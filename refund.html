@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Satisfaction Policy — DONEOVERNIGHT</title>
+<meta name="description" content="Our satisfaction guarantee — clearly defined. When we refund, when we revise, and what 'done right' means.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#050608">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Overnight">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="shared.css">
+
+<style>
+/* Scenario cards */
+.scenarios {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin: 40px 0;
+}
+@media (max-width: 720px) { .scenarios { grid-template-columns: 1fr; } }
+.scenario {
+  background: #050608;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 240px;
+}
+.scenario .s-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  align-self: flex-start;
+  border: 1px solid;
+}
+.scenario .s-label.revise { color: var(--amber); border-color: rgba(233,196,138,0.3); background: rgba(233,196,138,0.06); }
+.scenario .s-label.refund { color: var(--green); border-color: rgba(58, 165, 90, 0.3); background: rgba(58, 165, 90, 0.06); }
+.scenario .s-label.neither { color: var(--ink-dim); border-color: var(--line-strong); background: transparent; }
+.scenario .s-label .dot { width: 5px; height: 5px; border-radius: 50%; }
+.scenario .s-label.revise .dot { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.scenario .s-label.refund .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.scenario .s-label.neither .dot { background: var(--ink-faint); }
+
+.scenario h3 {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+  color: var(--ink);
+}
+.scenario p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+.scenario .s-action {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Promise block */
+.promise {
+  padding: 48px 40px;
+  background:
+    linear-gradient(135deg, rgba(233, 196, 138, 0.05), transparent 60%),
+    rgba(245, 241, 234, 0.02);
+  border: 1px solid rgba(233, 196, 138, 0.2);
+  border-radius: 6px;
+  margin: 40px auto;
+  max-width: 720px;
+  text-align: center;
+  position: relative;
+}
+.promise::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.5), transparent);
+}
+.promise .p-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 18px;
+}
+.promise h2 {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+.promise h2 em { font-style: italic; color: var(--amber); }
+.promise p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  max-width: 48ch;
+  margin: 0 auto;
+}
+</style>
+</head>
+<body>
+
+<div class="page-bg"></div>
+<div class="page-stars"></div>
+<div class="page-vignette"></div>
+<div class="page-grain"></div>
+
+<!-- NAV — hidden dot, expands on intent -->
+<nav class="nav" aria-label="Primary">
+  <a class="logo" href="index.html">DONEOVERNIGHT</a>
+  <div class="nav-pill" id="navPill">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
+    <div class="nav-links-wrap" id="navLinks">
+      <a href="index.html">Home</a>
+      <a href="index.html#proof">Proof</a>
+      <a href="trust.html">Trust</a>
+      <a href="index.html#pricing">Pricing</a>
+      <a href="enterprise.html">Enterprise</a>
+      <a href="portal.html">Portal</a>
+      <span class="sep"></span>
+      <button id="installBtn" class="nav-install" title="Install DONEOVERNIGHT as an app">
+        <span class="install-icon">↓</span>
+        <span>Install</span>
+      </button>
+      <a href="index.html#cta" class="nav-cta">
+        <span>Send it tonight</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="breadcrumb">
+    <a href="index.html">Home</a>
+    <span class="sep">/</span>
+    <a href="#">Legal</a>
+    <span class="sep">/</span>
+    <span class="current">Satisfaction Policy</span>
+  </div>
+  <span class="eyebrow reveal">Legal</span>
+  <h1 class="display reveal">Satisfaction, <em>defined.</em></h1>
+  <p class="sub reveal">Most companies who promise "100% satisfaction" won't tell you what that actually means. We will.</p>
+  <p class="mono reveal" style="font-size: 11px; letter-spacing: 0.22em; color: var(--ink-faint); text-transform: uppercase; margin-top: 24px;">
+    Last updated · April 2026 · Version 1.2
+  </p>
+</section>
+
+<section class="section">
+  <div class="section-inner section-narrow">
+
+    <div class="promise reveal">
+      <div class="p-label">Our Promise</div>
+      <h2>If the work doesn't match what we scoped, <em>we fix it.</em><br>If we can't fix it, <em>you don't pay.</em></h2>
+      <p>That's the whole thing. The rest of this page explains what that means in practice — so there's no ambiguity when it matters.</p>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">The scope</div>
+      <div class="content">
+        <p>Every task begins with a quote email from us that spells out <strong>exactly what we will deliver</strong>: format, components, deadline, price. Your confirmation of the quote is the scope we work against.</p>
+        <p>Satisfaction is measured against that scope — not against anything we didn't agree to.</p>
+      </div>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">What triggers a revision</div>
+      <div class="content">
+        <p>If the deliverable doesn't match the scope — wrong tone, missing section, factual error, visual issue, misaligned brand — you tell us. We revise it same day, at no extra cost.</p>
+        <p>This applies as many times as needed until the deliverable matches what we scoped. No limits. No arguments.</p>
+      </div>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">What triggers a refund</div>
+      <div class="content">
+        <p>If we've tried to make it right and we genuinely can't — if the deliverable fails to meet the scope and no amount of revision will get it there — <strong>you don't pay</strong>. Full refund. No forms. No negotiation.</p>
+        <p>This has happened twice in 1,800+ tasks. It's rare, but it's real, and it's the commitment.</p>
+      </div>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">Timing</div>
+      <div class="content">
+        <p>Bring up any issues within <strong>7 days of delivery</strong> for the satisfaction policy to apply. After 7 days, we assume you're satisfied and the task is closed.</p>
+        <p>For urgent issues affecting a same-day use case (e.g. "I'm presenting this in 2 hours"), tell us immediately. We prioritize these.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SCENARIOS -->
+<section class="section">
+  <div class="section-inner section-narrow">
+    <div class="section-head reveal">
+      <span class="eyebrow">Scenarios</span>
+      <h2 class="h2">When we revise, refund, and when we <em>don't.</em></h2>
+    </div>
+
+    <div class="scenarios">
+      <div class="scenario reveal">
+        <span class="s-label revise"><span class="dot"></span>Revise · no charge</span>
+        <h3>"The deck tone doesn't match our brand."</h3>
+        <p>We'll review your brand docs again, identify where we missed, rework the deck, and send an updated version — same day.</p>
+        <div class="s-action">→ Unlimited revisions within scope</div>
+      </div>
+
+      <div class="scenario reveal">
+        <span class="s-label revise"><span class="dot"></span>Revise · no charge</span>
+        <h3>"Slide 08 has a factual error."</h3>
+        <p>Clear and objective issue. We fix it immediately. If it affects adjacent slides, we check those too.</p>
+        <div class="s-action">→ Fixed within hours</div>
+      </div>
+
+      <div class="scenario reveal">
+        <span class="s-label revise"><span class="dot"></span>Revise · no charge</span>
+        <h3>"The workflow isn't triggering correctly."</h3>
+        <p>We'll debug, fix, test, and re-document. Automation tasks include post-delivery support for bugs within the scoped flow.</p>
+        <div class="s-action">→ Fixed within 24h</div>
+      </div>
+
+      <div class="scenario reveal">
+        <span class="s-label refund"><span class="dot"></span>Full refund</span>
+        <h3>"We've tried three times and it's still wrong."</h3>
+        <p>If we can't bring it to scope despite good-faith revisions, we refund in full. You keep nothing if we take nothing — the file isn't yours, no payment either.</p>
+        <div class="s-action">→ Refunded within 7 days</div>
+      </div>
+
+      <div class="scenario reveal">
+        <span class="s-label neither"><span class="dot"></span>Out of scope</span>
+        <h3>"Can you also add five more slides?"</h3>
+        <p>Five new slides weren't in the original scope. We'd love to build them — we'll send a short delta quote. Confirm, and we start on the addition.</p>
+        <div class="s-action">→ Quoted separately</div>
+      </div>
+
+      <div class="scenario reveal">
+        <span class="s-label neither"><span class="dot"></span>Out of scope</span>
+        <h3>"We changed direction — can you redo it in a different style?"</h3>
+        <p>A directional pivot mid-delivery isn't a revision, it's a new task. We'll quote the redirect separately and keep the original deliverable available to you either way.</p>
+        <div class="s-action">→ New quote required</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="section">
+  <div class="section-inner section-narrow">
+    <div class="section-head reveal">
+      <span class="eyebrow">How to raise a concern</span>
+      <h2 class="h2">Three steps. <em>No forms.</em></h2>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">Step 01</div>
+      <div class="content">
+        <p><strong>Reply to the delivery email.</strong> Tell us what's off. Be specific — "slide 08's tone is too casual" beats "I don't like it". We'll understand either way, but specificity gets you a faster, sharper fix.</p>
+      </div>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">Step 02</div>
+      <div class="content">
+        <p><strong>We respond within 2 hours.</strong> During operating hours (EU business + overnight shift). Outside those, we respond by 08:00 the next working day.</p>
+      </div>
+    </div>
+
+    <div class="doc-block reveal">
+      <div class="label">Step 03</div>
+      <div class="content">
+        <p><strong>Revision delivered same day</strong> (or, if we genuinely can't meet scope, a refund is issued within 7 days of that determination).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="section-inner">
+    <div class="cta-block reveal">
+      <span class="eyebrow">Questions</span>
+      <h3>Not sure if something is <em>in scope?</em></h3>
+      <p>Ask us before you agree. We'd rather clarify upfront than argue later.</p>
+      <a href="mailto:ask@doneovernight.com" class="btn-primary">
+        <span>Email ask@doneovernight.com</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wordmark italic">done overnight.</div>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="wordmark-small italic">done overnight.</div>
+      <div class="tag">Submit before bed. Wake up to results.</div>
+    </div>
+    <div class="footer-col"><h5>Service</h5><ul>
+      <li><a href="index.html">Landing</a></li>
+      <li><a href="index.html#pricing">Pricing</a></li>
+      <li><a href="index.html#cta">Submit task</a></li>
+    </ul></div>
+    <div class="footer-col"><h5>Company</h5><ul>
+      <li><a href="trust.html">Trust</a></li>
+      <li><a href="enterprise.html">Enterprise</a></li>
+      <li><a href="portal.html">Client portal</a></li>
+      <li><a href="mailto:ask@doneovernight.com">Contact</a></li>
+    </ul></div>
+    <div class="footer-col"><h5>Legal</h5><ul>
+      <li><a href="terms.html">Terms of Service</a></li>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="refund.html">Satisfaction Policy</a></li>
+    </ul></div>
+  </div>
+  <div class="footer-socials">
+    <span class="fs-label">Follow the studio</span>
+    <div class="footer-socials-list">
+      <a href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="5"/>
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor"/>
+        </svg>
+        <span>Instagram</span>
+        <span class="social-handle">@doneovernight</span>
+      </a>
+      <a href="https://www.tiktok.com/@doneovernight" target="_blank" rel="noopener" class="social-link" aria-label="TikTok">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005.8 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1.84-.1z"/>
+        </svg>
+        <span>TikTok</span>
+        <span class="social-handle">@doneovernight</span>
+      </a>
+      <a href="https://wa.me/31000000000" target="_blank" rel="noopener" class="social-link" aria-label="WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/>
+        </svg>
+        <span>WhatsApp</span>
+        <span class="social-handle">Chat with us</span>
+      </a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 · Done Overnight</span>
+    <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+  </div>
+</footer>
+
+<script>
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); } });
+}, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+
+<script>
+// Register service worker for offline + PWA install
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+</script>
+<script>
+// Nav — expanding dot menu
+(function() {
+  const pill = document.getElementById('navPill');
+  const dot = document.getElementById('navDot');
+  if (!pill || !dot) return;
+  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
+  let isOpen = false;
+  let closeTimer = null;
+  function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
+  function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
+  if (!mqCoarse.matches) {
+    pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
+    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
+  }
+  dot.addEventListener('click', (e) => { e.stopPropagation(); isOpen ? close() : open(); });
+  document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
+  pill.addEventListener('click', (e) => { if (e.target.closest('a')) setTimeout(close, 220); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
+})();
+// PWA install
+(function() {
+  const installBtn = document.getElementById('installBtn');
+  if (!installBtn) return;
+  let deferredPrompt = null;
+  const isiOS = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) return;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.classList.add('is-available'); });
+  if (isiOS && !isStandalone) installBtn.classList.add('is-available');
+  installBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') installBtn.classList.remove('is-available'); deferredPrompt = null; }
+    else if (isiOS) {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(5,6,8,0.88);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:24px;cursor:pointer;';
+      modal.innerHTML = '<div style="max-width:380px;background:#0a0b0f;border:1px solid rgba(245,241,234,0.1);border-radius:10px;padding:32px 28px;text-align:center;" onclick="event.stopPropagation()"><div style="font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:0.3em;color:#e9c48a;text-transform:uppercase;margin-bottom:14px;">Install on iPhone</div><h3 style="font-family:Instrument Serif,serif;font-size:26px;line-height:1.1;color:#f5f1ea;font-weight:400;letter-spacing:-0.02em;margin-bottom:20px;">Add to Home Screen</h3><ol style="list-style:none;padding:0;text-align:left;display:flex;flex-direction:column;gap:14px;margin-bottom:20px;"><li style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:rgba(245,241,234,0.7);line-height:1.5;"><span style="font-family:JetBrains Mono,monospace;color:#e9c48a;font-size:11px;letter-spacing:0.2em;padding-top:2px;">01</span><span>Tap the <strong style="color:#f5f1ea">Share</strong> icon in Safari.</span></li><li style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:rgba(245,241,234,0.7);line-height:1.5;"><span style="font-family:JetBrains Mono,monospace;color:#e9c48a;font-size:11px;letter-spacing:0.2em;padding-top:2px;">02</span><span>Tap <strong style="color:#f5f1ea">Add to Home Screen</strong>.</span></li><li style="display:flex;gap:12px;align-items:flex-start;font-size:14px;color:rgba(245,241,234,0.7);line-height:1.5;"><span style="font-family:JetBrains Mono,monospace;color:#e9c48a;font-size:11px;letter-spacing:0.2em;padding-top:2px;">03</span><span>Tap <strong style="color:#f5f1ea">Add</strong>.</span></li></ol></div>';
+      modal.addEventListener('click', () => modal.remove());
+      document.body.appendChild(modal);
+    }
+  });
+})();
+</script>
+</body>
+</html>
