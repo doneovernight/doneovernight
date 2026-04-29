@@ -23,19 +23,19 @@
 
 <style>
 /* ============================================================
-   PORTAL — password gate + dashboard
+   PORTAL — member entry + demo dashboard
    ============================================================ */
 
-/* GATE */
+/* MEMBER ENTRY */
 .gate {
   position: fixed;
   inset: 0;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 24px;
   background: #050608;
+  overflow-y: auto;
   will-change: opacity, transform;
 }
 .gate.is-unlocked {
@@ -73,8 +73,8 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 440px;
-  padding: 52px 44px 44px;
+  max-width: 1040px;
+  padding: clamp(24px, 4vw, 44px);
   background: rgba(245, 241, 234, 0.025);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -82,7 +82,7 @@
   box-shadow:
     0 30px 60px -15px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(245, 241, 234, 0.05);
-  text-align: center;
+  text-align: left;
 }
 .gate-card::before {
   content: "";
@@ -92,22 +92,33 @@
   background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.5), transparent);
 }
 
+.gate-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+.gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .gate-lock {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 28px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(233, 196, 138, 0.08);
   border: 1px solid rgba(233, 196, 138, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   color: var(--amber);
   position: relative;
+  flex: 0 0 auto;
 }
 .gate-lock svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   stroke: var(--amber);
   stroke-width: 1.6;
   fill: none;
@@ -131,98 +142,306 @@
   letter-spacing: 0.35em;
   color: var(--amber);
   text-transform: uppercase;
-  margin-bottom: 14px;
+}
+.gate-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+  white-space: nowrap;
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(103, 214, 149, 0.9);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+.gate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: clamp(28px, 5vw, 56px);
+  align-items: start;
 }
 .gate-title {
   font-family: var(--serif);
-  font-size: clamp(28px, 3.6vw, 40px);
+  font-size: clamp(44px, 7vw, 86px);
   line-height: 1.05;
   letter-spacing: -0.02em;
   font-weight: 400;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   color: var(--ink);
 }
 .gate-title em { font-style: italic; color: var(--amber); }
 .gate-sub {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink-dim);
-  line-height: 1.5;
-  max-width: 34ch;
-  margin: 0 auto 32px;
+  line-height: 1.65;
+  max-width: 42ch;
+  margin: 0 0 24px;
+}
+.gate-note {
+  padding: 14px 16px;
+  background: rgba(233, 196, 138, 0.055);
+  border: 1px solid rgba(233, 196, 138, 0.18);
+  border-radius: 8px;
+  color: rgba(245, 241, 234, 0.66);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 44ch;
+}
+.gate-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gate-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+}
+.gate-tab {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.gate-tab:hover,
+.gate-tab.is-active {
+  color: var(--amber);
+  background: rgba(233, 196, 138, 0.08);
+  border-color: rgba(233, 196, 138, 0.28);
+  box-shadow: 0 0 22px rgba(233, 196, 138, 0.08);
+}
+.auth-panel {
+  display: none;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(5, 6, 8, 0.38);
+  box-shadow: inset 0 1px 0 rgba(245, 241, 234, 0.04);
+}
+.auth-panel.is-active { display: block; }
+.auth-panel h3 {
+  font-family: var(--serif);
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.auth-panel h3 em { color: var(--amber); font-style: italic; }
+.auth-panel > p,
+.signin-copy {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.auth-options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.auth-btn,
+.gate-submit {
+  width: 100%;
+  min-height: 48px;
+  padding: 14px 18px;
+  border-radius: 7px;
+  border: 1px solid rgba(233, 196, 138, 0.45);
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+.auth-btn:hover,
+.auth-btn:focus-visible,
+.gate-submit:hover,
+.gate-submit:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.7);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.28),
+    0 0 70px rgba(233, 196, 138, 0.1),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  outline: none;
+}
+.auth-btn:active,
+.gate-submit:active { transform: scale(0.98); }
+.auth-btn:disabled,
+.gate-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+.auth-btn.is-muted {
+  border-color: var(--line-strong);
+  color: var(--ink);
+  background: rgba(245, 241, 234, 0.035);
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
-.gate-form { display: flex; flex-direction: column; gap: 14px; }
-.gate-input-wrap {
-  position: relative;
-}
+.gate-form { display: flex; flex-direction: column; gap: 12px; }
+.gate-input-wrap { position: relative; }
 .gate-input {
   width: 100%;
   background: rgba(245, 241, 234, 0.03);
   border: 1px solid var(--line-strong);
   border-radius: 6px;
-  padding: 16px 18px;
-  font-family: var(--mono);
+  padding: 15px 16px;
+  font-family: var(--sans);
   font-size: 14px;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   color: var(--ink);
-  text-align: center;
   outline: none;
   transition: all 0.3s;
 }
-.gate-input::placeholder { color: var(--ink-faint); letter-spacing: 0.15em; }
+.gate-input::placeholder { color: var(--ink-faint); }
 .gate-input:focus {
   border-color: var(--amber);
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.1);
 }
-.gate-input.is-wrong {
+.gate-input.is-wrong,
+.gate-input.is-invalid,
+.consent-row.is-invalid {
   border-color: var(--red);
   animation: shake 0.5s;
 }
+.gate-form.shake { animation: shake 0.5s; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-8px); }
   40%, 80% { transform: translateX(8px); }
 }
-.gate-submit {
-  padding: 16px 20px;
-  background: var(--ink);
-  color: #050608;
-  border-radius: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.4s;
-  border: none;
-  position: relative;
-  overflow: hidden;
-}
-.gate-submit::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: translateX(-100%);
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.gate-submit:hover::before { transform: translateX(0); }
-.gate-submit > span { position: relative; z-index: 1; }
-
 .gate-error {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.12em;
   color: var(--red);
   text-transform: uppercase;
-  margin-top: 8px;
   min-height: 14px;
   opacity: 0;
   transition: opacity 0.3s;
 }
 .gate-error.is-shown { opacity: 1; }
+.consent-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.025);
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.consent-row input {
+  margin-top: 2px;
+  accent-color: var(--amber);
+}
+.legal-copy {
+  margin-top: 16px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.legal-copy a,
+.signin-copy button,
+.auth-message a { color: var(--amber); }
+.signin-copy button {
+  border: none;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.auth-message {
+  display: none;
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid rgba(233, 196, 138, 0.22);
+  border-radius: 8px;
+  background: rgba(233, 196, 138, 0.055);
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.auth-message.is-shown { display: block; }
+.auth-message.is-success {
+  border-color: rgba(103, 214, 149, 0.28);
+  background: rgba(103, 214, 149, 0.07);
+}
+.auth-message.is-error {
+  border-color: rgba(255, 107, 107, 0.28);
+  background: rgba(255, 107, 107, 0.07);
+}
+.auth-message h4 {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+}
 
 .gate-back {
   display: inline-flex;
@@ -262,6 +481,10 @@
   border-radius: 4px;
   line-height: 1.5;
 }
+.dash-nav,
+.dash { visibility: hidden; }
+body.is-unlocked .dash-nav,
+body.is-unlocked .dash { visibility: visible; }
 
 /* ============================================================
    DASHBOARD
@@ -345,6 +568,19 @@ body.is-unlocked .dash { opacity: 1; }
   padding: 40px 36px 120px;
 }
 @media (max-width: 720px) {
+  .gate {
+    align-items: start;
+    padding: 16px;
+  }
+  .gate-card { padding: 22px; }
+  .gate-top {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+  .gate-grid { grid-template-columns: 1fr; gap: 24px; }
+  .gate-tabs { grid-template-columns: 1fr; }
+  .auth-panel { padding: 18px; }
   .dash-nav { padding: 14px 20px; flex-wrap: wrap; gap: 8px; }
   .dash-nav .right { flex-wrap: wrap; gap: 12px; }
   .dash-inner { padding: 32px 20px 80px; }
@@ -921,38 +1157,122 @@ body.is-unlocked .dash { opacity: 1; }
 <body>
 
 <!-- ============================================================
-     PASSWORD GATE
+     MEMBER ENTRY
      ============================================================ -->
 <div class="gate" id="gate">
   <div class="gate-bg"></div>
   <div class="gate-stars"></div>
 
   <div class="gate-card">
-    <div class="gate-lock">
-      <svg viewBox="0 0 24 24">
-        <rect x="5" y="10" width="14" height="10" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-      </svg>
-    </div>
-    <div class="gate-wordmark">Client Portal</div>
-    <h2 class="gate-title">For <em>members</em> only.</h2>
-    <p class="gate-sub">Enter your access key to open your dashboard. If you don't have one, it was included in your welcome email.</p>
-
-    <form class="gate-form" id="gateForm">
-      <div class="gate-input-wrap">
-        <input type="password" id="gateInput" class="gate-input" placeholder="access key" autocomplete="off" autofocus>
+    <div class="gate-top">
+      <div class="gate-brand">
+        <div class="gate-lock" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <rect x="5" y="10" width="14" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
+        </div>
+        <div class="gate-wordmark">DONEOVERNIGHT</div>
       </div>
-      <button type="submit" class="gate-submit"><span>Unlock portal →</span></button>
-      <div class="gate-error" id="gateError">Incorrect access key. Try again.</div>
-    </form>
-
-    <a href="index.html" class="gate-back">← Back to site</a>
-
-    <div class="gate-footer">
-      Lost your key? <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+      <div class="gate-status"><span class="live-dot"></span>Studio online</div>
     </div>
-    <div class="gate-proto-note">
-      Prototype · Real authentication requires backend integration.
+
+    <div class="gate-grid">
+      <div class="gate-intro">
+        <h1 class="gate-title">Join <em>Today</em></h1>
+        <p class="gate-sub">Create your member request, sign in when account access is live, or enter an access key from your welcome email.</p>
+        <div class="gate-note">
+          This static portal captures member requests safely today. Real Google, Apple, and private dashboard authentication require a backend auth provider.
+        </div>
+        <a href="index.html" class="gate-back">← Back to site</a>
+      </div>
+
+      <div class="gate-panels">
+        <div class="gate-tabs" role="tablist" aria-label="Portal entry">
+          <button type="button" class="gate-tab is-active" data-panel="signupPanel" role="tab" aria-selected="true">Join Today</button>
+          <button type="button" class="gate-tab" data-panel="signinPanel" role="tab" aria-selected="false">Sign In</button>
+          <button type="button" class="gate-tab" data-panel="accessPanel" role="tab" aria-selected="false">Client Portal</button>
+        </div>
+
+        <section class="auth-panel is-active" id="signupPanel" role="tabpanel">
+          <h3>Join Today</h3>
+          <p>Request member access and we’ll send your access key by email.</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Google">Continue with Google</button>
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
+          </div>
+
+          <div class="auth-divider">or</div>
+
+          <form class="gate-form" id="signupForm" novalidate>
+            <input type="hidden" name="_subject" value="Portal signup request">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="source" value="portal_signup">
+            <input type="hidden" name="signup_method" value="email">
+            <input type="hidden" name="created_at" id="signupCreatedAt">
+
+            <div class="gate-input-wrap">
+              <input type="text" name="name" id="signupName" class="gate-input" placeholder="Name" autocomplete="name" required>
+            </div>
+            <div class="gate-input-wrap">
+              <input type="email" name="email" id="signupEmail" class="gate-input" placeholder="Email" autocomplete="email" required>
+            </div>
+            <label class="consent-row" id="signupConsentWrap">
+              <input type="checkbox" name="marketing_consent" id="signupConsent" value="yes" required>
+              <span>I agree to receive updates about DONEOVERNIGHT.</span>
+            </label>
+            <button type="submit" class="gate-submit"><span>Create account with email →</span></button>
+            <div class="gate-error" id="signupError">Complete the required fields.</div>
+          </form>
+
+          <div class="auth-message" id="signupMessage" aria-live="polite"></div>
+          <p class="legal-copy">By signing up, you agree to the <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>, including Cookie Use.</p>
+        </section>
+
+        <section class="auth-panel" id="signinPanel" role="tabpanel">
+          <h3>Sign <em>in</em></h3>
+          <p class="signin-copy">Already have an account?</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Google">Continue with Google</button>
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
+            <button type="button" class="auth-btn is-muted js-email-signin">Email sign in</button>
+          </div>
+
+          <p class="signin-copy">Need early access? <button type="button" data-panel-link="signupPanel">Create an account with email.</button></p>
+          <div class="auth-message" id="signinMessage" aria-live="polite"></div>
+        </section>
+
+        <section class="auth-panel" id="accessPanel" role="tabpanel">
+          <h3>CLIENT PORTAL</h3>
+          <p><strong>For members only.</strong><br>Enter your access key to open your dashboard. If you don't have one, it was included in your welcome email.</p>
+
+          <form class="gate-form" id="gateForm" novalidate>
+            <input type="hidden" name="_subject" value="Portal access key verification request">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="source" value="portal_access_key">
+            <input type="hidden" name="created_at" id="accessCreatedAt">
+
+            <div class="gate-input-wrap">
+              <input type="email" name="email" id="gateEmail" class="gate-input" placeholder="Email" autocomplete="email" required>
+            </div>
+            <div class="gate-input-wrap">
+              <input type="password" name="access_key" id="gateInput" class="gate-input" placeholder="Access key" autocomplete="off" required>
+            </div>
+            <button type="submit" class="gate-submit"><span>Unlock portal →</span></button>
+            <div class="gate-error" id="gateError">Enter your email and access key.</div>
+          </form>
+
+          <div class="auth-message" id="gateMessage" aria-live="polite"></div>
+          <div class="gate-footer">
+            Lost your key? <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+          </div>
+          <div class="gate-proto-note">
+            Demo key for testing: DONE-DEMO · Real authentication requires backend integration.
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -969,7 +1289,7 @@ body.is-unlocked .dash { opacity: 1; }
   <div class="left">
     <a class="logo" href="index.html">DONEOVERNIGHT</a>
     <div class="sep"></div>
-    <div class="client-label">Acme Studio / Workspace</div>
+    <div class="client-label">Demo dashboard preview</div>
   </div>
   <div class="right">
     <div class="status"><span class="dot"></span>Studio online</div>
@@ -1274,49 +1594,186 @@ body.is-unlocked .dash { opacity: 1; }
 
 <script>
 /* ============================================================
-   PASSWORD GATE — password = "executed"
-   Uses sessionStorage so they stay unlocked during their session.
+   MEMBER ENTRY
+   Static-site safe: email signup/access requests use FormSubmit AJAX.
+   TODO: Replace FormSubmit with POST /api/signup, Supabase, Airtable,
+   or an n8n webhook once a real auth/database backend exists.
    ============================================================ */
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gateForm');
 const gateInput = document.getElementById('gateInput');
+const gateEmail = document.getElementById('gateEmail');
 const gateError = document.getElementById('gateError');
-const PASSWORD = 'executed';
+const gateMessage = document.getElementById('gateMessage');
+const signupForm = document.getElementById('signupForm');
+const signupError = document.getElementById('signupError');
+const signupMessage = document.getElementById('signupMessage');
+const signinMessage = document.getElementById('signinMessage');
+const FORM_ENDPOINT = 'https://formsubmit.co/ajax/ask@doneovernight.com';
+// DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
+const DEMO_KEY = 'DONE-DEMO';
 
 function unlock() {
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
-  sessionStorage.setItem('doneovernight_portal', '1');
+  sessionStorage.setItem('doneovernight_portal_demo', '1');
   document.body.style.overflow = '';
 }
 
-// Check if already unlocked this session
-if (sessionStorage.getItem('doneovernight_portal') === '1') {
+function showPanel(panelId) {
+  document.querySelectorAll('.gate-tab').forEach(tab => {
+    const isActive = tab.dataset.panel === panelId;
+    tab.classList.toggle('is-active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+  document.querySelectorAll('.auth-panel').forEach(panel => {
+    panel.classList.toggle('is-active', panel.id === panelId);
+  });
+}
+
+function showMessage(el, html, type = '') {
+  el.className = `auth-message is-shown${type ? ` is-${type}` : ''}`;
+  el.innerHTML = html;
+}
+
+function clearInvalid(form) {
+  form.querySelectorAll('.is-invalid, .is-wrong').forEach(el => {
+    el.classList.remove('is-invalid', 'is-wrong');
+  });
+}
+
+function markInvalid(input) {
+  input.classList.add('is-invalid');
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function postFormSubmit(form) {
+  const payload = new FormData(form);
+  const response = await fetch(FORM_ENDPOINT, {
+    method: 'POST',
+    body: payload,
+    headers: { 'Accept': 'application/json' }
+  });
+  if (!response.ok) throw new Error('FormSubmit request failed');
+  return response.json().catch(() => ({}));
+}
+
+document.querySelectorAll('.gate-tab, [data-panel-link]').forEach(control => {
+  control.addEventListener('click', () => showPanel(control.dataset.panel || control.dataset.panelLink));
+});
+
+document.querySelectorAll('.js-auth-placeholder').forEach(button => {
+  button.addEventListener('click', () => {
+    const provider = button.dataset.provider;
+    const panelMessage = button.closest('.auth-panel')?.querySelector('.auth-message') || signupMessage;
+    showMessage(panelMessage, `${provider} sign-in is opening soon. Use email signup for early access.`);
+  });
+});
+
+document.querySelector('.js-email-signin').addEventListener('click', () => {
+  showMessage(signinMessage, 'Email sign-in is opening soon. Use the access key from your welcome email, or create an account with email for early access.');
+});
+
+// Check if demo preview is already unlocked this session.
+if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
   gate.style.display = 'none';
   document.body.classList.add('is-unlocked');
 } else {
   document.body.style.overflow = 'hidden';
-  setTimeout(() => gateInput.focus(), 100);
+  setTimeout(() => document.getElementById('signupName').focus(), 100);
 }
 
-gateForm.addEventListener('submit', (e) => {
+signupForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const val = gateInput.value.trim().toLowerCase();
-  if (val === PASSWORD) {
-    gateError.classList.remove('is-shown');
-    unlock();
-  } else {
-    gateInput.classList.add('is-wrong');
+  clearInvalid(signupForm);
+  signupError.classList.remove('is-shown');
+
+  const name = document.getElementById('signupName');
+  const email = document.getElementById('signupEmail');
+  const consent = document.getElementById('signupConsent');
+  const consentWrap = document.getElementById('signupConsentWrap');
+  const submit = signupForm.querySelector('.gate-submit');
+  let hasError = false;
+
+  if (!name.value.trim()) { markInvalid(name); hasError = true; }
+  if (!isValidEmail(email.value.trim())) { markInvalid(email); hasError = true; }
+  if (!consent.checked) { consentWrap.classList.add('is-invalid'); hasError = true; }
+
+  if (hasError) {
+    signupError.classList.add('is-shown');
+    signupForm.classList.remove('shake');
+    void signupForm.offsetWidth;
+    signupForm.classList.add('shake');
+    (signupForm.querySelector('.is-invalid') || name).focus?.();
+    return;
+  }
+
+  document.getElementById('signupCreatedAt').value = new Date().toISOString();
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Sending request...</span>';
+
+  try {
+    await postFormSubmit(signupForm);
+    signupForm.style.display = 'none';
+    showMessage(signupMessage, '<h4>Member request received.</h4><p>We’ll send your access key by email.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+  } catch (error) {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    showMessage(signupMessage, 'Something went wrong. Please email <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a> directly.', 'error');
+  }
+});
+
+gateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearInvalid(gateForm);
+  gateError.classList.remove('is-shown');
+
+  const email = gateEmail.value.trim();
+  const key = gateInput.value.trim();
+  const submit = gateForm.querySelector('.gate-submit');
+  let hasError = false;
+
+  if (!isValidEmail(email)) { markInvalid(gateEmail); hasError = true; }
+  if (!key) { markInvalid(gateInput); hasError = true; }
+
+  if (hasError) {
     gateError.classList.add('is-shown');
-    setTimeout(() => gateInput.classList.remove('is-wrong'), 500);
-    gateInput.value = '';
-    gateInput.focus();
+    gateForm.classList.remove('shake');
+    void gateForm.offsetWidth;
+    gateForm.classList.add('shake');
+    (gateForm.querySelector('.is-invalid') || gateEmail).focus?.();
+    return;
+  }
+
+  if (key.toUpperCase() === DEMO_KEY) {
+    gateMessage.classList.remove('is-shown');
+    unlock();
+    return;
+  }
+
+  document.getElementById('accessCreatedAt').value = new Date().toISOString();
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Verifying...</span>';
+
+  try {
+    await postFormSubmit(gateForm);
+    gateForm.style.display = 'none';
+    showMessage(gateMessage, '<h4>Access request received.</h4><p>We’re verifying your key.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+  } catch (error) {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    showMessage(gateMessage, 'Something went wrong. Please email <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a> directly.', 'error');
   }
 });
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem('doneovernight_portal');
+  sessionStorage.removeItem('doneovernight_portal_demo');
   location.reload();
 });
 
