@@ -4503,7 +4503,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
 })();
 
 /* ============================================================
-   NAV — Expanding dot menu (desktop hover / mobile tap)
+   NAV — Expanding dot menu (clean + stable)
    ============================================================ */
 (function() {
   const pill = document.getElementById('navPill');
@@ -4521,6 +4521,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     dot.setAttribute('aria-expanded', 'true');
     dot.setAttribute('aria-label', 'Close menu');
   }
+
   function close() {
     if (!isOpen) return;
     isOpen = false;
@@ -4529,18 +4530,39 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     dot.setAttribute('aria-label', 'Open menu');
   }
 
-  // Desktop: open on hover, close when cursor leaves with a small delay
+  // Desktop (hover)
   if (!mqCoarse.matches) {
     pill.addEventListener('mouseenter', () => {
       clearTimeout(closeTimer);
       open();
     });
+
     pill.addEventListener('mouseleave', () => {
       clearTimeout(closeTimer);
-      closeTimer = setTimeout(close, 220);
+      closeTimer = setTimeout(close, 200);
     });
   }
 
+  // Mobile (tap)
+  dot.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isOpen ? close() : open();
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!pill.contains(e.target)) close();
+  });
+
+  // Close after clicking any nav item (FIX voor jouw issue)
+  pill.querySelectorAll('a, .nav-cta').forEach((item) => {
+    item.addEventListener('click', () => {
+      clearTimeout(closeTimer);
+      close();
+    });
+  });
+
+})();
   // Tap the dot (both desktop for accessibility and mobile for toggle)
   dot.addEventListener('click', (e) => {
     e.stopPropagation();
