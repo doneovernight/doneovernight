@@ -811,28 +811,111 @@ body.is-unlocked .dash { opacity: 1; }
   gap: 10px;
   width: 100%;
   padding: 16px;
-  background: var(--ink);
-  color: #050608;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
   border-radius: 100px;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all 0.4s;
-  border: none;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid rgba(233, 196, 138, 0.45);
   margin-top: 12px;
   position: relative;
   overflow: hidden;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .modal-submit::before {
-  content: "";
-  position: absolute; inset: 0;
-  background: var(--amber);
-  transform: translateX(-100%);
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  content: none;
+  display: none;
 }
-.modal-submit:hover::before { transform: translateX(0); }
-.modal-submit > * { position: relative; z-index: 1; }
+.modal-submit:hover,
+.modal-submit:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.68);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.32),
+    0 0 70px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.modal-submit:active {
+  transform: scale(0.98);
+}
+.modal-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+.modal-submit > *,
+.modal-submit span { position: relative; z-index: 1; color: inherit; }
+.modal-submit:hover span { color: #ffe3ad; }
+.modal .field-group.is-invalid textarea {
+  border-color: rgba(233, 196, 138, 0.85);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.12), 0 0 18px rgba(233, 196, 138, 0.18);
+}
+#modalForm.shake { animation: shake 0.5s; }
+.modal.sent form { display: none; }
+.modal-confirmation {
+  display: none;
+  padding: 32px 28px;
+  background:
+    linear-gradient(135deg, rgba(58, 165, 90, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+  border: 1px solid rgba(245, 241, 234, 0.10);
+  border-radius: 8px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.modal.sent .modal-confirmation { display: block; }
+.modal-confirmation h4 {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.modal-confirmation p {
+  font-size: 14px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.modal-confirmation .status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.64);
+}
+.modal-confirmation .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3aa55a;
+  box-shadow: 0 0 10px rgba(58, 165, 90, 0.78);
+  animation: modalConfirmPulse 1.7s ease-in-out infinite;
+}
+.modal-confirmation.is-error {
+  border-color: rgba(201, 74, 74, 0.35);
+  background:
+    linear-gradient(135deg, rgba(201, 74, 74, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+}
+@keyframes modalConfirmPulse {
+  0%, 100% { opacity: 0.72; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
 </style>
 </head>
 <body>
@@ -1152,7 +1235,7 @@ body.is-unlocked .dash { opacity: 1; }
       <button class="modal-close" id="modalClose">Close ×</button>
     </div>
 
-    <form id="modalForm">
+    <form id="modalForm" novalidate>
       <div class="field-group">
         <div class="field-label"><span>Task description</span><span class="hint">Required</span></div>
         <textarea id="modalDesc" placeholder="What do you need? The more context, the sharper the output." required></textarea>
@@ -1181,6 +1264,11 @@ body.is-unlocked .dash { opacity: 1; }
         <span>→</span>
       </button>
     </form>
+    <div class="modal-confirmation" id="modalConfirmation">
+      <h4>Task received.</h4>
+      <p>We’ll review it and send a quote within 60 minutes.</p>
+      <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
+    </div>
   </div>
 </div>
 
@@ -1238,8 +1326,17 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 const taskModal = document.getElementById('taskModal');
 const newTaskBtn = document.getElementById('newTaskBtn');
 const modalClose = document.getElementById('modalClose');
+const modalPanel = taskModal.querySelector('.modal');
 
 newTaskBtn.addEventListener('click', () => {
+  modalPanel.classList.remove('sent');
+  document.getElementById('modalForm').reset();
+  document.querySelectorAll('.modal-deadline-pill').forEach(x => x.classList.remove('active'));
+  document.querySelector('.modal-deadline-pill[data-val="overnight"]').classList.add('active');
+  document.getElementById('modalUploadArea').classList.remove('has-file');
+  document.getElementById('modalUploadLabel').textContent = 'Drop files or click to attach';
+  document.querySelector('.modal-submit').disabled = false;
+  document.querySelector('.modal-submit').innerHTML = '<span>Submit · get quote</span><span>→</span>';
   taskModal.classList.add('is-open');
 });
 modalClose.addEventListener('click', () => {
@@ -1270,15 +1367,58 @@ modalUpload.addEventListener('change', () => {
   }
 });
 
-// Submit → opens mail
-document.getElementById('modalForm').addEventListener('submit', (e) => {
+// Submit via FormSubmit AJAX and keep the modal open with inline status.
+document.getElementById('modalForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const desc = document.getElementById('modalDesc').value.trim();
+  const form = e.currentTarget;
+  const modal = form.closest('.modal');
+  const descField = document.getElementById('modalDesc');
+  const confirmation = document.getElementById('modalConfirmation');
+  const submit = form.querySelector('.modal-submit');
+  const desc = descField.value.trim();
   const deadline = document.querySelector('.modal-deadline-pill.active').dataset.val;
   const deadlineLabel = {rush:'Rush · 4h', overnight:'Overnight', '48h':'48 hours', flexible:'Flexible'}[deadline];
 
-  const body = `Hi Done Overnight team,%0A%0A— Task description:%0A${encodeURIComponent(desc)}%0A%0A— Deadline: ${encodeURIComponent(deadlineLabel)}%0A%0A— Submitted from client portal (Acme Studio / Alex R.)`;
-  window.location.href = `mailto:ask@doneovernight.com?subject=${encodeURIComponent('Portal submission · ' + deadlineLabel)}&body=${body}`;
+  form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  if (!desc) {
+    descField.closest('.field-group')?.classList.add('is-invalid');
+    form.classList.remove('shake');
+    void form.offsetWidth;
+    form.classList.add('shake');
+    descField.focus();
+    return;
+  }
+
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Sending</span><span>→</span>';
+
+  try {
+    const payload = new FormData();
+    payload.append('_subject', `Portal submission · ${deadlineLabel}`);
+    payload.append('_captcha', 'false');
+    payload.append('description', desc);
+    payload.append('deadline', deadlineLabel);
+    payload.append('workspace', 'Acme Studio / Alex R.');
+    if (modalUpload.files.length) {
+      Array.from(modalUpload.files).forEach(file => payload.append('attachments', file));
+    }
+    const response = await fetch('https://formsubmit.co/ajax/ask@doneovernight.com', {
+      method: 'POST',
+      body: payload,
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error('FormSubmit request failed');
+    confirmation.classList.remove('is-error');
+    confirmation.innerHTML = '<h4>Task received.</h4><p>We’ll review it and send a quote within 60 minutes.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>';
+    modal.classList.add('sent');
+  } catch (error) {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    confirmation.classList.add('is-error');
+    confirmation.innerHTML = '<h4>Something went wrong.</h4><p>Please email ask@doneovernight.com directly.</p>';
+    modal.classList.add('sent');
+  }
 });
 </script>
 

@@ -329,7 +329,10 @@ if ('serviceWorker' in navigator) {
   }
   dot.addEventListener('click', (e) => { e.stopPropagation(); isOpen ? close() : open(); });
   document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
-  pill.addEventListener('click', (e) => { if (e.target.closest('a')) setTimeout(close, 220); });
+  pill.addEventListener('click', (e) => {
+    if (e.target.closest('#navDot')) return;
+    if (e.target.closest('a, button')) close();
+  }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
 })();
 // PWA install

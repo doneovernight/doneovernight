@@ -2656,19 +2656,17 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   line-height: 1.5;
 }
 .intake-confirmation {
-  text-align: center;
-  padding: 34px 22px 28px;
-}
-.intake-confirmation .success-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--amber);
+  padding: 32px 28px;
+  background:
+    linear-gradient(135deg, rgba(58, 165, 90, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+  border: 1px solid rgba(245, 241, 234, 0.10);
+  border-radius: 8px;
   box-shadow:
-    0 0 0 1px rgba(0,0,0,0.35),
-    0 0 18px rgba(233,196,138,0.74),
-    0 0 42px rgba(233,196,138,0.22);
-  margin: 0 auto 22px;
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .intake-confirmation h4 {
   font-family: var(--serif);
@@ -2682,10 +2680,32 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   color: var(--ink-dim);
   font-size: 14px;
   line-height: 1.65;
-  max-width: 38ch;
-  margin: 0 auto 10px;
+  max-width: 42ch;
+  margin: 0;
 }
-.intake-confirmation a { color: var(--amber); }
+.intake-confirmation .status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.64);
+}
+.intake-confirmation .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3aa55a;
+  box-shadow: 0 0 10px rgba(58, 165, 90, 0.78);
+  animation: confirmPulse 1.7s ease-in-out infinite;
+}
+@keyframes confirmPulse {
+  0%, 100% { opacity: 0.72; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
 
 
   background:
@@ -3089,8 +3109,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 <!-- NAV — hidden dot, expands on intent -->
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="#top">DONEOVERNIGHT</a>
-  <div class="nav-pill" id="navPill" onclick="if (event.target === this || event.target.closest('.nav-dot')) { event.stopImmediatePropagation(); this.classList.add('is-open'); const d=this.querySelector('.nav-dot'); d && (d.setAttribute('aria-expanded','true'), d.setAttribute('aria-label','Close menu')); }">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); p.classList.add('is-open'); this.setAttribute('aria-expanded','true'); this.setAttribute('aria-label','Close menu');"></button>
+  <div class="nav-pill" id="navPill">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="#top" class="is-current">Home</a>
       <a href="#proof">Proof</a>
@@ -3638,7 +3658,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
     </div>
 
-	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST" novalidate>
+	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ajax/ask@doneovernight.com" method="POST" novalidate>
 	      <input type="hidden" name="_subject" value="New DONEOVERNIGHT task submission">
 	      <input type="hidden" name="_template" value="table">
 	      <input type="hidden" name="_captcha" value="false">
@@ -3715,9 +3735,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
       <!-- Sent state -->
       <div class="sent-state">
-        <div class="check">✓</div>
 	        <h4>Task received.</h4>
-	        <p>We'll review it and send a quote within 60 minutes.</p>
+	        <p>We’ll review it and send a quote within 60 minutes.</p>
+          <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
       </div>
     </form>
 
@@ -4331,10 +4351,9 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   function renderConfirmation() {
     form.innerHTML = `
       <div class="intake-confirmation">
-        <div class="success-dot" aria-hidden="true"></div>
         <h4>Task received.</h4>
-        <p>We'll review it and send a quote within 60 minutes.</p>
-        <p>Need to add files? Reply to our email or send them to <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>.</p>
+        <p>We’ll review it and send a quote within 60 minutes.</p>
+        <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
       </div>
     `;
   }
@@ -4532,12 +4551,11 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     if (!pill.contains(e.target)) close();
   });
 
-  // Close on any link click within the pill (smooth nav)
+  // Close immediately for every menu action without fighting the dot toggle.
   pill.addEventListener('click', (e) => {
-    if (e.target.closest('a')) {
-      setTimeout(close, 220);
-    }
-  });
+    if (e.target.closest('#navDot')) return;
+    if (e.target.closest('a, button')) close();
+  }, true);
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
