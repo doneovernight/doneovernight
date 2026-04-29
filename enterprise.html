@@ -347,10 +347,6 @@
       </a>
     </div>
   </div>
-  <div class="lang-toggle lang-switcher" aria-label="Language">
-    <button type="button" class="is-active" data-lang="en">EN</button>
-    <button type="button" data-lang="nl">NL</button>
-  </div>
 </nav>
 
 <!-- HERO -->
@@ -760,23 +756,6 @@ if ('serviceWorker' in navigator) {
 
   document.querySelectorAll('.nav-cta').forEach((cta) => {
     cta.addEventListener('click', playSoftClick);
-  });
-})();
-// Language toggle persistence. Main homepage copy is translated; secondary pages stay English for launch.
-(function() {
-  const savedLang = localStorage.getItem('doneovernight_lang') || 'en';
-  document.documentElement.lang = savedLang;
-  document.querySelectorAll('.lang-toggle button').forEach((btn) => {
-    btn.classList.toggle('is-active', btn.dataset.lang === savedLang);
-    btn.setAttribute('aria-pressed', btn.dataset.lang === savedLang ? 'true' : 'false');
-    btn.addEventListener('click', () => {
-      localStorage.setItem('doneovernight_lang', btn.dataset.lang);
-      document.documentElement.lang = btn.dataset.lang;
-      document.querySelectorAll('.lang-toggle button').forEach((b) => {
-        b.classList.toggle('is-active', b === btn);
-        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-      });
-    });
   });
 })();
 // PWA install

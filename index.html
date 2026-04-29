@@ -293,43 +293,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-links-wrap a:hover { color: var(--ink); background: rgba(245, 241, 234, 0.04); }
 .nav-links-wrap a.is-current { color: var(--amber); }
 
-.lang-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 6px;
-  padding: 4px;
-  border: 1px solid rgba(245, 241, 234, 0.1);
-  border-radius: 100px;
-}
-.lang-toggle button {
-  padding: 5px 8px;
-  border-radius: 100px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: rgba(245, 241, 234, 0.58);
-  text-transform: uppercase;
-}
-.lang-toggle button.is-active {
-  background: rgba(233, 196, 138, 0.16);
-  color: var(--amber);
-}
-.lang-switcher,
-.lang-toggle-fixed {
-  position: fixed !important;
-  top: 24px !important;
-  right: 28px !important;
-  z-index: 10000 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px;
-  background: rgba(10, 11, 15, 0.45);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  pointer-events: auto;
-}
-
 /* Divider dot between links and CTA */
 .nav-links-wrap .sep {
   width: 3px;
@@ -426,11 +389,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     top: 16px !important;
     right: 118px !important;
   }
-  .lang-switcher,
-  .lang-toggle-fixed {
-    top: 16px !important;
-    right: 18px !important;
-  }
   .nav-pill.is-open,
   .nav-pill:hover,
   .nav-pill:focus-within {
@@ -450,7 +408,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     width: 100%;
   }
   .nav-links-wrap .sep { display: none; }
-  .lang-toggle { justify-content: center; margin: 4px 0; }
   .nav-links-wrap a {
     padding: 10px 14px;
     text-align: left;
@@ -2526,7 +2483,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 @media (max-width: 540px) { .contact-row { grid-template-columns: 1fr; } }
 
 /* Submit CTA */
-.intake-submit {
+.submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2547,7 +2504,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   margin-top: 8px;
   border: none;
 }
-.intake-submit::before {
+.submit-btn::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -2555,10 +2512,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   transform: translateX(-100%);
   transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.intake-submit:hover::before { transform: translateX(0); }
-.intake-submit > * { position: relative; z-index: 1; }
-.intake-submit .arrow { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 16px; }
-.intake-submit:hover .arrow { transform: translateX(6px); }
+.submit-btn:hover::before { transform: translateX(0); }
+.submit-btn > * { position: relative; z-index: 1; }
+.submit-btn span { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 16px; }
+.submit-btn:hover span { transform: translateX(6px); }
 
 .intake-alt {
   display: flex;
@@ -3037,19 +2994,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 	      </a>
 	    </div>
 	  </div>
-	  <div class="lang-toggle lang-switcher" aria-label="Language">
-	    <button type="button" class="is-active" data-lang="en" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('en')">EN</button>
-	    <button type="button" data-lang="nl" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('nl')">NL</button>
-	  </div>
 	</nav>
 
 <!-- OPENING — pitch black title card -->
 <div class="opening" id="opening">
-	  <h1 class="opening-display" data-i18n="heroTitle">
+	  <h1 class="opening-display">
 	    Submit before bed.<br>
 	    Wake up to <em>results.</em>
 	  </h1>
-	  <p class="opening-subline" data-i18n="heroSubline">For founders, operators, business owners — and anyone who values time over effort.</p>
+	  <p class="opening-subline">For founders, operators, business owners — and anyone who values time over effort.</p>
   <div class="opening-scroll-hint">
     <span>Scroll</span>
     <div class="line"></div>
@@ -3379,10 +3332,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     <div class="proof-head">
       <div class="left">
         <span class="eyebrow">Proof</span>
-	      <h2 data-i18n="proofTitle">Proof, <em>not promises.</em></h2>
+	      <h2>Proof, <em>not promises.</em></h2>
       </div>
       <div class="right">
-	        <p data-i18n="proofSubline">Real work. Submitted late. Delivered early.</p>
+	        <p>Real work. Submitted late. Delivered early.</p>
       </div>
     </div>
 
@@ -3501,7 +3454,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   <div class="trust-inner">
     <div class="trust-head">
       <span class="eyebrow">Trust</span>
-	      <h3 data-i18n="trustTitle">Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.</h3>
+	      <h3>Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.</h3>
     </div>
     <div class="trust-grid">
       <div class="trust-cell">
@@ -3540,11 +3493,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
     <div class="intake-left">
       <span class="eyebrow">Final step</span>
-	      <h2 class="display" data-i18n="formTitle">
+	      <h2 class="display">
 	        Send it.<br>
 	        Wake up <em>done.</em>
 	      </h2>
-	      <p class="sub" data-i18n="formSubline">Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.</p>
+	      <p class="sub">Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.</p>
 
       <div class="intake-steps">
         <div class="intake-step">
@@ -3570,12 +3523,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
     </div>
 
-	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST" novalidate>
+	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST">
 	      <input type="hidden" name="_subject" value="New DONEOVERNIGHT task submission">
 	      <input type="hidden" name="_template" value="table">
 	      <input type="hidden" name="_captcha" value="false">
-	      <input type="hidden" name="_next" value="https://doneovernight.com/?submitted=1#cta">
 	      <input type="hidden" name="_autoresponse" value="Task received. We'll review it and send a quote within 60 minutes. You can reply with attachments after we send your quote.">
+	      <input type="hidden" name="_next" value="https://doneovernight.com/thanks.html">
 	      <input type="hidden" name="deadline" id="fDeadlineValue" value="Overnight">
 	      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
 	      <div class="intake-form-head">
@@ -3588,11 +3541,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         <!-- Describe -->
         <div class="field-group">
           <div class="label">
-	            <span data-i18n="taskLabel">Describe your task</span>
+	            <span>Describe your task</span>
 	            <span class="hint">Required</span>
           </div>
           <textarea
-	            name="task description"
+	            name="task"
             id="fDescription"
             placeholder="e.g. Build an investor-ready 12-slide deck from this outline. Series A, fintech. Sharp, minimal, confident. Attached: Google Doc + logo."
             required></textarea>
@@ -3601,11 +3554,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 	        <!-- File link -->
 	        <div class="field-group">
 	          <div class="label">
-	            <span data-i18n="fileLabel">File link</span>
-	            <span class="hint" data-i18n="fileHint">Optional</span>
+	            <span>Files / references</span>
+	            <span class="hint">Optional</span>
 	          </div>
-	          <input type="url" id="fFileLink" name="uploaded file info / file link" placeholder="Google Drive, Dropbox, WeTransfer, or Notion link">
-	          <div class="form-microcopy" data-i18n="attachmentMicrocopy">You can reply with attachments after we send your quote.</div>
+	          <input type="url" id="fFileLink" name="file_link" placeholder="Paste a Google Drive, Dropbox, WeTransfer, Notion, or Figma link">
+	          <div class="form-microcopy">You can also reply with attachments after we send your quote.</div>
 	        </div>
 
         <!-- Deadline -->
@@ -3635,11 +3588,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
         <!-- Submit -->
-	        <button type="submit" class="intake-submit">
-	          <span data-i18n="submitCta">Start your overnight cycle</span>
-	          <span class="arrow">→</span>
+	        <button type="submit" class="submit-btn">Start your overnight cycle <span>→</span>
 	        </button>
-	        <div class="form-reassurance" data-i18n="formReassurance">No payment required to submit · Quote first</div>
+	        <div class="form-reassurance">No payment required to submit · Quote first</div>
 
         <div class="intake-alt">
           <span>Prefer email?</span>
@@ -3650,8 +3601,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       <!-- Sent state -->
       <div class="sent-state">
         <div class="check">✓</div>
-	        <h4 data-i18n="thanksTitle">Task received.</h4>
-	        <p data-i18n="thanksBody">We'll review it and send a quote within 60 minutes.</p>
+	        <h4>Task received.</h4>
+	        <p>We'll review it and send a quote within 60 minutes.</p>
       </div>
     </form>
 
@@ -4202,9 +4153,6 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 (function() {
   const form = document.getElementById('intakeForm');
   if (!form) return;
-  if (new URLSearchParams(window.location.search).get('submitted') === '1') {
-    form.classList.add('sent');
-  }
 
   // Deadline pills
   const pills = document.querySelectorAll('#fDeadline .deadline-pill');
@@ -4224,14 +4172,10 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     });
   });
 
-  // Submit handler — sends to FormSubmit, then shows in-page confirmation.
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const desc = document.getElementById('fDescription').value.trim();
-    const name = document.getElementById('fName').value.trim();
-    const email = document.getElementById('fEmail').value.trim();
-
-    if (!desc || !name || !email) {
+  form.addEventListener('submit', (e) => {
+    if (!form.checkValidity()) {
+      e.preventDefault();
+      form.reportValidity();
       gsap.fromTo(form,
         { x: -6 },
         { x: 6, duration: 0.08, yoyo: true, repeat: 5, ease: 'power1.inOut',
@@ -4240,37 +4184,12 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
       return;
     }
 
-    const deadlineLabel = {
+    deadlineInput.value = {
       'rush': 'Rush · 4 hours',
       'overnight': 'Overnight',
       '48h': '48 hours',
       'flexible': 'Flexible'
     }[deadlineVal] || 'Overnight';
-    deadlineInput.value = deadlineLabel;
-
-    const submitBtn = form.querySelector('.intake-submit');
-    submitBtn.disabled = true;
-    const formData = new FormData(form);
-    formData.set('_subject', `New task · ${deadlineLabel} · ${name}`);
-
-    try {
-      const res = await fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!res.ok) throw new Error('FormSubmit request failed');
-    } catch (err) {
-      const fallback = form.cloneNode(true);
-      fallback.style.display = 'none';
-      document.body.appendChild(fallback);
-      fallback.submit();
-      return;
-    }
-
-    form.classList.add('sent');
-    const sent = form.querySelector('.sent-state');
-    gsap.fromTo(sent, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' });
   });
 })();
 
@@ -4298,107 +4217,6 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     ease: 'power3.out'
   });
 });
-
-/* ============================================================
-   LANGUAGE SWITCHER
-   ============================================================ */
-(function() {
-  const dictionaries = {
-    en: {
-      heroTitle: 'Submit before bed.<br>Wake up to <em>results.</em>',
-      heroSubline: 'For founders, operators, business owners — and anyone who values time over effort.',
-      proofTitle: 'Proof, <em>not promises.</em>',
-      proofSubline: 'Real work. Submitted late. Delivered early.',
-      trustTitle: 'Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.',
-      formTitle: 'Send it.<br>Wake up <em>done.</em>',
-      formSubline: "Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.",
-      taskLabel: 'Describe your task',
-      fileLabel: 'File link',
-      fileHint: 'Optional',
-      attachmentMicrocopy: 'You can reply with attachments after we send your quote.',
-      submitCta: 'Start your overnight cycle',
-      formReassurance: 'No payment required to submit · Quote first',
-      thanksTitle: 'Task received.',
-      thanksBody: "We'll review it and send a quote within 60 minutes."
-    },
-    nl: {
-      heroTitle: 'Dien in voor bedtijd.<br>Word wakker met <em>resultaat.</em>',
-      heroSubline: 'Voor founders, operators, ondernemers — en iedereen die tijd belangrijker vindt dan moeite.',
-      proofTitle: 'Bewijs, <em>geen beloftes.</em>',
-      proofSubline: 'Echt werk. Laat ingediend. Vroeg geleverd.',
-      trustTitle: 'Gebouwd voor <em>snelheid.</em> Gecontroleerd op <em>kwaliteit.</em> Elke keer geleverd.',
-      formTitle: 'Stuur het op.<br>Word wakker met <em>klaar.</em>',
-      formSubline: 'Vertel wat je nodig hebt en wanneer. We sturen binnen 60 minuten een offerte. Na akkoord starten we, meestal nog voor middernacht.',
-      taskLabel: 'Beschrijf je taak',
-      fileLabel: 'Bestandslink',
-      fileHint: 'Optioneel',
-      attachmentMicrocopy: 'Je kunt bijlagen meesturen in je reply nadat we je offerte hebben gestuurd.',
-      submitCta: 'Start je overnight cyclus',
-      formReassurance: 'Geen betaling nodig om in te dienen · Eerst een offerte',
-      thanksTitle: 'Taak ontvangen.',
-      thanksBody: 'We beoordelen je aanvraag en sturen binnen 60 minuten een offerte.'
-    }
-  };
-
-  const selectorText = {
-    en: {
-      '.nav-links-wrap a[href="#top"]': 'Home',
-      '.nav-links-wrap a[href="#proof"]': 'Proof',
-      '.nav-links-wrap a[href="trust.html"]': 'Trust',
-      '.nav-links-wrap a[href="#pricing"]': 'Pricing',
-      '.nav-links-wrap a[href="enterprise.html"]': 'Enterprise',
-      '.nav-links-wrap a[href="portal.html"]': 'Portal',
-      '.nav-cta span:first-child': 'Send it tonight',
-      '.opening-scroll-hint span': 'Scroll',
-      '#fDescription': 'e.g. Build an investor-ready 12-slide deck from this outline. Series A, fintech. Sharp, minimal, confident. Attached: Google Doc + logo.',
-      '#fFileLink': 'Google Drive, Dropbox, WeTransfer, or Notion link',
-      '#fName': 'Your name',
-      '#fEmail': 'your@email.com'
-    },
-    nl: {
-      '.nav-links-wrap a[href="#top"]': 'Home',
-      '.nav-links-wrap a[href="#proof"]': 'Bewijs',
-      '.nav-links-wrap a[href="trust.html"]': 'Vertrouwen',
-      '.nav-links-wrap a[href="#pricing"]': 'Prijzen',
-      '.nav-links-wrap a[href="enterprise.html"]': 'Enterprise',
-      '.nav-links-wrap a[href="portal.html"]': 'Portal',
-      '.nav-cta span:first-child': 'Stuur het vanavond',
-      '.opening-scroll-hint span': 'Scroll',
-      '#fDescription': 'Bijv. maak een investeerdersdeck van 12 slides op basis van deze outline. Series A, fintech. Strak, minimalistisch, zelfverzekerd. Link: Google Doc + logo.',
-      '#fFileLink': 'Google Drive, Dropbox, WeTransfer of Notion link',
-      '#fName': 'Je naam',
-      '#fEmail': 'jij@email.com'
-    }
-  };
-
-  function applyLanguage(lang) {
-    const dict = dictionaries[lang] || dictionaries.en;
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[data-i18n]').forEach((el) => {
-      const value = dict[el.dataset.i18n];
-      if (!value) return;
-      el.innerHTML = value;
-    });
-    Object.entries(selectorText[lang] || selectorText.en).forEach(([selector, value]) => {
-      const el = document.querySelector(selector);
-      if (!el) return;
-      if ('placeholder' in el) el.placeholder = value;
-      else el.textContent = value;
-    });
-    document.querySelectorAll('.lang-toggle button').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.lang === lang);
-      btn.setAttribute('aria-pressed', btn.dataset.lang === lang ? 'true' : 'false');
-    });
-    localStorage.setItem('doneovernight_lang', lang);
-  }
-  window.setDoneOvernightLanguage = applyLanguage;
-
-  const savedLang = localStorage.getItem('doneovernight_lang') || 'en';
-  applyLanguage(savedLang);
-  document.querySelectorAll('.lang-toggle button').forEach((btn) => {
-    btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
-  });
-})();
 
 /* ============================================================
    PWA — Install button + service worker
