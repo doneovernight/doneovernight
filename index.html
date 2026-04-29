@@ -2420,6 +2420,37 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
 }
+.field-group.field-error input,
+.field-group.field-error textarea {
+  border-color: rgba(233, 196, 138, 0.72);
+  background: rgba(233, 196, 138, 0.06);
+  box-shadow:
+    0 0 0 3px rgba(233, 196, 138, 0.09),
+    0 0 24px rgba(233, 196, 138, 0.12);
+}
+.form-error {
+  display: none;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(233, 196, 138, 0.26);
+  border-radius: 6px;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.form-error.is-visible { display: block; }
+.intake-form.is-shaking {
+  animation: intakeShake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes intakeShake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-5px); }
+  36% { transform: translateX(5px); }
+  54% { transform: translateX(-3px); }
+  72% { transform: translateX(3px); }
+}
 .form-microcopy,
 .form-reassurance {
   margin-top: 8px;
@@ -2516,6 +2547,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .submit-btn > * { position: relative; z-index: 1; }
 .submit-btn span { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 16px; }
 .submit-btn:hover span { transform: translateX(6px); }
+.submit-btn.is-sending {
+  color: rgba(5, 6, 8, 0.78);
+  pointer-events: none;
+}
+.submit-btn.is-sending::before {
+  transform: translateX(0);
+  opacity: 0.82;
+}
 
 .intake-alt {
   display: flex;
@@ -2571,6 +2610,37 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   margin: 0 auto;
   line-height: 1.5;
 }
+.intake-confirmation {
+  text-align: center;
+  padding: 34px 22px 28px;
+}
+.intake-confirmation .success-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--amber);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.35),
+    0 0 18px rgba(233,196,138,0.74),
+    0 0 42px rgba(233,196,138,0.22);
+  margin: 0 auto 22px;
+}
+.intake-confirmation h4 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.intake-confirmation p {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.65;
+  max-width: 38ch;
+  margin: 0 auto 10px;
+}
+.intake-confirmation a { color: var(--amber); }
 
 
   background:
@@ -3523,12 +3593,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
     </div>
 
-	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST">
+	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST" novalidate>
 	      <input type="hidden" name="_subject" value="New DONEOVERNIGHT task submission">
 	      <input type="hidden" name="_template" value="table">
 	      <input type="hidden" name="_captcha" value="false">
 	      <input type="hidden" name="_autoresponse" value="Task received. We'll review it and send a quote within 60 minutes. You can reply with attachments after we send your quote.">
-	      <input type="hidden" name="_next" value="https://doneovernight.com/thanks.html">
 	      <input type="hidden" name="deadline" id="fDeadlineValue" value="Overnight">
 	      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
 	      <div class="intake-form-head">
@@ -3537,9 +3606,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
 
       <div class="intake-form-body">
+        <div class="form-error" id="intakeError" role="alert" aria-live="polite"></div>
 
         <!-- Describe -->
-        <div class="field-group">
+        <div class="field-group" data-field="task">
           <div class="label">
 	            <span>Describe your task</span>
 	            <span class="hint">Required</span>
@@ -3552,7 +3622,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
 	        <!-- File link -->
-	        <div class="field-group">
+	        <div class="field-group" data-field="file_link">
 	          <div class="label">
 	            <span>Files / references</span>
 	            <span class="hint">Optional</span>
@@ -3562,7 +3632,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 	        </div>
 
         <!-- Deadline -->
-        <div class="field-group">
+        <div class="field-group" data-field="deadline">
           <div class="label">
             <span>Deadline</span>
             <span class="hint">When do you need it?</span>
@@ -3576,7 +3646,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
         <!-- Contact -->
-        <div class="field-group">
+        <div class="field-group" data-field="contact">
           <div class="label">
             <span>Contact</span>
             <span class="hint">So we can send your quote</span>
@@ -4154,10 +4224,13 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   const form = document.getElementById('intakeForm');
   if (!form) return;
 
-  // Deadline pills
   const pills = document.querySelectorAll('#fDeadline .deadline-pill');
   const deadlineInput = document.getElementById('fDeadlineValue');
+  const errorEl = document.getElementById('intakeError');
+  const submitBtn = form.querySelector('.submit-btn');
+  const submitIdleHtml = submitBtn ? submitBtn.innerHTML : '';
   let deadlineVal = 'overnight';
+
   pills.forEach(p => {
     p.addEventListener('click', () => {
       pills.forEach(x => x.classList.remove('active'));
@@ -4172,24 +4245,91 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     });
   });
 
-  form.addEventListener('submit', (e) => {
-    if (!form.checkValidity()) {
-      e.preventDefault();
-      form.reportValidity();
-      gsap.fromTo(form,
-        { x: -6 },
-        { x: 6, duration: 0.08, yoyo: true, repeat: 5, ease: 'power1.inOut',
-          onComplete: () => gsap.set(form, { x: 0 }) }
-      );
-      return;
-    }
-
+  function syncDeadline() {
     deadlineInput.value = {
       'rush': 'Rush · 4 hours',
       'overnight': 'Overnight',
       '48h': '48 hours',
       'flexible': 'Flexible'
     }[deadlineVal] || 'Overnight';
+  }
+
+  function clearErrors() {
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.remove('is-visible');
+    }
+    form.querySelectorAll('.field-error').forEach((field) => field.classList.remove('field-error'));
+  }
+
+  function showError(message, fields = []) {
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.classList.add('is-visible');
+    }
+    fields.forEach((field) => {
+      const group = field.closest('.field-group');
+      if (group) group.classList.add('field-error');
+    });
+    form.classList.remove('is-shaking');
+    void form.offsetWidth;
+    form.classList.add('is-shaking');
+  }
+
+  function setSending(isSending) {
+    if (!submitBtn) return;
+    submitBtn.disabled = isSending;
+    submitBtn.classList.toggle('is-sending', isSending);
+    submitBtn.innerHTML = isSending ? 'Sending…' : submitIdleHtml;
+  }
+
+  function renderConfirmation() {
+    form.innerHTML = `
+      <div class="intake-confirmation">
+        <div class="success-dot" aria-hidden="true"></div>
+        <h4>Task received.</h4>
+        <p>We'll review it and send a quote within 60 minutes.</p>
+        <p>Need to add files? Reply to our email or send them to <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>.</p>
+      </div>
+    `;
+  }
+
+  function validateRequired() {
+    const task = form.querySelector('[name="task"]');
+    const name = form.querySelector('[name="name"]');
+    const email = form.querySelector('[name="email"]');
+    const invalid = [];
+    if (!task.value.trim()) invalid.push(task);
+    if (!name.value.trim()) invalid.push(name);
+    if (!email.value.trim() || !email.validity.valid) invalid.push(email);
+    return invalid;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+    syncDeadline();
+
+    const invalid = validateRequired();
+    if (invalid.length) {
+      showError('Complete the required fields to start your overnight cycle.', invalid);
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const res = await fetch('https://formsubmit.co/ajax/ask@doneovernight.com', {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('FormSubmit request failed');
+      renderConfirmation();
+    } catch (err) {
+      setSending(false);
+      showError('Something went wrong. Please email ask@doneovernight.com directly.');
+    }
   });
 })();
 
