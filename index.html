@@ -118,14 +118,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* The pill — collapsed state shows only the dot */
 .nav-pill {
-  position: fixed;
-  top: 24px;
-  right: 28px;
-  left: auto;
-  z-index: 9999;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  position: fixed !important;
+  top: 24px !important;
+  right: 150px !important;
+  left: auto !important;
+  z-index: 9999 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
   display: flex;
   align-items: center;
   height: 42px;
@@ -162,47 +162,75 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   height: 42px;
   justify-content: center;
 }
-
-/* The amber dot (always rendered) */
-.nav-dot {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  background: transparent;
-  border: none;
-  transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
-}
-.nav-dot::before {
+.nav-pill:not(.is-open)::before {
   content: "";
-  display: block;
+  position: absolute;
+  left: 17px;
+  top: 17px;
   width: 8px;
   height: 8px;
   border-radius: 999px;
   background: #e9c48a;
   box-shadow:
     0 0 0 1px rgba(0,0,0,.45),
-    0 0 18px rgba(233,196,138,.75),
-    0 0 42px rgba(233,196,138,.25);
+    0 0 18px rgba(233,196,138,.8),
+    0 0 42px rgba(233,196,138,.3);
   animation: navDotPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* The amber dot (always rendered) */
+.nav-dot {
+  position: relative;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
+}
+.nav-dot::before {
+  content: "" !important;
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 999px !important;
+  background: #e9c48a !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.45),
+    0 0 18px rgba(233,196,138,.8),
+    0 0 42px rgba(233,196,138,.3) !important;
+  animation: navDotPulse 2.2s ease-in-out infinite !important;
   transition:
     width 0.5s cubic-bezier(0.22, 0.68, 0.26, 1),
     height 0.5s cubic-bezier(0.22, 0.68, 0.26, 1),
     box-shadow 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
 }
 .nav-dot::after {
-  content: none;
-  display: none;
+  display: none !important;
+  content: none !important;
   pointer-events: none;
 }
 @keyframes navDotPulse {
-  0%, 100% { opacity: 0.82; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.22); }
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: .85;
+  }
 }
 .nav-pill:not(.is-open):hover .nav-dot::before {
   width: 9px;
@@ -216,7 +244,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-pill.is-open,
 .nav-pill:hover,
 .nav-pill:focus-within {
-  max-width: 780px;
+  max-width: calc(100vw - 210px) !important;
+  overflow: visible !important;
+  transform-origin: right center !important;
   padding-left: 10px;
   padding-right: 4px;
 }
@@ -231,7 +261,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-links-wrap {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: clamp(8px, 1vw, 18px);
   padding-left: 8px;
   opacity: 0;
   transform: translateX(-8px);
@@ -252,7 +282,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-links-wrap a {
   display: inline-flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 8px 10px;
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -285,11 +315,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: rgba(233, 196, 138, 0.16);
   color: var(--amber);
 }
+.lang-switcher,
 .lang-toggle-fixed {
-  position: fixed;
-  top: 26px;
-  right: 82px;
-  z-index: 9999;
+  position: fixed !important;
+  top: 24px !important;
+  right: 28px !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px;
   background: rgba(10, 11, 15, 0.45);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
@@ -317,10 +351,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--amber);
-  background: transparent;
-  border: 1px solid rgba(233, 196, 138, 0.45);
+  color: #f4d28a !important;
+  background: rgba(233, 196, 138, 0.06) !important;
+  border: 1px solid rgba(233, 196, 138, 0.45) !important;
   border-radius: 100px;
+  box-shadow:
+    0 0 18px rgba(233, 196, 138, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
   transition:
     background 0.4s cubic-bezier(0.22, 0.68, 0.26, 1),
     color 0.4s cubic-bezier(0.22, 0.68, 0.26, 1),
@@ -330,17 +369,27 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   overflow: hidden;
 }
 .nav-cta::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: translateX(-101%);
-  transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
-  z-index: 0;
+  display: none !important;
+  content: none !important;
 }
 .nav-cta > * { position: relative; z-index: 1; transition: color 0.4s; }
-.nav-cta:hover::before { transform: translateX(0); }
-.nav-cta:hover { color: #050608; border-color: var(--amber); }
+.nav-cta:hover,
+.nav-cta:focus-visible {
+  background: rgba(233, 196, 138, 0.10) !important;
+  color: #ffe3ad !important;
+  border-color: rgba(233, 196, 138, 0.75) !important;
+  box-shadow:
+    0 0 28px rgba(233, 196, 138, 0.32),
+    0 0 70px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+.nav-cta:active {
+  transform: scale(0.97);
+  box-shadow:
+    0 0 36px rgba(233, 196, 138, 0.45),
+    0 0 90px rgba(233, 196, 138, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.14) !important;
+}
 .nav-cta .arrow {
   transition: transform 0.45s cubic-bezier(0.22, 0.68, 0.26, 1);
   font-size: 12px;
@@ -373,12 +422,21 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* Mobile — pill expands vertically instead of horizontally */
 @media (max-width: 720px) {
   .nav { padding: 16px 18px; }
+  .nav-pill {
+    top: 16px !important;
+    right: 118px !important;
+  }
+  .lang-switcher,
+  .lang-toggle-fixed {
+    top: 16px !important;
+    right: 18px !important;
+  }
   .nav-pill.is-open,
   .nav-pill:hover,
   .nav-pill:focus-within {
     flex-direction: column;
     align-items: stretch;
-    max-width: 220px;
+    max-width: 220px !important;
     height: auto;
     padding: 4px 4px 8px;
     border-radius: 22px;
@@ -2959,8 +3017,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 <!-- NAV — hidden dot, expands on intent -->
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="#top">DONEOVERNIGHT</a>
-  <div class="nav-pill" id="navPill">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); const open=!p.classList.contains('is-open'); p.classList.toggle('is-open', open); this.setAttribute('aria-expanded', open ? 'true' : 'false'); this.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');"></button>
+  <div class="nav-pill" id="navPill" onclick="if (event.target === this || event.target.closest('.nav-dot')) { event.stopImmediatePropagation(); this.classList.add('is-open'); const d=this.querySelector('.nav-dot'); d && (d.setAttribute('aria-expanded','true'), d.setAttribute('aria-label','Close menu')); }">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); p.classList.add('is-open'); this.setAttribute('aria-expanded','true'); this.setAttribute('aria-label','Close menu');"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="#top" class="is-current">Home</a>
       <a href="#proof">Proof</a>
@@ -2979,7 +3037,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 	      </a>
 	    </div>
 	  </div>
-	  <div class="lang-toggle lang-toggle-fixed" aria-label="Language">
+	  <div class="lang-toggle lang-switcher" aria-label="Language">
 	    <button type="button" class="is-active" data-lang="en" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('en')">EN</button>
 	    <button type="button" data-lang="nl" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('nl')">NL</button>
 	  </div>
@@ -4462,7 +4520,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   dot.addEventListener('click', (e) => {
     e.stopPropagation();
     clearTimeout(closeTimer);
-    if (isOpen) close(); else open();
+    open();
   });
 
   // Close on outside click (mobile + accessibility)
@@ -4481,6 +4539,27 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   // Close on Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && isOpen) close();
+  });
+
+  function playSoftClick() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, ctx.currentTime);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.025, ctx.currentTime + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.035);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.04);
+  }
+
+  document.querySelectorAll('.nav-cta').forEach((cta) => {
+    cta.addEventListener('click', playSoftClick);
   });
 })();
 

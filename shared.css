@@ -168,14 +168,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav .logo:hover { opacity: 0.7; }
 
 .nav-pill {
-  position: fixed;
-  top: 24px;
-  right: 28px;
-  left: auto;
-  z-index: 9999;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+  position: fixed !important;
+  top: 24px !important;
+  right: 150px !important;
+  left: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 9999 !important;
   display: flex;
   align-items: center;
   height: 42px;
@@ -199,39 +199,67 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 .nav-dot {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
   cursor: pointer;
   flex-shrink: 0;
-  background: transparent;
-  border: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
 }
 .nav-dot::before {
+  content: "" !important;
+  display: block !important;
+  width: 8px !important; height: 8px !important;
+  border-radius: 999px !important;
+  background: #e9c48a !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.45),
+    0 0 18px rgba(233,196,138,.8),
+    0 0 42px rgba(233,196,138,.3) !important;
+  animation: navDotPulse 2.2s ease-in-out infinite !important;
+  transition: width 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), height 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), box-shadow 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
+}
+.nav-dot::after {
+  display: none !important;
+  content: none !important;
+  pointer-events: none;
+}
+.nav-pill:not(.is-open)::before {
   content: "";
-  display: block;
-  width: 8px; height: 8px;
+  position: absolute;
+  left: 17px;
+  top: 17px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: #e9c48a;
   box-shadow:
     0 0 0 1px rgba(0,0,0,.45),
-    0 0 18px rgba(233,196,138,.75),
-    0 0 42px rgba(233,196,138,.25);
+    0 0 18px rgba(233,196,138,.8),
+    0 0 42px rgba(233,196,138,.3);
   animation: navDotPulse 2.2s ease-in-out infinite;
-  transition: width 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), height 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), box-shadow 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
-}
-.nav-dot::after {
-  content: none;
-  display: none;
   pointer-events: none;
 }
 @keyframes navDotPulse {
-  0%, 100% { opacity: 0.82; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.22); }
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: .85;
+  }
 }
 .nav-pill:not(.is-open):hover .nav-dot::before {
   width: 9px; height: 9px;
@@ -241,7 +269,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-pill.is-open,
 .nav-pill:hover,
 .nav-pill:focus-within {
-  max-width: 780px;
+  max-width: calc(100vw - 210px) !important;
+  overflow: visible !important;
+  transform-origin: right center !important;
   width: auto;
   padding: 4px 4px 4px 10px;
   background: rgba(10, 11, 15, 0.55);
@@ -258,7 +288,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-links-wrap {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: clamp(8px, 1vw, 18px);
   padding-left: 8px;
   opacity: 0;
   transform: translateX(-8px);
@@ -276,7 +306,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-links-wrap a {
   display: inline-flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 8px 10px;
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -308,11 +338,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: rgba(233, 196, 138, 0.16);
   color: var(--amber);
 }
+.lang-switcher,
 .lang-toggle-fixed {
-  position: fixed;
-  top: 26px;
-  right: 82px;
-  z-index: 9999;
+  position: fixed !important;
+  top: 24px !important;
+  right: 28px !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px;
   background: rgba(10, 11, 15, 0.45);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
@@ -335,26 +369,41 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--amber);
-  background: transparent;
-  border: 1px solid rgba(233, 196, 138, 0.45);
+  color: #f4d28a !important;
+  background: rgba(233, 196, 138, 0.06) !important;
+  border: 1px solid rgba(233, 196, 138, 0.45) !important;
   border-radius: 100px;
+  box-shadow:
+    0 0 18px rgba(233, 196, 138, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
   transition: background 0.4s cubic-bezier(0.22, 0.68, 0.26, 1), color 0.4s cubic-bezier(0.22, 0.68, 0.26, 1), border-color 0.4s cubic-bezier(0.22, 0.68, 0.26, 1);
   position: relative;
   overflow: hidden;
 }
 .nav-cta::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: translateX(-101%);
-  transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
-  z-index: 0;
+  display: none !important;
+  content: none !important;
 }
 .nav-cta > * { position: relative; z-index: 1; }
-.nav-cta:hover::before { transform: translateX(0); }
-.nav-cta:hover { color: #050608; border-color: var(--amber); }
+.nav-cta:hover,
+.nav-cta:focus-visible {
+  background: rgba(233, 196, 138, 0.10) !important;
+  color: #ffe3ad !important;
+  border-color: rgba(233, 196, 138, 0.75) !important;
+  box-shadow:
+    0 0 28px rgba(233, 196, 138, 0.32),
+    0 0 70px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+.nav-cta:active {
+  transform: scale(0.97);
+  box-shadow:
+    0 0 36px rgba(233, 196, 138, 0.45),
+    0 0 90px rgba(233, 196, 138, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.14) !important;
+}
 .nav-cta .arrow { transition: transform 0.45s cubic-bezier(0.22, 0.68, 0.26, 1); font-size: 12px; line-height: 1; }
 .nav-cta:hover .arrow { transform: translateX(3px); }
 
@@ -381,12 +430,21 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 @media (max-width: 720px) {
   .nav { padding: 16px 18px; }
+  .nav-pill {
+    top: 16px !important;
+    right: 118px !important;
+  }
+  .lang-switcher,
+  .lang-toggle-fixed {
+    top: 16px !important;
+    right: 18px !important;
+  }
   .nav-pill.is-open,
   .nav-pill:hover,
   .nav-pill:focus-within {
     flex-direction: column;
     align-items: stretch;
-    max-width: 220px;
+    max-width: 220px !important;
     height: auto;
     padding: 4px 4px 8px;
     border-radius: 22px;
