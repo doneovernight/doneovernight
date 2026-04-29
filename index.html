@@ -118,7 +118,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* The pill — collapsed state shows only the dot */
 .nav-pill {
-  position: relative;
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  left: auto;
+  z-index: 9999;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   height: 42px;
@@ -173,30 +180,29 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .nav-dot::before {
   content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--amber);
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e9c48a;
   box-shadow:
-    0 0 8px rgba(233, 196, 138, 0.7),
-    0 0 16px rgba(233, 196, 138, 0.35);
+    0 0 0 1px rgba(0,0,0,.45),
+    0 0 18px rgba(233,196,138,.75),
+    0 0 42px rgba(233,196,138,.25);
+  animation: navDotPulse 2.2s ease-in-out infinite;
   transition:
     width 0.5s cubic-bezier(0.22, 0.68, 0.26, 1),
     height 0.5s cubic-bezier(0.22, 0.68, 0.26, 1),
     box-shadow 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
 }
 .nav-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(233, 196, 138, 0.22);
-  animation: navDotPulse 2.8s ease-out infinite;
+  content: none;
+  display: none;
   pointer-events: none;
 }
 @keyframes navDotPulse {
-  0% { opacity: 0.9; transform: scale(0.55); }
-  100% { opacity: 0; transform: scale(1.4); }
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.22); }
 }
 .nav-pill:not(.is-open):hover .nav-dot::before {
   width: 9px;
@@ -207,12 +213,16 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 /* Expanded state */
-.nav-pill.is-open {
+.nav-pill.is-open,
+.nav-pill:hover,
+.nav-pill:focus-within {
   max-width: 780px;
   padding-left: 10px;
   padding-right: 4px;
 }
-.nav-pill.is-open .nav-dot {
+.nav-pill.is-open .nav-dot,
+.nav-pill:hover .nav-dot,
+.nav-pill:focus-within .nav-dot {
   transform: scale(0.65);
 }
 .nav-pill.is-open .nav-dot::after { animation: none; opacity: 0; }
@@ -231,7 +241,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   pointer-events: none;
   white-space: nowrap;
 }
-.nav-pill.is-open .nav-links-wrap {
+.nav-pill.is-open .nav-links-wrap,
+.nav-pill:hover .nav-links-wrap,
+.nav-pill:focus-within .nav-links-wrap {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -250,6 +262,39 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .nav-links-wrap a:hover { color: var(--ink); background: rgba(245, 241, 234, 0.04); }
 .nav-links-wrap a.is-current { color: var(--amber); }
+
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 6px;
+  padding: 4px;
+  border: 1px solid rgba(245, 241, 234, 0.1);
+  border-radius: 100px;
+}
+.lang-toggle button {
+  padding: 5px 8px;
+  border-radius: 100px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(245, 241, 234, 0.58);
+  text-transform: uppercase;
+}
+.lang-toggle button.is-active {
+  background: rgba(233, 196, 138, 0.16);
+  color: var(--amber);
+}
+.lang-toggle-fixed {
+  position: fixed;
+  top: 26px;
+  right: 82px;
+  z-index: 9999;
+  background: rgba(10, 11, 15, 0.45);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  pointer-events: auto;
+}
 
 /* Divider dot between links and CTA */
 .nav-links-wrap .sep {
@@ -328,7 +373,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* Mobile — pill expands vertically instead of horizontally */
 @media (max-width: 720px) {
   .nav { padding: 16px 18px; }
-  .nav-pill.is-open {
+  .nav-pill.is-open,
+  .nav-pill:hover,
+  .nav-pill:focus-within {
     flex-direction: column;
     align-items: stretch;
     max-width: 220px;
@@ -345,6 +392,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     width: 100%;
   }
   .nav-links-wrap .sep { display: none; }
+  .lang-toggle { justify-content: center; margin: 4px 0; }
   .nav-links-wrap a {
     padding: 10px 14px;
     text-align: left;
@@ -2332,6 +2380,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .field-group .label .hint { color: var(--ink-faint); font-size: 9px; letter-spacing: 0.15em; }
 .field-group input[type="text"],
 .field-group input[type="email"],
+.field-group input[type="url"],
 .field-group textarea,
 .field-group select {
   width: 100%;
@@ -2356,54 +2405,27 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
 }
+.form-microcopy,
+.form-reassurance {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+.form-reassurance {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
 .field-group textarea {
   min-height: 110px;
   resize: vertical;
   line-height: 1.5;
   font-family: var(--sans);
 }
-
-/* File upload */
-.upload-area {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 18px 16px;
-  border: 1px dashed var(--line);
-  border-radius: 4px;
-  background: rgba(245, 241, 234, 0.015);
-  transition: border 0.3s, background 0.3s;
-  cursor: pointer;
-  text-align: center;
-  font-size: 13px;
-  color: var(--ink-dim);
-}
-.upload-area:hover {
-  border-color: var(--amber);
-  background: rgba(233, 196, 138, 0.04);
-  color: var(--ink);
-}
-.upload-area.has-file {
-  border-style: solid;
-  border-color: rgba(233, 196, 138, 0.5);
-  background: rgba(233, 196, 138, 0.06);
-  color: var(--ink);
-}
-.upload-area input[type="file"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.upload-area .icon {
-  font-family: var(--serif);
-  font-size: 18px;
-  color: var(--amber);
-}
-.upload-area .upload-label { font-weight: 500; }
-.upload-area .upload-hint { color: var(--ink-faint); font-size: 11px; font-family: var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-left: 4px; }
 
 /* Deadline pills */
 .deadline-pills {
@@ -2938,7 +2960,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="#top">DONEOVERNIGHT</a>
   <div class="nav-pill" id="navPill">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); const open=!p.classList.contains('is-open'); p.classList.toggle('is-open', open); this.setAttribute('aria-expanded', open ? 'true' : 'false'); this.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="#top" class="is-current">Home</a>
       <a href="#proof">Proof</a>
@@ -2947,25 +2969,29 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       <a href="enterprise.html">Enterprise</a>
       <a href="portal.html">Portal</a>
       <span class="sep"></span>
-      <button id="installBtn" class="nav-install" title="Install DONEOVERNIGHT as an app">
-        <span class="install-icon">↓</span>
-        <span>Install</span>
-      </button>
-      <a href="#cta" class="nav-cta">
-        <span>Send it tonight</span>
-        <span class="arrow">→</span>
-      </a>
-    </div>
-  </div>
-</nav>
+	      <button id="installBtn" class="nav-install" title="Install DONEOVERNIGHT as an app">
+	        <span class="install-icon">↓</span>
+	        <span>Install</span>
+	      </button>
+	      <a href="#cta" class="nav-cta">
+	        <span>Send it tonight</span>
+	        <span class="arrow">→</span>
+	      </a>
+	    </div>
+	  </div>
+	  <div class="lang-toggle lang-toggle-fixed" aria-label="Language">
+	    <button type="button" class="is-active" data-lang="en" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('en')">EN</button>
+	    <button type="button" data-lang="nl" onclick="window.setDoneOvernightLanguage && window.setDoneOvernightLanguage('nl')">NL</button>
+	  </div>
+	</nav>
 
 <!-- OPENING — pitch black title card -->
 <div class="opening" id="opening">
-  <h1 class="opening-display">
-    Submit before bed.<br>
-    Wake up to <em>results.</em>
-  </h1>
-  <p class="opening-subline">For founders, operators, business owners — and anyone who values time over effort.</p>
+	  <h1 class="opening-display" data-i18n="heroTitle">
+	    Submit before bed.<br>
+	    Wake up to <em>results.</em>
+	  </h1>
+	  <p class="opening-subline" data-i18n="heroSubline">For founders, operators, business owners — and anyone who values time over effort.</p>
   <div class="opening-scroll-hint">
     <span>Scroll</span>
     <div class="line"></div>
@@ -3295,10 +3321,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     <div class="proof-head">
       <div class="left">
         <span class="eyebrow">Proof</span>
-        <h2>Proof, <em>not promises.</em></h2>
+	      <h2 data-i18n="proofTitle">Proof, <em>not promises.</em></h2>
       </div>
       <div class="right">
-        <p>Real work. Submitted late. Delivered early.</p>
+	        <p data-i18n="proofSubline">Real work. Submitted late. Delivered early.</p>
       </div>
     </div>
 
@@ -3417,7 +3443,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   <div class="trust-inner">
     <div class="trust-head">
       <span class="eyebrow">Trust</span>
-      <h3>Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.</h3>
+	      <h3 data-i18n="trustTitle">Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.</h3>
     </div>
     <div class="trust-grid">
       <div class="trust-cell">
@@ -3456,11 +3482,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
     <div class="intake-left">
       <span class="eyebrow">Final step</span>
-      <h2 class="display">
-        Send it.<br>
-        Wake up <em>done.</em>
-      </h2>
-      <p class="sub">Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.</p>
+	      <h2 class="display" data-i18n="formTitle">
+	        Send it.<br>
+	        Wake up <em>done.</em>
+	      </h2>
+	      <p class="sub" data-i18n="formSubline">Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.</p>
 
       <div class="intake-steps">
         <div class="intake-step">
@@ -3486,8 +3512,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
     </div>
 
-    <form class="intake-form" id="intakeForm" novalidate>
-      <div class="intake-form-head">
+	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST" novalidate>
+	      <input type="hidden" name="_subject" value="New DONEOVERNIGHT task submission">
+	      <input type="hidden" name="_template" value="table">
+	      <input type="hidden" name="_captcha" value="false">
+	      <input type="hidden" name="_next" value="https://doneovernight.com/?submitted=1#cta">
+	      <input type="hidden" name="_autoresponse" value="Task received. We'll review it and send a quote within 60 minutes. You can reply with attachments after we send your quote.">
+	      <input type="hidden" name="deadline" id="fDeadlineValue" value="Overnight">
+	      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
+	      <div class="intake-form-head">
         <span class="title">New task</span>
         <span class="meta"><span class="dot"></span>Studio online</span>
       </div>
@@ -3497,29 +3530,25 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         <!-- Describe -->
         <div class="field-group">
           <div class="label">
-            <span>Describe your task</span>
-            <span class="hint">Required</span>
+	            <span data-i18n="taskLabel">Describe your task</span>
+	            <span class="hint">Required</span>
           </div>
           <textarea
-            name="description"
+	            name="task description"
             id="fDescription"
             placeholder="e.g. Build an investor-ready 12-slide deck from this outline. Series A, fintech. Sharp, minimal, confident. Attached: Google Doc + logo."
             required></textarea>
         </div>
 
-        <!-- Upload -->
-        <div class="field-group">
-          <div class="label">
-            <span>Upload files</span>
-            <span class="hint">Optional · max 25MB</span>
-          </div>
-          <label class="upload-area" id="fUploadArea">
-            <span class="icon">＋</span>
-            <span class="upload-label" id="fUploadLabel">Drop files or click to attach</span>
-            <span class="upload-hint" id="fUploadHint">PDF · DOCX · KEY · PNG</span>
-            <input type="file" id="fUpload" name="files" multiple accept=".pdf,.doc,.docx,.key,.pptx,.ppt,.png,.jpg,.jpeg,.csv,.xlsx,.zip">
-          </label>
-        </div>
+	        <!-- File link -->
+	        <div class="field-group">
+	          <div class="label">
+	            <span data-i18n="fileLabel">File link</span>
+	            <span class="hint" data-i18n="fileHint">Optional</span>
+	          </div>
+	          <input type="url" id="fFileLink" name="uploaded file info / file link" placeholder="Google Drive, Dropbox, WeTransfer, or Notion link">
+	          <div class="form-microcopy" data-i18n="attachmentMicrocopy">You can reply with attachments after we send your quote.</div>
+	        </div>
 
         <!-- Deadline -->
         <div class="field-group">
@@ -3548,10 +3577,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
         <!-- Submit -->
-        <button type="submit" class="intake-submit">
-          <span>Start your overnight cycle</span>
-          <span class="arrow">→</span>
-        </button>
+	        <button type="submit" class="intake-submit">
+	          <span data-i18n="submitCta">Start your overnight cycle</span>
+	          <span class="arrow">→</span>
+	        </button>
+	        <div class="form-reassurance" data-i18n="formReassurance">No payment required to submit · Quote first</div>
 
         <div class="intake-alt">
           <span>Prefer email?</span>
@@ -3562,8 +3592,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       <!-- Sent state -->
       <div class="sent-state">
         <div class="check">✓</div>
-        <h4>Task received.</h4>
-        <p>We've got it. You'll have a quote in your inbox within the hour. Close the laptop — we'll take it from here.</p>
+	        <h4 data-i18n="thanksTitle">Task received.</h4>
+	        <p data-i18n="thanksBody">We'll review it and send a quote within 60 minutes.</p>
       </div>
     </form>
 
@@ -3699,6 +3729,22 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 </footer>
 
 <script>
+if (!window.gsap) {
+  window.gsap = {
+    registerPlugin() {},
+    utils: { toArray: (selector) => Array.from(document.querySelectorAll(selector)) },
+    from() {},
+    fromTo() {},
+    set() {},
+    to() {}
+  };
+}
+if (!window.ScrollTrigger) {
+  window.ScrollTrigger = { create() {}, refresh() {} };
+}
+if (!window.ScrollToPlugin) {
+  window.ScrollToPlugin = {};
+}
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 /* ============================================================
@@ -4098,62 +4144,30 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 (function() {
   const form = document.getElementById('intakeForm');
   if (!form) return;
+  if (new URLSearchParams(window.location.search).get('submitted') === '1') {
+    form.classList.add('sent');
+  }
 
   // Deadline pills
   const pills = document.querySelectorAll('#fDeadline .deadline-pill');
+  const deadlineInput = document.getElementById('fDeadlineValue');
   let deadlineVal = 'overnight';
   pills.forEach(p => {
     p.addEventListener('click', () => {
       pills.forEach(x => x.classList.remove('active'));
       p.classList.add('active');
       deadlineVal = p.dataset.val;
+      deadlineInput.value = {
+        rush: 'Rush · 4 hours',
+        overnight: 'Overnight',
+        '48h': '48 hours',
+        flexible: 'Flexible'
+      }[deadlineVal] || 'Overnight';
     });
   });
 
-  // File upload display
-  const fileInput = document.getElementById('fUpload');
-  const uploadArea = document.getElementById('fUploadArea');
-  const uploadLabel = document.getElementById('fUploadLabel');
-  const uploadHint = document.getElementById('fUploadHint');
-  fileInput.addEventListener('change', () => {
-    const files = fileInput.files;
-    if (files && files.length) {
-      uploadArea.classList.add('has-file');
-      if (files.length === 1) {
-        uploadLabel.textContent = files[0].name;
-      } else {
-        uploadLabel.textContent = files.length + ' files attached';
-      }
-      let total = 0;
-      for (const f of files) total += f.size;
-      uploadHint.textContent = (total / (1024 * 1024)).toFixed(1) + ' MB';
-    } else {
-      uploadArea.classList.remove('has-file');
-      uploadLabel.textContent = 'Drop files or click to attach';
-      uploadHint.textContent = 'PDF · DOCX · KEY · PNG';
-    }
-  });
-
-  // Drag and drop visual feedback
-  ['dragenter', 'dragover'].forEach(ev => {
-    uploadArea.addEventListener(ev, e => {
-      e.preventDefault();
-      uploadArea.style.borderColor = 'var(--amber)';
-      uploadArea.style.background = 'rgba(233, 196, 138, 0.08)';
-    });
-  });
-  ['dragleave', 'drop'].forEach(ev => {
-    uploadArea.addEventListener(ev, e => {
-      e.preventDefault();
-      if (!uploadArea.classList.contains('has-file')) {
-        uploadArea.style.borderColor = '';
-        uploadArea.style.background = '';
-      }
-    });
-  });
-
-  // Submit handler — fills a mailto: with everything, opens mail client
-  form.addEventListener('submit', (e) => {
+  // Submit handler — sends to FormSubmit, then shows in-page confirmation.
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const desc = document.getElementById('fDescription').value.trim();
     const name = document.getElementById('fName').value.trim();
@@ -4168,50 +4182,37 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
       return;
     }
 
-    // Build email body
-    const files = fileInput.files;
-    let attachNote = '';
-    if (files && files.length) {
-      attachNote = `\n\n— Attachments (will be included in reply):\n`;
-      for (const f of files) {
-        attachNote += `  · ${f.name} (${(f.size / (1024 * 1024)).toFixed(2)} MB)\n`;
-      }
-      attachNote += `\n(Please attach these files when your mail client opens.)`;
-    }
-
     const deadlineLabel = {
       'rush': 'Rush · 4 hours',
       'overnight': 'Overnight',
       '48h': '48 hours',
       'flexible': 'Flexible'
     }[deadlineVal] || 'Overnight';
+    deadlineInput.value = deadlineLabel;
 
-    const subject = `New task · ${deadlineLabel} · ${name}`;
-    const body = `Hi Done Overnight team,
+    const submitBtn = form.querySelector('.intake-submit');
+    submitBtn.disabled = true;
+    const formData = new FormData(form);
+    formData.set('_subject', `New task · ${deadlineLabel} · ${name}`);
 
-— Task description:
-${desc}
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('FormSubmit request failed');
+    } catch (err) {
+      const fallback = form.cloneNode(true);
+      fallback.style.display = 'none';
+      document.body.appendChild(fallback);
+      fallback.submit();
+      return;
+    }
 
-— Deadline: ${deadlineLabel}
-
-— Contact:
-${name}
-${email}${attachNote}
-
-— Sent via doneovernight.com intake form`;
-
-    const mailto = `mailto:ask@doneovernight.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-    // Show sent state
     form.classList.add('sent');
-    // Smooth entrance
     const sent = form.querySelector('.sent-state');
     gsap.fromTo(sent, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' });
-
-    // Open email client after a brief delay so the UI feedback is visible
-    setTimeout(() => {
-      window.location.href = mailto;
-    }, 600);
   });
 })();
 
@@ -4239,6 +4240,107 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     ease: 'power3.out'
   });
 });
+
+/* ============================================================
+   LANGUAGE SWITCHER
+   ============================================================ */
+(function() {
+  const dictionaries = {
+    en: {
+      heroTitle: 'Submit before bed.<br>Wake up to <em>results.</em>',
+      heroSubline: 'For founders, operators, business owners — and anyone who values time over effort.',
+      proofTitle: 'Proof, <em>not promises.</em>',
+      proofSubline: 'Real work. Submitted late. Delivered early.',
+      trustTitle: 'Built for <em>speed.</em> Reviewed for <em>quality.</em> Delivered, every single time.',
+      formTitle: 'Send it.<br>Wake up <em>done.</em>',
+      formSubline: "Tell us what you need and when. We'll send a quote within the hour. Confirm it, and we start — usually before midnight.",
+      taskLabel: 'Describe your task',
+      fileLabel: 'File link',
+      fileHint: 'Optional',
+      attachmentMicrocopy: 'You can reply with attachments after we send your quote.',
+      submitCta: 'Start your overnight cycle',
+      formReassurance: 'No payment required to submit · Quote first',
+      thanksTitle: 'Task received.',
+      thanksBody: "We'll review it and send a quote within 60 minutes."
+    },
+    nl: {
+      heroTitle: 'Dien in voor bedtijd.<br>Word wakker met <em>resultaat.</em>',
+      heroSubline: 'Voor founders, operators, ondernemers — en iedereen die tijd belangrijker vindt dan moeite.',
+      proofTitle: 'Bewijs, <em>geen beloftes.</em>',
+      proofSubline: 'Echt werk. Laat ingediend. Vroeg geleverd.',
+      trustTitle: 'Gebouwd voor <em>snelheid.</em> Gecontroleerd op <em>kwaliteit.</em> Elke keer geleverd.',
+      formTitle: 'Stuur het op.<br>Word wakker met <em>klaar.</em>',
+      formSubline: 'Vertel wat je nodig hebt en wanneer. We sturen binnen 60 minuten een offerte. Na akkoord starten we, meestal nog voor middernacht.',
+      taskLabel: 'Beschrijf je taak',
+      fileLabel: 'Bestandslink',
+      fileHint: 'Optioneel',
+      attachmentMicrocopy: 'Je kunt bijlagen meesturen in je reply nadat we je offerte hebben gestuurd.',
+      submitCta: 'Start je overnight cyclus',
+      formReassurance: 'Geen betaling nodig om in te dienen · Eerst een offerte',
+      thanksTitle: 'Taak ontvangen.',
+      thanksBody: 'We beoordelen je aanvraag en sturen binnen 60 minuten een offerte.'
+    }
+  };
+
+  const selectorText = {
+    en: {
+      '.nav-links-wrap a[href="#top"]': 'Home',
+      '.nav-links-wrap a[href="#proof"]': 'Proof',
+      '.nav-links-wrap a[href="trust.html"]': 'Trust',
+      '.nav-links-wrap a[href="#pricing"]': 'Pricing',
+      '.nav-links-wrap a[href="enterprise.html"]': 'Enterprise',
+      '.nav-links-wrap a[href="portal.html"]': 'Portal',
+      '.nav-cta span:first-child': 'Send it tonight',
+      '.opening-scroll-hint span': 'Scroll',
+      '#fDescription': 'e.g. Build an investor-ready 12-slide deck from this outline. Series A, fintech. Sharp, minimal, confident. Attached: Google Doc + logo.',
+      '#fFileLink': 'Google Drive, Dropbox, WeTransfer, or Notion link',
+      '#fName': 'Your name',
+      '#fEmail': 'your@email.com'
+    },
+    nl: {
+      '.nav-links-wrap a[href="#top"]': 'Home',
+      '.nav-links-wrap a[href="#proof"]': 'Bewijs',
+      '.nav-links-wrap a[href="trust.html"]': 'Vertrouwen',
+      '.nav-links-wrap a[href="#pricing"]': 'Prijzen',
+      '.nav-links-wrap a[href="enterprise.html"]': 'Enterprise',
+      '.nav-links-wrap a[href="portal.html"]': 'Portal',
+      '.nav-cta span:first-child': 'Stuur het vanavond',
+      '.opening-scroll-hint span': 'Scroll',
+      '#fDescription': 'Bijv. maak een investeerdersdeck van 12 slides op basis van deze outline. Series A, fintech. Strak, minimalistisch, zelfverzekerd. Link: Google Doc + logo.',
+      '#fFileLink': 'Google Drive, Dropbox, WeTransfer of Notion link',
+      '#fName': 'Je naam',
+      '#fEmail': 'jij@email.com'
+    }
+  };
+
+  function applyLanguage(lang) {
+    const dict = dictionaries[lang] || dictionaries.en;
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const value = dict[el.dataset.i18n];
+      if (!value) return;
+      el.innerHTML = value;
+    });
+    Object.entries(selectorText[lang] || selectorText.en).forEach(([selector, value]) => {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      if ('placeholder' in el) el.placeholder = value;
+      else el.textContent = value;
+    });
+    document.querySelectorAll('.lang-toggle button').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.lang === lang);
+      btn.setAttribute('aria-pressed', btn.dataset.lang === lang ? 'true' : 'false');
+    });
+    localStorage.setItem('doneovernight_lang', lang);
+  }
+  window.setDoneOvernightLanguage = applyLanguage;
+
+  const savedLang = localStorage.getItem('doneovernight_lang') || 'en';
+  applyLanguage(savedLang);
+  document.querySelectorAll('.lang-toggle button').forEach((btn) => {
+    btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+  });
+})();
 
 /* ============================================================
    PWA — Install button + service worker
@@ -4359,6 +4461,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   // Tap the dot (both desktop for accessibility and mobile for toggle)
   dot.addEventListener('click', (e) => {
     e.stopPropagation();
+    clearTimeout(closeTimer);
     if (isOpen) close(); else open();
   });
 

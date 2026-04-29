@@ -168,7 +168,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav .logo:hover { opacity: 0.7; }
 
 .nav-pill {
-  position: relative;
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  left: auto;
+  z-index: 9999;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   height: 42px;
@@ -206,31 +213,34 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .nav-dot::before {
   content: "";
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 8px rgba(233, 196, 138, 0.7), 0 0 16px rgba(233, 196, 138, 0.35);
+  display: block;
+  width: 8px; height: 8px;
+  border-radius: 999px;
+  background: #e9c48a;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.45),
+    0 0 18px rgba(233,196,138,.75),
+    0 0 42px rgba(233,196,138,.25);
+  animation: navDotPulse 2.2s ease-in-out infinite;
   transition: width 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), height 0.5s cubic-bezier(0.22, 0.68, 0.26, 1), box-shadow 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
 }
 .nav-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(233, 196, 138, 0.22);
-  animation: navDotPulse 2.8s ease-out infinite;
+  content: none;
+  display: none;
   pointer-events: none;
 }
 @keyframes navDotPulse {
-  0% { opacity: 0.9; transform: scale(0.55); }
-  100% { opacity: 0; transform: scale(1.4); }
+  0%, 100% { opacity: 0.82; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.22); }
 }
 .nav-pill:not(.is-open):hover .nav-dot::before {
   width: 9px; height: 9px;
   box-shadow: 0 0 14px rgba(233, 196, 138, 0.9), 0 0 26px rgba(233, 196, 138, 0.45);
 }
 
-.nav-pill.is-open {
+.nav-pill.is-open,
+.nav-pill:hover,
+.nav-pill:focus-within {
   max-width: 780px;
   width: auto;
   padding: 4px 4px 4px 10px;
@@ -240,7 +250,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   border-color: rgba(245, 241, 234, 0.09);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
-.nav-pill.is-open .nav-dot { transform: scale(0.65); }
+.nav-pill.is-open .nav-dot,
+.nav-pill:hover .nav-dot,
+.nav-pill:focus-within .nav-dot { transform: scale(0.65); }
 .nav-pill.is-open .nav-dot::after { animation: none; opacity: 0; }
 
 .nav-links-wrap {
@@ -254,7 +266,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   pointer-events: none;
   white-space: nowrap;
 }
-.nav-pill.is-open .nav-links-wrap {
+.nav-pill.is-open .nav-links-wrap,
+.nav-pill:hover .nav-links-wrap,
+.nav-pill:focus-within .nav-links-wrap {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -272,6 +286,38 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .nav-links-wrap a:hover { color: var(--ink); background: rgba(245, 241, 234, 0.04); }
 .nav-links-wrap a.is-current { color: var(--amber); }
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 6px;
+  padding: 4px;
+  border: 1px solid rgba(245, 241, 234, 0.1);
+  border-radius: 100px;
+}
+.lang-toggle button {
+  padding: 5px 8px;
+  border-radius: 100px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(245, 241, 234, 0.58);
+  text-transform: uppercase;
+}
+.lang-toggle button.is-active {
+  background: rgba(233, 196, 138, 0.16);
+  color: var(--amber);
+}
+.lang-toggle-fixed {
+  position: fixed;
+  top: 26px;
+  right: 82px;
+  z-index: 9999;
+  background: rgba(10, 11, 15, 0.45);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  pointer-events: auto;
+}
 .nav-links-wrap .sep {
   width: 3px; height: 3px;
   border-radius: 50%;
@@ -335,7 +381,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 @media (max-width: 720px) {
   .nav { padding: 16px 18px; }
-  .nav-pill.is-open {
+  .nav-pill.is-open,
+  .nav-pill:hover,
+  .nav-pill:focus-within {
     flex-direction: column;
     align-items: stretch;
     max-width: 220px;
@@ -352,6 +400,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     width: 100%;
   }
   .nav-links-wrap .sep { display: none; }
+  .lang-toggle { justify-content: center; margin: 4px 0; }
   .nav-links-wrap a { padding: 10px 14px; text-align: left; font-size: 11px; }
   .nav-cta { justify-content: center; margin-top: 6px; padding: 12px 16px; font-size: 11px; }
   .nav-install.is-available { justify-content: center; margin-top: 4px; }

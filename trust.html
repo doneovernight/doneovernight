@@ -209,7 +209,7 @@
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="index.html">DONEOVERNIGHT</a>
   <div class="nav-pill" id="navPill">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); const open=!p.classList.contains('is-open'); p.classList.toggle('is-open', open); this.setAttribute('aria-expanded', open ? 'true' : 'false'); this.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="index.html">Home</a>
       <a href="index.html#proof">Proof</a>
@@ -227,6 +227,10 @@
         <span class="arrow">→</span>
       </a>
     </div>
+  </div>
+  <div class="lang-toggle lang-toggle-fixed" aria-label="Language">
+    <button type="button" class="is-active" data-lang="en">EN</button>
+    <button type="button" data-lang="nl">NL</button>
   </div>
 </nav>
 
@@ -596,10 +600,27 @@ if ('serviceWorker' in navigator) {
     pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
     pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
   }
-  dot.addEventListener('click', (e) => { e.stopPropagation(); isOpen ? close() : open(); });
+  dot.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(closeTimer); isOpen ? close() : open(); });
   document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
   pill.addEventListener('click', (e) => { if (e.target.closest('a')) setTimeout(close, 220); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
+})();
+// Language toggle persistence. Main homepage copy is translated; secondary pages stay English for launch.
+(function() {
+  const savedLang = localStorage.getItem('doneovernight_lang') || 'en';
+  document.documentElement.lang = savedLang;
+  document.querySelectorAll('.lang-toggle button').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.lang === savedLang);
+    btn.setAttribute('aria-pressed', btn.dataset.lang === savedLang ? 'true' : 'false');
+    btn.addEventListener('click', () => {
+      localStorage.setItem('doneovernight_lang', btn.dataset.lang);
+      document.documentElement.lang = btn.dataset.lang;
+      document.querySelectorAll('.lang-toggle button').forEach((b) => {
+        b.classList.toggle('is-active', b === btn);
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+    });
+  });
 })();
 // PWA install
 (function() {

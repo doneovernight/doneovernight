@@ -2,7 +2,7 @@
  * DONEOVERNIGHT — Service Worker
  * Minimal offline support. Caches the shell, network-first for everything else.
  */
-const VERSION = 'v5.0.1';
+const VERSION = 'v5.0.2';
 const SHELL_CACHE = `overnight-shell-${VERSION}`;
 
 const SHELL_ASSETS = [
