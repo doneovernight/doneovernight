@@ -3128,19 +3128,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   </div>
 </div>
 
-<!-- OPENING — pitch black title card -->
-<div class="opening" id="opening">
-	  <h1 class="opening-display">
-	    Submit before bed.<br>
-	    Wake up to <em>results.</em>
-	  </h1>
-	  <p class="opening-subline">For founders, operators, business owners — and anyone who values time over effort.</p>
-  <div class="opening-scroll-hint">
-    <span>Scroll</span>
-    <div class="line"></div>
-  </div>
-</div>
-
 <!-- ============================================================
      CINEMATIC STAGE
      ============================================================ -->
@@ -4536,7 +4523,6 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     });
   }
 
-})();
   // Tap the dot (both desktop for accessibility and mobile for toggle)
   dot.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -4552,6 +4538,11 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
 
   // Close on any link click within the pill (smooth nav)
   pill.addEventListener('click', (e) => {
+  if (e.target.closest('a') || e.target.closest('.nav-cta')) {
+    clearTimeout(closeTimer);
+    close();
+  }
+});
     if (e.target.closest('a')) {
       setTimeout(close, 220);
     }
