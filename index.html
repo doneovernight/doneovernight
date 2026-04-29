@@ -3093,10 +3093,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 <!-- NAV — hidden dot, expands on intent -->
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="#top">DONEOVERNIGHT</a>
-
-  <div class="nav-pill" id="navPill">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
-
+  <div class="nav-pill" id="navPill" onclick="if (event.target === this || event.target.closest('.nav-dot')) { event.stopImmediatePropagation(); this.classList.add('is-open'); const d=this.querySelector('.nav-dot'); d && (d.setAttribute('aria-expanded','true'), d.setAttribute('aria-label','Close menu')); }">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); p.classList.add('is-open'); this.setAttribute('aria-expanded','true'); this.setAttribute('aria-label','Close menu');"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="#top" class="is-current">Home</a>
       <a href="#proof">Proof</a>
@@ -3104,21 +3102,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       <a href="#pricing">Pricing</a>
       <a href="enterprise.html">Enterprise</a>
       <a href="portal.html">Portal</a>
-
       <span class="sep"></span>
-
-      <button id="installBtn" class="nav-install" title="Install DONEOVERNIGHT as an app">
-        <span class="install-icon">↓</span>
-        <span>Install</span>
-      </button>
-
-      <a href="#cta" class="nav-cta">
-        <span>Send it tonight</span>
-        <span class="arrow">→</span>
-      </a>
-    </div>
-  </div>
-</nav>
+	      <button id="installBtn" class="nav-install" title="Install DONEOVERNIGHT as an app">
+	        <span class="install-icon">↓</span>
+	        <span>Install</span>
+	      </button>
+	      <a href="#cta" class="nav-cta">
+	        <span>Send it tonight</span>
+	        <span class="arrow">→</span>
+	      </a>
+	    </div>
+	  </div>
+	</nav>
 
 <!-- OPENING — pitch black title card -->
 <div class="opening" id="opening">
