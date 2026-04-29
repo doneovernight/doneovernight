@@ -25,48 +25,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
 
-<style>/* FIX — intake submit button text always visible */
-.submit-btn {
-  background: rgba(233, 196, 138, 0.08) !important;
-  color: #f4d28a !important;
-  border: 1px solid rgba(233, 196, 138, 0.45) !important;
-  box-shadow:
-    0 0 22px rgba(233, 196, 138, 0.18),
-    inset 0 1px 0 rgba(255,255,255,0.08) !important;
-}
-
-.submit-btn::before {
-  display: none !important;
-  content: none !important;
-}
-
-.submit-btn,
-.submit-btn span {
-  position: relative;
-  z-index: 2;
-  color: #f4d28a !important;
-}
-
-.submit-btn:hover,
-.submit-btn:focus-visible {
-  background: rgba(233, 196, 138, 0.14) !important;
-  color: #ffe3ad !important;
-  border-color: rgba(233, 196, 138, 0.8) !important;
-  box-shadow:
-    0 0 34px rgba(233, 196, 138, 0.38),
-    0 0 90px rgba(233, 196, 138, 0.14),
-    inset 0 1px 0 rgba(255,255,255,0.12) !important;
-}
-
-.submit-btn:hover span,
-.submit-btn:focus-visible span {
-  color: #ffe3ad !important;
-  transform: translateX(6px);
-}
-
-.submit-btn:active {
-  transform: scale(0.98);
-}
+<style>
 /* ============================================================
    RESET
    ============================================================ */
@@ -4538,11 +4497,6 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
 
   // Close on any link click within the pill (smooth nav)
   pill.addEventListener('click', (e) => {
-  if (e.target.closest('a') || e.target.closest('.nav-cta')) {
-    clearTimeout(closeTimer);
-    close();
-  }
-});
     if (e.target.closest('a')) {
       setTimeout(close, 220);
     }
