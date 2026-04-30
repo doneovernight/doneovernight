@@ -763,6 +763,21 @@ body.is-unlocked .dash { opacity: 1; }
   font-size: 14px;
   line-height: 1.6;
 }
+#historyList .task-row {
+  grid-template-columns: 1fr 140px 140px;
+}
+#historyList .task-row .t-actions {
+  justify-content: flex-end;
+}
+@media (max-width: 900px) {
+  #historyList .task-row {
+    grid-template-columns: 1fr;
+  }
+  #historyList .task-row .t-scope,
+  #historyList .task-row .t-actions {
+    grid-column: 1;
+  }
+}
 
 /* Task row (list) */
 .task-list {
@@ -1372,15 +1387,15 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="kpi-grid">
       <div class="kpi is-active">
         <div class="kpi-label">Active tasks</div>
-        <div class="kpi-n">0</div>
+        <div class="kpi-n" id="activeTasksCount">0</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Pending quotes</div>
-        <div class="kpi-n">0</div>
+        <div class="kpi-n" id="pendingQuotesCount">0</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Delivered</div>
-        <div class="kpi-n">0</div>
+        <div class="kpi-n" id="deliveredCount">0</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Hours saved</div>
@@ -1440,7 +1455,9 @@ body.is-unlocked .dash { opacity: 1; }
         <h2>History</h2>
       </div>
 
-      <div class="empty-state">No tasks yet. Submit your first request to begin.</div>
+      <div id="historyList">
+        <div class="empty-state">No tasks yet. Submit your first request to begin.</div>
+      </div>
     </div>
 
   </div>
@@ -1464,6 +1481,7 @@ const signinMessage = document.getElementById('signinMessage');
 const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
 const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
+const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 
@@ -1473,6 +1491,7 @@ function unlock() {
   document.body.classList.add('is-unlocked');
   sessionStorage.setItem('doneovernight_portal_demo', '1');
   document.body.style.overflow = '';
+  loadTaskHistory();
 }
 
 function getTimeGreeting() {
@@ -1530,6 +1549,119 @@ function escapeHTML(value) {
   })[char]);
 }
 
+function getPortalEmail() {
+  return sessionStorage.getItem('portal_email') || sessionStorage.getItem('doneovernight_portal_email') || '';
+}
+
+function getPortalAccessKey() {
+  return sessionStorage.getItem('portal_access_key') || sessionStorage.getItem('doneovernight_portal_access_key') || '';
+}
+
+function resetTaskStats() {
+  document.getElementById('activeTasksCount').textContent = '0';
+  document.getElementById('pendingQuotesCount').textContent = '0';
+  document.getElementById('deliveredCount').textContent = '0';
+}
+
+function renderEmptyHistory() {
+  document.getElementById('historyList').innerHTML = '<div class="empty-state">No tasks yet. Submit your first request to begin.</div>';
+}
+
+function getStatusLabel(status) {
+  const key = String(status || '').toLowerCase();
+  return {
+    new: 'Received',
+    quoted: 'Quote sent',
+    in_progress: 'In progress',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled'
+  }[key] || 'Received';
+}
+
+function getStatusClass(status) {
+  const key = String(status || '').toLowerCase();
+  return {
+    new: 'queued',
+    quoted: 'review',
+    in_progress: 'working',
+    delivered: 'delivered',
+    cancelled: 'draft'
+  }[key] || 'queued';
+}
+
+function formatTaskDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateTaskStats(tasks) {
+  const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
+  document.getElementById('activeTasksCount').textContent = tasks.filter(task => activeStatuses.has(String(task.status || '').toLowerCase())).length;
+  document.getElementById('pendingQuotesCount').textContent = tasks.filter(task => String(task.status || '').toLowerCase() === 'new').length;
+  document.getElementById('deliveredCount').textContent = tasks.filter(task => String(task.status || '').toLowerCase() === 'delivered').length;
+}
+
+function renderTaskHistory(tasks) {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    resetTaskStats();
+    renderEmptyHistory();
+    return;
+  }
+
+  updateTaskStats(tasks);
+  document.getElementById('historyList').innerHTML = `
+    <div class="task-list">
+      ${tasks.map(task => `
+        <div class="task-row">
+          <div class="t-info">
+            <h4>${escapeHTML(task.task_description || 'Untitled task')}</h4>
+            <div class="meta">${escapeHTML(formatTaskDate(task.created_at))}</div>
+          </div>
+          <div class="t-scope">${escapeHTML(task.deadline || 'Flexible')}</div>
+          <div class="t-actions">
+            <span class="status-pill ${getStatusClass(task.status)}"><span class="dot"></span>${escapeHTML(getStatusLabel(task.status))}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function loadTaskHistory() {
+  const email = getPortalEmail();
+  const accessKey = getPortalAccessKey();
+
+  if (!email || !accessKey) {
+    resetTaskStats();
+    renderEmptyHistory();
+    return;
+  }
+
+  try {
+    const response = await fetch(TASKS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: accessKey
+      })
+    });
+    if (!response.ok) throw new Error('Task history request failed');
+    const data = await response.json().catch(() => ({}));
+    renderTaskHistory(data?.success === true ? data.tasks : []);
+  } catch (error) {
+    resetTaskStats();
+    renderEmptyHistory();
+  }
+}
+
 document.querySelectorAll('.gate-tab, [data-panel-link]').forEach(control => {
   control.addEventListener('click', () => showPanel(control.dataset.panel || control.dataset.panelLink));
 });
@@ -1551,6 +1683,7 @@ if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
   gate.style.display = 'none';
   document.body.classList.add('is-unlocked');
   updateDashboardGreeting();
+  loadTaskHistory();
 } else {
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('signupName').focus(), 100);
@@ -1662,6 +1795,8 @@ gateForm.addEventListener('submit', async (e) => {
     const data = await response.json().catch(() => ({}));
     if (data?.success === true) {
       gateMessage.classList.remove('is-shown');
+      sessionStorage.setItem('portal_email', email);
+      sessionStorage.setItem('portal_access_key', key);
       sessionStorage.setItem('doneovernight_portal_email', email);
       sessionStorage.setItem('doneovernight_portal_access_key', key);
       if (data.name?.trim()) {
@@ -1688,6 +1823,8 @@ gateForm.addEventListener('submit', async (e) => {
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
   sessionStorage.removeItem('doneovernight_portal_demo');
+  sessionStorage.removeItem('portal_email');
+  sessionStorage.removeItem('portal_access_key');
   sessionStorage.removeItem('doneovernight_portal_email');
   sessionStorage.removeItem('doneovernight_portal_access_key');
   location.reload();
@@ -1732,8 +1869,8 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
-        email: sessionStorage.getItem('doneovernight_portal_email') || '',
-        access_key: sessionStorage.getItem('doneovernight_portal_access_key') || '',
+        email: getPortalEmail(),
+        access_key: getPortalAccessKey(),
         task_description: desc,
         deadline,
         source: 'portal_dashboard',
@@ -1745,6 +1882,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     form.reset();
     document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
     document.querySelector('#dashboardDeadlinePills .modal-deadline-pill[data-val="tonight"]').classList.add('active');
+    loadTaskHistory();
   } catch (error) {
     showMessage(message, 'Could not send task. Please try again.', 'error');
   } finally {
