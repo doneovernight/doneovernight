@@ -1592,11 +1592,10 @@ body.is-unlocked .dash { opacity: 1; }
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============================================================
    MEMBER ENTRY
-   Static-site safe: email signup uses Supabase; access requests use FormSubmit AJAX.
+   Static-site safe: email signup uses n8n; access requests use FormSubmit AJAX.
    TODO: Replace remaining FormSubmit access hooks with real server-side
    auth/database validation once the private dashboard backend exists.
    ============================================================ */
@@ -1611,10 +1610,7 @@ const signupError = document.getElementById('signupError');
 const signupMessage = document.getElementById('signupMessage');
 const signinMessage = document.getElementById('signinMessage');
 const FORM_ENDPOINT = 'https://formsubmit.co/ajax/ask@doneovernight.com';
-const supabaseClient = window.supabase.createClient(
-  "https://xvctqtcjhcmjlesbfbmj.supabase.co",
-  "sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8"
-);
+const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 
@@ -1653,6 +1649,16 @@ function markInvalid(input) {
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
 }
 
 async function postFormSubmit(form) {
@@ -1716,25 +1722,34 @@ signupForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  document.getElementById('signupCreatedAt').value = new Date().toISOString();
+  const createdAt = new Date().toISOString();
+  document.getElementById('signupCreatedAt').value = createdAt;
   const previousText = submit.innerHTML;
   submit.disabled = true;
   submit.innerHTML = '<span>Sending request...</span>';
 
   try {
-    const { error } = await supabaseClient
-      .from('portal_requests')
-      .insert({
+    const response = await fetch(SIGNUP_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
         name: name.value.trim(),
         email: email.value.trim(),
-        signup_method: 'email',
-        marketing_consent: consent.checked ? 'yes' : 'no',
+        marketing_consent: consent.checked,
         source: 'portal_signup',
-        status: 'pending'
-      });
-    if (error) throw error;
+        signup_method: 'email',
+        created_at: createdAt
+      })
+    });
+    if (!response.ok) throw new Error('Signup request failed');
+    const data = await response.json().catch(() => ({}));
+    const accessKey = data?.access_key;
     signupForm.style.display = 'none';
-    showMessage(signupMessage, '<h4>Member request received.</h4><p>We’ll send your access key by email.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+    if (accessKey) {
+      showMessage(signupMessage, `<h4>Member request received.</h4><p>Your access key has been issued.</p><p><strong>Access key:</strong> ${escapeHTML(accessKey)}</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>`, 'success');
+    } else {
+      showMessage(signupMessage, '<h4>Member request received.</h4><p>We’ll send your access key by email.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+    }
   } catch (error) {
     submit.disabled = false;
     submit.innerHTML = previousText;
