@@ -1808,7 +1808,12 @@ gateForm.addEventListener('submit', async (e) => {
     }
     submit.disabled = false;
     submit.innerHTML = previousText;
-    showMessage(gateMessage, 'Invalid access key. Check your email and try again.', 'error');
+    const accessMessages = {
+      pending: 'Your access request is being reviewed. We’ll notify you once your workspace is ready.',
+      revoked: 'This access key is no longer active.',
+      invalid: 'Invalid access key. Check your email and try again.'
+    };
+    showMessage(gateMessage, accessMessages[data?.status] || accessMessages.invalid, 'error');
   } catch (error) {
     submit.disabled = false;
     submit.innerHTML = previousText;
