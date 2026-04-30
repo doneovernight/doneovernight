@@ -1484,6 +1484,7 @@ const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
 const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
 const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
+const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 
@@ -1640,6 +1641,12 @@ function renderTaskDetails(task) {
   return `<div class="meta">${details.map(detail => escapeHTML(detail)).join(' · ')}</div>`;
 }
 
+function renderTaskActions(task) {
+  const statusPill = `<span class="status-pill ${getStatusClass(task.status)}"><span class="dot"></span>${escapeHTML(getStatusLabel(task.status))}</span>`;
+  if (getStatusKey(task.status) !== 'quoted' || !task.id) return statusPill;
+  return `${statusPill}<button type="button" class="task-btn primary quote-accept-btn" data-task-id="${escapeHTML(task.id)}">Accept Quote</button>`;
+}
+
 function getLatestTask(tasks) {
   return [...tasks].sort((a, b) => {
     const bTime = new Date(b.created_at || 0).getTime() || 0;
@@ -1690,7 +1697,7 @@ function renderTaskHistory(tasks) {
           </div>
           <div class="t-scope">${escapeHTML(task.deadline || 'Flexible')}</div>
           <div class="t-actions">
-            <span class="status-pill ${getStatusClass(task.status)}"><span class="dot"></span>${escapeHTML(getStatusLabel(task.status))}</span>
+            ${renderTaskActions(task)}
           </div>
         </div>
       `).join('')}
@@ -1723,6 +1730,35 @@ async function loadTaskHistory() {
   } catch (error) {
     resetTaskStats();
     renderEmptyHistory();
+  }
+}
+
+async function acceptQuote(button) {
+  const taskId = button.dataset.taskId;
+  const message = document.getElementById('dashboardTaskMessage');
+  const previousText = button.textContent;
+
+  button.disabled = true;
+  button.textContent = 'Processing...';
+  message.classList.remove('is-shown', 'is-success', 'is-error');
+
+  try {
+    const response = await fetch(ACCEPT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        task_id: taskId,
+        email: getPortalEmail(),
+        access_key: getPortalAccessKey()
+      })
+    });
+    if (!response.ok) throw new Error('Quote accept request failed');
+    showMessage(message, 'Quote accepted. Work is now in progress.', 'success');
+    loadTaskHistory();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    showMessage(message, 'Could not accept quote. Try again.', 'error');
   }
 }
 
@@ -1902,6 +1938,12 @@ document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEac
     document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
   });
+});
+
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const button = e.target.closest('.quote-accept-btn');
+  if (!button) return;
+  acceptQuote(button);
 });
 
 document.getElementById('dashboardTaskForm').addEventListener('submit', async (e) => {
