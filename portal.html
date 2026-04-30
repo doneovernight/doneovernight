@@ -1445,7 +1445,9 @@ body.is-unlocked .dash { opacity: 1; }
           <h2>Activity</h2>
         </div>
 
-        <div class="empty-state">Your workspace activity will appear here.</div>
+        <div id="activityList">
+          <div class="empty-state">Your workspace activity will appear here.</div>
+        </div>
       </div>
     </div>
 
@@ -1567,19 +1569,27 @@ function renderEmptyHistory() {
   document.getElementById('historyList').innerHTML = '<div class="empty-state">No tasks yet. Submit your first request to begin.</div>';
 }
 
+function renderEmptyActivity() {
+  document.getElementById('activityList').innerHTML = '<div class="empty-state">Your workspace activity will appear here.</div>';
+}
+
+function getStatusKey(status) {
+  return String(status || '').toLowerCase();
+}
+
 function getStatusLabel(status) {
-  const key = String(status || '').toLowerCase();
+  const key = getStatusKey(status);
   return {
-    new: 'Received',
+    new: 'Quote pending',
     quoted: 'Quote sent',
     in_progress: 'In progress',
     delivered: 'Delivered',
     cancelled: 'Cancelled'
-  }[key] || 'Received';
+  }[key] || 'Quote pending';
 }
 
 function getStatusClass(status) {
-  const key = String(status || '').toLowerCase();
+  const key = getStatusKey(status);
   return {
     new: 'queued',
     quoted: 'review',
@@ -1587,6 +1597,17 @@ function getStatusClass(status) {
     delivered: 'delivered',
     cancelled: 'draft'
   }[key] || 'queued';
+}
+
+function getActivityText(status) {
+  const key = getStatusKey(status);
+  return {
+    new: 'Task received · quote pending',
+    quoted: 'Quote sent · awaiting approval',
+    in_progress: 'Task in progress',
+    delivered: 'Task delivered',
+    cancelled: 'Task cancelled'
+  }[key] || 'Task received · quote pending';
 }
 
 function formatTaskDate(value) {
@@ -1603,19 +1624,61 @@ function formatTaskDate(value) {
 
 function updateTaskStats(tasks) {
   const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
-  document.getElementById('activeTasksCount').textContent = tasks.filter(task => activeStatuses.has(String(task.status || '').toLowerCase())).length;
-  document.getElementById('pendingQuotesCount').textContent = tasks.filter(task => String(task.status || '').toLowerCase() === 'new').length;
-  document.getElementById('deliveredCount').textContent = tasks.filter(task => String(task.status || '').toLowerCase() === 'delivered').length;
+  document.getElementById('activeTasksCount').textContent = tasks.filter(task => activeStatuses.has(getStatusKey(task.status))).length;
+  document.getElementById('pendingQuotesCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'new').length;
+  document.getElementById('deliveredCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'delivered').length;
+}
+
+function renderTaskDetails(task) {
+  const details = [
+    task.quote_amount ? `Quote: ${task.quote_amount}` : '',
+    task.delivery_eta ? `ETA: ${task.delivery_eta}` : '',
+    task.quote_note || ''
+  ].filter(Boolean);
+
+  if (!details.length) return '';
+  return `<div class="meta">${details.map(detail => escapeHTML(detail)).join(' · ')}</div>`;
+}
+
+function getLatestTask(tasks) {
+  return [...tasks].sort((a, b) => {
+    const bTime = new Date(b.created_at || 0).getTime() || 0;
+    const aTime = new Date(a.created_at || 0).getTime() || 0;
+    return bTime - aTime;
+  })[0];
+}
+
+function renderTaskActivity(tasks) {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    renderEmptyActivity();
+    return;
+  }
+
+  const latest = getLatestTask(tasks);
+  document.getElementById('activityList').innerHTML = `
+    <div class="activity-list">
+      <div class="activity-item is-${getStatusClass(latest.status)}">
+        <div class="a-bullet"></div>
+        <div class="a-content">
+          <h5>${escapeHTML(getActivityText(latest.status))}</h5>
+          <p>${escapeHTML(latest.task_description || 'Your latest task')}</p>
+          <div class="a-time">${escapeHTML(formatTaskDate(latest.created_at))}</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderTaskHistory(tasks) {
   if (!Array.isArray(tasks) || tasks.length === 0) {
     resetTaskStats();
     renderEmptyHistory();
+    renderEmptyActivity();
     return;
   }
 
   updateTaskStats(tasks);
+  renderTaskActivity(tasks);
   document.getElementById('historyList').innerHTML = `
     <div class="task-list">
       ${tasks.map(task => `
@@ -1623,6 +1686,7 @@ function renderTaskHistory(tasks) {
           <div class="t-info">
             <h4>${escapeHTML(task.task_description || 'Untitled task')}</h4>
             <div class="meta">${escapeHTML(formatTaskDate(task.created_at))}</div>
+            ${renderTaskDetails(task)}
           </div>
           <div class="t-scope">${escapeHTML(task.deadline || 'Flexible')}</div>
           <div class="t-actions">
