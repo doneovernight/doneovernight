@@ -1611,6 +1611,7 @@ const signupMessage = document.getElementById('signupMessage');
 const signinMessage = document.getElementById('signinMessage');
 const FORM_ENDPOINT = 'https://formsubmit.co/ajax/ask@doneovernight.com';
 const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
+const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 
@@ -1785,19 +1786,33 @@ gateForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  document.getElementById('accessCreatedAt').value = new Date().toISOString();
   const previousText = submit.innerHTML;
   submit.disabled = true;
-  submit.innerHTML = '<span>Verifying...</span>';
+  submit.innerHTML = '<span>Checking...</span>';
 
   try {
-    await postFormSubmit(gateForm);
-    gateForm.style.display = 'none';
-    showMessage(gateMessage, '<h4>Access request received.</h4><p>We’re verifying your key.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+    const response = await fetch(ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: key
+      })
+    });
+    if (!response.ok) throw new Error('Access verification failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === true) {
+      gateMessage.classList.remove('is-shown');
+      unlock();
+      return;
+    }
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    showMessage(gateMessage, 'Invalid access key. Check your email and try again.', 'error');
   } catch (error) {
     submit.disabled = false;
     submit.innerHTML = previousText;
-    showMessage(gateMessage, 'Something went wrong. Please email <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a> directly.', 'error');
+    showMessage(gateMessage, 'Could not verify access key. Please try again.', 'error');
   }
 });
 
