@@ -1450,7 +1450,6 @@ body.is-unlocked .dash { opacity: 1; }
 /* ============================================================
    MEMBER ENTRY
    Static-site safe: email signup and access verification use n8n.
-   TODO: Replace the local task draft with a backend connection next.
    ============================================================ */
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gateForm');
@@ -1464,6 +1463,7 @@ const signupMessage = document.getElementById('signupMessage');
 const signinMessage = document.getElementById('signinMessage');
 const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
+const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 
@@ -1644,6 +1644,8 @@ gateForm.addEventListener('submit', async (e) => {
     const data = await response.json().catch(() => ({}));
     if (data?.success === true) {
       gateMessage.classList.remove('is-shown');
+      sessionStorage.setItem('doneovernight_portal_email', email);
+      sessionStorage.setItem('doneovernight_portal_access_key', key);
       unlock();
       return;
     }
@@ -1665,11 +1667,13 @@ gateForm.addEventListener('submit', async (e) => {
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
   sessionStorage.removeItem('doneovernight_portal_demo');
+  sessionStorage.removeItem('doneovernight_portal_email');
+  sessionStorage.removeItem('doneovernight_portal_access_key');
   location.reload();
 });
 
 /* ============================================================
-   DASHBOARD TASK DRAFT
+   DASHBOARD TASK SUBMIT
    ============================================================ */
 document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(p => {
   p.addEventListener('click', () => {
@@ -1678,11 +1682,12 @@ document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEac
   });
 });
 
-document.getElementById('dashboardTaskForm').addEventListener('submit', (e) => {
+document.getElementById('dashboardTaskForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   const descField = document.getElementById('dashboardTaskDesc');
   const message = document.getElementById('dashboardTaskMessage');
+  const submit = form.querySelector('.modal-submit');
   const desc = descField.value.trim();
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -1696,7 +1701,35 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', (e) => {
     return;
   }
 
-  showMessage(message, 'Task draft captured. Backend connection comes next.', 'success');
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Sending...</span>';
+
+  try {
+    const deadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
+    const response = await fetch(TASK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email: sessionStorage.getItem('doneovernight_portal_email') || '',
+        access_key: sessionStorage.getItem('doneovernight_portal_access_key') || '',
+        task_description: desc,
+        deadline,
+        source: 'portal_dashboard',
+        created_at: new Date().toISOString()
+      })
+    });
+    if (!response.ok) throw new Error('Task request failed');
+    showMessage(message, 'Task received. We’ll review it and send a quote within 60 minutes.', 'success');
+    form.reset();
+    document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
+    document.querySelector('#dashboardDeadlinePills .modal-deadline-pill[data-val="tonight"]').classList.add('active');
+  } catch (error) {
+    showMessage(message, 'Could not send task. Please try again.', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+  }
 });
 </script>
 
