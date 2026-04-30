@@ -1363,7 +1363,7 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="dash-head">
       <div>
         <span class="eyebrow">Workspace</span>
-        <h1>Good evening.</h1>
+        <h1 id="dashboardGreeting">Good evening.</h1>
         <p>Your private DONEOVERNIGHT workspace is ready.</p>
       </div>
     </div>
@@ -1468,10 +1468,26 @@ const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
 const DEMO_KEY = 'DONE-DEMO';
 
 function unlock() {
+  updateDashboardGreeting();
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
   sessionStorage.setItem('doneovernight_portal_demo', '1');
   document.body.style.overflow = '';
+}
+
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+}
+
+function updateDashboardGreeting() {
+  const greeting = getTimeGreeting();
+  const name = sessionStorage.getItem('portal_name')?.trim();
+  const headline = document.getElementById('dashboardGreeting');
+  headline.textContent = name ? `${greeting}, ${name}.` : `${greeting}.`;
 }
 
 function showPanel(panelId) {
@@ -1534,6 +1550,7 @@ document.querySelector('.js-email-signin').addEventListener('click', () => {
 if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
   gate.style.display = 'none';
   document.body.classList.add('is-unlocked');
+  updateDashboardGreeting();
 } else {
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('signupName').focus(), 100);
@@ -1586,6 +1603,7 @@ signupForm.addEventListener('submit', async (e) => {
     if (!response.ok) throw new Error('Signup request failed');
     const data = await response.json().catch(() => ({}));
     const accessKey = data?.access_key;
+    sessionStorage.setItem('portal_name', name.value.trim());
     signupForm.style.display = 'none';
     if (accessKey) {
       showMessage(signupMessage, `<h4>Member request received.</h4><p>Your access key has been issued.</p><p><strong>Access key:</strong> ${escapeHTML(accessKey)}</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>`, 'success');
