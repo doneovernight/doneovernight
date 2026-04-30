@@ -606,6 +606,12 @@ body.is-unlocked .dash { opacity: 1; }
   font-weight: 400;
 }
 .dash-head h1 em { font-style: italic; color: var(--amber); }
+.dash-head p {
+  margin-top: 10px;
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
 
 .new-task-btn {
   display: inline-flex;
@@ -702,6 +708,62 @@ body.is-unlocked .dash { opacity: 1; }
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-faint);
+}
+.modal-form {
+  padding-top: 18px;
+}
+.modal-form .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.modal-form .field-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  display: flex;
+  justify-content: space-between;
+}
+.modal-form .field-label .hint {
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+.modal-form textarea {
+  width: 100%;
+  min-height: 150px;
+  background: rgba(245, 241, 234, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  outline: none;
+  resize: vertical;
+  transition: border 0.3s, background 0.3s, box-shadow 0.3s;
+}
+.modal-form textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
+}
+.modal-form .field-group.is-invalid textarea {
+  border-color: var(--red);
+}
+.modal-form.shake { animation: shake 0.5s; }
+.empty-state {
+  margin-top: 18px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* Task row (list) */
@@ -1093,7 +1155,6 @@ body.is-unlocked .dash { opacity: 1; }
   border-color: rgba(233, 196, 138, 0.85);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.12), 0 0 18px rgba(233, 196, 138, 0.18);
 }
-#modalForm.shake { animation: shake 0.5s; }
 .modal.sent form { display: none; }
 .modal-confirmation {
   display: none;
@@ -1289,11 +1350,10 @@ body.is-unlocked .dash { opacity: 1; }
   <div class="left">
     <a class="logo" href="index.html">DONEOVERNIGHT</a>
     <div class="sep"></div>
-    <div class="client-label">Demo dashboard preview</div>
+    <div class="client-label">Private workspace</div>
   </div>
   <div class="right">
     <div class="status"><span class="dot"></span>Studio online</div>
-    <div style="color:var(--ink-dim);">Alex R.</div>
     <button class="logout" id="logoutBtn">Log out</button>
   </div>
 </nav>
@@ -1305,146 +1365,69 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="dash-head">
       <div>
         <span class="eyebrow">Workspace</span>
-        <h1>Good evening, <em>Alex.</em></h1>
+        <h1>Good evening.</h1>
+        <p>Your private DONEOVERNIGHT workspace is ready.</p>
       </div>
-      <button class="new-task-btn" id="newTaskBtn">
-        <span class="plus">+</span>
-        <span>Submit new task</span>
-      </button>
     </div>
 
-    <!-- KPIs -->
+    <!-- Status cards -->
     <div class="kpi-grid">
       <div class="kpi is-active">
-        <div class="kpi-label">Active now</div>
-        <div class="kpi-n">3</div>
-        <div class="kpi-delta">Due within 24h</div>
+        <div class="kpi-label">Active tasks</div>
+        <div class="kpi-n">0</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Delivered · this month</div>
-        <div class="kpi-n">14</div>
-        <div class="kpi-delta up">↑ 3 vs last month</div>
+        <div class="kpi-label">Pending quotes</div>
+        <div class="kpi-n">0</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">On-time rate</div>
-        <div class="kpi-n">100<span style="font-size: 0.55em;">%</span></div>
-        <div class="kpi-delta">Rolling 90 days</div>
+        <div class="kpi-label">Delivered</div>
+        <div class="kpi-n">0</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">Hours saved</div>
-        <div class="kpi-n">47.5</div>
-        <div class="kpi-delta">Estimated · this month</div>
+        <div class="kpi-label">Studio status</div>
+        <div class="kpi-n">Online</div>
       </div>
     </div>
 
-    <!-- Active tasks + activity -->
+    <!-- Submit task + activity -->
     <div class="two-col">
       <div class="dash-section">
         <div class="dash-section-head">
-          <h2>Active tasks</h2>
-          <span class="meta">3 in progress</span>
+          <h2>Submit a task</h2>
         </div>
 
-        <div class="task-list">
-          <div class="task-row">
-            <div class="t-id">#2041</div>
-            <div class="t-info">
-              <h4>Investor deck — Series A · 12 slides</h4>
-              <div class="meta">Submitted tonight · 22:58</div>
-            </div>
-            <div class="t-scope">Standard</div>
-            <div class="t-deadline">
-              <strong>Tomorrow · 09:00</strong>
-              <span>in 9h 42m</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill working"><span class="dot"></span>Working</span>
+        <form id="dashboardTaskForm" class="modal-form" novalidate>
+          <div class="field-group">
+            <div class="field-label"><span>Request</span><span class="hint">Required</span></div>
+            <textarea id="dashboardTaskDesc" placeholder="What do you need done?" required></textarea>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label"><span>Deadline</span><span class="hint">Choose one</span></div>
+            <div class="modal-deadline-pills" id="dashboardDeadlinePills">
+              <div class="modal-deadline-pill active" data-val="tonight">Tonight</div>
+              <div class="modal-deadline-pill" data-val="tomorrow">Tomorrow</div>
+              <div class="modal-deadline-pill" data-val="this-week">This week</div>
+              <div class="modal-deadline-pill" data-val="flexible">Flexible</div>
             </div>
           </div>
 
-          <div class="task-row">
-            <div class="t-id">#2039</div>
-            <div class="t-info">
-              <h4>n8n workflow — HubSpot → Slack deal alerts</h4>
-              <div class="meta">Submitted · yesterday 14:10</div>
-            </div>
-            <div class="t-scope">Standard</div>
-            <div class="t-deadline">
-              <strong>Tomorrow · 12:00</strong>
-              <span>in 13h</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill review"><span class="dot"></span>In review</span>
-            </div>
-          </div>
-
-          <div class="task-row">
-            <div class="t-id">#2038</div>
-            <div class="t-info">
-              <h4>Competitor research — 3 firms, positioning analysis</h4>
-              <div class="meta">Submitted · yesterday 09:22</div>
-            </div>
-            <div class="t-scope">Quick hit</div>
-            <div class="t-deadline">
-              <strong>Today · 18:00</strong>
-              <span>in 3h 15m</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill working"><span class="dot"></span>Working</span>
-            </div>
-          </div>
-        </div>
+          <button type="submit" class="modal-submit">
+            <span>Send task</span>
+            <span>→</span>
+          </button>
+        </form>
+        <div class="auth-message" id="dashboardTaskMessage" aria-live="polite"></div>
       </div>
 
       <!-- Activity feed -->
       <div class="dash-section">
         <div class="dash-section-head">
           <h2>Activity</h2>
-          <span class="meta">Live</span>
         </div>
 
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Slide 07 regenerated</h5>
-              <p>Senior operator rejected v2, requested sharper positioning.</p>
-              <div class="a-time">Just now</div>
-            </div>
-          </div>
-          <div class="activity-item is-review">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Task #2039 entered review</h5>
-              <p>n8n workflow passed functional tests. Second operator reviewing.</p>
-              <div class="a-time">18 min ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Research sources locked</h5>
-              <p>12 competitor sources pulled for task #2038.</p>
-              <div class="a-time">2h ago</div>
-            </div>
-          </div>
-          <div class="activity-item is-queued">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Quote confirmed · #2041</h5>
-              <p>€280 · Standard · overnight delivery.</p>
-              <div class="a-time">Tonight · 23:02</div>
-            </div>
-          </div>
-          <div class="activity-item is-delivered">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Task #2037 delivered</h5>
-              <p>Weekly market briefing · delivered 06:14 this morning.</p>
-              <div class="a-time">12h ago</div>
-            </div>
-          </div>
-        </div>
+        <div class="empty-state">Your workspace activity will appear here.</div>
       </div>
     </div>
 
@@ -1452,152 +1435,19 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="dash-section">
       <div class="dash-section-head">
         <h2>History</h2>
-        <span class="meta">Last 30 days · 14 tasks</span>
       </div>
 
-      <div class="task-list">
-        <div class="task-row">
-          <div class="t-id">#2037</div>
-          <div class="t-info">
-            <h4>Weekly market briefing — 3 pages</h4>
-            <div class="meta">Delivered · today 06:14</div>
-          </div>
-          <div class="t-scope">Recurring</div>
-          <div class="t-deadline"><strong>On time</strong><span>−1h 46m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2033</div>
-          <div class="t-info">
-            <h4>Board deck refresh — 18 slides, sections 3-7</h4>
-            <div class="meta">Delivered · Tue 07:45</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+15m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2031</div>
-          <div class="t-info">
-            <h4>Sales one-pager · EU mid-market</h4>
-            <div class="meta">Delivered · Mon 06:30</div>
-          </div>
-          <div class="t-scope">Quick hit</div>
-          <div class="t-deadline"><strong>On time</strong><span>+2h early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2028</div>
-          <div class="t-info">
-            <h4>CSV cleanup & formatting · customer list (4.2k rows)</h4>
-            <div class="meta">Delivered · last Fri 11:20</div>
-          </div>
-          <div class="t-scope">Quick hit</div>
-          <div class="t-deadline"><strong>On time</strong><span>+40m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2025</div>
-          <div class="t-info">
-            <h4>Content pack — 10 LinkedIn posts, launch week</h4>
-            <div class="meta">Delivered · 2 weeks ago</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+1h early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2022</div>
-          <div class="t-info">
-            <h4>Pitch deck — seed round · 10 slides</h4>
-            <div class="meta">Delivered · 2 weeks ago</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+30m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-      </div>
+      <div class="empty-state">No tasks yet. Submit your first request to begin.</div>
     </div>
 
-  </div>
-</div>
-
-<!-- ============================================================
-     NEW TASK MODAL
-     ============================================================ -->
-<div class="modal-backdrop" id="taskModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Submit a new task</h3>
-      <button class="modal-close" id="modalClose">Close ×</button>
-    </div>
-
-    <form id="modalForm" novalidate>
-      <div class="field-group">
-        <div class="field-label"><span>Task description</span><span class="hint">Required</span></div>
-        <textarea id="modalDesc" placeholder="What do you need? The more context, the sharper the output." required></textarea>
-      </div>
-
-      <div class="field-group">
-        <div class="field-label"><span>Upload files</span><span class="hint">Optional · max 25MB</span></div>
-        <label class="modal-upload" id="modalUploadArea">
-          <span id="modalUploadLabel">Drop files or click to attach</span>
-          <input type="file" id="modalUpload" multiple>
-        </label>
-      </div>
-
-      <div class="field-group">
-        <div class="field-label"><span>Deadline</span><span class="hint">When do you need it?</span></div>
-        <div class="modal-deadline-pills" id="modalPills">
-          <div class="modal-deadline-pill" data-val="rush">Rush · 4h</div>
-          <div class="modal-deadline-pill active" data-val="overnight">Overnight</div>
-          <div class="modal-deadline-pill" data-val="48h">48 hours</div>
-          <div class="modal-deadline-pill" data-val="flexible">Flexible</div>
-        </div>
-      </div>
-
-      <button type="submit" class="modal-submit">
-        <span>Submit · get quote</span>
-        <span>→</span>
-      </button>
-    </form>
-    <div class="modal-confirmation" id="modalConfirmation">
-      <h4>Task received.</h4>
-      <p>We’ll review it and send a quote within 60 minutes.</p>
-      <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
-    </div>
   </div>
 </div>
 
 <script>
 /* ============================================================
    MEMBER ENTRY
-   Static-site safe: email signup uses n8n; access requests use FormSubmit AJAX.
-   TODO: Replace remaining FormSubmit access hooks with real server-side
-   auth/database validation once the private dashboard backend exists.
+   Static-site safe: email signup and access verification use n8n.
+   TODO: Replace the local task draft with a backend connection next.
    ============================================================ */
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gateForm');
@@ -1609,7 +1459,6 @@ const signupForm = document.getElementById('signupForm');
 const signupError = document.getElementById('signupError');
 const signupMessage = document.getElementById('signupMessage');
 const signinMessage = document.getElementById('signinMessage');
-const FORM_ENDPOINT = 'https://formsubmit.co/ajax/ask@doneovernight.com';
 const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
@@ -1660,17 +1509,6 @@ function escapeHTML(value) {
     '"': '&quot;',
     "'": '&#39;'
   })[char]);
-}
-
-async function postFormSubmit(form) {
-  const payload = new FormData(form);
-  const response = await fetch(FORM_ENDPOINT, {
-    method: 'POST',
-    body: payload,
-    headers: { 'Accept': 'application/json' }
-  });
-  if (!response.ok) throw new Error('FormSubmit request failed');
-  return response.json().catch(() => ({}));
 }
 
 document.querySelectorAll('.gate-tab, [data-panel-link]').forEach(control => {
@@ -1828,65 +1666,24 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
-   NEW TASK MODAL
+   DASHBOARD TASK DRAFT
    ============================================================ */
-const taskModal = document.getElementById('taskModal');
-const newTaskBtn = document.getElementById('newTaskBtn');
-const modalClose = document.getElementById('modalClose');
-const modalPanel = taskModal.querySelector('.modal');
-
-newTaskBtn.addEventListener('click', () => {
-  modalPanel.classList.remove('sent');
-  document.getElementById('modalForm').reset();
-  document.querySelectorAll('.modal-deadline-pill').forEach(x => x.classList.remove('active'));
-  document.querySelector('.modal-deadline-pill[data-val="overnight"]').classList.add('active');
-  document.getElementById('modalUploadArea').classList.remove('has-file');
-  document.getElementById('modalUploadLabel').textContent = 'Drop files or click to attach';
-  document.querySelector('.modal-submit').disabled = false;
-  document.querySelector('.modal-submit').innerHTML = '<span>Submit · get quote</span><span>→</span>';
-  taskModal.classList.add('is-open');
-});
-modalClose.addEventListener('click', () => {
-  taskModal.classList.remove('is-open');
-});
-taskModal.addEventListener('click', (e) => {
-  if (e.target === taskModal) taskModal.classList.remove('is-open');
-});
-
-// Deadline pills
-document.querySelectorAll('.modal-deadline-pill').forEach(p => {
+document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('.modal-deadline-pill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
   });
 });
 
-// File upload
-const modalUpload = document.getElementById('modalUpload');
-const modalUploadArea = document.getElementById('modalUploadArea');
-const modalUploadLabel = document.getElementById('modalUploadLabel');
-modalUpload.addEventListener('change', () => {
-  if (modalUpload.files.length) {
-    modalUploadArea.classList.add('has-file');
-    modalUploadLabel.textContent = modalUpload.files.length === 1
-      ? modalUpload.files[0].name
-      : `${modalUpload.files.length} files attached`;
-  }
-});
-
-// Submit via FormSubmit AJAX and keep the modal open with inline status.
-document.getElementById('modalForm').addEventListener('submit', async (e) => {
+document.getElementById('dashboardTaskForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const form = e.currentTarget;
-  const modal = form.closest('.modal');
-  const descField = document.getElementById('modalDesc');
-  const confirmation = document.getElementById('modalConfirmation');
-  const submit = form.querySelector('.modal-submit');
+  const descField = document.getElementById('dashboardTaskDesc');
+  const message = document.getElementById('dashboardTaskMessage');
   const desc = descField.value.trim();
-  const deadline = document.querySelector('.modal-deadline-pill.active').dataset.val;
-  const deadlineLabel = {rush:'Rush · 4h', overnight:'Overnight', '48h':'48 hours', flexible:'Flexible'}[deadline];
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  message.classList.remove('is-shown', 'is-success', 'is-error');
   if (!desc) {
     descField.closest('.field-group')?.classList.add('is-invalid');
     form.classList.remove('shake');
@@ -1896,36 +1693,7 @@ document.getElementById('modalForm').addEventListener('submit', async (e) => {
     return;
   }
 
-  const previousText = submit.innerHTML;
-  submit.disabled = true;
-  submit.innerHTML = '<span>Sending</span><span>→</span>';
-
-  try {
-    const payload = new FormData();
-    payload.append('_subject', `Portal submission · ${deadlineLabel}`);
-    payload.append('_captcha', 'false');
-    payload.append('description', desc);
-    payload.append('deadline', deadlineLabel);
-    payload.append('workspace', 'Acme Studio / Alex R.');
-    if (modalUpload.files.length) {
-      Array.from(modalUpload.files).forEach(file => payload.append('attachments', file));
-    }
-    const response = await fetch('https://formsubmit.co/ajax/ask@doneovernight.com', {
-      method: 'POST',
-      body: payload,
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!response.ok) throw new Error('FormSubmit request failed');
-    confirmation.classList.remove('is-error');
-    confirmation.innerHTML = '<h4>Task received.</h4><p>We’ll review it and send a quote within 60 minutes.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>';
-    modal.classList.add('sent');
-  } catch (error) {
-    submit.disabled = false;
-    submit.innerHTML = previousText;
-    confirmation.classList.add('is-error');
-    confirmation.innerHTML = '<h4>Something went wrong.</h4><p>Please email ask@doneovernight.com directly.</p>';
-    modal.classList.add('sent');
-  }
+  showMessage(message, 'Task draft captured. Backend connection comes next.', 'success');
 });
 </script>
 
