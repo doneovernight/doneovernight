@@ -1636,13 +1636,18 @@ function renderTaskDetails(task) {
     task.delivery_eta ? `ETA: ${task.delivery_eta}` : '',
     task.quote_note || ''
   ].filter(Boolean);
+  const deliveryNote = getStatusKey(task.status) === 'delivered' && task.delivery_note
+    ? `<div class="meta">${escapeHTML(task.delivery_note)}</div>`
+    : '';
 
-  if (!details.length) return '';
-  return `<div class="meta">${details.map(detail => escapeHTML(detail)).join(' · ')}</div>`;
+  return `${details.length ? `<div class="meta">${details.map(detail => escapeHTML(detail)).join(' · ')}</div>` : ''}${deliveryNote}`;
 }
 
 function renderTaskActions(task) {
   const statusPill = `<span class="status-pill ${getStatusClass(task.status)}"><span class="dot"></span>${escapeHTML(getStatusLabel(task.status))}</span>`;
+  if (getStatusKey(task.status) === 'delivered' && task.delivery_link) {
+    return `${statusPill}<a class="task-btn primary" href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer">View delivery</a>`;
+  }
   if (getStatusKey(task.status) !== 'quoted' || !task.id) return statusPill;
   return `${statusPill}<button type="button" class="task-btn primary quote-accept-btn" data-task-id="${escapeHTML(task.id)}">Accept Quote</button>`;
 }
