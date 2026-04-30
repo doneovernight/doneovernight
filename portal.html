@@ -1664,6 +1664,9 @@ gateForm.addEventListener('submit', async (e) => {
       gateMessage.classList.remove('is-shown');
       sessionStorage.setItem('doneovernight_portal_email', email);
       sessionStorage.setItem('doneovernight_portal_access_key', key);
+      if (data.name?.trim()) {
+        sessionStorage.setItem('portal_name', data.name.trim());
+      }
       unlock();
       return;
     }
