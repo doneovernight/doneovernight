@@ -2895,7 +2895,6 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
   const attachment = document.getElementById('dashboardAttachment');
-  const attachmentLink = document.getElementById('dashboardAttachmentLink');
   const desc = descField.value.trim();
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -2918,27 +2917,26 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     const customDeadline = document.getElementById('customDeadlineInput').value;
     const deadline = selectedDeadline === 'other' && customDeadline ? customDeadline : selectedDeadline;
     const hasFiles = Boolean(attachment.files?.length);
-    const attachmentNotes = [
-      hasFiles ? 'Files selected for this request. Upload handling coming next.' : '',
-      attachmentLink.value.trim() ? `Link: ${attachmentLink.value.trim()}` : ''
-    ].filter(Boolean).join('\n');
-    const taskDescription = attachmentNotes ? `${desc}\n\n${attachmentNotes}` : desc;
+    const taskDescription = hasFiles
+      ? `${desc}\n\nFiles selected for this request. Upload handling comes next.`
+      : desc;
     const createdAt = new Date().toISOString();
+    const payload = {
+      email: sessionStorage.getItem('portal_email'),
+      access_key: sessionStorage.getItem('portal_access_key'),
+      task_description: taskDescription,
+      deadline,
+      source: 'portal_dashboard',
+      created_at: createdAt
+    };
     const response = await fetch(TASK_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        email: getPortalEmail(),
-        access_key: getPortalAccessKey(),
-        task_description: taskDescription,
-        deadline,
-        source: 'portal_dashboard',
-        created_at: createdAt
-      })
+      body: JSON.stringify(payload)
     });
     if (!response.ok) throw new Error('Task request failed');
     const submittedTask = {
-      email: getPortalEmail(),
+      email: payload.email,
       task_description: taskDescription,
       deadline,
       status: 'new',
