@@ -111,10 +111,12 @@ try {
   text-align: center;
 }
 .gate.is-checking,
+body.auth-booting .gate,
 html.portal-precheck .gate {
   overflow: hidden;
 }
 .gate.is-checking .gate-card,
+body.auth-booting .gate-card,
 html.portal-precheck .gate-card {
   display: grid;
   place-items: center;
@@ -129,13 +131,17 @@ html.portal-precheck .gate-card {
 }
 .gate.is-checking .gate-card::before,
 .gate.is-checking .gate-top,
+body.auth-booting .gate-card::before,
+body.auth-booting .gate-top,
 html.portal-precheck .gate-card::before,
 html.portal-precheck .gate-top {
   display: none;
 }
 .gate.is-checking .gate-grid,
+body.auth-booting .gate-grid,
 html.portal-precheck .gate-grid { display: none; }
 .gate.is-checking .gate-checking,
+body.auth-booting .gate-checking,
 html.portal-precheck .gate-checking {
   display: grid;
   animation: checkingFade 0.5s ease both;
@@ -1322,7 +1328,7 @@ body.is-unlocked .dash { opacity: 1; }
 }
 </style>
 </head>
-<body>
+<body class="auth-booting">
 
 <!-- ============================================================
      MEMBER ENTRY
@@ -1597,7 +1603,7 @@ const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 const DEMO_KEY = 'DONE-DEMO';
 let portalVerifiedThisSession = false;
 let googleAccessCheckInFlight = false;
-let isAuthRestoring = Boolean(window.__portalInitialAuthRestoring);
+let isAuthRestoring = true;
 
 function clearPortalSession() {
   ['portal_email', 'portal_access_key', 'portal_name'].forEach(key => sessionStorage.removeItem(key));
@@ -1610,6 +1616,7 @@ function clearPortalSession() {
 
 function beginAuthRestore() {
   isAuthRestoring = true;
+  document.body.classList.add('auth-booting');
   document.documentElement.classList.add('portal-precheck');
   gate.classList.add('is-checking');
   document.body.style.overflow = 'hidden';
@@ -1617,6 +1624,7 @@ function beginAuthRestore() {
 
 function finishAuthRestore() {
   isAuthRestoring = false;
+  document.body.classList.remove('auth-booting');
   document.documentElement.classList.remove('portal-precheck');
   gate.classList.remove('is-checking');
 }
@@ -2139,6 +2147,7 @@ async function initializePortalSession() {
     return;
   }
 
+  finishAuthRestore();
   document.body.style.overflow = 'hidden';
   setTimeout(() => gateEmail.focus(), 100);
 }
