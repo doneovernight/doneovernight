@@ -1518,12 +1518,37 @@ const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
 const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
+let portalVerifiedThisSession = false;
 
-function unlock() {
+function clearPortalSession() {
+  ['portal_email', 'portal_access_key', 'portal_name'].forEach(key => sessionStorage.removeItem(key));
+  Object.keys(sessionStorage).forEach(key => {
+    if (key.startsWith('doneovernight_portal')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+}
+
+function lockPortal(message = '') {
+  gate.classList.remove('is-unlocked');
+  document.body.classList.remove('is-unlocked');
+  document.body.style.overflow = 'hidden';
+  if (message) {
+    showPanel('accessPanel');
+    showMessage(gateMessage, message, 'error');
+  }
+}
+
+function unlock(options = {}) {
+  portalVerifiedThisSession = true;
   updateDashboardGreeting();
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
-  sessionStorage.setItem('doneovernight_portal_demo', '1');
+  if (options.demo) {
+    sessionStorage.setItem('doneovernight_portal_demo', '1');
+  } else {
+    sessionStorage.removeItem('doneovernight_portal_demo');
+  }
   document.body.style.overflow = '';
   loadTaskHistory();
 }
@@ -1589,6 +1614,47 @@ function getPortalEmail() {
 
 function getPortalAccessKey() {
   return sessionStorage.getItem('portal_access_key') || sessionStorage.getItem('doneovernight_portal_access_key') || '';
+}
+
+async function verifyStoredPortalSession() {
+  const email = getPortalEmail();
+  const accessKey = getPortalAccessKey();
+
+  if (!email || !accessKey) return false;
+
+  try {
+    const response = await fetch(ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: accessKey
+      })
+    });
+    if (!response.ok) throw new Error('Stored access verification failed');
+    const data = await response.json().catch(() => ({}));
+
+    if (data?.success === true) {
+      sessionStorage.setItem('portal_email', email);
+      sessionStorage.setItem('portal_access_key', accessKey);
+      sessionStorage.setItem('doneovernight_portal_email', email);
+      sessionStorage.setItem('doneovernight_portal_access_key', accessKey);
+      if (data.name?.trim()) {
+        sessionStorage.setItem('portal_name', data.name.trim());
+      }
+      unlock();
+      return true;
+    }
+
+    clearPortalSession();
+    lockPortal('Your access is no longer active.');
+    return false;
+  } catch (error) {
+    if (!portalVerifiedThisSession) {
+      lockPortal();
+    }
+    return false;
+  }
 }
 
 function resetTaskStats() {
@@ -1815,12 +1881,12 @@ document.querySelector('.js-email-signin').addEventListener('click', () => {
   showMessage(signinMessage, 'Email sign-in is opening soon. Use the access key from your welcome email, or create an account with email for early access.');
 });
 
-// Check if demo preview is already unlocked this session.
-if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
-  gate.style.display = 'none';
-  document.body.classList.add('is-unlocked');
-  updateDashboardGreeting();
-  loadTaskHistory();
+// Re-check stored real portal access on restore; demo restore remains demo-only.
+if (getPortalEmail() && getPortalAccessKey()) {
+  document.body.style.overflow = 'hidden';
+  verifyStoredPortalSession();
+} else if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
+  unlock({ demo: true });
 } else {
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('signupName').focus(), 100);
@@ -1911,7 +1977,7 @@ gateForm.addEventListener('submit', async (e) => {
 
   if (key.toUpperCase() === DEMO_KEY) {
     gateMessage.classList.remove('is-shown');
-    unlock();
+    unlock({ demo: true });
     return;
   }
 
@@ -1936,6 +2002,7 @@ gateForm.addEventListener('submit', async (e) => {
       sessionStorage.setItem('portal_access_key', key);
       sessionStorage.setItem('doneovernight_portal_email', email);
       sessionStorage.setItem('doneovernight_portal_access_key', key);
+      sessionStorage.removeItem('doneovernight_portal_demo');
       if (data.name?.trim()) {
         sessionStorage.setItem('portal_name', data.name.trim());
       }
@@ -1959,11 +2026,7 @@ gateForm.addEventListener('submit', async (e) => {
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem('doneovernight_portal_demo');
-  sessionStorage.removeItem('portal_email');
-  sessionStorage.removeItem('portal_access_key');
-  sessionStorage.removeItem('doneovernight_portal_email');
-  sessionStorage.removeItem('doneovernight_portal_access_key');
+  clearPortalSession();
   location.reload();
 });
 
