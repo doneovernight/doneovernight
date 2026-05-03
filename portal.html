@@ -942,6 +942,9 @@ body.is-unlocked .dash { opacity: 1; }
   font-size: 13px;
   line-height: 1.5;
 }
+.task-list {
+  animation: dashboardViewIn 0.28s ease both;
+}
 #historyList .task-row {
   grid-template-columns: 1fr 140px 140px;
 }
@@ -970,7 +973,8 @@ body.is-unlocked .dash { opacity: 1; }
   align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
-  transition: background 0.3s;
+  cursor: pointer;
+  transition: background 0.3s, opacity 0.25s;
 }
 .task-row:hover {
   background: rgba(245, 241, 234, 0.02);
@@ -1049,6 +1053,30 @@ body.is-unlocked .dash { opacity: 1; }
   letter-spacing: 0.1em;
 }
 .task-row .t-deadline strong { color: var(--ink); display: block; margin-bottom: 2px; }
+.task-expanded {
+  grid-column: 1 / -1;
+  display: none;
+  margin-top: -6px;
+  padding: 0 0 4px;
+  color: rgba(245, 241, 234, 0.62);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.task-row.is-expanded .task-expanded {
+  display: block;
+  animation: dashboardViewIn 0.24s ease both;
+}
+.task-expanded p {
+  margin: 6px 0 0;
+}
+.task-expanded strong {
+  color: rgba(245, 241, 234, 0.82);
+  font-weight: 500;
+}
+.task-expanded a {
+  color: var(--amber);
+  text-decoration: none;
+}
 
 /* Status pill */
 .status-pill {
@@ -1084,6 +1112,11 @@ body.is-unlocked .dash { opacity: 1; }
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+@keyframes dashboardViewIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Task actions */
@@ -1697,24 +1730,24 @@ body.is-unlocked .dash { opacity: 1; }
 
     <!-- Status cards -->
     <div class="kpi-grid">
-      <button class="kpi is-active is-clickable" type="button" data-history-mode="active">
+      <button class="kpi is-active is-clickable" type="button" data-dashboard-view="active">
         <div class="kpi-label">Active tasks</div>
         <div class="kpi-n" id="activeTasksCount">0</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-history-mode="pending">
+      <button class="kpi is-clickable" type="button" data-dashboard-view="pending">
         <div class="kpi-label">Pending quotes</div>
         <div class="kpi-n" id="pendingQuotesCount">0</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-history-mode="delivered">
+      <button class="kpi is-clickable" type="button" data-dashboard-view="delivered">
         <div class="kpi-label">Delivered</div>
         <div class="kpi-n" id="deliveredCount">0</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-history-mode="hours">
+      <button class="kpi is-clickable" type="button" data-dashboard-reset>
         <div class="kpi-label">Hours saved</div>
         <div class="kpi-n" id="hoursSavedCount">0h</div>
         <div class="kpi-delta">Starts tracking after your first task</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-history-mode="studio">
+      <button class="kpi is-clickable" type="button" data-dashboard-reset>
         <div class="kpi-label">Studio status</div>
         <div class="kpi-n">Online</div>
       </button>
@@ -1832,7 +1865,8 @@ const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 let dashboardTasks = [];
-let historyMode = 'all';
+let currentView = 'all';
+let expandedTaskKey = '';
 const taskRecommendations = [
   {
     category: 'Social',
@@ -2305,6 +2339,10 @@ function getHoursSaved(tasks) {
   return Number.isInteger(total) ? String(total) : total.toFixed(1);
 }
 
+function getTaskKey(task, index = 0) {
+  return String(task.id || task.created_at || `${task.task_description || 'task'}-${index}`);
+}
+
 function renderTaskDetails(task) {
   const quoteLine = task.quote_amount || task.delivery_eta
     ? `<div class="task-quote-line">
@@ -2317,6 +2355,26 @@ function renderTaskDetails(task) {
   const noteLine = note ? `<div class="meta task-note">${escapeHTML(note)}</div>` : '';
 
   return `${quoteLine}${noteLine}`;
+}
+
+function renderTaskExpanded(task) {
+  const status = getStatusKey(task.status);
+  const note = task.quote_note || (status === 'delivered' ? task.delivery_note : '');
+  const deliveryLink = status === 'delivered' && task.delivery_link
+    ? `<p><strong>Delivery:</strong> <a href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer">View delivery</a></p>`
+    : '';
+  const quoteInfo = [task.quote_amount, task.delivery_eta].filter(Boolean).join(' · ');
+
+  return `
+    <div class="task-expanded">
+      <p><strong>Request:</strong> ${escapeHTML(task.task_description || 'Untitled task')}</p>
+      <p><strong>Deadline:</strong> ${escapeHTML(task.deadline || 'Flexible')}</p>
+      <p><strong>Status:</strong> ${escapeHTML(getStatusLabel(task.status))}</p>
+      ${quoteInfo ? `<p><strong>Quote:</strong> ${escapeHTML(quoteInfo)}</p>` : ''}
+      ${note ? `<p><strong>Notes:</strong> ${escapeHTML(note)}</p>` : ''}
+      ${deliveryLink}
+    </div>
+  `;
 }
 
 function renderTaskActions(task) {
@@ -2354,15 +2412,15 @@ function renderTaskActivity(tasks) {
 }
 
 function setSelectedStatusCard() {
-  document.querySelectorAll('[data-history-mode]').forEach(card => {
-    card.classList.toggle('is-selected', card.dataset.historyMode === historyMode);
+  document.querySelectorAll('[data-dashboard-view]').forEach(card => {
+    card.classList.toggle('is-selected', card.dataset.dashboardView === currentView);
   });
 }
 
-function renderHistoryMode(tasks) {
+function renderDashboardView(tasks) {
   const mode = document.getElementById('historyMode');
   setSelectedStatusCard();
-  if (historyMode === 'all') {
+  if (currentView === 'all') {
     mode.classList.remove('is-shown');
     mode.innerHTML = '';
     return tasks;
@@ -2388,23 +2446,9 @@ function renderHistoryMode(tasks) {
       body: 'Completed tasks and delivery links.',
       tasks: deliveredTasks,
       empty: 'No delivered work yet.'
-    },
-    hours: {
-      title: 'Hours saved',
-      body: deliveredTasks.length
-        ? `${getHoursSaved(deliveredTasks)}h saved from delivered work.`
-        : 'Hours saved starts tracking after your first delivered task.',
-      tasks: deliveredTasks,
-      empty: 'Hours saved starts tracking after your first delivered task.'
-    },
-    studio: {
-      title: 'Studio status',
-      body: 'Studio online. Ready to receive tasks.',
-      tasks: [],
-      empty: 'Studio online. Ready to receive tasks.'
     }
   };
-  const view = views[historyMode] || views.active;
+  const view = views[currentView] || views.active;
   mode.classList.add('is-shown');
   mode.innerHTML = `<h3>${escapeHTML(view.title)}</h3><p>${escapeHTML(view.body)}</p>`;
   return view.tasks.length ? view.tasks : [{ isEmptyView: true, message: view.empty }];
@@ -2414,7 +2458,7 @@ function renderTaskHistory(tasks) {
   if (!Array.isArray(tasks) || tasks.length === 0) {
     dashboardTasks = [];
     resetTaskStats();
-    const visibleTasks = renderHistoryMode([]);
+    const visibleTasks = renderDashboardView([]);
     if (visibleTasks[0]?.isEmptyView) {
       document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
     } else {
@@ -2427,15 +2471,17 @@ function renderTaskHistory(tasks) {
   dashboardTasks = getSortedTasks(tasks);
   updateTaskStats(tasks);
   renderTaskActivity(tasks);
-  const visibleTasks = renderHistoryMode(dashboardTasks);
+  const visibleTasks = renderDashboardView(dashboardTasks);
   if (visibleTasks[0]?.isEmptyView) {
     document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
     return;
   }
   document.getElementById('historyList').innerHTML = `
     <div class="task-list">
-      ${visibleTasks.map(task => `
-        <div class="task-row">
+      ${visibleTasks.map((task, index) => {
+        const taskKey = getTaskKey(task, index);
+        return `
+        <div class="task-row ${expandedTaskKey === taskKey ? 'is-expanded' : ''}" data-task-key="${escapeHTML(taskKey)}" tabindex="0" role="button" aria-expanded="${expandedTaskKey === taskKey ? 'true' : 'false'}">
           <div class="t-info">
             <h4>${escapeHTML(task.task_description || 'Untitled task')}</h4>
             <div class="meta task-timestamp">${escapeHTML(formatTaskDate(task.created_at))}</div>
@@ -2445,8 +2491,10 @@ function renderTaskHistory(tasks) {
           <div class="t-actions">
             ${renderTaskActions(task)}
           </div>
+          ${renderTaskExpanded(task)}
         </div>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
   `;
 }
@@ -2779,15 +2827,37 @@ document.getElementById('dashboardAttachment').addEventListener('change', (e) =>
 
 document.getElementById('historyList').addEventListener('click', (e) => {
   const button = e.target.closest('.quote-accept-btn');
-  if (!button) return;
-  acceptQuote(button);
+  const deliveryLink = e.target.closest('a');
+  if (button) {
+    acceptQuote(button);
+    return;
+  }
+  if (deliveryLink) return;
+  const row = e.target.closest('.task-row');
+  if (!row) return;
+  expandedTaskKey = expandedTaskKey === row.dataset.taskKey ? '' : row.dataset.taskKey;
+  renderTaskHistory(dashboardTasks);
 });
 
-document.querySelectorAll('[data-history-mode]').forEach(card => {
+document.getElementById('historyList').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const row = e.target.closest('.task-row');
+  if (!row) return;
+  e.preventDefault();
+  row.click();
+});
+
+document.querySelectorAll('[data-dashboard-view]').forEach(card => {
   card.addEventListener('click', () => {
-    historyMode = card.dataset.historyMode || 'all';
+    currentView = card.dataset.dashboardView || 'all';
     renderTaskHistory(dashboardTasks);
-    document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+document.querySelectorAll('[data-dashboard-reset]').forEach(card => {
+  card.addEventListener('click', () => {
+    currentView = 'all';
+    renderTaskHistory(dashboardTasks);
   });
 });
 
@@ -2874,9 +2944,8 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       status: 'new',
       created_at: createdAt
     };
-    historyMode = 'pending';
+    currentView = 'pending';
     renderTaskHistory(mergeOptimisticTask(dashboardTasks, submittedTask));
-    document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
     showMessage(message, 'Task received. We’ll review it and send a quote within 60 minutes.', 'success');
     form.reset();
     document.getElementById('dashboardAttachmentText').textContent = 'Attach PDF, DOC, or images';
