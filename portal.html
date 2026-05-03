@@ -250,7 +250,7 @@
 }
 .gate-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   padding: 6px;
   border: 1px solid var(--line);
@@ -1332,8 +1332,8 @@ body.is-unlocked .dash { opacity: 1; }
 
     <div class="gate-grid">
       <div class="gate-intro">
-        <h1 class="gate-title">Join <em>Today</em></h1>
-        <p class="gate-sub">Create your member request, sign in when account access is live, or enter an access key from your welcome email.</p>
+        <h1 class="gate-title">Client <em>Portal</em></h1>
+        <p class="gate-sub">Existing clients can access their workspace. New members can request access and receive a private key by email.</p>
         <div class="gate-note">
           This static portal captures member requests safely today. Real Google, Apple, and private dashboard authentication require a backend auth provider.
         </div>
@@ -1342,12 +1342,11 @@ body.is-unlocked .dash { opacity: 1; }
 
       <div class="gate-panels">
         <div class="gate-tabs" role="tablist" aria-label="Portal entry">
-          <button type="button" class="gate-tab is-active" data-panel="signupPanel" role="tab" aria-selected="true">Join Today</button>
-          <button type="button" class="gate-tab" data-panel="signinPanel" role="tab" aria-selected="false">Sign In</button>
-          <button type="button" class="gate-tab" data-panel="accessPanel" role="tab" aria-selected="false">Client Portal</button>
+          <button type="button" class="gate-tab" data-panel="signupPanel" role="tab" aria-selected="false">Request member access</button>
+          <button type="button" class="gate-tab is-active" data-panel="accessPanel" role="tab" aria-selected="true">Access your workspace</button>
         </div>
 
-        <section class="auth-panel is-active" id="signupPanel" role="tabpanel">
+        <section class="auth-panel" id="signupPanel" role="tabpanel">
           <h3>Join Today</h3>
           <p>Request member access and we’ll send your access key by email.</p>
 
@@ -1397,7 +1396,7 @@ body.is-unlocked .dash { opacity: 1; }
           <div class="auth-message" id="signinMessage" aria-live="polite"></div>
         </section>
 
-        <section class="auth-panel" id="accessPanel" role="tabpanel">
+        <section class="auth-panel is-active" id="accessPanel" role="tabpanel">
           <h3>CLIENT PORTAL</h3>
           <p><strong>For members only.</strong><br>Enter your access key to open your dashboard. If you don't have one, it was included in your welcome email.</p>
 
@@ -1940,7 +1939,7 @@ if (getPortalEmail() && getPortalAccessKey()) {
   unlock({ demo: true });
 } else {
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('signupName').focus(), 100);
+  setTimeout(() => gateEmail.focus(), 100);
 }
 
 signupForm.addEventListener('submit', async (e) => {
