@@ -1010,31 +1010,44 @@ body.is-unlocked .dash { opacity: 1; }
   color: #050608;
 }
 
+.recommendations-section {
+  margin-top: 56px;
+}
 .recommendation-list {
   display: grid;
-  gap: 18px;
-  padding-top: 8px;
+  gap: 24px;
+  padding-top: 16px;
 }
 .recommendation-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
-  align-items: start;
-  padding: 4px 0;
+  gap: 24px;
+  align-items: center;
+  padding: 10px 0;
 }
 .recommendation-item h4 {
   font-family: var(--serif);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 400;
   line-height: 1.25;
   color: var(--ink);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .recommendation-item p {
-  color: var(--ink-dim);
-  font-size: 13px;
-  line-height: 1.45;
-  margin-bottom: 6px;
+  color: rgba(245, 241, 234, 0.68);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+.recommendation-kicker {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 8px;
+  color: rgba(233, 196, 138, 0.78);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 .recommendation-meta {
   color: rgba(233, 196, 138, 0.72);
@@ -1052,7 +1065,7 @@ body.is-unlocked .dash { opacity: 1; }
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  padding: 3px 0;
+  padding: 8px 0;
   white-space: nowrap;
   transition: color 0.25s, text-shadow 0.25s;
 }
@@ -1065,7 +1078,7 @@ body.is-unlocked .dash { opacity: 1; }
 @media (max-width: 640px) {
   .recommendation-item {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 }
 
@@ -1630,9 +1643,10 @@ body.is-unlocked .dash { opacity: 1; }
       </div>
     </div>
 
-    <div class="dash-section">
+    <div class="dash-section recommendations-section">
       <div class="dash-section-head">
         <h2>Recommended for you</h2>
+        <div class="meta">Useful follow-up tasks based on common client requests.</div>
       </div>
 
       <div id="recommendationsList"></div>
@@ -1670,28 +1684,39 @@ const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 const DEMO_KEY = 'DONE-DEMO';
 const taskRecommendations = [
   {
+    category: 'Social',
     title: 'Turn your presentation into 3 social posts',
     description: 'Repurpose your slides into concise LinkedIn-ready content.',
     hint: 'From €120 · Tonight',
     prompt: 'Turn my presentation into 3 polished social posts for LinkedIn.'
   },
   {
+    category: 'Document',
     title: 'Create a clean PDF version',
     description: 'Format your document into a polished, shareable PDF.',
     hint: 'From €90 · Tomorrow',
     prompt: 'Create a clean, polished PDF version of my document.'
   },
   {
+    category: 'Proofread',
     title: 'Proofread and optimize your text',
     description: 'Tighten wording, fix errors, and make the message sharper.',
     hint: 'From €80 · Tonight',
     prompt: 'Proofread and optimize my text so it reads clearly and professionally.'
   },
   {
+    category: 'Strategy',
     title: 'Convert your notes into a structured document',
     description: 'Turn rough notes into a clear brief, proposal, or outline.',
     hint: 'From €140 · This week',
     prompt: 'Convert my notes into a structured, professional document.'
+  },
+  {
+    category: 'Recurring',
+    title: 'Weekly content pack',
+    description: 'Turn one idea into posts, captions, and short-form content every week.',
+    hint: 'From €249 · recurring',
+    prompt: 'Create a weekly content pack from one idea, including posts, captions, and short-form content.'
   }
 ];
 let portalVerifiedThisSession = false;
@@ -1978,11 +2003,12 @@ function renderRecommendations(suggestions = taskRecommendations) {
       ${suggestions.map((suggestion, index) => `
         <div class="recommendation-item">
           <div>
+            <div class="recommendation-kicker">${escapeHTML(suggestion.category)}</div>
             <h4>${escapeHTML(suggestion.title)}</h4>
             <p>${escapeHTML(suggestion.description)}</p>
             <div class="recommendation-meta">${escapeHTML(suggestion.hint)}</div>
           </div>
-          <button type="button" class="recommendation-add" data-recommendation-index="${index}">Add task</button>
+          <button type="button" class="recommendation-add" data-recommendation-index="${index}">Add to request</button>
         </div>
       `).join('')}
     </div>
