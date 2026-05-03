@@ -25,7 +25,7 @@
 try {
   const params = new URLSearchParams(window.location.search);
   const hasAccessKeySession = sessionStorage.getItem('portal_email') && sessionStorage.getItem('portal_access_key');
-  const hasGoogleSession = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
+  const hasGoogleSession = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true' || sessionStorage.getItem('portal_auth_method') === 'google';
   const isOAuthReturn = params.has('code') || params.has('error') || window.location.hash.includes('access_token');
   if (hasAccessKeySession || hasGoogleSession || isOAuthReturn) {
     window.__portalInitialAuthRestoring = true;
@@ -1966,7 +1966,7 @@ let googleAccessCheckInFlight = false;
 let isAuthRestoring = true;
 
 function clearPortalSession() {
-  ['portal_email', 'portal_access_key', 'portal_name'].forEach(key => sessionStorage.removeItem(key));
+  ['portal_email', 'portal_access_key', 'portal_name', 'portal_auth_method'].forEach(key => sessionStorage.removeItem(key));
   Object.keys(sessionStorage).forEach(key => {
     if (key.startsWith('doneovernight_portal')) {
       sessionStorage.removeItem(key);
@@ -2099,6 +2099,7 @@ async function verifyStoredPortalSession() {
     if (data?.success === true) {
       sessionStorage.setItem('portal_email', email);
       sessionStorage.setItem('portal_access_key', accessKey);
+      sessionStorage.setItem('portal_auth_method', 'access_key');
       sessionStorage.setItem('doneovernight_portal_email', email);
       sessionStorage.setItem('doneovernight_portal_access_key', accessKey);
       if (data.name?.trim()) {
@@ -2192,20 +2193,25 @@ async function verifyGooglePortalAccess(options = {}) {
 
     if (access?.success === true) {
       sessionStorage.setItem('portal_email', email);
-      sessionStorage.setItem('portal_name', name);
+      sessionStorage.setItem('doneovernight_portal_email', email);
+      sessionStorage.setItem('portal_auth_method', 'google');
       sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
+      if (name?.trim()) {
+        sessionStorage.setItem('portal_name', name.trim());
+      }
       if (access.access_key) {
         sessionStorage.setItem('portal_access_key', access.access_key);
         sessionStorage.setItem('doneovernight_portal_access_key', access.access_key);
+      } else {
+        sessionStorage.removeItem('portal_access_key');
+        sessionStorage.removeItem('doneovernight_portal_access_key');
       }
       unlock();
       googleAccessCheckInFlight = false;
       return true;
     }
 
-    sessionStorage.removeItem('portal_email');
-    sessionStorage.removeItem('portal_name');
-    sessionStorage.removeItem('doneovernight_portal_unlocked');
+    clearPortalSession();
     lockPortal();
     const googleMessages = {
       pending: 'Your access is pending approval.',
@@ -2234,6 +2240,13 @@ function resetTaskStats() {
 
 function renderEmptyHistory() {
   document.getElementById('historyList').innerHTML = '<div class="empty-state">No tasks yet. Submit your first request to begin.</div>';
+}
+
+function renderHistorySyncing() {
+  document.getElementById('historyMode').classList.remove('is-shown');
+  document.getElementById('historyMode').innerHTML = '';
+  document.getElementById('historyList').innerHTML = '<div class="empty-state">Task history is syncing…</div>';
+  document.getElementById('activityList').innerHTML = '<div class="empty-state">Task history is syncing…</div>';
 }
 
 function renderEmptyActivity() {
@@ -2511,10 +2524,23 @@ function mergeOptimisticTask(tasks, optimisticTask) {
 async function loadTaskHistory(options = {}) {
   const email = getPortalEmail();
   const accessKey = getPortalAccessKey();
+  const isGoogleSession = sessionStorage.getItem('portal_auth_method') === 'google';
 
-  if (!email || !accessKey) {
-    resetTaskStats();
-    renderEmptyHistory();
+  if (!email) {
+    if (!dashboardTasks.length) {
+      renderHistorySyncing();
+    }
+    return;
+  }
+
+  if (!accessKey) {
+    if (isGoogleSession) {
+      renderHistorySyncing();
+      return;
+    }
+    if (!dashboardTasks.length) {
+      renderHistorySyncing();
+    }
     return;
   }
 
@@ -2536,8 +2562,9 @@ async function loadTaskHistory(options = {}) {
       renderTaskHistory(mergeOptimisticTask(dashboardTasks, options.optimisticTask));
       return;
     }
-    resetTaskStats();
-    renderTaskHistory([]);
+    if (!dashboardTasks.length) {
+      renderHistorySyncing();
+    }
   }
 }
 
@@ -2609,7 +2636,7 @@ document.querySelector('.js-email-signin').addEventListener('click', () => {
 async function initializePortalSession() {
   const url = new URL(window.location.href);
   const isOAuthReturn = url.searchParams.has('code') || url.searchParams.has('error') || window.location.hash.includes('access_token');
-  const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
+  const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true' || sessionStorage.getItem('portal_auth_method') === 'google';
   const shouldCheckGoogle = isOAuthReturn || hasGoogleUnlock;
   if (shouldCheckGoogle) {
     beginAuthRestore();
@@ -2768,6 +2795,7 @@ gateForm.addEventListener('submit', async (e) => {
       gateMessage.classList.remove('is-shown');
       sessionStorage.setItem('portal_email', email);
       sessionStorage.setItem('portal_access_key', key);
+      sessionStorage.setItem('portal_auth_method', 'access_key');
       sessionStorage.setItem('doneovernight_portal_email', email);
       sessionStorage.setItem('doneovernight_portal_access_key', key);
       sessionStorage.removeItem('doneovernight_portal_demo');
