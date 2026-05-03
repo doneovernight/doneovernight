@@ -1742,36 +1742,17 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getSupabaseSessionWithRetry(retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
+async function getSupabaseSessionWithRetry(attempts = 5, delay = 300) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session) return data.session;
-    if (attempt < retries) await wait(400);
+    if (attempt < attempts) await wait(delay);
   }
   return null;
 }
 
-async function waitForSupabaseSession() {
-  const session = await getSupabaseSessionWithRetry();
-  if (session) return session;
-
-  return new Promise(resolve => {
-    let settled = false;
-    const timeout = setTimeout(() => finish(null), 900);
-    const { data } = supabaseClient.auth.onAuthStateChange((event, nextSession) => {
-      if (event === 'SIGNED_IN' && nextSession?.user) {
-        finish(nextSession);
-      }
-    });
-
-    function finish(nextSession) {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      data?.subscription?.unsubscribe();
-      resolve(nextSession);
-    }
-  });
+async function restoreGoogleSession() {
+  return getSupabaseSessionWithRetry(5, 300);
 }
 
 async function verifyGooglePortalAccess(options = {}) {
@@ -2099,7 +2080,7 @@ async function initializePortalSession() {
     document.body.style.overflow = 'hidden';
   }
   const session = shouldCheckGoogle
-    ? await waitForSupabaseSession()
+    ? await restoreGoogleSession()
     : (await supabaseClient.auth.getSession()).data?.session;
   const hasSupabaseSession = Boolean(session?.user);
 
