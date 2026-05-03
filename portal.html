@@ -1015,15 +1015,22 @@ body.is-unlocked .dash { opacity: 1; }
 }
 .recommendation-list {
   display: grid;
-  gap: 24px;
+  gap: 22px;
   padding-top: 16px;
 }
 .recommendation-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
-  align-items: center;
-  padding: 10px 0;
+  padding: 12px 0;
+  cursor: pointer;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.recommendation-item:hover,
+.recommendation-item:focus-within {
+  opacity: 1;
+  transform: translateX(2px);
+}
+.recommendation-item.is-featured h4 {
+  color: #ffe3ad;
+  text-shadow: 0 0 16px rgba(233, 196, 138, 0.12);
 }
 .recommendation-item h4 {
   font-family: var(--serif);
@@ -1039,15 +1046,24 @@ body.is-unlocked .dash { opacity: 1; }
   line-height: 1.55;
   margin-bottom: 8px;
 }
+.recommendation-item:hover h4,
+.recommendation-item:hover p,
+.recommendation-item:hover .recommendation-add {
+  color: #ffe3ad;
+}
 .recommendation-kicker {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
-  color: rgba(233, 196, 138, 0.78);
+  color: rgba(245, 241, 234, 0.42);
   font-family: var(--mono);
   font-size: 9px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+.recommendation-badge {
+  color: rgba(233, 196, 138, 0.78);
 }
 .recommendation-meta {
   color: rgba(233, 196, 138, 0.72);
@@ -1055,6 +1071,12 @@ body.is-unlocked .dash { opacity: 1; }
   font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+.recommendation-urgency {
+  margin-top: 5px;
+  color: rgba(245, 241, 234, 0.46);
+  font-size: 12px;
+  line-height: 1.45;
 }
 .recommendation-add {
   border: 0;
@@ -1065,7 +1087,7 @@ body.is-unlocked .dash { opacity: 1; }
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 8px 0 0;
   white-space: nowrap;
   transition: color 0.25s, text-shadow 0.25s;
 }
@@ -1077,8 +1099,7 @@ body.is-unlocked .dash { opacity: 1; }
 }
 @media (max-width: 640px) {
   .recommendation-item {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    padding: 10px 0;
   }
 }
 
@@ -1687,35 +1708,47 @@ const taskRecommendations = [
     category: 'Social',
     title: 'Turn your presentation into 3 social posts',
     description: 'Repurpose your slides into concise LinkedIn-ready content.',
-    hint: 'From €120 · Tonight',
+    price: 'From €120',
+    timing: 'Tonight',
+    urgency: 'Popular today',
+    tag: 'Most used',
     prompt: 'Turn my presentation into 3 polished social posts for LinkedIn.'
   },
   {
     category: 'Document',
     title: 'Create a clean PDF version',
     description: 'Format your document into a polished, shareable PDF.',
-    hint: 'From €90 · Tomorrow',
+    price: 'From €90',
+    timing: 'Tomorrow',
+    urgency: 'Ready by morning',
     prompt: 'Create a clean, polished PDF version of my document.'
   },
   {
     category: 'Proofread',
     title: 'Proofread and optimize your text',
     description: 'Tighten wording, fix errors, and make the message sharper.',
-    hint: 'From €80 · Tonight',
+    price: 'From €80',
+    timing: 'Tonight',
+    urgency: 'Delivered overnight',
     prompt: 'Proofread and optimize my text so it reads clearly and professionally.'
   },
   {
     category: 'Strategy',
     title: 'Convert your notes into a structured document',
     description: 'Turn rough notes into a clear brief, proposal, or outline.',
-    hint: 'From €140 · This week',
+    price: 'From €140',
+    timing: 'This week',
+    urgency: 'Ready by morning',
     prompt: 'Convert my notes into a structured, professional document.'
   },
   {
     category: 'Recurring',
     title: 'Weekly content pack',
     description: 'Turn one idea into posts, captions, and short-form content every week.',
-    hint: 'From €249 · recurring',
+    price: 'From €249',
+    timing: 'recurring',
+    urgency: 'Popular today',
+    tag: 'Recurring',
     prompt: 'Create a weekly content pack from one idea, including posts, captions, and short-form content.'
   }
 ];
@@ -2001,14 +2034,18 @@ function renderRecommendations(suggestions = taskRecommendations) {
   document.getElementById('recommendationsList').innerHTML = `
     <div class="recommendation-list">
       ${suggestions.map((suggestion, index) => `
-        <div class="recommendation-item">
+        <div class="recommendation-item${index === 0 ? ' is-featured' : ''}" data-recommendation-index="${index}" tabindex="0" role="button">
           <div>
-            <div class="recommendation-kicker">${escapeHTML(suggestion.category)}</div>
+            <div class="recommendation-kicker">
+              <span>${escapeHTML(suggestion.category)}</span>
+              ${suggestion.tag ? `<span class="recommendation-badge">${escapeHTML(suggestion.tag)}</span>` : ''}
+            </div>
             <h4>${escapeHTML(suggestion.title)}</h4>
             <p>${escapeHTML(suggestion.description)}</p>
-            <div class="recommendation-meta">${escapeHTML(suggestion.hint)}</div>
+            <div class="recommendation-meta">${escapeHTML(suggestion.price)} · ${escapeHTML(suggestion.timing)}</div>
+            <div class="recommendation-urgency">${escapeHTML(suggestion.urgency)}</div>
+            <button type="button" class="recommendation-add" tabindex="-1">Add to request</button>
           </div>
-          <button type="button" class="recommendation-add" data-recommendation-index="${index}">Add to request</button>
         </div>
       `).join('')}
     </div>
@@ -2455,16 +2492,24 @@ document.getElementById('historyList').addEventListener('click', (e) => {
 });
 
 document.getElementById('recommendationsList').addEventListener('click', (e) => {
-  const button = e.target.closest('.recommendation-add');
-  if (!button) return;
+  const item = e.target.closest('.recommendation-item');
+  if (!item) return;
 
-  const suggestion = taskRecommendations[Number(button.dataset.recommendationIndex)];
+  const suggestion = taskRecommendations[Number(item.dataset.recommendationIndex)];
   if (!suggestion) return;
 
   const descField = document.getElementById('dashboardTaskDesc');
   descField.value = suggestion.prompt;
   descField.focus();
   descField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+document.getElementById('recommendationsList').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const item = e.target.closest('.recommendation-item');
+  if (!item) return;
+  e.preventDefault();
+  item.click();
 });
 
 renderRecommendations();
