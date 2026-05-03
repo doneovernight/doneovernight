@@ -1738,6 +1738,19 @@ async function verifyStoredPortalSession() {
   }
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function getSupabaseSessionWithRetry(retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const { data } = await supabaseClient.auth.getSession();
+    if (data?.session) return data.session;
+    if (attempt < retries) await wait(400);
+  }
+  return null;
+}
+
 async function verifyGooglePortalAccess(options = {}) {
   const showChecking = Boolean(options.showChecking);
   if (googleAccessCheckInFlight) return true;
@@ -1751,8 +1764,8 @@ async function verifyGooglePortalAccess(options = {}) {
   try {
     let user = options.user;
     if (!user) {
-      const { data: sessionData } = await supabaseClient.auth.getSession();
-      user = sessionData?.session?.user;
+      const session = await getSupabaseSessionWithRetry();
+      user = session?.user;
     }
     if (!user) {
       const { data } = await supabaseClient.auth.getUser();
@@ -2057,8 +2070,15 @@ async function initializePortalSession() {
   const url = new URL(window.location.href);
   const isOAuthReturn = url.searchParams.has('code') || url.searchParams.has('error') || window.location.hash.includes('access_token');
   const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
-  const { data: sessionData } = await supabaseClient.auth.getSession();
-  const hasSupabaseSession = Boolean(sessionData?.session?.user);
+  const shouldCheckGoogle = isOAuthReturn || hasGoogleUnlock;
+  if (shouldCheckGoogle) {
+    gate.classList.add('is-checking');
+    document.body.style.overflow = 'hidden';
+  }
+  const session = shouldCheckGoogle
+    ? await getSupabaseSessionWithRetry()
+    : (await supabaseClient.auth.getSession()).data?.session;
+  const hasSupabaseSession = Boolean(session?.user);
 
   // Re-check stored real portal access on restore; demo restore remains demo-only.
   if (getPortalEmail() && getPortalAccessKey()) {
@@ -2071,7 +2091,7 @@ async function initializePortalSession() {
   if (isOAuthReturn || hasGoogleUnlock || hasSupabaseSession) {
     const handledGoogle = await verifyGooglePortalAccess({
       showChecking: true,
-      user: sessionData?.session?.user
+      user: session?.user
     });
     if (handledGoogle) return;
   }
