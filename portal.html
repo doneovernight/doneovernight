@@ -28,6 +28,7 @@ try {
   const hasGoogleSession = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
   const isOAuthReturn = params.has('code') || params.has('error') || window.location.hash.includes('access_token');
   if (hasAccessKeySession || hasGoogleSession || isOAuthReturn) {
+    window.__portalInitialAuthRestoring = true;
     document.documentElement.classList.add('portal-precheck');
   }
 } catch (error) {}
@@ -1596,6 +1597,7 @@ const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 const DEMO_KEY = 'DONE-DEMO';
 let portalVerifiedThisSession = false;
 let googleAccessCheckInFlight = false;
+let isAuthRestoring = Boolean(window.__portalInitialAuthRestoring);
 
 function clearPortalSession() {
   ['portal_email', 'portal_access_key', 'portal_name'].forEach(key => sessionStorage.removeItem(key));
@@ -1606,9 +1608,21 @@ function clearPortalSession() {
   });
 }
 
-function lockPortal(message = '') {
+function beginAuthRestore() {
+  isAuthRestoring = true;
+  document.documentElement.classList.add('portal-precheck');
+  gate.classList.add('is-checking');
+  document.body.style.overflow = 'hidden';
+}
+
+function finishAuthRestore() {
+  isAuthRestoring = false;
   document.documentElement.classList.remove('portal-precheck');
   gate.classList.remove('is-checking');
+}
+
+function lockPortal(message = '') {
+  finishAuthRestore();
   gate.classList.remove('is-unlocked');
   document.body.classList.remove('is-unlocked');
   document.body.style.overflow = 'hidden';
@@ -1620,8 +1634,7 @@ function lockPortal(message = '') {
 
 function unlock(options = {}) {
   portalVerifiedThisSession = true;
-  document.documentElement.classList.remove('portal-precheck');
-  gate.classList.remove('is-checking');
+  finishAuthRestore();
   updateDashboardGreeting();
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
@@ -1780,8 +1793,7 @@ async function verifyGooglePortalAccess(options = {}) {
   googleAccessCheckInFlight = true;
 
   if (showChecking) {
-    gate.classList.add('is-checking');
-    document.body.style.overflow = 'hidden';
+    beginAuthRestore();
   }
 
   try {
@@ -2095,8 +2107,7 @@ async function initializePortalSession() {
   const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
   const shouldCheckGoogle = isOAuthReturn || hasGoogleUnlock;
   if (shouldCheckGoogle) {
-    gate.classList.add('is-checking');
-    document.body.style.overflow = 'hidden';
+    beginAuthRestore();
   }
   const session = shouldCheckGoogle
     ? await restoreGoogleSession()
@@ -2105,8 +2116,7 @@ async function initializePortalSession() {
 
   // Re-check stored real portal access on restore; demo restore remains demo-only.
   if (getPortalEmail() && getPortalAccessKey()) {
-    gate.classList.add('is-checking');
-    document.body.style.overflow = 'hidden';
+    beginAuthRestore();
     verifyStoredPortalSession();
     return;
   }
