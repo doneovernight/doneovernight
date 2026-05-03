@@ -92,6 +92,25 @@
   background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.5), transparent);
 }
 
+.gate-checking {
+  display: none;
+  min-height: 260px;
+  place-items: center;
+  text-align: center;
+}
+.gate.is-checking .gate-grid { display: none; }
+.gate.is-checking .gate-checking { display: grid; }
+.gate-checking-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(245, 241, 234, 0.72);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 .gate-top {
   display: flex;
   align-items: center;
@@ -1282,6 +1301,10 @@ body.is-unlocked .dash { opacity: 1; }
       <div class="gate-status"><span class="live-dot"></span>Studio online</div>
     </div>
 
+    <div class="gate-checking" aria-live="polite">
+      <div class="gate-checking-card"><span class="live-dot"></span>Checking access&hellip;</div>
+    </div>
+
     <div class="gate-grid">
       <div class="gate-intro">
         <h1 class="gate-title">Join <em>Today</em></h1>
@@ -1530,6 +1553,7 @@ function clearPortalSession() {
 }
 
 function lockPortal(message = '') {
+  gate.classList.remove('is-checking');
   gate.classList.remove('is-unlocked');
   document.body.classList.remove('is-unlocked');
   document.body.style.overflow = 'hidden';
@@ -1541,6 +1565,7 @@ function lockPortal(message = '') {
 
 function unlock(options = {}) {
   portalVerifiedThisSession = true;
+  gate.classList.remove('is-checking');
   updateDashboardGreeting();
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
@@ -1883,6 +1908,7 @@ document.querySelector('.js-email-signin').addEventListener('click', () => {
 
 // Re-check stored real portal access on restore; demo restore remains demo-only.
 if (getPortalEmail() && getPortalAccessKey()) {
+  gate.classList.add('is-checking');
   document.body.style.overflow = 'hidden';
   verifyStoredPortalSession();
 } else if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
