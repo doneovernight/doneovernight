@@ -306,6 +306,98 @@ body.is-admin .admin-dashboard { display: block; }
   border-top: 1px solid var(--line);
 }
 
+.admin-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-task-row {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(245, 241, 234, 0.08);
+}
+
+.admin-task-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.admin-task-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.admin-task-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.admin-task-email,
+.admin-task-meta,
+.admin-activity-time {
+  color: rgba(245, 241, 234, 0.45);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-task-meta {
+  margin-top: 8px;
+}
+
+.admin-task-detail {
+  margin-top: 6px;
+  color: rgba(245, 241, 234, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-task-price {
+  color: #e6d3a3;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.12);
+}
+
+.admin-task-eta {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-status-pill {
+  flex: 0 0 auto;
+  border: 1px solid rgba(233, 196, 138, 0.22);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: rgba(245, 241, 234, 0.72);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-status-pill.status-new { color: #e6d3a3; }
+.admin-status-pill.status-quoted { color: #f4d28a; }
+.admin-status-pill.status-in-progress { color: rgba(151, 197, 255, 0.86); }
+.admin-status-pill.status-delivered { color: var(--green); }
+.admin-status-pill.status-cancelled { color: rgba(245, 241, 234, 0.44); }
+
+.admin-activity {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-activity-title {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .section-kicker {
   margin: -8px 0 16px;
   font-family: var(--mono);
@@ -322,6 +414,10 @@ body.is-admin .admin-dashboard { display: block; }
   }
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+  .admin-task-top {
+    flex-direction: column;
+    gap: 10px;
   }
 }
 </style>
@@ -363,19 +459,19 @@ body.is-admin .admin-dashboard { display: block; }
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">New tasks</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value" id="adminNewTasksCount">0</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Pending quotes</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value" id="adminPendingQuotesCount">0</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">In progress</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value" id="adminInProgressCount">0</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Delivered</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value" id="adminDeliveredCount">0</div>
       </div>
     </div>
 
@@ -388,13 +484,17 @@ body.is-admin .admin-dashboard { display: block; }
 
       <section class="admin-section">
         <h2>Tasks</h2>
-        <div class="section-kicker">Not connected yet</div>
-        <div class="placeholder">Incoming tasks, quotes, and deliveries will appear here once connected.</div>
+        <div class="section-kicker">Live task feed</div>
+        <div id="adminTasksList">
+          <div class="placeholder">Loading tasks...</div>
+        </div>
       </section>
 
       <section class="admin-section is-wide">
         <h2>Activity</h2>
-        <div class="placeholder">Recent operator activity will appear here.</div>
+        <div id="adminActivity">
+          <div class="placeholder">Recent operator activity will appear here.</div>
+        </div>
       </section>
     </div>
   </section>
@@ -402,17 +502,175 @@ body.is-admin .admin-dashboard { display: block; }
 
 <script>
 const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
+const ADMIN_TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
 const adminForm = document.getElementById('adminForm');
 const adminKey = document.getElementById('adminKey');
 const adminError = document.getElementById('adminError');
 const adminLogout = document.getElementById('adminLogout');
+const adminTasksList = document.getElementById('adminTasksList');
+const adminActivity = document.getElementById('adminActivity');
+const adminNewTasksCount = document.getElementById('adminNewTasksCount');
+const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
+const adminInProgressCount = document.getElementById('adminInProgressCount');
+const adminDeliveredCount = document.getElementById('adminDeliveredCount');
+
+function escapeHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    new: 'Quote pending',
+    quoted: 'Quote sent',
+    in_progress: 'In progress',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled'
+  };
+  return labels[normalizeStatus(status)] || 'Pending';
+}
+
+function getStatusClass(status) {
+  return `status-${normalizeStatus(status).replace(/_/g, '-') || 'pending'}`;
+}
+
+function formatTaskDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function sortedTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
+function updateAdminStats(tasks) {
+  adminNewTasksCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'new').length;
+  adminPendingQuotesCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'quoted').length;
+  adminInProgressCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'in_progress').length;
+  adminDeliveredCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'delivered').length;
+}
+
+function renderAdminTasks(tasks) {
+  if (!tasks.length) {
+    adminTasksList.innerHTML = '<div class="placeholder">No tasks yet.</div>';
+    return;
+  }
+
+  adminTasksList.innerHTML = `
+    <div class="admin-task-list">
+      ${sortedTasks(tasks).map((task) => {
+        const createdAt = formatTaskDate(task.created_at);
+        const deadline = task.deadline ? escapeHTML(task.deadline) : 'No deadline set';
+        const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '';
+        const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
+        const details = [quoteAmount, deliveryEta].filter(Boolean).join(' · ');
+
+        return `
+          <article class="admin-task-row">
+            <div class="admin-task-top">
+              <div>
+                <h3 class="admin-task-title">${escapeHTML(task.task_description || 'Untitled task')}</h3>
+                <div class="admin-task-email">${escapeHTML(task.email || 'No email')}</div>
+              </div>
+              <span class="admin-status-pill ${getStatusClass(task.status)}">${getStatusLabel(task.status)}</span>
+            </div>
+            <div class="admin-task-meta">${deadline}${createdAt ? ` · ${escapeHTML(createdAt)}` : ''}</div>
+            ${details ? `<div class="admin-task-detail">${details}</div>` : ''}
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderAdminActivity(tasks) {
+  if (!tasks.length) {
+    adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+    return;
+  }
+
+  const latest = sortedTasks(tasks)[0];
+  const labels = {
+    new: 'New task received',
+    quoted: 'Quote sent',
+    in_progress: 'Task in progress',
+    delivered: 'Task delivered',
+    cancelled: 'Task cancelled'
+  };
+  const status = normalizeStatus(latest.status);
+  const createdAt = formatTaskDate(latest.created_at);
+  adminActivity.innerHTML = `
+    <div class="admin-activity">
+      <div class="admin-activity-title">${escapeHTML(labels[status] || 'Task updated')}</div>
+      ${createdAt ? `<div class="admin-activity-time">${escapeHTML(createdAt)}</div>` : ''}
+    </div>
+  `;
+}
+
+function setAdminLoading() {
+  adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
+}
+
+function setAdminError() {
+  adminTasksList.innerHTML = '<div class="placeholder">Could not load tasks.</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+}
+
+function resetAdminDashboard() {
+  updateAdminStats([]);
+  adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+}
+
+async function loadAdminTasks() {
+  setAdminLoading();
+
+  try {
+    const response = await fetch(ADMIN_TASKS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({})
+    });
+    if (!response.ok) throw new Error('Admin tasks failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success !== true || !Array.isArray(data.tasks)) throw new Error('Admin tasks denied');
+
+    updateAdminStats(data.tasks);
+    renderAdminTasks(data.tasks);
+    renderAdminActivity(data.tasks);
+  } catch (error) {
+    updateAdminStats([]);
+    setAdminError();
+  }
+}
 
 function showAdminDashboard() {
   document.body.classList.add('is-admin');
+  loadAdminTasks();
 }
 
 function showAdminLogin() {
   document.body.classList.remove('is-admin');
+  resetAdminDashboard();
   adminForm.reset();
   adminError.classList.remove('is-shown');
   setTimeout(() => adminKey.focus(), 100);
