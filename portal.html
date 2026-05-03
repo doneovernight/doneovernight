@@ -1754,7 +1754,7 @@ async function verifyGooglePortalAccess(options = {}) {
     }
 
     const email = user.email;
-    const name = user.user_metadata?.full_name || '';
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
     const response = await fetch(GOOGLE_ACCESS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -2014,7 +2014,10 @@ document.querySelectorAll('.js-google-auth').forEach(button => {
     document.body.style.overflow = 'hidden';
 
     const { error } = await supabaseClient.auth.signInWithOAuth({
-      provider: 'google'
+      provider: 'google',
+      options: {
+        redirectTo: 'https://doneovernight.com/portal.html'
+      }
     });
 
     if (error) {
