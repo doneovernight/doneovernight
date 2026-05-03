@@ -212,6 +212,30 @@ body.is-admin .admin-dashboard { display: block; }
   color: var(--green);
 }
 
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.admin-logout {
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+.admin-logout:hover,
+.admin-logout:focus-visible {
+  color: var(--amber);
+  outline: none;
+}
+
 .live-dot {
   width: 7px;
   height: 7px;
@@ -282,6 +306,15 @@ body.is-admin .admin-dashboard { display: block; }
   border-top: 1px solid var(--line);
 }
 
+.section-kicker {
+  margin: -8px 0 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.34);
+}
+
 @media (max-width: 760px) {
   .admin-topbar {
     align-items: flex-start;
@@ -315,13 +348,16 @@ body.is-admin .admin-dashboard { display: block; }
   <section class="admin-dashboard" id="adminDashboard">
     <div class="admin-topbar">
       <div class="brand">DONEOVERNIGHT — Admin</div>
-      <div class="admin-status"><span class="live-dot"></span>Studio online</div>
+      <div class="admin-actions">
+        <div class="admin-status"><span class="live-dot"></span>Studio online</div>
+        <button class="admin-logout" id="adminLogout" type="button">Log out</button>
+      </div>
     </div>
 
     <header class="admin-head">
       <div class="eyebrow">Private dashboard</div>
-      <h1>Operations control.</h1>
-      <p>Approvals, task flow, and studio activity will live here.</p>
+      <h1>Execution control.</h1>
+      <p>Approve clients, quote tasks, and manage deliveries from one private workspace.</p>
     </header>
 
     <div class="stats-grid">
@@ -346,17 +382,19 @@ body.is-admin .admin-dashboard { display: block; }
     <div class="admin-grid">
       <section class="admin-section">
         <h2>Clients</h2>
-        <div class="placeholder">Client approvals will appear here</div>
+        <div class="section-kicker">Not connected yet</div>
+        <div class="placeholder">Client approvals will appear here once connected.</div>
       </section>
 
       <section class="admin-section">
         <h2>Tasks</h2>
-        <div class="placeholder">Task management will appear here</div>
+        <div class="section-kicker">Not connected yet</div>
+        <div class="placeholder">Incoming tasks, quotes, and deliveries will appear here once connected.</div>
       </section>
 
       <section class="admin-section is-wide">
         <h2>Activity</h2>
-        <div class="placeholder">Recent activity</div>
+        <div class="placeholder">Recent operator activity will appear here.</div>
       </section>
     </div>
   </section>
@@ -367,9 +405,17 @@ const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
 const adminForm = document.getElementById('adminForm');
 const adminKey = document.getElementById('adminKey');
 const adminError = document.getElementById('adminError');
+const adminLogout = document.getElementById('adminLogout');
 
 function showAdminDashboard() {
   document.body.classList.add('is-admin');
+}
+
+function showAdminLogin() {
+  document.body.classList.remove('is-admin');
+  adminForm.reset();
+  adminError.classList.remove('is-shown');
+  setTimeout(() => adminKey.focus(), 100);
 }
 
 if (sessionStorage.getItem('doneovernight_admin') === 'true') {
@@ -377,6 +423,11 @@ if (sessionStorage.getItem('doneovernight_admin') === 'true') {
 } else {
   setTimeout(() => adminKey.focus(), 100);
 }
+
+adminLogout.addEventListener('click', () => {
+  sessionStorage.removeItem('doneovernight_admin');
+  showAdminLogin();
+});
 
 adminForm.addEventListener('submit', async (e) => {
   e.preventDefault();
