@@ -1751,6 +1751,29 @@ async function getSupabaseSessionWithRetry(retries = 2) {
   return null;
 }
 
+async function waitForSupabaseSession() {
+  const session = await getSupabaseSessionWithRetry();
+  if (session) return session;
+
+  return new Promise(resolve => {
+    let settled = false;
+    const timeout = setTimeout(() => finish(null), 900);
+    const { data } = supabaseClient.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_IN' && nextSession?.user) {
+        finish(nextSession);
+      }
+    });
+
+    function finish(nextSession) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      data?.subscription?.unsubscribe();
+      resolve(nextSession);
+    }
+  });
+}
+
 async function verifyGooglePortalAccess(options = {}) {
   const showChecking = Boolean(options.showChecking);
   if (googleAccessCheckInFlight) return true;
@@ -2076,7 +2099,7 @@ async function initializePortalSession() {
     document.body.style.overflow = 'hidden';
   }
   const session = shouldCheckGoogle
-    ? await getSupabaseSessionWithRetry()
+    ? await waitForSupabaseSession()
     : (await supabaseClient.auth.getSession()).data?.session;
   const hasSupabaseSession = Boolean(session?.user);
 
@@ -2085,6 +2108,11 @@ async function initializePortalSession() {
     gate.classList.add('is-checking');
     document.body.style.overflow = 'hidden';
     verifyStoredPortalSession();
+    return;
+  }
+
+  if (shouldCheckGoogle && !hasSupabaseSession) {
+    lockPortal();
     return;
   }
 
