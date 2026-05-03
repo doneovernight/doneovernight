@@ -358,6 +358,46 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
+.admin-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-task-action {
+  border: 1px solid rgba(233, 196, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(233, 196, 138, 0.055);
+  color: #f4d28a;
+  padding: 8px 11px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(233, 196, 138, 0.08);
+  transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.admin-task-action:hover,
+.admin-task-action:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  border-color: rgba(233, 196, 138, 0.62);
+  color: #ffe3ad;
+  box-shadow: 0 0 26px rgba(233, 196, 138, 0.18);
+  outline: none;
+}
+
+.admin-task-action:active { transform: scale(0.98); }
+.admin-task-action:disabled { cursor: wait; opacity: 0.66; }
+
+.admin-task-message {
+  color: rgba(245, 241, 234, 0.52);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .admin-task-price {
   color: #e6d3a3;
   font-weight: 600;
@@ -503,6 +543,7 @@ body.is-admin .admin-dashboard { display: block; }
 <script>
 const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
 const ADMIN_TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
+const ADMIN_UPDATE_TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-update-task';
 const adminForm = document.getElementById('adminForm');
 const adminKey = document.getElementById('adminKey');
 const adminError = document.getElementById('adminError');
@@ -540,6 +581,15 @@ function getStatusLabel(status) {
 
 function getStatusClass(status) {
   return `status-${normalizeStatus(status).replace(/_/g, '-') || 'pending'}`;
+}
+
+function getTaskAction(status) {
+  const actions = {
+    new: { type: 'quote', label: 'Send quote' },
+    quoted: { type: 'quote', label: 'Edit quote' },
+    in_progress: { type: 'deliver', label: 'Deliver' }
+  };
+  return actions[normalizeStatus(status)] || null;
 }
 
 function formatTaskDate(value) {
@@ -583,6 +633,18 @@ function renderAdminTasks(tasks) {
         const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '';
         const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
         const details = [quoteAmount, deliveryEta].filter(Boolean).join(' · ');
+        const action = task.id ? getTaskAction(task.status) : null;
+        const actionMarkup = action ? `
+          <div class="admin-task-actions">
+            <button
+              class="admin-task-action"
+              type="button"
+              data-action="${action.type}"
+              data-task-id="${escapeHTML(task.id)}"
+            >${action.label}</button>
+            <span class="admin-task-message" aria-live="polite"></span>
+          </div>
+        ` : '';
 
         return `
           <article class="admin-task-row">
@@ -595,6 +657,7 @@ function renderAdminTasks(tasks) {
             </div>
             <div class="admin-task-meta">${deadline}${createdAt ? ` · ${escapeHTML(createdAt)}` : ''}</div>
             ${details ? `<div class="admin-task-detail">${details}</div>` : ''}
+            ${actionMarkup}
           </article>
         `;
       }).join('')}
@@ -663,6 +726,59 @@ async function loadAdminTasks() {
   }
 }
 
+async function updateTask(button, payload) {
+  const row = button.closest('.admin-task-row');
+  const message = row?.querySelector('.admin-task-message');
+  const previousText = button.textContent;
+
+  button.disabled = true;
+  button.textContent = 'Processing...';
+  if (message) message.textContent = '';
+
+  try {
+    const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Task update failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === false) throw new Error('Task update denied');
+    await loadAdminTasks();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    if (message) message.textContent = 'Could not update task.';
+  }
+}
+
+function promptForQuote() {
+  const quoteAmount = window.prompt('quote_amount');
+  if (quoteAmount === null) return null;
+  const deliveryEta = window.prompt('delivery_eta');
+  if (deliveryEta === null) return null;
+  const quoteNote = window.prompt('quote_note');
+  if (quoteNote === null) return null;
+
+  return {
+    quote_amount: quoteAmount.trim(),
+    delivery_eta: deliveryEta.trim(),
+    quote_note: quoteNote.trim()
+  };
+}
+
+function promptForDelivery() {
+  const deliveryLink = window.prompt('delivery_link');
+  if (deliveryLink === null) return null;
+  const deliveryNote = window.prompt('delivery_note');
+  if (deliveryNote === null) return null;
+
+  return {
+    delivery_link: deliveryLink.trim(),
+    delivery_note: deliveryNote.trim()
+  };
+}
+
 function showAdminDashboard() {
   document.body.classList.add('is-admin');
   loadAdminTasks();
@@ -685,6 +801,41 @@ if (sessionStorage.getItem('doneovernight_admin') === 'true') {
 adminLogout.addEventListener('click', () => {
   sessionStorage.removeItem('doneovernight_admin');
   showAdminLogin();
+});
+
+adminTasksList.addEventListener('click', async (e) => {
+  const button = e.target.closest('.admin-task-action');
+  if (!button || button.disabled) return;
+
+  const taskId = button.dataset.taskId;
+  if (!taskId) return;
+
+  if (button.dataset.action === 'quote') {
+    const quote = promptForQuote();
+    if (!quote) return;
+
+    await updateTask(button, {
+      id: taskId,
+      status: 'quoted',
+      quote_amount: quote.quote_amount,
+      delivery_eta: quote.delivery_eta,
+      quote_note: quote.quote_note,
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  if (button.dataset.action === 'deliver') {
+    const delivery = promptForDelivery();
+    if (!delivery) return;
+
+    await updateTask(button, {
+      id: taskId,
+      status: 'delivered',
+      delivery_link: delivery.delivery_link,
+      delivery_note: delivery.delivery_note,
+      updated_at: new Date().toISOString()
+    });
+  }
 });
 
 adminForm.addEventListener('submit', async (e) => {
