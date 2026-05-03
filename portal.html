@@ -734,6 +734,11 @@ body.is-unlocked .dash { opacity: 1; }
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08), 0 0 26px rgba(233, 196, 138, 0.12);
   outline: none;
 }
+.kpi.is-selected {
+  border-color: rgba(233, 196, 138, 0.38);
+  background: rgba(233, 196, 138, 0.045);
+  box-shadow: 0 0 24px rgba(233, 196, 138, 0.08);
+}
 .kpi .kpi-label {
   font-family: var(--mono);
   font-size: 10px;
@@ -1692,27 +1697,27 @@ body.is-unlocked .dash { opacity: 1; }
 
     <!-- Status cards -->
     <div class="kpi-grid">
-      <div class="kpi is-active">
+      <button class="kpi is-active is-clickable" type="button" data-history-mode="active">
         <div class="kpi-label">Active tasks</div>
         <div class="kpi-n" id="activeTasksCount">0</div>
-      </div>
-      <button class="kpi is-clickable" id="pendingQuotesCard" type="button">
+      </button>
+      <button class="kpi is-clickable" type="button" data-history-mode="pending">
         <div class="kpi-label">Pending quotes</div>
         <div class="kpi-n" id="pendingQuotesCount">0</div>
       </button>
-      <div class="kpi">
+      <button class="kpi is-clickable" type="button" data-history-mode="delivered">
         <div class="kpi-label">Delivered</div>
         <div class="kpi-n" id="deliveredCount">0</div>
-      </div>
-      <div class="kpi">
+      </button>
+      <button class="kpi is-clickable" type="button" data-history-mode="hours">
         <div class="kpi-label">Hours saved</div>
-        <div class="kpi-n">0h</div>
+        <div class="kpi-n" id="hoursSavedCount">0h</div>
         <div class="kpi-delta">Starts tracking after your first task</div>
-      </div>
-      <div class="kpi">
+      </button>
+      <button class="kpi is-clickable" type="button" data-history-mode="studio">
         <div class="kpi-label">Studio status</div>
         <div class="kpi-n">Online</div>
-      </div>
+      </button>
     </div>
 
     <!-- Submit task + activity -->
@@ -2190,6 +2195,7 @@ function resetTaskStats() {
   document.getElementById('activeTasksCount').textContent = '0';
   document.getElementById('pendingQuotesCount').textContent = '0';
   document.getElementById('deliveredCount').textContent = '0';
+  document.getElementById('hoursSavedCount').textContent = '0h';
 }
 
 function renderEmptyHistory() {
@@ -2273,9 +2279,11 @@ function formatTaskDate(value) {
 
 function updateTaskStats(tasks) {
   const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
+  const deliveredTasks = tasks.filter(task => getStatusKey(task.status) === 'delivered');
   document.getElementById('activeTasksCount').textContent = tasks.filter(task => activeStatuses.has(getStatusKey(task.status))).length;
   document.getElementById('pendingQuotesCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'new').length;
-  document.getElementById('deliveredCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'delivered').length;
+  document.getElementById('deliveredCount').textContent = deliveredTasks.length;
+  document.getElementById('hoursSavedCount').textContent = `${getHoursSaved(deliveredTasks)}h`;
 }
 
 function getSortedTasks(tasks) {
@@ -2284,6 +2292,17 @@ function getSortedTasks(tasks) {
     const aTime = new Date(a.created_at || 0).getTime() || 0;
     return bTime - aTime;
   });
+}
+
+function getTaskHoursSaved(task) {
+  const value = task.hours_saved ?? task.estimated_hours_saved ?? task.hours_saved_estimate;
+  const hours = Number.parseFloat(value);
+  return Number.isFinite(hours) ? hours : 0;
+}
+
+function getHoursSaved(tasks) {
+  const total = tasks.reduce((sum, task) => sum + getTaskHoursSaved(task), 0);
+  return Number.isInteger(total) ? String(total) : total.toFixed(1);
 }
 
 function renderTaskDetails(task) {
@@ -2334,29 +2353,70 @@ function renderTaskActivity(tasks) {
   `;
 }
 
+function setSelectedStatusCard() {
+  document.querySelectorAll('[data-history-mode]').forEach(card => {
+    card.classList.toggle('is-selected', card.dataset.historyMode === historyMode);
+  });
+}
+
 function renderHistoryMode(tasks) {
   const mode = document.getElementById('historyMode');
-  if (historyMode !== 'pending') {
+  setSelectedStatusCard();
+  if (historyMode === 'all') {
     mode.classList.remove('is-shown');
     mode.innerHTML = '';
     return tasks;
   }
 
-  const pendingTasks = tasks.filter(task => getStatusKey(task.status) === 'new');
+  const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
+  const deliveredTasks = tasks.filter(task => getStatusKey(task.status) === 'delivered');
+  const views = {
+    active: {
+      title: 'Active tasks',
+      body: 'Tasks currently waiting for a quote, approval, or delivery.',
+      tasks: tasks.filter(task => activeStatuses.has(getStatusKey(task.status))),
+      empty: 'No active tasks.'
+    },
+    pending: {
+      title: 'Pending quote requests',
+      body: 'Tasks waiting for a quote from the studio.',
+      tasks: tasks.filter(task => getStatusKey(task.status) === 'new'),
+      empty: 'No pending quotes.'
+    },
+    delivered: {
+      title: 'Delivered work',
+      body: 'Completed tasks and delivery links.',
+      tasks: deliveredTasks,
+      empty: 'No delivered work yet.'
+    },
+    hours: {
+      title: 'Hours saved',
+      body: deliveredTasks.length
+        ? `${getHoursSaved(deliveredTasks)}h saved from delivered work.`
+        : 'Hours saved starts tracking after your first delivered task.',
+      tasks: deliveredTasks,
+      empty: 'Hours saved starts tracking after your first delivered task.'
+    },
+    studio: {
+      title: 'Studio status',
+      body: 'Studio online. Ready to receive tasks.',
+      tasks: [],
+      empty: 'Studio online. Ready to receive tasks.'
+    }
+  };
+  const view = views[historyMode] || views.active;
   mode.classList.add('is-shown');
-  mode.innerHTML = pendingTasks.length
-    ? '<h3>Pending quote requests</h3><p>Tasks waiting for a quote from the studio.</p>'
-    : '<h3>Pending quote requests</h3><p>No pending quotes.</p>';
-  return pendingTasks;
+  mode.innerHTML = `<h3>${escapeHTML(view.title)}</h3><p>${escapeHTML(view.body)}</p>`;
+  return view.tasks.length ? view.tasks : [{ isEmptyView: true, message: view.empty }];
 }
 
 function renderTaskHistory(tasks) {
   if (!Array.isArray(tasks) || tasks.length === 0) {
     dashboardTasks = [];
     resetTaskStats();
-    renderHistoryMode([]);
-    if (historyMode === 'pending') {
-      document.getElementById('historyList').innerHTML = '<div class="empty-state">No pending quotes.</div>';
+    const visibleTasks = renderHistoryMode([]);
+    if (visibleTasks[0]?.isEmptyView) {
+      document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
     } else {
       renderEmptyHistory();
     }
@@ -2368,8 +2428,8 @@ function renderTaskHistory(tasks) {
   updateTaskStats(tasks);
   renderTaskActivity(tasks);
   const visibleTasks = renderHistoryMode(dashboardTasks);
-  if (!visibleTasks.length) {
-    document.getElementById('historyList').innerHTML = '<div class="empty-state">No pending quotes.</div>';
+  if (visibleTasks[0]?.isEmptyView) {
+    document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
     return;
   }
   document.getElementById('historyList').innerHTML = `
@@ -2723,10 +2783,12 @@ document.getElementById('historyList').addEventListener('click', (e) => {
   acceptQuote(button);
 });
 
-document.getElementById('pendingQuotesCard').addEventListener('click', () => {
-  historyMode = 'pending';
-  renderTaskHistory(dashboardTasks);
-  document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
+document.querySelectorAll('[data-history-mode]').forEach(card => {
+  card.addEventListener('click', () => {
+    historyMode = card.dataset.historyMode || 'all';
+    renderTaskHistory(dashboardTasks);
+    document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 });
 
 document.getElementById('recommendationsList').addEventListener('click', (e) => {
