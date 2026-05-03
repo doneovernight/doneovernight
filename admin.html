@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — DONEOVERNIGHT</title>
+<meta name="description" content="Private DONEOVERNIGHT admin dashboard." />
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="shared.css">
+
+<style>
+body {
+  min-height: 100vh;
+  background: #050608;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+.admin-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, 0.08), transparent 64%),
+    radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, 0.06), transparent 68%),
+    #050608;
+}
+
+.admin-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.45;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 36% 12%, #ffeed0, transparent),
+    radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+    radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+    radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 68% 82%, #fff, transparent);
+}
+
+.admin-shell {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.admin-gate {
+  min-height: calc(100vh - clamp(44px, 8vw, 84px));
+  display: grid;
+  place-items: center;
+}
+
+.admin-card,
+.admin-section,
+.stat-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+  box-shadow:
+    0 30px 60px -18px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(245, 241, 234, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.admin-card {
+  width: min(100%, 440px);
+  padding: clamp(24px, 4vw, 42px);
+  text-align: left;
+}
+
+.admin-wordmark,
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+
+.admin-card h1,
+.admin-head h1 {
+  margin-top: 14px;
+  font-family: var(--serif);
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+
+.admin-card p,
+.admin-head p,
+.placeholder {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-card p { margin: 14px 0 26px; }
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.03);
+  color: var(--ink);
+  padding: 15px 16px;
+  font: 14px var(--sans);
+  outline: none;
+  transition: border 0.25s, background 0.25s, box-shadow 0.25s;
+}
+
+.admin-input:focus {
+  border-color: var(--amber);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.1);
+}
+
+.admin-button {
+  min-height: 48px;
+  border: 1px solid rgba(233, 196, 138, 0.45);
+  border-radius: 7px;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font: 600 13px var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.admin-button:hover,
+.admin-button:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.7);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.28),
+    0 0 70px rgba(233, 196, 138, 0.1);
+  outline: none;
+}
+
+.admin-button:active { transform: scale(0.98); }
+.admin-button:disabled { cursor: wait; opacity: 0.72; }
+
+.admin-error {
+  min-height: 16px;
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.admin-error.is-shown { opacity: 1; }
+
+.admin-dashboard {
+  display: none;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+body.is-admin .admin-gate { display: none; }
+body.is-admin .admin-dashboard { display: block; }
+
+.admin-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 24px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-topbar .brand {
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(103, 214, 149, 0.9);
+}
+
+.admin-head {
+  margin-bottom: 34px;
+}
+
+.admin-head p {
+  margin-top: 10px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  padding: 22px 24px;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.stat-value {
+  margin-top: 8px;
+  font-family: var(--serif);
+  font-size: 34px;
+  line-height: 1;
+  color: var(--amber);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.admin-section {
+  padding: clamp(22px, 3vw, 30px);
+}
+
+.admin-section h2 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: 18px;
+}
+
+.admin-section.is-wide {
+  grid-column: 1 / -1;
+}
+
+.placeholder {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<div class="admin-bg"></div>
+<div class="admin-stars"></div>
+
+<main class="admin-shell">
+  <section class="admin-gate" id="adminGate">
+    <div class="admin-card">
+      <div class="admin-wordmark">DONEOVERNIGHT</div>
+      <h1>Admin access</h1>
+      <p>Private operator dashboard. Enter the admin key to continue.</p>
+
+      <form class="admin-form" id="adminForm" novalidate>
+        <input class="admin-input" id="adminKey" type="password" placeholder="Admin key" autocomplete="off" required>
+        <button class="admin-button" type="submit"><span>Unlock admin →</span></button>
+        <div class="admin-error" id="adminError">Could not verify admin key.</div>
+      </form>
+    </div>
+  </section>
+
+  <section class="admin-dashboard" id="adminDashboard">
+    <div class="admin-topbar">
+      <div class="brand">DONEOVERNIGHT — Admin</div>
+      <div class="admin-status"><span class="live-dot"></span>Studio online</div>
+    </div>
+
+    <header class="admin-head">
+      <div class="eyebrow">Private dashboard</div>
+      <h1>Operations control.</h1>
+      <p>Approvals, task flow, and studio activity will live here.</p>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">New tasks</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending quotes</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">In progress</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Delivered</div>
+        <div class="stat-value">0</div>
+      </div>
+    </div>
+
+    <div class="admin-grid">
+      <section class="admin-section">
+        <h2>Clients</h2>
+        <div class="placeholder">Client approvals will appear here</div>
+      </section>
+
+      <section class="admin-section">
+        <h2>Tasks</h2>
+        <div class="placeholder">Task management will appear here</div>
+      </section>
+
+      <section class="admin-section is-wide">
+        <h2>Activity</h2>
+        <div class="placeholder">Recent activity</div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script>
+const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
+const adminForm = document.getElementById('adminForm');
+const adminKey = document.getElementById('adminKey');
+const adminError = document.getElementById('adminError');
+
+function showAdminDashboard() {
+  document.body.classList.add('is-admin');
+}
+
+if (sessionStorage.getItem('doneovernight_admin') === 'true') {
+  showAdminDashboard();
+} else {
+  setTimeout(() => adminKey.focus(), 100);
+}
+
+adminForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  adminError.classList.remove('is-shown');
+
+  const key = adminKey.value.trim();
+  const submit = adminForm.querySelector('.admin-button');
+  if (!key) {
+    adminError.textContent = 'Enter admin key.';
+    adminError.classList.add('is-shown');
+    adminKey.focus();
+    return;
+  }
+
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Checking...</span>';
+
+  try {
+    const response = await fetch(ADMIN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ admin_key: key })
+    });
+    if (!response.ok) throw new Error('Admin auth failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success !== true) throw new Error('Admin auth denied');
+    sessionStorage.setItem('doneovernight_admin', 'true');
+    showAdminDashboard();
+  } catch (error) {
+    adminError.textContent = 'Could not verify admin key.';
+    adminError.classList.add('is-shown');
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+  }
+});
+</script>
+</body>
+</html>
