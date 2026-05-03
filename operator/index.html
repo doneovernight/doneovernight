@@ -365,14 +365,16 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
-.admin-task-actions {
+.admin-task-actions,
+.admin-client-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: 12px;
 }
 
-.admin-task-action {
+.admin-task-action,
+.admin-client-action {
   border: 1px solid rgba(233, 196, 138, 0.35);
   border-radius: 999px;
   background: rgba(233, 196, 138, 0.055);
@@ -388,7 +390,9 @@ body.is-admin .admin-dashboard { display: block; }
 }
 
 .admin-task-action:hover,
-.admin-task-action:focus-visible {
+.admin-task-action:focus-visible,
+.admin-client-action:hover,
+.admin-client-action:focus-visible {
   background: rgba(233, 196, 138, 0.12);
   border-color: rgba(233, 196, 138, 0.62);
   color: #ffe3ad;
@@ -398,8 +402,11 @@ body.is-admin .admin-dashboard { display: block; }
 
 .admin-task-action:active { transform: scale(0.98); }
 .admin-task-action:disabled { cursor: wait; opacity: 0.66; }
+.admin-client-action:active { transform: scale(0.98); }
+.admin-client-action:disabled { cursor: wait; opacity: 0.66; }
 
-.admin-task-message {
+.admin-task-message,
+.admin-client-message {
   color: rgba(245, 241, 234, 0.52);
   font-size: 12px;
   line-height: 1.5;
@@ -559,6 +566,7 @@ body.is-admin .admin-dashboard { display: block; }
 <script>
 const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
 const ADMIN_CLIENTS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-clients';
+const ADMIN_UPDATE_CLIENT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-update-client';
 const ADMIN_TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
 const ADMIN_UPDATE_TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-update-task';
 const adminForm = document.getElementById('adminForm');
@@ -605,6 +613,22 @@ function getClientStatusLabel(status) {
     revoked: 'Revoked'
   };
   return labels[normalizeStatus(status)] || 'Pending';
+}
+
+function getClientActions(status) {
+  const actions = {
+    pending: [
+      { type: 'approve', label: 'Approve', status: 'active' },
+      { type: 'reject', label: 'Reject', status: 'revoked' }
+    ],
+    active: [
+      { type: 'revoke', label: 'Revoke', status: 'revoked' }
+    ],
+    revoked: [
+      { type: 'reactivate', label: 'Re-activate', status: 'active' }
+    ]
+  };
+  return actions[normalizeStatus(status)] || [];
 }
 
 function getStatusClass(status) {
@@ -667,6 +691,21 @@ function renderAdminClients(clients) {
     <div class="admin-client-list">
       ${sortedClients(clients).map((client) => {
         const createdAt = formatTaskDate(client.created_at);
+        const actions = client.email ? getClientActions(client.status) : [];
+        const actionMarkup = actions.length ? `
+          <div class="admin-client-actions">
+            ${actions.map((action) => `
+              <button
+                class="admin-client-action"
+                type="button"
+                data-client-action="${action.type}"
+                data-client-status="${action.status}"
+                data-client-email="${escapeHTML(client.email)}"
+              >${action.label}</button>
+            `).join('')}
+            <span class="admin-client-message" aria-live="polite"></span>
+          </div>
+        ` : '';
 
         return `
           <article class="admin-client-row">
@@ -678,6 +717,7 @@ function renderAdminClients(clients) {
               <span class="admin-status-pill ${getStatusClass(client.status)}">${getClientStatusLabel(client.status)}</span>
             </div>
             ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
+            ${actionMarkup}
           </article>
         `;
       }).join('')}
@@ -823,6 +863,33 @@ async function loadAdminTasks() {
   }
 }
 
+async function updateClient(button, payload) {
+  const row = button.closest('.admin-client-row');
+  const actions = row?.querySelectorAll('.admin-client-action') || [];
+  const message = row?.querySelector('.admin-client-message');
+  const previousText = button.textContent;
+
+  actions.forEach((action) => { action.disabled = true; });
+  button.textContent = 'Processing...';
+  if (message) message.textContent = '';
+
+  try {
+    const response = await fetch(ADMIN_UPDATE_CLIENT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Client update failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === false) throw new Error('Client update denied');
+    await loadAdminClients();
+  } catch (error) {
+    actions.forEach((action) => { action.disabled = false; });
+    button.textContent = previousText;
+    if (message) message.textContent = 'Could not update client.';
+  }
+}
+
 async function updateTask(button, payload) {
   const row = button.closest('.admin-task-row');
   const message = row?.querySelector('.admin-task-message');
@@ -899,6 +966,20 @@ if (sessionStorage.getItem('doneovernight_admin') === 'true') {
 adminLogout.addEventListener('click', () => {
   sessionStorage.removeItem('doneovernight_admin');
   showAdminLogin();
+});
+
+adminClientsList.addEventListener('click', async (e) => {
+  const button = e.target.closest('.admin-client-action');
+  if (!button || button.disabled) return;
+
+  const email = button.dataset.clientEmail;
+  const status = button.dataset.clientStatus;
+  if (!email || !status) return;
+
+  await updateClient(button, {
+    email,
+    status
+  });
 });
 
 adminTasksList.addEventListener('click', async (e) => {
