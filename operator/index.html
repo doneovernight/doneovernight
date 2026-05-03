@@ -263,6 +263,10 @@ body.is-admin .admin-dashboard { display: block; }
   padding: 22px 24px;
 }
 
+.stat-card.has-new-tasks {
+  animation: operatorPulse 2.8s ease-in-out infinite;
+}
+
 .stat-label {
   font-family: var(--mono);
   font-size: 10px;
@@ -321,6 +325,23 @@ body.is-admin .admin-dashboard { display: block; }
   border-bottom: 1px solid rgba(245, 241, 234, 0.08);
 }
 
+.admin-task-row.is-new-task {
+  position: relative;
+}
+
+.admin-task-row.is-new-task::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: -14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e6d3a3;
+  box-shadow: 0 0 14px rgba(230, 211, 163, 0.28);
+  animation: operatorDotPulse 2.4s ease-in-out infinite;
+}
+
 .admin-task-row:last-child,
 .admin-client-row:last-child {
   padding-bottom: 0;
@@ -363,6 +384,34 @@ body.is-admin .admin-dashboard { display: block; }
   color: rgba(245, 241, 234, 0.72);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.admin-task-priority {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-task-priority.priority-high {
+  color: #e6d3a3;
+  background: rgba(230, 211, 163, 0.08);
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.14);
+}
+
+.admin-task-priority.priority-medium {
+  color: rgba(245, 241, 234, 0.68);
+  background: rgba(245, 241, 234, 0.055);
+}
+
+.admin-task-priority.priority-normal {
+  color: rgba(245, 241, 234, 0.38);
+  background: rgba(245, 241, 234, 0.035);
 }
 
 .admin-task-actions,
@@ -464,6 +513,26 @@ body.is-admin .admin-dashboard { display: block; }
   color: rgba(245, 241, 234, 0.34);
 }
 
+@keyframes operatorPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(230, 211, 163, 0), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(230, 211, 163, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+}
+
+@keyframes operatorDotPulse {
+  0%, 100% {
+    opacity: 0.46;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
 @media (max-width: 760px) {
   .admin-topbar {
     align-items: flex-start;
@@ -518,7 +587,7 @@ body.is-admin .admin-dashboard { display: block; }
     </header>
 
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card" id="adminNewTasksStat">
         <div class="stat-label">New tasks</div>
         <div class="stat-value" id="adminNewTasksCount">0</div>
       </div>
@@ -577,6 +646,7 @@ const adminClientsKicker = document.getElementById('adminClientsKicker');
 const adminClientsList = document.getElementById('adminClientsList');
 const adminTasksList = document.getElementById('adminTasksList');
 const adminActivity = document.getElementById('adminActivity');
+const adminNewTasksStat = document.getElementById('adminNewTasksStat');
 const adminNewTasksCount = document.getElementById('adminNewTasksCount');
 const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
 const adminInProgressCount = document.getElementById('adminInProgressCount');
@@ -644,6 +714,22 @@ function getTaskAction(status) {
   return actions[normalizeStatus(status)] || null;
 }
 
+function getTaskPriority(task) {
+  const deadline = String(task.deadline || '').trim().toLowerCase();
+  const description = String(task.task_description || '').toLowerCase();
+  const urgentPattern = /\b(asap|urgent|tonight|today)\b/;
+
+  if (deadline === 'tonight' || urgentPattern.test(description)) {
+    return { label: 'High', className: 'priority-high' };
+  }
+
+  if (deadline === 'tomorrow') {
+    return { label: 'Medium', className: 'priority-medium' };
+  }
+
+  return { label: 'Normal', className: 'priority-normal' };
+}
+
 function formatTaskDate(value) {
   if (!value) return '';
   const date = new Date(value);
@@ -673,7 +759,9 @@ function sortedClients(clients) {
 }
 
 function updateAdminStats(tasks) {
-  adminNewTasksCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'new').length;
+  const newTasksCount = tasks.filter((task) => normalizeStatus(task.status) === 'new').length;
+  adminNewTasksCount.textContent = newTasksCount;
+  adminNewTasksStat.classList.toggle('has-new-tasks', newTasksCount > 0);
   adminPendingQuotesCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'quoted').length;
   adminInProgressCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'in_progress').length;
   adminDeliveredCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'delivered').length;
@@ -740,6 +828,8 @@ function renderAdminTasks(tasks) {
         const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
         const details = [quoteAmount, deliveryEta].filter(Boolean).join(' · ');
         const action = task.id ? getTaskAction(task.status) : null;
+        const isNew = normalizeStatus(task.status) === 'new';
+        const priority = getTaskPriority(task);
         const actionMarkup = action ? `
           <div class="admin-task-actions">
             <button
@@ -753,11 +843,12 @@ function renderAdminTasks(tasks) {
         ` : '';
 
         return `
-          <article class="admin-task-row">
+          <article class="admin-task-row ${isNew ? 'is-new-task' : ''}">
             <div class="admin-task-top">
               <div>
                 <h3 class="admin-task-title">${escapeHTML(task.task_description || 'Untitled task')}</h3>
                 <div class="admin-task-email">${escapeHTML(task.email || 'No email')}</div>
+                <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
               </div>
               <span class="admin-status-pill ${getStatusClass(task.status)}">${getStatusLabel(task.status)}</span>
             </div>
@@ -779,17 +870,21 @@ function renderAdminActivity(tasks) {
 
   const latest = sortedTasks(tasks)[0];
   const labels = {
-    new: 'New task received',
+    new: 'New task awaiting quote',
     quoted: 'Quote sent',
     in_progress: 'Task in progress',
     delivered: 'Task delivered',
     cancelled: 'Task cancelled'
   };
   const status = normalizeStatus(latest.status);
+  const priority = getTaskPriority(latest);
+  const title = status === 'new' && priority.label === 'High'
+    ? 'High priority · New task awaiting quote'
+    : labels[status] || 'Task updated';
   const createdAt = formatTaskDate(latest.created_at);
   adminActivity.innerHTML = `
     <div class="admin-activity">
-      <div class="admin-activity-title">${escapeHTML(labels[status] || 'Task updated')}</div>
+      <div class="admin-activity-title">${escapeHTML(title)}</div>
       ${createdAt ? `<div class="admin-activity-time">${escapeHTML(createdAt)}</div>` : ''}
     </div>
   `;
