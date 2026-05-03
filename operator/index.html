@@ -489,6 +489,7 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-status-pill.status-in-progress { color: rgba(151, 197, 255, 0.86); }
 .admin-status-pill.status-delivered { color: var(--green); }
 .admin-status-pill.status-cancelled { color: rgba(245, 241, 234, 0.44); }
+.admin-status-pill.status-rejected { color: rgba(229, 112, 112, 0.72); border-color: rgba(229, 112, 112, 0.2); }
 .admin-status-pill.status-pending { color: #e6d3a3; }
 .admin-status-pill.status-active { color: var(--green); }
 .admin-status-pill.status-revoked { color: rgba(245, 241, 234, 0.44); }
@@ -671,7 +672,8 @@ function getStatusLabel(status) {
     quoted: 'Quote sent',
     in_progress: 'In progress',
     delivered: 'Delivered',
-    cancelled: 'Cancelled'
+    cancelled: 'Cancelled',
+    rejected: 'Rejected'
   };
   return labels[normalizeStatus(status)] || 'Pending';
 }
@@ -705,13 +707,20 @@ function getStatusClass(status) {
   return `status-${normalizeStatus(status).replace(/_/g, '-') || 'pending'}`;
 }
 
-function getTaskAction(status) {
+function getTaskActions(status) {
   const actions = {
-    new: { type: 'quote', label: 'Send quote' },
-    quoted: { type: 'quote', label: 'Edit quote' },
-    in_progress: { type: 'deliver', label: 'Deliver' }
+    new: [
+      { type: 'quote', label: 'Send quote' },
+      { type: 'reject', label: 'Reject' }
+    ],
+    quoted: [
+      { type: 'quote', label: 'Edit quote' }
+    ],
+    in_progress: [
+      { type: 'deliver', label: 'Deliver' }
+    ]
   };
-  return actions[normalizeStatus(status)] || null;
+  return actions[normalizeStatus(status)] || [];
 }
 
 function getTaskPriority(task) {
@@ -827,17 +836,19 @@ function renderAdminTasks(tasks) {
         const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '';
         const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
         const details = [quoteAmount, deliveryEta].filter(Boolean).join(' · ');
-        const action = task.id ? getTaskAction(task.status) : null;
+        const actions = task.id ? getTaskActions(task.status) : [];
         const isNew = normalizeStatus(task.status) === 'new';
         const priority = getTaskPriority(task);
-        const actionMarkup = action ? `
+        const actionMarkup = actions.length ? `
           <div class="admin-task-actions">
-            <button
-              class="admin-task-action"
-              type="button"
-              data-action="${action.type}"
-              data-task-id="${escapeHTML(task.id)}"
-            >${action.label}</button>
+            ${actions.map((action) => `
+              <button
+                class="admin-task-action"
+                type="button"
+                data-action="${action.type}"
+                data-task-id="${escapeHTML(task.id)}"
+              >${action.label}</button>
+            `).join('')}
             <span class="admin-task-message" aria-live="polite"></span>
           </div>
         ` : '';
@@ -874,7 +885,8 @@ function renderAdminActivity(tasks) {
     quoted: 'Quote sent',
     in_progress: 'Task in progress',
     delivered: 'Task delivered',
-    cancelled: 'Task cancelled'
+    cancelled: 'Task cancelled',
+    rejected: 'Task rejected'
   };
   const status = normalizeStatus(latest.status);
   const priority = getTaskPriority(latest);
@@ -1107,6 +1119,14 @@ adminTasksList.addEventListener('click', async (e) => {
       status: 'delivered',
       delivery_link: delivery.delivery_link,
       delivery_note: delivery.delivery_note,
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  if (button.dataset.action === 'reject') {
+    await updateTask(button, {
+      id: taskId,
+      status: 'rejected',
       updated_at: new Date().toISOString()
     });
   }

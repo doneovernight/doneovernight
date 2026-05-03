@@ -1109,6 +1109,9 @@ body.is-unlocked .dash { opacity: 1; }
 .status-pill.draft { color: var(--ink-faint); border-color: var(--line); background: transparent; }
 .status-pill.draft .dot { background: var(--ink-faint); }
 
+.status-pill.rejected { color: rgba(229, 112, 112, 0.74); border-color: rgba(229, 112, 112, 0.22); background: rgba(229, 112, 112, 0.055); }
+.status-pill.rejected .dot { background: rgba(229, 112, 112, 0.74); }
+
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
@@ -2286,7 +2289,8 @@ function getStatusLabel(status) {
     quoted: 'Quote sent',
     in_progress: 'In progress',
     delivered: 'Delivered',
-    cancelled: 'Cancelled'
+    cancelled: 'Cancelled',
+    rejected: 'Not accepted'
   }[key] || 'Quote pending';
 }
 
@@ -2297,7 +2301,8 @@ function getStatusClass(status) {
     quoted: 'review',
     in_progress: 'working',
     delivered: 'delivered',
-    cancelled: 'draft'
+    cancelled: 'draft',
+    rejected: 'rejected'
   }[key] || 'queued';
 }
 
@@ -2308,7 +2313,8 @@ function getActivityText(status) {
     quoted: 'Quote sent · awaiting approval',
     in_progress: 'Task in progress',
     delivered: 'Task delivered',
-    cancelled: 'Task cancelled'
+    cancelled: 'Task cancelled',
+    rejected: 'Request not accepted'
   }[key] || 'Task received · quote pending';
 }
 
@@ -2357,6 +2363,9 @@ function getTaskKey(task, index = 0) {
 }
 
 function renderTaskDetails(task) {
+  const rejectionLine = getStatusKey(task.status) === 'rejected'
+    ? '<div class="meta task-note">This request could not be processed.</div>'
+    : '';
   const quoteLine = task.quote_amount || task.delivery_eta
     ? `<div class="task-quote-line">
         ${task.quote_amount ? `<span class="task-price">${escapeHTML(task.quote_amount)}</span>` : ''}
@@ -2367,7 +2376,7 @@ function renderTaskDetails(task) {
   const note = task.quote_note || (getStatusKey(task.status) === 'delivered' ? task.delivery_note : '');
   const noteLine = note ? `<div class="meta task-note">${escapeHTML(note)}</div>` : '';
 
-  return `${quoteLine}${noteLine}`;
+  return `${rejectionLine}${quoteLine}${noteLine}`;
 }
 
 function renderTaskExpanded(task) {
@@ -2377,12 +2386,16 @@ function renderTaskExpanded(task) {
     ? `<p><strong>Delivery:</strong> <a href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer">View delivery</a></p>`
     : '';
   const quoteInfo = [task.quote_amount, task.delivery_eta].filter(Boolean).join(' · ');
+  const rejectionMessage = status === 'rejected'
+    ? '<p><strong>Message:</strong> This request could not be processed.</p>'
+    : '';
 
   return `
     <div class="task-expanded">
       <p><strong>Request:</strong> ${escapeHTML(task.task_description || 'Untitled task')}</p>
       <p><strong>Deadline:</strong> ${escapeHTML(task.deadline || 'Flexible')}</p>
       <p><strong>Status:</strong> ${escapeHTML(getStatusLabel(task.status))}</p>
+      ${rejectionMessage}
       ${quoteInfo ? `<p><strong>Quote:</strong> ${escapeHTML(quoteInfo)}</p>` : ''}
       ${note ? `<p><strong>Notes:</strong> ${escapeHTML(note)}</p>` : ''}
       ${deliveryLink}
