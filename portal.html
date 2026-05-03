@@ -717,12 +717,23 @@ body.is-unlocked .dash { opacity: 1; }
   background: rgba(245, 241, 234, 0.025);
   border: 1px solid var(--line);
   border-radius: 6px;
+  color: inherit;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font: inherit;
+  text-align: left;
   transition: border 0.3s;
 }
 .kpi:hover { border-color: var(--line-strong); }
+.kpi.is-clickable {
+  cursor: pointer;
+}
+.kpi.is-clickable:focus-visible {
+  border-color: rgba(233, 196, 138, 0.55);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08), 0 0 26px rgba(233, 196, 138, 0.12);
+  outline: none;
+}
 .kpi .kpi-label {
   font-family: var(--mono);
   font-size: 10px;
@@ -902,6 +913,29 @@ body.is-unlocked .dash { opacity: 1; }
   color: var(--ink-dim);
   font-size: 14px;
   line-height: 1.6;
+}
+.history-mode {
+  display: none;
+  margin-top: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.history-mode.is-shown {
+  display: block;
+}
+.history-mode h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--ink);
+}
+.history-mode p {
+  margin-top: 6px;
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.5;
 }
 #historyList .task-row {
   grid-template-columns: 1fr 140px 140px;
@@ -1662,10 +1696,10 @@ body.is-unlocked .dash { opacity: 1; }
         <div class="kpi-label">Active tasks</div>
         <div class="kpi-n" id="activeTasksCount">0</div>
       </div>
-      <div class="kpi">
+      <button class="kpi is-clickable" id="pendingQuotesCard" type="button">
         <div class="kpi-label">Pending quotes</div>
         <div class="kpi-n" id="pendingQuotesCount">0</div>
-      </div>
+      </button>
       <div class="kpi">
         <div class="kpi-label">Delivered</div>
         <div class="kpi-n" id="deliveredCount">0</div>
@@ -1747,6 +1781,7 @@ body.is-unlocked .dash { opacity: 1; }
         <h2>History</h2>
       </div>
 
+      <div class="history-mode" id="historyMode" aria-live="polite"></div>
       <div id="historyList">
         <div class="empty-state">No tasks yet. Submit your first request to begin.</div>
       </div>
@@ -1791,6 +1826,8 @@ const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
 const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
+let dashboardTasks = [];
+let historyMode = 'all';
 const taskRecommendations = [
   {
     category: 'Social',
@@ -2241,6 +2278,14 @@ function updateTaskStats(tasks) {
   document.getElementById('deliveredCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'delivered').length;
 }
 
+function getSortedTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    const bTime = new Date(b.created_at || 0).getTime() || 0;
+    const aTime = new Date(a.created_at || 0).getTime() || 0;
+    return bTime - aTime;
+  });
+}
+
 function renderTaskDetails(task) {
   const quoteLine = task.quote_amount || task.delivery_eta
     ? `<div class="task-quote-line">
@@ -2265,11 +2310,7 @@ function renderTaskActions(task) {
 }
 
 function getLatestTask(tasks) {
-  return [...tasks].sort((a, b) => {
-    const bTime = new Date(b.created_at || 0).getTime() || 0;
-    const aTime = new Date(a.created_at || 0).getTime() || 0;
-    return bTime - aTime;
-  })[0];
+  return getSortedTasks(tasks)[0];
 }
 
 function renderTaskActivity(tasks) {
@@ -2293,19 +2334,47 @@ function renderTaskActivity(tasks) {
   `;
 }
 
+function renderHistoryMode(tasks) {
+  const mode = document.getElementById('historyMode');
+  if (historyMode !== 'pending') {
+    mode.classList.remove('is-shown');
+    mode.innerHTML = '';
+    return tasks;
+  }
+
+  const pendingTasks = tasks.filter(task => getStatusKey(task.status) === 'new');
+  mode.classList.add('is-shown');
+  mode.innerHTML = pendingTasks.length
+    ? '<h3>Pending quote requests</h3><p>Tasks waiting for a quote from the studio.</p>'
+    : '<h3>Pending quote requests</h3><p>No pending quotes.</p>';
+  return pendingTasks;
+}
+
 function renderTaskHistory(tasks) {
   if (!Array.isArray(tasks) || tasks.length === 0) {
+    dashboardTasks = [];
     resetTaskStats();
-    renderEmptyHistory();
+    renderHistoryMode([]);
+    if (historyMode === 'pending') {
+      document.getElementById('historyList').innerHTML = '<div class="empty-state">No pending quotes.</div>';
+    } else {
+      renderEmptyHistory();
+    }
     renderEmptyActivity();
     return;
   }
 
+  dashboardTasks = getSortedTasks(tasks);
   updateTaskStats(tasks);
   renderTaskActivity(tasks);
+  const visibleTasks = renderHistoryMode(dashboardTasks);
+  if (!visibleTasks.length) {
+    document.getElementById('historyList').innerHTML = '<div class="empty-state">No pending quotes.</div>';
+    return;
+  }
   document.getElementById('historyList').innerHTML = `
     <div class="task-list">
-      ${tasks.map(task => `
+      ${visibleTasks.map(task => `
         <div class="task-row">
           <div class="t-info">
             <h4>${escapeHTML(task.task_description || 'Untitled task')}</h4>
@@ -2322,7 +2391,16 @@ function renderTaskHistory(tasks) {
   `;
 }
 
-async function loadTaskHistory() {
+function mergeOptimisticTask(tasks, optimisticTask) {
+  if (!optimisticTask) return tasks;
+  const hasMatch = tasks.some(task =>
+    task.created_at === optimisticTask.created_at ||
+    (task.task_description === optimisticTask.task_description && task.deadline === optimisticTask.deadline)
+  );
+  return hasMatch ? tasks : [optimisticTask, ...tasks];
+}
+
+async function loadTaskHistory(options = {}) {
   const email = getPortalEmail();
   const accessKey = getPortalAccessKey();
 
@@ -2343,10 +2421,15 @@ async function loadTaskHistory() {
     });
     if (!response.ok) throw new Error('Task history request failed');
     const data = await response.json().catch(() => ({}));
-    renderTaskHistory(data?.success === true ? data.tasks : []);
+    const tasks = data?.success === true && Array.isArray(data.tasks) ? data.tasks : [];
+    renderTaskHistory(mergeOptimisticTask(tasks, options.optimisticTask));
   } catch (error) {
+    if (options.optimisticTask) {
+      renderTaskHistory(mergeOptimisticTask(dashboardTasks, options.optimisticTask));
+      return;
+    }
     resetTaskStats();
-    renderEmptyHistory();
+    renderTaskHistory([]);
   }
 }
 
@@ -2640,6 +2723,12 @@ document.getElementById('historyList').addEventListener('click', (e) => {
   acceptQuote(button);
 });
 
+document.getElementById('pendingQuotesCard').addEventListener('click', () => {
+  historyMode = 'pending';
+  renderTaskHistory(dashboardTasks);
+  document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 document.getElementById('recommendationsList').addEventListener('click', (e) => {
   const item = e.target.closest('.recommendation-item');
   if (!item) return;
@@ -2702,6 +2791,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       attachmentLink.value.trim() ? `Link: ${attachmentLink.value.trim()}` : ''
     ].filter(Boolean).join('\n');
     const taskDescription = attachmentNotes ? `${desc}\n\n${attachmentNotes}` : desc;
+    const createdAt = new Date().toISOString();
     const response = await fetch(TASK_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -2711,15 +2801,25 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
         task_description: taskDescription,
         deadline,
         source: 'portal_dashboard',
-        created_at: new Date().toISOString()
+        created_at: createdAt
       })
     });
     if (!response.ok) throw new Error('Task request failed');
+    const submittedTask = {
+      email: getPortalEmail(),
+      task_description: taskDescription,
+      deadline,
+      status: 'new',
+      created_at: createdAt
+    };
+    historyMode = 'pending';
+    renderTaskHistory(mergeOptimisticTask(dashboardTasks, submittedTask));
+    document.getElementById('historyMode').scrollIntoView({ behavior: 'smooth', block: 'start' });
     showMessage(message, 'Task received. We’ll review it and send a quote within 60 minutes.', 'success');
     form.reset();
     document.getElementById('dashboardAttachmentText').textContent = 'Attach PDF, DOC, or images';
     setDashboardDeadline('tonight');
-    loadTaskHistory();
+    await loadTaskHistory({ optimisticTask: submittedTask });
   } catch (error) {
     showMessage(message, 'Could not send task. Please try again.', 'error');
   } finally {
