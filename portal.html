@@ -21,6 +21,18 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="shared.css">
 
+<script>
+try {
+  const params = new URLSearchParams(window.location.search);
+  const hasAccessKeySession = sessionStorage.getItem('portal_email') && sessionStorage.getItem('portal_access_key');
+  const hasGoogleSession = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
+  const isOAuthReturn = params.has('code') || params.has('error') || window.location.hash.includes('access_token');
+  if (hasAccessKeySession || hasGoogleSession || isOAuthReturn) {
+    document.documentElement.classList.add('portal-precheck');
+  }
+} catch (error) {}
+</script>
+
 <style>
 /* ============================================================
    PORTAL — member entry + demo dashboard
@@ -97,10 +109,12 @@
   place-items: center;
   text-align: center;
 }
-.gate.is-checking {
+.gate.is-checking,
+html.portal-precheck .gate {
   overflow: hidden;
 }
-.gate.is-checking .gate-card {
+.gate.is-checking .gate-card,
+html.portal-precheck .gate-card {
   display: grid;
   place-items: center;
   width: auto;
@@ -113,11 +127,15 @@
   backdrop-filter: none;
 }
 .gate.is-checking .gate-card::before,
-.gate.is-checking .gate-top {
+.gate.is-checking .gate-top,
+html.portal-precheck .gate-card::before,
+html.portal-precheck .gate-top {
   display: none;
 }
-.gate.is-checking .gate-grid { display: none; }
-.gate.is-checking .gate-checking {
+.gate.is-checking .gate-grid,
+html.portal-precheck .gate-grid { display: none; }
+.gate.is-checking .gate-checking,
+html.portal-precheck .gate-checking {
   display: grid;
   animation: checkingFade 0.5s ease both;
 }
@@ -1351,7 +1369,7 @@ body.is-unlocked .dash { opacity: 1; }
           <p>Request member access and we’ll send your access key by email.</p>
 
           <div class="auth-options">
-            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Google">Continue with Google</button>
+            <button type="button" class="auth-btn js-google-auth">Continue with Google</button>
             <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
           </div>
 
@@ -1387,7 +1405,7 @@ body.is-unlocked .dash { opacity: 1; }
           <p class="signin-copy">Already have an account?</p>
 
           <div class="auth-options">
-            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Google">Continue with Google</button>
+            <button type="button" class="auth-btn js-google-auth">Continue with Google</button>
             <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
             <button type="button" class="auth-btn is-muted js-email-signin">Email sign in</button>
           </div>
@@ -1399,6 +1417,12 @@ body.is-unlocked .dash { opacity: 1; }
         <section class="auth-panel is-active" id="accessPanel" role="tabpanel">
           <h3>CLIENT PORTAL</h3>
           <p><strong>For members only.</strong><br>Enter your access key to open your dashboard. If you don't have one, it was included in your welcome email.</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-google-auth">Continue with Google</button>
+          </div>
+
+          <div class="auth-divider">or</div>
 
           <form class="gate-form" id="gateForm" novalidate>
             <input type="hidden" name="_subject" value="Portal access key verification request">
@@ -1543,6 +1567,7 @@ body.is-unlocked .dash { opacity: 1; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
 /* ============================================================
    MEMBER ENTRY
@@ -1558,8 +1583,12 @@ const signupForm = document.getElementById('signupForm');
 const signupError = document.getElementById('signupError');
 const signupMessage = document.getElementById('signupMessage');
 const signinMessage = document.getElementById('signinMessage');
+const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
 const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
+const GOOGLE_ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-google-access';
 const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
 const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
 const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
@@ -1577,6 +1606,7 @@ function clearPortalSession() {
 }
 
 function lockPortal(message = '') {
+  document.documentElement.classList.remove('portal-precheck');
   gate.classList.remove('is-checking');
   gate.classList.remove('is-unlocked');
   document.body.classList.remove('is-unlocked');
@@ -1589,6 +1619,7 @@ function lockPortal(message = '') {
 
 function unlock(options = {}) {
   portalVerifiedThisSession = true;
+  document.documentElement.classList.remove('portal-precheck');
   gate.classList.remove('is-checking');
   updateDashboardGreeting();
   gate.classList.add('is-unlocked');
@@ -1703,6 +1734,64 @@ async function verifyStoredPortalSession() {
       lockPortal();
     }
     return false;
+  }
+}
+
+async function verifyGooglePortalAccess(options = {}) {
+  const showChecking = Boolean(options.showChecking);
+
+  if (showChecking) {
+    gate.classList.add('is-checking');
+    document.body.style.overflow = 'hidden';
+  }
+
+  try {
+    const { data } = await supabaseClient.auth.getUser();
+    const user = data?.user;
+    if (!user?.email) {
+      if (showChecking) lockPortal();
+      return false;
+    }
+
+    const email = user.email;
+    const name = user.user_metadata?.full_name || '';
+    const response = await fetch(GOOGLE_ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email, name })
+    });
+    if (!response.ok) throw new Error('Google portal access failed');
+    const access = await response.json().catch(() => ({}));
+
+    if (access?.success === true) {
+      sessionStorage.setItem('portal_email', email);
+      sessionStorage.setItem('portal_name', name);
+      sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
+      if (access.access_key) {
+        sessionStorage.setItem('portal_access_key', access.access_key);
+        sessionStorage.setItem('doneovernight_portal_access_key', access.access_key);
+      }
+      unlock();
+      return true;
+    }
+
+    sessionStorage.removeItem('portal_email');
+    sessionStorage.removeItem('portal_name');
+    sessionStorage.removeItem('doneovernight_portal_unlocked');
+    lockPortal();
+    const googleMessages = {
+      pending: 'Your access is pending approval.',
+      revoked: 'Your access has been revoked.',
+      invalid: 'No portal access found.'
+    };
+    showPanel('accessPanel');
+    showMessage(gateMessage, googleMessages[access?.status] || googleMessages.invalid, 'error');
+    return true;
+  } catch (error) {
+    if (showChecking) lockPortal();
+    showPanel('accessPanel');
+    showMessage(gateMessage, 'Could not verify Google access. Please try again.', 'error');
+    return true;
   }
 }
 
@@ -1918,6 +2007,23 @@ document.querySelectorAll('.gate-tab, [data-panel-link]').forEach(control => {
   control.addEventListener('click', () => showPanel(control.dataset.panel || control.dataset.panelLink));
 });
 
+document.querySelectorAll('.js-google-auth').forEach(button => {
+  button.addEventListener('click', async () => {
+    const panelMessage = button.closest('.auth-panel')?.querySelector('.auth-message') || gateMessage;
+    gate.classList.add('is-checking');
+    document.body.style.overflow = 'hidden';
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google'
+    });
+
+    if (error) {
+      lockPortal();
+      showMessage(panelMessage, 'Could not start Google sign-in. Please try again.', 'error');
+    }
+  });
+});
+
 document.querySelectorAll('.js-auth-placeholder').forEach(button => {
   button.addEventListener('click', () => {
     const provider = button.dataset.provider;
@@ -1930,17 +2036,34 @@ document.querySelector('.js-email-signin').addEventListener('click', () => {
   showMessage(signinMessage, 'Email sign-in is opening soon. Use the access key from your welcome email, or create an account with email for early access.');
 });
 
-// Re-check stored real portal access on restore; demo restore remains demo-only.
-if (getPortalEmail() && getPortalAccessKey()) {
-  gate.classList.add('is-checking');
-  document.body.style.overflow = 'hidden';
-  verifyStoredPortalSession();
-} else if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
-  unlock({ demo: true });
-} else {
+async function initializePortalSession() {
+  const url = new URL(window.location.href);
+  const isOAuthReturn = url.searchParams.has('code') || url.searchParams.has('error') || window.location.hash.includes('access_token');
+  const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
+
+  // Re-check stored real portal access on restore; demo restore remains demo-only.
+  if (getPortalEmail() && getPortalAccessKey()) {
+    gate.classList.add('is-checking');
+    document.body.style.overflow = 'hidden';
+    verifyStoredPortalSession();
+    return;
+  }
+
+  if (isOAuthReturn || hasGoogleUnlock) {
+    const handledGoogle = await verifyGooglePortalAccess({ showChecking: true });
+    if (handledGoogle) return;
+  }
+
+  if (sessionStorage.getItem('doneovernight_portal_demo') === '1') {
+    unlock({ demo: true });
+    return;
+  }
+
   document.body.style.overflow = 'hidden';
   setTimeout(() => gateEmail.focus(), 100);
 }
+
+initializePortalSession();
 
 signupForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -2075,7 +2198,8 @@ gateForm.addEventListener('submit', async (e) => {
 });
 
 // Logout
-document.getElementById('logoutBtn').addEventListener('click', () => {
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut().catch(() => {});
   clearPortalSession();
   location.reload();
 });
