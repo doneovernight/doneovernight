@@ -94,12 +94,33 @@
 
 .gate-checking {
   display: none;
-  min-height: 260px;
   place-items: center;
   text-align: center;
 }
+.gate.is-checking {
+  overflow: hidden;
+}
+.gate.is-checking .gate-card {
+  display: grid;
+  place-items: center;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.gate.is-checking .gate-card::before,
+.gate.is-checking .gate-top {
+  display: none;
+}
 .gate.is-checking .gate-grid { display: none; }
-.gate.is-checking .gate-checking { display: grid; }
+.gate.is-checking .gate-checking {
+  display: grid;
+  animation: checkingFade 0.5s ease both;
+}
 .gate-checking-card {
   display: inline-flex;
   align-items: center;
@@ -109,6 +130,10 @@
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+@keyframes checkingFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .gate-top {
