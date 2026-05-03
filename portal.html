@@ -1595,6 +1595,7 @@ const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 let portalVerifiedThisSession = false;
+let googleAccessCheckInFlight = false;
 
 function clearPortalSession() {
   ['portal_email', 'portal_access_key', 'portal_name'].forEach(key => sessionStorage.removeItem(key));
@@ -1739,6 +1740,8 @@ async function verifyStoredPortalSession() {
 
 async function verifyGooglePortalAccess(options = {}) {
   const showChecking = Boolean(options.showChecking);
+  if (googleAccessCheckInFlight) return true;
+  googleAccessCheckInFlight = true;
 
   if (showChecking) {
     gate.classList.add('is-checking');
@@ -1746,10 +1749,18 @@ async function verifyGooglePortalAccess(options = {}) {
   }
 
   try {
-    const { data } = await supabaseClient.auth.getUser();
-    const user = data?.user;
+    let user = options.user;
+    if (!user) {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      user = sessionData?.session?.user;
+    }
+    if (!user) {
+      const { data } = await supabaseClient.auth.getUser();
+      user = data?.user;
+    }
     if (!user?.email) {
       if (showChecking) lockPortal();
+      googleAccessCheckInFlight = false;
       return false;
     }
 
@@ -1772,6 +1783,7 @@ async function verifyGooglePortalAccess(options = {}) {
         sessionStorage.setItem('doneovernight_portal_access_key', access.access_key);
       }
       unlock();
+      googleAccessCheckInFlight = false;
       return true;
     }
 
@@ -1786,11 +1798,13 @@ async function verifyGooglePortalAccess(options = {}) {
     };
     showPanel('accessPanel');
     showMessage(gateMessage, googleMessages[access?.status] || googleMessages.invalid, 'error');
+    googleAccessCheckInFlight = false;
     return true;
   } catch (error) {
     if (showChecking) lockPortal();
     showPanel('accessPanel');
     showMessage(gateMessage, 'Could not verify Google access. Please try again.', 'error');
+    googleAccessCheckInFlight = false;
     return true;
   }
 }
@@ -2043,6 +2057,8 @@ async function initializePortalSession() {
   const url = new URL(window.location.href);
   const isOAuthReturn = url.searchParams.has('code') || url.searchParams.has('error') || window.location.hash.includes('access_token');
   const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true';
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  const hasSupabaseSession = Boolean(sessionData?.session?.user);
 
   // Re-check stored real portal access on restore; demo restore remains demo-only.
   if (getPortalEmail() && getPortalAccessKey()) {
@@ -2052,8 +2068,11 @@ async function initializePortalSession() {
     return;
   }
 
-  if (isOAuthReturn || hasGoogleUnlock) {
-    const handledGoogle = await verifyGooglePortalAccess({ showChecking: true });
+  if (isOAuthReturn || hasGoogleUnlock || hasSupabaseSession) {
+    const handledGoogle = await verifyGooglePortalAccess({
+      showChecking: true,
+      user: sessionData?.session?.user
+    });
     if (handledGoogle) return;
   }
 
@@ -2065,6 +2084,15 @@ async function initializePortalSession() {
   document.body.style.overflow = 'hidden';
   setTimeout(() => gateEmail.focus(), 100);
 }
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user && !document.body.classList.contains('is-unlocked')) {
+    verifyGooglePortalAccess({
+      showChecking: true,
+      user: session.user
+    });
+  }
+});
 
 initializePortalSession();
 
