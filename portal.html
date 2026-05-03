@@ -818,10 +818,81 @@ body.is-unlocked .dash { opacity: 1; }
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
 }
+.modal-form textarea.is-prefilled {
+  animation: requestGlow 1.3s ease;
+}
+@keyframes requestGlow {
+  0% { box-shadow: 0 0 0 rgba(233, 196, 138, 0); }
+  35% { box-shadow: 0 0 28px rgba(233, 196, 138, 0.16); border-color: rgba(233, 196, 138, 0.62); }
+  100% { box-shadow: 0 0 0 rgba(233, 196, 138, 0); }
+}
 .modal-form .field-group.is-invalid textarea {
   border-color: var(--red);
 }
 .modal-form.shake { animation: shake 0.5s; }
+.request-help {
+  margin-top: 8px;
+  color: rgba(245, 241, 234, 0.48);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.custom-deadline {
+  display: none;
+  margin-top: 10px;
+}
+.custom-deadline.is-shown { display: block; }
+.custom-deadline input,
+.attachment-link {
+  width: 100%;
+  background: rgba(245, 241, 234, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 13px;
+  color: var(--ink);
+  font: 13px var(--sans);
+  outline: none;
+  transition: border 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.custom-deadline input:focus,
+.attachment-link:focus {
+  border-color: rgba(233, 196, 138, 0.58);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
+}
+.attachment-row {
+  display: grid;
+  gap: 10px;
+}
+.attachment-upload {
+  position: relative;
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(245, 241, 234, 0.16);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.018);
+  color: rgba(245, 241, 234, 0.54);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: border 0.25s, background 0.25s, color 0.25s;
+}
+.attachment-upload:hover {
+  border-color: rgba(233, 196, 138, 0.42);
+  background: rgba(233, 196, 138, 0.035);
+  color: rgba(245, 241, 234, 0.78);
+}
+.attachment-upload input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.attachment-note {
+  color: rgba(245, 241, 234, 0.42);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .empty-state {
   margin-top: 18px;
   padding: clamp(24px, 4vw, 42px);
@@ -1262,7 +1333,7 @@ body.is-unlocked .dash { opacity: 1; }
 .modal textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .modal-deadline-pills {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
   gap: 6px;
 }
 .modal-deadline-pill {
@@ -1621,6 +1692,7 @@ body.is-unlocked .dash { opacity: 1; }
           <div class="field-group">
             <div class="field-label"><span>Request</span><span class="hint">Required</span></div>
             <textarea id="dashboardTaskDesc" placeholder="What do you need done?" required></textarea>
+            <div class="request-help">The more context you add, the better the outcome.</div>
           </div>
 
           <div class="field-group">
@@ -1630,6 +1702,22 @@ body.is-unlocked .dash { opacity: 1; }
               <div class="modal-deadline-pill" data-val="tomorrow">Tomorrow</div>
               <div class="modal-deadline-pill" data-val="this-week">This week</div>
               <div class="modal-deadline-pill" data-val="flexible">Flexible</div>
+              <div class="modal-deadline-pill" data-val="other">Other</div>
+            </div>
+            <div class="custom-deadline" id="customDeadlineWrap">
+              <input type="datetime-local" id="customDeadlineInput" aria-label="Custom deadline">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label"><span>Files or link</span><span class="hint">Optional</span></div>
+            <div class="attachment-row">
+              <label class="attachment-upload" id="dashboardAttachmentLabel">
+                <span id="dashboardAttachmentText">Attach PDF, DOC, or images</span>
+                <input type="file" id="dashboardAttachment" accept=".pdf,.doc,.docx,image/*" multiple>
+              </label>
+              <input class="attachment-link" id="dashboardAttachmentLink" type="url" placeholder="Paste a link">
+              <div class="attachment-note">Files and links help us quote faster. Upload storage can be connected later.</div>
             </div>
           </div>
 
@@ -1712,7 +1800,16 @@ const taskRecommendations = [
     timing: 'Tonight',
     urgency: 'Popular today',
     tag: 'Most used',
-    prompt: 'Turn my presentation into 3 polished social posts for LinkedIn.'
+    deadline: 'tonight',
+    prompt: `Turn my presentation into 3 polished social posts for LinkedIn.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
   },
   {
     category: 'Document',
@@ -1721,7 +1818,16 @@ const taskRecommendations = [
     price: 'From €90',
     timing: 'Tomorrow',
     urgency: 'Ready by morning',
-    prompt: 'Create a clean, polished PDF version of my document.'
+    deadline: 'tomorrow',
+    prompt: `Create a clean, polished PDF version of my document.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
   },
   {
     category: 'Proofread',
@@ -1730,7 +1836,16 @@ const taskRecommendations = [
     price: 'From €80',
     timing: 'Tonight',
     urgency: 'Delivered overnight',
-    prompt: 'Proofread and optimize my text so it reads clearly and professionally.'
+    deadline: 'tonight',
+    prompt: `Proofread and optimize my text so it reads clearly and professionally.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
   },
   {
     category: 'Strategy',
@@ -1739,7 +1854,16 @@ const taskRecommendations = [
     price: 'From €140',
     timing: 'This week',
     urgency: 'Ready by morning',
-    prompt: 'Convert my notes into a structured, professional document.'
+    deadline: 'this-week',
+    prompt: `Convert my notes into a structured, professional document.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
   },
   {
     category: 'Recurring',
@@ -1749,7 +1873,16 @@ const taskRecommendations = [
     timing: 'recurring',
     urgency: 'Popular today',
     tag: 'Recurring',
-    prompt: 'Create a weekly content pack from one idea, including posts, captions, and short-form content.'
+    deadline: 'flexible',
+    prompt: `Create a weekly content pack from one idea, including posts, captions, and short-form content.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
   }
 ];
 let portalVerifiedThisSession = false;
@@ -2480,9 +2613,25 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
    ============================================================ */
 document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
+    setDashboardDeadline(p.dataset.val);
   });
+});
+
+function setDashboardDeadline(value) {
+  document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
+  const pill = document.querySelector(`#dashboardDeadlinePills .modal-deadline-pill[data-val="${value}"]`);
+  (pill || document.querySelector('#dashboardDeadlinePills .modal-deadline-pill[data-val="flexible"]'))?.classList.add('active');
+  document.getElementById('customDeadlineWrap').classList.toggle('is-shown', value === 'other');
+  if (value === 'other') {
+    document.getElementById('customDeadlineInput').focus();
+  }
+}
+
+document.getElementById('dashboardAttachment').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  document.getElementById('dashboardAttachmentText').textContent = files.length
+    ? files.map(file => file.name).join(', ')
+    : 'Attach PDF, DOC, or images';
 });
 
 document.getElementById('historyList').addEventListener('click', (e) => {
@@ -2500,6 +2649,10 @@ document.getElementById('recommendationsList').addEventListener('click', (e) => 
 
   const descField = document.getElementById('dashboardTaskDesc');
   descField.value = suggestion.prompt;
+  setDashboardDeadline(suggestion.deadline || 'flexible');
+  descField.classList.remove('is-prefilled');
+  void descField.offsetWidth;
+  descField.classList.add('is-prefilled');
   descField.focus();
   descField.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
@@ -2520,6 +2673,8 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const descField = document.getElementById('dashboardTaskDesc');
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
+  const attachment = document.getElementById('dashboardAttachment');
+  const attachmentLink = document.getElementById('dashboardAttachmentLink');
   const desc = descField.value.trim();
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -2538,14 +2693,22 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   submit.innerHTML = '<span>Sending...</span>';
 
   try {
-    const deadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
+    const selectedDeadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
+    const customDeadline = document.getElementById('customDeadlineInput').value;
+    const deadline = selectedDeadline === 'other' && customDeadline ? customDeadline : selectedDeadline;
+    const fileNames = Array.from(attachment.files || []).map(file => file.name);
+    const attachmentNotes = [
+      fileNames.length ? `Files: ${fileNames.join(', ')}` : '',
+      attachmentLink.value.trim() ? `Link: ${attachmentLink.value.trim()}` : ''
+    ].filter(Boolean).join('\n');
+    const taskDescription = attachmentNotes ? `${desc}\n\n${attachmentNotes}` : desc;
     const response = await fetch(TASK_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         email: getPortalEmail(),
         access_key: getPortalAccessKey(),
-        task_description: desc,
+        task_description: taskDescription,
         deadline,
         source: 'portal_dashboard',
         created_at: new Date().toISOString()
@@ -2554,8 +2717,8 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     if (!response.ok) throw new Error('Task request failed');
     showMessage(message, 'Task received. We’ll review it and send a quote within 60 minutes.', 'success');
     form.reset();
-    document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
-    document.querySelector('#dashboardDeadlinePills .modal-deadline-pill[data-val="tonight"]').classList.add('active');
+    document.getElementById('dashboardAttachmentText').textContent = 'Attach PDF, DOC, or images';
+    setDashboardDeadline('tonight');
     loadTaskHistory();
   } catch (error) {
     showMessage(message, 'Could not send task. Please try again.', 'error');
