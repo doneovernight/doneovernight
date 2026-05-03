@@ -1751,8 +1751,27 @@ async function getSupabaseSessionWithRetry(attempts = 5, delay = 300) {
   return null;
 }
 
+async function setSupabaseSessionFromHash() {
+  if (!window.location.hash.includes('access_token') || !window.location.hash.includes('refresh_token')) {
+    return null;
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = hashParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token');
+  if (!accessToken || !refreshToken) return null;
+
+  const { data } = await supabaseClient.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken
+  });
+  window.history.replaceState({}, document.title, window.location.pathname);
+  return data?.session || null;
+}
+
 async function restoreGoogleSession() {
-  return getSupabaseSessionWithRetry(5, 300);
+  const hashSession = await setSupabaseSessionFromHash();
+  return hashSession || getSupabaseSessionWithRetry(5, 300);
 }
 
 async function verifyGooglePortalAccess(options = {}) {
