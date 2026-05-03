@@ -306,7 +306,8 @@ body.is-admin .admin-dashboard { display: block; }
   border-top: 1px solid var(--line);
 }
 
-.admin-task-list {
+.admin-task-list,
+.admin-client-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -314,24 +315,28 @@ body.is-admin .admin-dashboard { display: block; }
   border-top: 1px solid var(--line);
 }
 
-.admin-task-row {
+.admin-task-row,
+.admin-client-row {
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(245, 241, 234, 0.08);
 }
 
-.admin-task-row:last-child {
+.admin-task-row:last-child,
+.admin-client-row:last-child {
   padding-bottom: 0;
   border-bottom: 0;
 }
 
-.admin-task-top {
+.admin-task-top,
+.admin-client-top {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
 }
 
-.admin-task-title {
+.admin-task-title,
+.admin-client-name {
   margin: 0;
   color: var(--ink);
   font-size: 14px;
@@ -341,6 +346,8 @@ body.is-admin .admin-dashboard { display: block; }
 
 .admin-task-email,
 .admin-task-meta,
+.admin-client-email,
+.admin-client-meta,
 .admin-activity-time {
   color: rgba(245, 241, 234, 0.45);
   font-size: 12px;
@@ -426,6 +433,9 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-status-pill.status-in-progress { color: rgba(151, 197, 255, 0.86); }
 .admin-status-pill.status-delivered { color: var(--green); }
 .admin-status-pill.status-cancelled { color: rgba(245, 241, 234, 0.44); }
+.admin-status-pill.status-pending { color: #e6d3a3; }
+.admin-status-pill.status-active { color: var(--green); }
+.admin-status-pill.status-revoked { color: rgba(245, 241, 234, 0.44); }
 
 .admin-activity {
   padding-top: 14px;
@@ -456,6 +466,10 @@ body.is-admin .admin-dashboard { display: block; }
     grid-template-columns: 1fr;
   }
   .admin-task-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .admin-client-top {
     flex-direction: column;
     gap: 10px;
   }
@@ -518,8 +532,10 @@ body.is-admin .admin-dashboard { display: block; }
     <div class="admin-grid">
       <section class="admin-section">
         <h2>Clients</h2>
-        <div class="section-kicker">Not connected yet</div>
-        <div class="placeholder">Client approvals will appear here once connected.</div>
+        <div class="section-kicker" id="adminClientsKicker">Not connected yet</div>
+        <div id="adminClientsList">
+          <div class="placeholder">Loading clients&hellip;</div>
+        </div>
       </section>
 
       <section class="admin-section">
@@ -542,12 +558,15 @@ body.is-admin .admin-dashboard { display: block; }
 
 <script>
 const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
+const ADMIN_CLIENTS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-clients';
 const ADMIN_TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
 const ADMIN_UPDATE_TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-update-task';
 const adminForm = document.getElementById('adminForm');
 const adminKey = document.getElementById('adminKey');
 const adminError = document.getElementById('adminError');
 const adminLogout = document.getElementById('adminLogout');
+const adminClientsKicker = document.getElementById('adminClientsKicker');
+const adminClientsList = document.getElementById('adminClientsList');
 const adminTasksList = document.getElementById('adminTasksList');
 const adminActivity = document.getElementById('adminActivity');
 const adminNewTasksCount = document.getElementById('adminNewTasksCount');
@@ -575,6 +594,15 @@ function getStatusLabel(status) {
     in_progress: 'In progress',
     delivered: 'Delivered',
     cancelled: 'Cancelled'
+  };
+  return labels[normalizeStatus(status)] || 'Pending';
+}
+
+function getClientStatusLabel(status) {
+  const labels = {
+    pending: 'Pending',
+    active: 'Active',
+    revoked: 'Revoked'
   };
   return labels[normalizeStatus(status)] || 'Pending';
 }
@@ -612,11 +640,49 @@ function sortedTasks(tasks) {
   });
 }
 
+function sortedClients(clients) {
+  return [...clients].sort((a, b) => {
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
 function updateAdminStats(tasks) {
   adminNewTasksCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'new').length;
   adminPendingQuotesCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'quoted').length;
   adminInProgressCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'in_progress').length;
   adminDeliveredCount.textContent = tasks.filter((task) => normalizeStatus(task.status) === 'delivered').length;
+}
+
+function renderAdminClients(clients) {
+  adminClientsKicker.hidden = true;
+
+  if (!clients.length) {
+    adminClientsList.innerHTML = '<div class="placeholder">No clients yet.</div>';
+    return;
+  }
+
+  adminClientsList.innerHTML = `
+    <div class="admin-client-list">
+      ${sortedClients(clients).map((client) => {
+        const createdAt = formatTaskDate(client.created_at);
+
+        return `
+          <article class="admin-client-row">
+            <div class="admin-client-top">
+              <div>
+                <h3 class="admin-client-name">${escapeHTML(client.name || 'Unnamed client')}</h3>
+                <div class="admin-client-email">${escapeHTML(client.email || 'No email')}</div>
+              </div>
+              <span class="admin-status-pill ${getStatusClass(client.status)}">${getClientStatusLabel(client.status)}</span>
+            </div>
+            ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
 }
 
 function renderAdminTasks(tasks) {
@@ -693,15 +759,46 @@ function setAdminLoading() {
   adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
 }
 
+function setAdminClientsLoading() {
+  adminClientsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Loading clients&hellip;</div>';
+}
+
 function setAdminError() {
   adminTasksList.innerHTML = '<div class="placeholder">Could not load tasks.</div>';
   adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
 }
 
+function setAdminClientsError() {
+  adminClientsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Could not load clients.</div>';
+}
+
 function resetAdminDashboard() {
   updateAdminStats([]);
+  adminClientsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Loading clients&hellip;</div>';
   adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
   adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+}
+
+async function loadAdminClients() {
+  setAdminClientsLoading();
+
+  try {
+    const response = await fetch(ADMIN_CLIENTS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({})
+    });
+    if (!response.ok) throw new Error('Admin clients failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success !== true || !Array.isArray(data.clients)) throw new Error('Admin clients denied');
+
+    renderAdminClients(data.clients);
+  } catch (error) {
+    setAdminClientsError();
+  }
 }
 
 async function loadAdminTasks() {
@@ -781,6 +878,7 @@ function promptForDelivery() {
 
 function showAdminDashboard() {
   document.body.classList.add('is-admin');
+  loadAdminClients();
   loadAdminTasks();
 }
 
