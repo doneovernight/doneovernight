@@ -652,6 +652,7 @@ const adminNewTasksCount = document.getElementById('adminNewTasksCount');
 const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
 const adminInProgressCount = document.getElementById('adminInProgressCount');
 const adminDeliveredCount = document.getElementById('adminDeliveredCount');
+let adminTasks = [];
 
 function escapeHTML(value) {
   return String(value ?? '')
@@ -673,7 +674,7 @@ function getStatusLabel(status) {
     in_progress: 'In progress',
     delivered: 'Delivered',
     cancelled: 'Cancelled',
-    rejected: 'Rejected'
+    rejected: 'Not accepted'
   };
   return labels[normalizeStatus(status)] || 'Pending';
 }
@@ -961,13 +962,28 @@ async function loadAdminTasks() {
     const data = await response.json().catch(() => ({}));
     if (data?.success !== true || !Array.isArray(data.tasks)) throw new Error('Admin tasks denied');
 
-    updateAdminStats(data.tasks);
-    renderAdminTasks(data.tasks);
-    renderAdminActivity(data.tasks);
+    adminTasks = data.tasks;
+    updateAdminStats(adminTasks);
+    renderAdminTasks(adminTasks);
+    renderAdminActivity(adminTasks);
   } catch (error) {
+    adminTasks = [];
     updateAdminStats([]);
     setAdminError();
   }
+}
+
+function extractUpdatedTask(data) {
+  if (!data || typeof data !== 'object') return null;
+  const candidates = [data.task, data.updated_task, data.updatedTask, data.data, data];
+  return candidates.find((candidate) => candidate && typeof candidate === 'object' && candidate.id) || null;
+}
+
+function renderAdminTaskState(tasks) {
+  adminTasks = tasks;
+  updateAdminStats(adminTasks);
+  renderAdminTasks(adminTasks);
+  renderAdminActivity(adminTasks);
 }
 
 async function updateClient(button, payload) {
@@ -1015,11 +1031,16 @@ async function updateTask(button, payload) {
     if (!response.ok) throw new Error('Task update failed');
     const data = await response.json().catch(() => ({}));
     if (data?.success === false) throw new Error('Task update denied');
+    const updatedTask = extractUpdatedTask(data);
+    if (updatedTask) {
+      const nextTasks = adminTasks.map((task) => String(task.id) === String(updatedTask.id) ? { ...task, ...updatedTask } : task);
+      renderAdminTaskState(nextTasks);
+    }
     await loadAdminTasks();
   } catch (error) {
     button.disabled = false;
     button.textContent = previousText;
-    if (message) message.textContent = 'Could not update task.';
+    if (message) message.textContent = payload.status === 'rejected' ? 'Could not reject task.' : 'Could not update task.';
   }
 }
 

@@ -1745,12 +1745,12 @@ body.is-unlocked .dash { opacity: 1; }
         <div class="kpi-label">Delivered</div>
         <div class="kpi-n" id="deliveredCount">0</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-dashboard-reset>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="hours">
         <div class="kpi-label">Hours saved</div>
         <div class="kpi-n" id="hoursSavedCount">0h</div>
         <div class="kpi-delta">Starts tracking after your first task</div>
       </button>
-      <button class="kpi is-clickable" type="button" data-dashboard-reset>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="studio">
         <div class="kpi-label">Studio status</div>
         <div class="kpi-n">Online</div>
       </button>
@@ -2364,7 +2364,7 @@ function getTaskKey(task, index = 0) {
 
 function renderTaskDetails(task) {
   const rejectionLine = getStatusKey(task.status) === 'rejected'
-    ? '<div class="meta task-note">This request could not be processed.</div>'
+    ? '<div class="meta task-note">This request could not be processed. You can submit a new task anytime.</div>'
     : '';
   const quoteLine = task.quote_amount || task.delivery_eta
     ? `<div class="task-quote-line">
@@ -2387,13 +2387,14 @@ function renderTaskExpanded(task) {
     : '';
   const quoteInfo = [task.quote_amount, task.delivery_eta].filter(Boolean).join(' · ');
   const rejectionMessage = status === 'rejected'
-    ? '<p><strong>Message:</strong> This request could not be processed.</p>'
+    ? '<p><strong>Message:</strong> This request could not be processed. You can submit a new task anytime.</p>'
     : '';
 
   return `
     <div class="task-expanded">
       <p><strong>Request:</strong> ${escapeHTML(task.task_description || 'Untitled task')}</p>
       <p><strong>Deadline:</strong> ${escapeHTML(task.deadline || 'Flexible')}</p>
+      ${task.created_at ? `<p><strong>Created:</strong> ${escapeHTML(formatTaskDate(task.created_at))}</p>` : ''}
       <p><strong>Status:</strong> ${escapeHTML(getStatusLabel(task.status))}</p>
       ${rejectionMessage}
       ${quoteInfo ? `<p><strong>Quote:</strong> ${escapeHTML(quoteInfo)}</p>` : ''}
@@ -2472,6 +2473,20 @@ function renderDashboardView(tasks) {
       body: 'Completed tasks and delivery links.',
       tasks: deliveredTasks,
       empty: 'No delivered work yet.'
+    },
+    hours: {
+      title: 'Hours saved',
+      body: deliveredTasks.length
+        ? `${getHoursSaved(deliveredTasks)}h saved from delivered work.`
+        : 'Hours saved starts tracking after your first delivered task.',
+      tasks: deliveredTasks,
+      empty: 'Hours saved starts tracking after your first delivered task.'
+    },
+    studio: {
+      title: 'Studio status',
+      body: 'Studio online. Ready to receive tasks.',
+      tasks: [],
+      empty: 'Studio online. Ready to receive tasks.'
     }
   };
   const view = views[currentView] || views.active;
