@@ -1791,7 +1791,7 @@ body.is-unlocked .dash { opacity: 1; }
                 <span id="dashboardAttachmentText">Attach PDF, DOC, or images</span>
                 <input type="file" id="dashboardAttachment" accept=".pdf,.doc,.docx,image/*" multiple>
               </label>
-              <input class="attachment-link" id="dashboardAttachmentLink" type="url" placeholder="Paste a link">
+              <input class="attachment-link" id="dashboardAttachmentLink" name="files_link" type="url" placeholder="Paste a link">
               <div class="attachment-note">Files and links help us quote faster. Upload storage can be connected later.</div>
             </div>
           </div>
@@ -2997,7 +2997,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
   const attachment = document.getElementById('dashboardAttachment');
-  const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="link"]') || document.querySelector('#link');
+  const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="files_link"]') || document.querySelector('[name="link"]') || document.querySelector('#link');
   const desc = descField.value.trim();
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -3024,6 +3024,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       ? `${desc}\n\nFiles selected for this request. Upload handling comes next.`
       : desc;
     const filesLink = linkInput?.value?.trim() || '';
+    console.log('files_link:', filesLink);
     const createdAt = new Date().toISOString();
     let accessKey = sessionStorage.getItem('portal_access_key');
     if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
