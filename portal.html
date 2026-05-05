@@ -2081,6 +2081,61 @@ function getPortalAccessKey() {
   return sessionStorage.getItem('portal_access_key') || sessionStorage.getItem('doneovernight_portal_access_key') || '';
 }
 
+function storeGooglePortalAccess(access, fallback = {}) {
+  const email = access?.email || fallback.email || '';
+  const name = access?.name || fallback.name || '';
+  const accessKey = access?.access_key || '';
+
+  if (email) {
+    sessionStorage.setItem('portal_email', email);
+    sessionStorage.setItem('doneovernight_portal_email', email);
+  }
+  sessionStorage.setItem('portal_auth_method', 'google');
+  sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
+  if (name?.trim()) {
+    sessionStorage.setItem('portal_name', name.trim());
+  }
+  if (accessKey) {
+    sessionStorage.setItem('portal_access_key', accessKey);
+    sessionStorage.setItem('doneovernight_portal_access_key', accessKey);
+  }
+
+  return accessKey;
+}
+
+async function getGooglePortalIdentity() {
+  const session = await getSupabaseSessionWithRetry(2, 250);
+  let user = session?.user;
+  if (!user) {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data?.user;
+  }
+
+  const email = user?.email || getPortalEmail();
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || sessionStorage.getItem('portal_name') || '';
+  return { email, name, user };
+}
+
+async function restoreGoogleAccessKey() {
+  const existingKey = getPortalAccessKey();
+  if (existingKey) return existingKey;
+  if (sessionStorage.getItem('portal_auth_method') !== 'google') return '';
+
+  const { email, name } = await getGooglePortalIdentity();
+  if (!email) return '';
+
+  const response = await fetch(GOOGLE_ACCESS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ email, name })
+  });
+  if (!response.ok) return '';
+  const access = await response.json().catch(() => ({}));
+  if (access?.success !== true) return '';
+
+  return storeGooglePortalAccess(access, { email, name });
+}
+
 async function verifyStoredPortalSession() {
   const email = getPortalEmail();
   const accessKey = getPortalAccessKey();
@@ -2195,20 +2250,7 @@ async function verifyGooglePortalAccess(options = {}) {
     const access = await response.json().catch(() => ({}));
 
     if (access?.success === true) {
-      sessionStorage.setItem('portal_email', email);
-      sessionStorage.setItem('doneovernight_portal_email', email);
-      sessionStorage.setItem('portal_auth_method', 'google');
-      sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
-      if (name?.trim()) {
-        sessionStorage.setItem('portal_name', name.trim());
-      }
-      if (access.access_key) {
-        sessionStorage.setItem('portal_access_key', access.access_key);
-        sessionStorage.setItem('doneovernight_portal_access_key', access.access_key);
-      } else {
-        sessionStorage.removeItem('portal_access_key');
-        sessionStorage.removeItem('doneovernight_portal_access_key');
-      }
+      storeGooglePortalAccess(access, { email, name });
       unlock();
       googleAccessCheckInFlight = false;
       return true;
@@ -2551,7 +2593,7 @@ function mergeOptimisticTask(tasks, optimisticTask) {
 
 async function loadTaskHistory(options = {}) {
   const email = getPortalEmail();
-  const accessKey = getPortalAccessKey();
+  let accessKey = getPortalAccessKey();
   const isGoogleSession = sessionStorage.getItem('portal_auth_method') === 'google';
 
   if (!email) {
@@ -2563,13 +2605,17 @@ async function loadTaskHistory(options = {}) {
 
   if (!accessKey) {
     if (isGoogleSession) {
-      renderHistorySyncing();
+      accessKey = await restoreGoogleAccessKey();
+      if (!accessKey) {
+        renderHistorySyncing();
+        return;
+      }
+    } else {
+      if (!dashboardTasks.length) {
+        renderHistorySyncing();
+      }
       return;
     }
-    if (!dashboardTasks.length) {
-      renderHistorySyncing();
-    }
-    return;
   }
 
   try {
@@ -2977,9 +3023,16 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       ? `${desc}\n\nFiles selected for this request. Upload handling comes next.`
       : desc;
     const createdAt = new Date().toISOString();
+    let accessKey = sessionStorage.getItem('portal_access_key');
+    if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
+      accessKey = await restoreGoogleAccessKey();
+    }
+    if (!accessKey) {
+      throw new Error('Missing portal access key');
+    }
     const payload = {
       email: sessionStorage.getItem('portal_email'),
-      access_key: sessionStorage.getItem('portal_access_key'),
+      access_key: accessKey,
       task_description: taskDescription,
       deadline,
       source: 'portal_dashboard',
