@@ -1870,6 +1870,8 @@ const DEMO_KEY = 'DONE-DEMO';
 let dashboardTasks = [];
 let currentView = 'all';
 let expandedTaskKey = '';
+let taskPollingInterval = null;
+let taskHistoryLoading = false;
 const taskRecommendations = [
   {
     category: 'Social',
@@ -1994,6 +1996,7 @@ function finishAuthRestore() {
 
 function lockPortal(message = '') {
   finishAuthRestore();
+  stopPortalPolling();
   gate.classList.remove('is-unlocked');
   document.body.classList.remove('is-unlocked');
   document.body.style.overflow = 'hidden';
@@ -2016,6 +2019,7 @@ function unlock(options = {}) {
   }
   document.body.style.overflow = '';
   loadTaskHistory();
+  startPortalPolling();
 }
 
 function getTimeGreeting() {
@@ -2621,7 +2625,33 @@ function parseTaskRequest(value) {
   return sections;
 }
 
+function startPortalPolling() {
+  if (taskPollingInterval || !document.body.classList.contains('is-unlocked')) return;
+
+  taskPollingInterval = setInterval(async () => {
+    try {
+      await loadTaskHistory({ silent: true });
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, 10000);
+}
+
+function stopPortalPolling() {
+  if (!taskPollingInterval) return;
+  clearInterval(taskPollingInterval);
+  taskPollingInterval = null;
+}
+
 async function loadTaskHistory(options = {}) {
+  if (taskHistoryLoading) {
+    if (options.optimisticTask) {
+      renderTaskHistory(mergeOptimisticTask(dashboardTasks, options.optimisticTask));
+    }
+    return;
+  }
+
+  taskHistoryLoading = true;
   const email = getPortalEmail();
   let accessKey = getPortalAccessKey();
   const isGoogleSession = sessionStorage.getItem('portal_auth_method') === 'google';
@@ -2630,20 +2660,23 @@ async function loadTaskHistory(options = {}) {
     if (!dashboardTasks.length) {
       renderHistorySyncing();
     }
+    taskHistoryLoading = false;
     return;
   }
 
   if (!accessKey) {
     if (isGoogleSession) {
-      accessKey = await restoreGoogleAccessKey();
+      accessKey = await restoreGoogleAccessKey().catch(() => '');
       if (!accessKey) {
         renderHistorySyncing();
+        taskHistoryLoading = false;
         return;
       }
     } else {
       if (!dashboardTasks.length) {
         renderHistorySyncing();
       }
+      taskHistoryLoading = false;
       return;
     }
   }
@@ -2669,6 +2702,8 @@ async function loadTaskHistory(options = {}) {
     if (!dashboardTasks.length) {
       renderHistorySyncing();
     }
+  } finally {
+    taskHistoryLoading = false;
   }
 }
 
@@ -2991,6 +3026,18 @@ document.querySelectorAll('[data-dashboard-reset]').forEach(card => {
     currentView = 'all';
     renderTaskHistory(dashboardTasks);
   });
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPortalPolling();
+    return;
+  }
+
+  if (document.body.classList.contains('is-unlocked')) {
+    loadTaskHistory({ silent: true });
+    startPortalPolling();
+  }
 });
 
 document.getElementById('recommendationsList').addEventListener('click', (e) => {

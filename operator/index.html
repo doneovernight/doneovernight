@@ -653,6 +653,8 @@ const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount
 const adminInProgressCount = document.getElementById('adminInProgressCount');
 const adminDeliveredCount = document.getElementById('adminDeliveredCount');
 let adminTasks = [];
+let adminTaskPollingInterval = null;
+let adminTasksLoading = false;
 
 function escapeHTML(value) {
   return String(value ?? '')
@@ -949,8 +951,13 @@ async function loadAdminClients() {
   }
 }
 
-async function loadAdminTasks() {
-  setAdminLoading();
+async function loadAdminTasks(options = {}) {
+  if (adminTasksLoading) return;
+  adminTasksLoading = true;
+
+  if (!options.silent) {
+    setAdminLoading();
+  }
 
   try {
     const response = await fetch(ADMIN_TASKS_ENDPOINT, {
@@ -967,10 +974,32 @@ async function loadAdminTasks() {
     renderAdminTasks(adminTasks);
     renderAdminActivity(adminTasks);
   } catch (error) {
-    adminTasks = [];
-    updateAdminStats([]);
-    setAdminError();
+    if (!options.silent || !adminTasks.length) {
+      adminTasks = [];
+      updateAdminStats([]);
+      setAdminError();
+    }
+  } finally {
+    adminTasksLoading = false;
   }
+}
+
+function startAdminTaskPolling() {
+  if (adminTaskPollingInterval || !document.body.classList.contains('is-admin')) return;
+
+  adminTaskPollingInterval = setInterval(async () => {
+    try {
+      await loadAdminTasks({ silent: true });
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, 10000);
+}
+
+function stopAdminTaskPolling() {
+  if (!adminTaskPollingInterval) return;
+  clearInterval(adminTaskPollingInterval);
+  adminTaskPollingInterval = null;
 }
 
 function extractUpdatedTask(data) {
@@ -1075,10 +1104,12 @@ function showAdminDashboard() {
   document.body.classList.add('is-admin');
   loadAdminClients();
   loadAdminTasks();
+  startAdminTaskPolling();
 }
 
 function showAdminLogin() {
   document.body.classList.remove('is-admin');
+  stopAdminTaskPolling();
   resetAdminDashboard();
   adminForm.reset();
   adminError.classList.remove('is-shown');
@@ -1094,6 +1125,18 @@ if (sessionStorage.getItem('doneovernight_admin') === 'true') {
 adminLogout.addEventListener('click', () => {
   sessionStorage.removeItem('doneovernight_admin');
   showAdminLogin();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAdminTaskPolling();
+    return;
+  }
+
+  if (document.body.classList.contains('is-admin')) {
+    loadAdminTasks({ silent: true });
+    startAdminTaskPolling();
+  }
 });
 
 adminClientsList.addEventListener('click', async (e) => {
