@@ -2997,6 +2997,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
   const attachment = document.getElementById('dashboardAttachment');
+  const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="link"]') || document.querySelector('#link');
   const desc = descField.value.trim();
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
@@ -3022,6 +3023,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     const taskDescription = hasFiles
       ? `${desc}\n\nFiles selected for this request. Upload handling comes next.`
       : desc;
+    const filesLink = linkInput?.value?.trim() || '';
     const createdAt = new Date().toISOString();
     let accessKey = sessionStorage.getItem('portal_access_key');
     if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
@@ -3036,7 +3038,8 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       task_description: taskDescription,
       deadline,
       source: 'portal_dashboard',
-      created_at: createdAt
+      created_at: createdAt,
+      files_link: filesLink
     };
     const response = await fetch(TASK_ENDPOINT, {
       method: 'POST',
