@@ -2591,6 +2591,36 @@ function mergeOptimisticTask(tasks, optimisticTask) {
   return hasMatch ? tasks : [optimisticTask, ...tasks];
 }
 
+function parseTaskRequest(value) {
+  const sections = {
+    task_description: '',
+    context: '',
+    tone: '',
+    goal: '',
+    files_link: ''
+  };
+  let currentSection = 'task_description';
+
+  String(value || '').split(/\r?\n/).forEach((line) => {
+    const match = line.match(/^\s*(Context|Tone|Goal|Files)\s*:\s*(.*)$/i);
+    if (match) {
+      currentSection = match[1].toLowerCase() === 'files' ? 'files_link' : match[1].toLowerCase();
+      if (match[2].trim()) {
+        sections[currentSection] = [sections[currentSection], match[2].trim()].filter(Boolean).join('\n');
+      }
+      return;
+    }
+
+    sections[currentSection] = [sections[currentSection], line].filter(Boolean).join('\n');
+  });
+
+  Object.keys(sections).forEach((key) => {
+    sections[key] = sections[key].trim();
+  });
+
+  return sections;
+}
+
 async function loadTaskHistory(options = {}) {
   const email = getPortalEmail();
   let accessKey = getPortalAccessKey();
@@ -2996,7 +3026,6 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const descField = document.getElementById('dashboardTaskDesc');
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
-  const attachment = document.getElementById('dashboardAttachment');
   const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="files_link"]') || document.querySelector('[name="link"]') || document.querySelector('#link');
   const desc = descField.value.trim();
 
@@ -3019,12 +3048,9 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     const selectedDeadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
     const customDeadline = document.getElementById('customDeadlineInput').value;
     const deadline = selectedDeadline === 'other' && customDeadline ? customDeadline : selectedDeadline;
-    const hasFiles = Boolean(attachment.files?.length);
-    const taskDescription = hasFiles
-      ? `${desc}\n\nFiles selected for this request. Upload handling comes next.`
-      : desc;
-    const filesLink = linkInput?.value?.trim() || '';
-    console.log('files_link:', filesLink);
+    const requestParts = parseTaskRequest(desc);
+    const taskDescription = requestParts.task_description || desc;
+    const filesLink = linkInput?.value?.trim() || requestParts.files_link || '';
     const createdAt = new Date().toISOString();
     let accessKey = sessionStorage.getItem('portal_access_key');
     if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
@@ -3037,6 +3063,9 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
       email: sessionStorage.getItem('portal_email'),
       access_key: accessKey,
       task_description: taskDescription,
+      context: requestParts.context,
+      tone: requestParts.tone,
+      goal: requestParts.goal,
       deadline,
       source: 'portal_dashboard',
       created_at: createdAt,
