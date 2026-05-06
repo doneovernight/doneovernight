@@ -592,23 +592,31 @@ if ('serviceWorker' in navigator) {
   let closeTimer = null;
   function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
   function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
-  if (!mqCoarse.matches) {
+  if (mqCoarse.matches) {
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      clearTimeout(closeTimer);
+      if (isOpen) close();
+      else open();
+    });
+    document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('#navDot')) return;
+      if (e.target.closest('a, button')) close();
+    }, true);
+  } else {
     pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
     pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      dot.blur();
+      close();
+    });
   }
-  dot.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    clearTimeout(closeTimer);
-    if (mqCoarse.matches && isOpen) close();
-    else open();
-  });
-  document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
-  pill.addEventListener('click', (e) => {
-    if (e.target.closest('#navDot')) return;
-    if (e.target.closest('a, button')) close();
-  }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
 
   function playSoftClick() {

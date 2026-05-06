@@ -4574,8 +4574,28 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     dot.setAttribute('aria-label', 'Open menu');
   }
 
-  // Desktop: open on hover, close when cursor leaves with a small delay
-  if (!mqCoarse.matches) {
+  if (mqCoarse.matches) {
+    // Mobile/touch: tap toggles. Hidden links remain inert until .is-open.
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      clearTimeout(closeTimer);
+      if (isOpen) close();
+      else open();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!isOpen) return;
+      if (!pill.contains(e.target)) close();
+    });
+
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('#navDot')) return;
+      if (e.target.closest('a, button')) close();
+    }, true);
+  } else {
+    // Desktop: hover only. Dot clicks are swallowed so focus/click cannot stick it open.
     pill.addEventListener('mouseenter', () => {
       clearTimeout(closeTimer);
       open();
@@ -4584,29 +4604,15 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
       clearTimeout(closeTimer);
       closeTimer = setTimeout(close, 220);
     });
+
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      dot.blur();
+      close();
+    });
   }
-
-  // Tap the dot (both desktop for accessibility and mobile for toggle)
-  dot.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    clearTimeout(closeTimer);
-    if (mqCoarse.matches && isOpen) close();
-    else open();
-  });
-
-  // Close on outside click (mobile + accessibility)
-  document.addEventListener('click', (e) => {
-    if (!isOpen) return;
-    if (!pill.contains(e.target)) close();
-  });
-
-  // Close immediately for every menu action without fighting the dot toggle.
-  pill.addEventListener('click', (e) => {
-    if (e.target.closest('#navDot')) return;
-    if (e.target.closest('a, button')) close();
-  }, true);
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
