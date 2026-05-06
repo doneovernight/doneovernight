@@ -396,26 +396,70 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .nav-pill {
     top: 16px !important;
     right: 18px !important;
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    padding: 0 !important;
+    justify-content: center;
+    overflow: hidden !important;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
   }
-  .nav-pill.is-open,
-  .nav-pill:hover,
-  .nav-pill:focus-within {
+  .nav-pill:not(.is-open):hover,
+  .nav-pill:not(.is-open):focus-within {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    padding: 0 !important;
+    flex-direction: row;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .nav-pill:not(.is-open) .nav-links-wrap,
+  .nav-pill:not(.is-open):hover .nav-links-wrap,
+  .nav-pill:not(.is-open):focus-within .nav-links-wrap {
+    opacity: 0 !important;
+    visibility: hidden;
+    pointer-events: none !important;
+    transform: translateY(-4px);
+  }
+  .nav-pill:not(.is-open):hover .nav-dot,
+  .nav-pill:not(.is-open):focus-within .nav-dot {
+    transform: none;
+  }
+  .nav-pill.is-open {
+    width: min(220px, calc(100vw - 36px)) !important;
+    max-width: min(220px, calc(100vw - 36px)) !important;
+    min-height: 42px;
+    height: auto;
     flex-direction: column;
     align-items: stretch;
-    max-width: 220px !important;
-    height: auto;
     padding: 4px 4px 8px;
     border-radius: 22px;
+    overflow: hidden !important;
+    background: rgba(10, 11, 15, 0.72);
+    border-color: rgba(233, 196, 138, 0.14);
   }
   .nav-pill.is-open .nav-dot { align-self: flex-end; margin-bottom: 4px; }
   .nav-pill.is-open .nav-links-wrap {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 2px;
     padding: 6px;
     width: 100%;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
   }
-  .nav-links-wrap .sep { display: none; }
+  .nav-links-wrap .sep,
+  .nav-links-wrap .nav-install,
+  .nav-links-wrap a[href="#pricing"],
+  .nav-links-wrap a[href="index.html#pricing"],
+  .nav-links-wrap a[href="portal.html"] { display: none; }
   .nav-links-wrap a {
     padding: 10px 14px;
     text-align: left;
@@ -4531,9 +4575,8 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   const dot = document.getElementById('navDot');
   if (!pill || !dot) return;
 
-  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
+  const isTouch = window.matchMedia('(hover: none), (pointer: coarse)');
   let isOpen = false;
-  let closeTimer = null;
 
   function open() {
     if (isOpen) return;
@@ -4550,36 +4593,30 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     dot.setAttribute('aria-label', 'Open menu');
   }
 
-  // Desktop: open on hover, close when cursor leaves with a small delay
-  if (!mqCoarse.matches) {
-    pill.addEventListener('mouseenter', () => {
-      clearTimeout(closeTimer);
-      open();
+  if (isTouch.matches) {
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isOpen ? close() : open();
     });
-    pill.addEventListener('mouseleave', () => {
-      clearTimeout(closeTimer);
-      closeTimer = setTimeout(close, 220);
+    document.addEventListener('click', (e) => {
+      if (isOpen && !pill.contains(e.target)) close();
     });
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('#navDot')) return;
+      if (e.target.closest('a, button')) close();
+    }, true);
+  } else {
+    dot.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dot.blur();
+      close();
+    });
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('a, button')) close();
+    }, true);
   }
-
-  // Tap the dot (both desktop for accessibility and mobile for toggle)
-  dot.addEventListener('click', (e) => {
-    e.stopPropagation();
-    clearTimeout(closeTimer);
-    open();
-  });
-
-  // Close on outside click (mobile + accessibility)
-  document.addEventListener('click', (e) => {
-    if (!isOpen) return;
-    if (!pill.contains(e.target)) close();
-  });
-
-  // Close immediately for every menu action without fighting the dot toggle.
-  pill.addEventListener('click', (e) => {
-    if (e.target.closest('#navDot')) return;
-    if (e.target.closest('a, button')) close();
-  }, true);
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
