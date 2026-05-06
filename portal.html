@@ -1789,7 +1789,7 @@ body.is-unlocked .dash { opacity: 1; }
             <div class="attachment-row">
               <label class="attachment-upload" id="dashboardAttachmentLabel">
                 <span id="dashboardAttachmentText">Attach PDF, DOC, or images</span>
-                <input type="file" id="dashboardAttachment" accept=".pdf,.doc,.docx,image/*" multiple>
+                <input type="file" id="dashboardFileUpload" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp">
               </label>
               <input class="attachment-link" id="dashboardAttachmentLink" name="files_link" type="url" placeholder="Paste a link">
               <div class="attachment-note">Files and links help us quote faster. Upload storage can be connected later.</div>
@@ -1865,6 +1865,9 @@ const GOOGLE_ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-goo
 const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
 const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
 const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
+const TASK_FILE_BUCKET = 'task-files';
+const TASK_FILE_MAX_BYTES = 100 * 1024 * 1024;
+const TASK_FILE_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']);
 // DEMO ONLY: hardcoded preview key for static-site testing. Replace with real auth.
 const DEMO_KEY = 'DONE-DEMO';
 let dashboardTasks = [];
@@ -2615,7 +2618,9 @@ function parseTaskRequest(value) {
       return;
     }
 
-    sections[currentSection] = [sections[currentSection], line].filter(Boolean).join('\n');
+    if (line.trim()) {
+      sections[currentSection] = [sections[currentSection], line.trim()].filter(Boolean).join('\n');
+    }
   });
 
   Object.keys(sections).forEach((key) => {
@@ -2623,6 +2628,47 @@ function parseTaskRequest(value) {
   });
 
   return sections;
+}
+
+function getFileExtension(fileName) {
+  return String(fileName || '').split('.').pop().toLowerCase();
+}
+
+function getSafeFileName(fileName) {
+  return String(fileName || 'upload')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'upload';
+}
+
+async function uploadTaskFile(file) {
+  if (!file) return '';
+  const extension = getFileExtension(file.name);
+  if (!TASK_FILE_EXTENSIONS.has(extension)) {
+    throw new Error('Please upload a PDF, DOC, DOCX, PNG, JPG, JPEG, or WEBP file.');
+  }
+  if (file.size > TASK_FILE_MAX_BYTES) {
+    throw new Error('File is too large. Please upload a file under 100MB.');
+  }
+
+  const safeFileName = getSafeFileName(file.name);
+  const path = `tasks/${Date.now()}-${safeFileName}`;
+  const { error } = await supabaseClient.storage
+    .from(TASK_FILE_BUCKET)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) throw new Error('Could not upload file. Please try again.');
+
+  const { data } = supabaseClient.storage
+    .from(TASK_FILE_BUCKET)
+    .getPublicUrl(path);
+
+  return data?.publicUrl || '';
 }
 
 function startPortalPolling() {
@@ -2986,7 +3032,7 @@ function setDashboardDeadline(value) {
   }
 }
 
-document.getElementById('dashboardAttachment').addEventListener('change', (e) => {
+document.getElementById('dashboardFileUpload').addEventListener('change', (e) => {
   const files = Array.from(e.target.files || []);
   document.getElementById('dashboardAttachmentText').textContent = files.length
     ? files.map(file => file.name).join(', ')
@@ -3075,11 +3121,13 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
   const message = document.getElementById('dashboardTaskMessage');
   const submit = form.querySelector('.modal-submit');
   const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="files_link"]') || document.querySelector('[name="link"]') || document.querySelector('#link');
+  const fileInput = document.querySelector('#dashboardFileUpload');
   const desc = descField.value.trim();
+  const requestParts = parseTaskRequest(desc);
 
   form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   message.classList.remove('is-shown', 'is-success', 'is-error');
-  if (!desc) {
+  if (!desc || !requestParts.task_description) {
     descField.closest('.field-group')?.classList.add('is-invalid');
     form.classList.remove('shake');
     void form.offsetWidth;
@@ -3096,9 +3144,11 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     const selectedDeadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
     const customDeadline = document.getElementById('customDeadlineInput').value;
     const deadline = selectedDeadline === 'other' && customDeadline ? customDeadline : selectedDeadline;
-    const requestParts = parseTaskRequest(desc);
-    const taskDescription = requestParts.task_description || desc;
-    const filesLink = linkInput?.value?.trim() || requestParts.files_link || '';
+    const taskDescription = requestParts.task_description;
+    const selectedFile = fileInput?.files?.[0] || null;
+    const filesLink = selectedFile
+      ? await uploadTaskFile(selectedFile)
+      : linkInput?.value?.trim() || requestParts.files_link || '';
     const createdAt = new Date().toISOString();
     let accessKey = sessionStorage.getItem('portal_access_key');
     if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
@@ -3140,7 +3190,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     setDashboardDeadline('tonight');
     await loadTaskHistory({ optimisticTask: submittedTask });
   } catch (error) {
-    showMessage(message, 'Could not send task. Please try again.', 'error');
+    showMessage(message, error.message || 'Could not send task. Please try again.', 'error');
   } finally {
     submit.disabled = false;
     submit.innerHTML = previousText;
