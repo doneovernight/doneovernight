@@ -596,7 +596,14 @@ if ('serviceWorker' in navigator) {
     pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
     pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
   }
-  dot.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(closeTimer); open(); });
+  dot.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    clearTimeout(closeTimer);
+    if (mqCoarse.matches && isOpen) close();
+    else open();
+  });
   document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
   pill.addEventListener('click', (e) => {
     if (e.target.closest('#navDot')) return;

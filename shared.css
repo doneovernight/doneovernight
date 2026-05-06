@@ -402,16 +402,40 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .nav-pill {
     top: 16px !important;
     right: 18px !important;
+    transform: none !important;
+    transform-origin: top right !important;
   }
-  .nav-pill.is-open,
-  .nav-pill:hover,
-  .nav-pill:focus-within {
-    flex-direction: column;
-    align-items: stretch;
-    max-width: 220px !important;
+  .nav-pill:not(.is-open),
+  .nav-pill:not(.is-open):hover,
+  .nav-pill:not(.is-open):focus-within {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    padding: 0 !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .nav-pill:not(.is-open) .nav-links-wrap,
+  .nav-pill:not(.is-open) .nav-links-wrap * {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  .nav-pill.is-open {
+    width: min(260px, calc(100vw - 36px)) !important;
+    max-width: calc(100vw - 36px) !important;
+    max-height: calc(100svh - 32px);
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
     height: auto;
-    padding: 4px 4px 8px;
+    padding: 4px 4px 8px !important;
     border-radius: 22px;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
   }
   .nav-pill.is-open .nav-dot { align-self: flex-end; margin-bottom: 4px; }
   .nav-pill.is-open .nav-links-wrap {
@@ -420,6 +444,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     gap: 2px;
     padding: 6px;
     width: 100%;
+    pointer-events: auto;
   }
   .nav-links-wrap .sep { display: none; }
   .nav-links-wrap a { padding: 10px 14px; text-align: left; font-size: 11px; }

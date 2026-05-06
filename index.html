@@ -413,6 +413,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     border-color: transparent;
     box-shadow: none;
   }
+  .nav-pill:not(.is-open) .nav-links-wrap,
+  .nav-pill:not(.is-open) .nav-links-wrap * {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
   .nav-pill.is-open {
     width: min(260px, calc(100vw - 36px)) !important;
     max-width: calc(100vw - 36px) !important;
@@ -433,6 +438,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     gap: 2px;
     padding: 6px;
     width: 100%;
+    pointer-events: auto;
   }
   .nav-links-wrap .sep { display: none; }
   .nav-links-wrap a {
@@ -4582,7 +4588,9 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
 
   // Tap the dot (both desktop for accessibility and mobile for toggle)
   dot.addEventListener('click', (e) => {
+    e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
     clearTimeout(closeTimer);
     if (mqCoarse.matches && isOpen) close();
     else open();
