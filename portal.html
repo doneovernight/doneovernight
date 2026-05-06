@@ -2636,15 +2636,17 @@ function getFileExtension(fileName) {
 
 function getSafeFileName(fileName) {
   return String(fileName || 'upload')
-    .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/[^a-z0-9._-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '') || 'upload';
 }
 
 async function uploadTaskFile(file) {
   if (!file) return '';
+  if (!supabaseClient?.storage) {
+    throw new Error('File upload is not available. Please paste a link instead.');
+  }
   const extension = getFileExtension(file.name);
   if (!TASK_FILE_EXTENSIONS.has(extension)) {
     throw new Error('Please upload a PDF, DOC, DOCX, PNG, JPG, JPEG, or WEBP file.');
@@ -2654,21 +2656,29 @@ async function uploadTaskFile(file) {
   }
 
   const safeFileName = getSafeFileName(file.name);
-  const path = `tasks/${Date.now()}-${safeFileName}`;
+  const filePath = `tasks/${Date.now()}-${safeFileName}`;
+  console.log('selected file name:', file.name);
+  console.log('upload path:', filePath);
   const { error } = await supabaseClient.storage
     .from(TASK_FILE_BUCKET)
-    .upload(path, file, {
+    .upload(filePath, file, {
       cacheControl: '3600',
+      contentType: file.type || 'application/octet-stream',
       upsert: false
     });
 
-  if (error) throw new Error('Could not upload file. Please try again.');
+  if (error) {
+    console.error('Supabase upload error:', error);
+    throw new Error('File upload failed. Please try again or paste a link.');
+  }
 
   const { data } = supabaseClient.storage
     .from(TASK_FILE_BUCKET)
-    .getPublicUrl(path);
+    .getPublicUrl(filePath);
 
-  return data?.publicUrl || '';
+  console.log('generated public URL:', data?.publicUrl || '');
+  if (!data?.publicUrl) throw new Error('Could not create file link. Please try again.');
+  return data.publicUrl;
 }
 
 function startPortalPolling() {
@@ -3149,6 +3159,7 @@ document.getElementById('dashboardTaskForm').addEventListener('submit', async (e
     const filesLink = selectedFile
       ? await uploadTaskFile(selectedFile)
       : linkInput?.value?.trim() || requestParts.files_link || '';
+    console.log('final payload.files_link:', filesLink);
     const createdAt = new Date().toISOString();
     let accessKey = sessionStorage.getItem('portal_access_key');
     if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
