@@ -243,8 +243,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* Expanded state */
 .nav-pill.is-open,
-.nav-pill:hover,
-.nav-pill:focus-within {
+.nav-pill:hover {
   max-width: calc(100vw - 56px) !important;
   overflow: visible !important;
   transform-origin: right center !important;
@@ -259,8 +258,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .nav-pill.is-open .nav-dot,
-.nav-pill:hover .nav-dot,
-.nav-pill:focus-within .nav-dot {
+.nav-pill:hover .nav-dot {
   transform: scale(0.65);
 }
 .nav-pill.is-open .nav-dot::after { animation: none; opacity: 0; }
@@ -281,8 +279,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   white-space: nowrap;
 }
 .nav-pill.is-open .nav-links-wrap,
-.nav-pill:hover .nav-links-wrap,
-.nav-pill:focus-within .nav-links-wrap {
+.nav-pill:hover .nav-links-wrap {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -4555,7 +4552,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   const dot = document.getElementById('navDot');
   if (!pill || !dot) return;
 
-  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
   let isOpen = false;
   let closeTimer = null;
 
@@ -4574,7 +4571,7 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     dot.setAttribute('aria-label', 'Open menu');
   }
 
-  if (mqCoarse.matches) {
+  if (!canHover.matches) {
     // Mobile/touch: tap toggles. Hidden links remain inert until .is-open.
     dot.addEventListener('click', (e) => {
       e.preventDefault();
@@ -4595,15 +4592,14 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
       if (e.target.closest('a, button')) close();
     }, true);
   } else {
-    // Desktop: hover only. Dot clicks are swallowed so focus/click cannot stick it open.
-    pill.addEventListener('mouseenter', () => {
-      clearTimeout(closeTimer);
-      open();
-    });
+    // Desktop: CSS hover only. JS only clears stale touch state.
     pill.addEventListener('mouseleave', () => {
       clearTimeout(closeTimer);
-      closeTimer = setTimeout(close, 220);
+      close();
     });
+    pill.addEventListener('click', (e) => {
+      if (e.target.closest('a')) close();
+    }, true);
 
     dot.addEventListener('click', (e) => {
       e.preventDefault();

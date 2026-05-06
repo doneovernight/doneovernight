@@ -587,12 +587,12 @@ if ('serviceWorker' in navigator) {
   const pill = document.getElementById('navPill');
   const dot = document.getElementById('navDot');
   if (!pill || !dot) return;
-  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
+  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
   let isOpen = false;
   let closeTimer = null;
   function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
-  function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
-  if (mqCoarse.matches) {
+  function close() { isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
+  if (!canHover.matches) {
     dot.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -607,8 +607,8 @@ if ('serviceWorker' in navigator) {
       if (e.target.closest('a, button')) close();
     }, true);
   } else {
-    pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
-    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
+    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); close(); });
+    pill.addEventListener('click', (e) => { if (e.target.closest('a')) close(); }, true);
     dot.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
