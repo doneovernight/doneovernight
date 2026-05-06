@@ -81,8 +81,8 @@
 
 <nav class="nav" aria-label="Primary">
   <a class="logo" href="index.html">DONEOVERNIGHT</a>
-  <div class="nav-pill" id="navPill">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
+  <div class="nav-pill" id="navPill" onclick="if (event.target === this || event.target.closest('.nav-dot')) { event.stopImmediatePropagation(); this.classList.add('is-open'); const d=this.querySelector('.nav-dot'); d && (d.setAttribute('aria-expanded','true'), d.setAttribute('aria-label','Close menu')); }">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); p.classList.add('is-open'); this.setAttribute('aria-expanded','true'); this.setAttribute('aria-label','Close menu');"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="index.html">Home</a>
       <a href="index.html#proof">Proof</a>
@@ -117,36 +117,18 @@
   const pill = document.getElementById('navPill');
   const dot = document.getElementById('navDot');
   if (!pill || !dot) return;
-  const canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
   let isOpen = false;
   let closeTimer = null;
   function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
-  function close() { isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
-  if (!canHover.matches) {
-    dot.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      clearTimeout(closeTimer);
-      if (isOpen) close();
-      else open();
-    });
-    document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
-    pill.addEventListener('click', (e) => {
-      if (e.target.closest('#navDot')) return;
-      if (e.target.closest('a, button')) close();
-    }, true);
-  } else {
-    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); close(); });
-    pill.addEventListener('click', (e) => { if (e.target.closest('a')) close(); }, true);
-    dot.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      dot.blur();
-      close();
-    });
+  function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
+  if (!mqCoarse.matches) {
+    pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
+    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
   }
+  dot.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(closeTimer); open(); });
+  document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
+  pill.addEventListener('click', (e) => { if (e.target.closest('a')) setTimeout(close, 220); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
 })();
 </script>

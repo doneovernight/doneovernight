@@ -213,7 +213,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent;
   transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
 }
 .nav-dot::before {
@@ -268,7 +267,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 .nav-pill.is-open,
-.nav-pill:hover {
+.nav-pill:hover,
+.nav-pill:focus-within {
   max-width: calc(100vw - 56px) !important;
   overflow: visible !important;
   transform-origin: right center !important;
@@ -285,7 +285,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .nav-pill.is-open .nav-dot,
-.nav-pill:hover .nav-dot { transform: scale(0.65); }
+.nav-pill:hover .nav-dot,
+.nav-pill:focus-within .nav-dot { transform: scale(0.65); }
 .nav-pill.is-open .nav-dot::after { animation: none; opacity: 0; }
 
 .nav-links-wrap {
@@ -301,7 +302,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   white-space: nowrap;
 }
 .nav-pill.is-open .nav-links-wrap,
-.nav-pill:hover .nav-links-wrap {
+.nav-pill:hover .nav-links-wrap,
+.nav-pill:focus-within .nav-links-wrap {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -401,37 +403,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     top: 16px !important;
     right: 18px !important;
   }
-  .nav-pill:not(.is-open),
-  .nav-pill:not(.is-open):hover,
-  .nav-pill:not(.is-open):focus-within {
-    width: 42px !important;
-    height: 42px !important;
-    max-width: 42px !important;
-    padding: 0 !important;
-    flex-direction: row !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-  }
-  .nav-pill:not(.is-open) .nav-links-wrap,
-  .nav-pill:not(.is-open) .nav-links-wrap * {
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
-  .nav-pill.is-open {
-    width: min(260px, calc(100vw - 36px)) !important;
-    max-width: calc(100vw - 36px) !important;
-    max-height: calc(100svh - 32px);
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
+  .nav-pill.is-open,
+  .nav-pill:hover,
+  .nav-pill:focus-within {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 220px !important;
     height: auto;
-    padding: 4px 4px 8px !important;
+    padding: 4px 4px 8px;
     border-radius: 22px;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
   }
   .nav-pill.is-open .nav-dot { align-self: flex-end; margin-bottom: 4px; }
   .nav-pill.is-open .nav-links-wrap {
@@ -440,7 +420,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     gap: 2px;
     padding: 6px;
     width: 100%;
-    pointer-events: auto;
   }
   .nav-links-wrap .sep { display: none; }
   .nav-links-wrap a { padding: 10px 14px; text-align: left; font-size: 11px; }
