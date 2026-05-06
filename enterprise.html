@@ -726,19 +726,34 @@ if ('serviceWorker' in navigator) {
   const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
   let isOpen = false;
   let closeTimer = null;
+  let lastTriggerAt = 0;
   function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
   function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
   if (!mqCoarse.matches) {
     pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
     pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
   }
-  dot.addEventListener('click', (e) => {
+  function toggleFromTrigger(e) {
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
     clearTimeout(closeTimer);
     if (mqCoarse.matches && isOpen) close();
     else open();
+  }
+  dot.addEventListener('pointerup', (e) => {
+    if (!mqCoarse.matches) return;
+    lastTriggerAt = Date.now();
+    toggleFromTrigger(e);
+  });
+  dot.addEventListener('click', (e) => {
+    if (mqCoarse.matches && Date.now() - lastTriggerAt < 450) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return;
+    }
+    toggleFromTrigger(e);
   });
   document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
   pill.addEventListener('click', (e) => {
