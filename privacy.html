@@ -318,30 +318,21 @@ if ('serviceWorker' in navigator) {
   const pill = document.getElementById('navPill');
   const dot = document.getElementById('navDot');
   if (!pill || !dot) return;
-  const isTouch = window.matchMedia('(hover: none), (pointer: coarse)');
+  const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
   let isOpen = false;
+  let closeTimer = null;
   function open() { if (isOpen) return; isOpen = true; pill.classList.add('is-open'); dot.setAttribute('aria-expanded','true'); }
   function close() { if (!isOpen) return; isOpen = false; pill.classList.remove('is-open'); dot.setAttribute('aria-expanded','false'); }
-  if (isTouch.matches) {
-    dot.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      isOpen ? close() : open();
-    });
-    document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
-    pill.addEventListener('click', (e) => {
-      if (e.target.closest('#navDot')) return;
-      if (e.target.closest('a, button')) close();
-    }, true);
-  } else {
-    dot.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dot.blur();
-      close();
-    });
-    pill.addEventListener('click', (e) => { if (e.target.closest('a, button')) close(); }, true);
+  if (!mqCoarse.matches) {
+    pill.addEventListener('mouseenter', () => { clearTimeout(closeTimer); open(); });
+    pill.addEventListener('mouseleave', () => { clearTimeout(closeTimer); closeTimer = setTimeout(close, 220); });
   }
+  dot.addEventListener('click', (e) => { e.stopPropagation(); isOpen ? close() : open(); });
+  document.addEventListener('click', (e) => { if (isOpen && !pill.contains(e.target)) close(); });
+  pill.addEventListener('click', (e) => {
+    if (e.target.closest('#navDot')) return;
+    if (e.target.closest('a, button')) close();
+  }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) close(); });
 })();
 // PWA install
