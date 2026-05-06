@@ -196,15 +196,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.5s cubic-bezier(0.22, 0.68, 0.26, 1);
-}
-.nav-dot:focus-visible {
-  outline: 1px solid rgba(233, 196, 138, 0.75);
-  outline-offset: 3px;
 }
 .nav-dot::before {
   content: "" !important;
@@ -404,15 +397,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .nav-pill {
     top: 16px !important;
     right: 18px !important;
-    transform: none !important;
-    transform-origin: top right !important;
-    pointer-events: auto !important;
-  }
-  .nav-dot {
-    position: relative;
-    z-index: 3;
-    pointer-events: auto !important;
-    touch-action: manipulation;
   }
   .nav-pill:not(.is-open),
   .nav-pill:not(.is-open):hover,
@@ -4574,7 +4558,6 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
   const mqCoarse = window.matchMedia('(hover: none), (pointer: coarse)');
   let isOpen = false;
   let closeTimer = null;
-  let lastTriggerAt = 0;
 
   function open() {
     if (isOpen) return;
@@ -4603,30 +4586,14 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     });
   }
 
-  function toggleFromTrigger(e) {
+  // Tap the dot (both desktop for accessibility and mobile for toggle)
+  dot.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
     clearTimeout(closeTimer);
     if (mqCoarse.matches && isOpen) close();
     else open();
-  }
-
-  dot.addEventListener('pointerup', (e) => {
-    if (!mqCoarse.matches) return;
-    lastTriggerAt = Date.now();
-    toggleFromTrigger(e);
-  });
-
-  // Tap the dot (both desktop for accessibility and mobile for toggle)
-  dot.addEventListener('click', (e) => {
-    if (mqCoarse.matches && Date.now() - lastTriggerAt < 450) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      return;
-    }
-    toggleFromTrigger(e);
   });
 
   // Close on outside click (mobile + accessibility)
