@@ -2629,6 +2629,7 @@ function startPortalPolling() {
   if (taskPollingInterval || !document.body.classList.contains('is-unlocked')) return;
 
   taskPollingInterval = setInterval(async () => {
+    if (!document.hasFocus()) return;
     try {
       await loadTaskHistory({ silent: true });
     } catch (err) {

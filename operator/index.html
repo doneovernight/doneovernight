@@ -988,6 +988,7 @@ function startAdminTaskPolling() {
   if (adminTaskPollingInterval || !document.body.classList.contains('is-admin')) return;
 
   adminTaskPollingInterval = setInterval(async () => {
+    if (!document.hasFocus()) return;
     try {
       await loadAdminTasks({ silent: true });
     } catch (err) {
