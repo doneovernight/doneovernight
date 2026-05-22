@@ -1,0 +1,2554 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operator Headquarters | DONEOVERNIGHT</title>
+  <meta name="description" content="Private DONEOVERNIGHT operator headquarters for assigned specialist work.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050608;
+      --ink: rgba(255,255,255,.92);
+      --ink-dim: rgba(255,255,255,.62);
+      --ink-faint: rgba(255,255,255,.38);
+      --line: rgba(255,255,255,.105);
+      --amber: #e9c48a;
+      --operator-accent: #e9c48a;
+      --green: #8be0ad;
+      --blue: rgba(151,197,255,.82);
+      --red: rgba(229,112,112,.82);
+      --sans: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); color-scheme: dark; scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233,196,138,.08), transparent 64%),
+        radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120,100,180,.06), transparent 68%),
+        #050608;
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    body::before {
+      opacity: .44;
+      background-image:
+        radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+        radial-gradient(.9px .9px at 36% 12%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+        radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+        radial-gradient(.9px .9px at 68% 82%, #fff, transparent);
+    }
+
+    body::after {
+      opacity: .22;
+      background: linear-gradient(90deg, transparent, rgba(233,196,138,.055), transparent);
+      background-size: 220% 100%;
+      background-position: -80% 0;
+      mix-blend-mode: soft-light;
+      animation: signalDrift 34s ease-in-out infinite;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+
+    .operator-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 36px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 78px 0 56px;
+    }
+
+    .operator-topbar {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 40;
+      width: 100%;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(5,6,8,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .operator-topbar-inner {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 0 18px;
+    }
+
+    .wordmark { display: inline-flex; align-items: center; line-height: 0; }
+    .wordmark img { display: block; width: clamp(142px, 15vw, 164px); height: auto; }
+
+    .operator-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(139,224,173,.86);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .operator-status::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.44);
+      content: "";
+      animation: livePulse 2.6s ease-in-out infinite;
+    }
+
+    .operator-topbar-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.018);
+      padding: 5px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .operator-logout {
+      min-height: 30px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,255,255,.48);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      padding: 0 12px;
+      text-transform: uppercase;
+      transition: border-color .2s, color .2s, background .2s, transform .2s;
+    }
+
+    .operator-logout:hover,
+    .operator-logout:focus-visible {
+      border-color: rgba(233,196,138,.38);
+      background: rgba(233,196,138,.055);
+      color: var(--amber);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .operator-hero {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(320px, .72fr);
+      gap: clamp(24px, 6vw, 72px);
+      align-items: center;
+      padding: clamp(38px, 7vh, 78px) 0 34px;
+    }
+
+    .eyebrow,
+    .module-label,
+    .metric-label {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow { margin: 0 0 14px; }
+
+    h1 {
+      max-width: 12ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(48px, 8vw, 92px);
+      font-weight: 400;
+      line-height: .96;
+      letter-spacing: -.04em;
+    }
+
+    h2,
+    h3,
+    p { margin-top: 0; }
+
+    .copy {
+      max-width: 56ch;
+      margin: 20px 0 0;
+      color: var(--ink-dim);
+      font-size: clamp(15px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+
+    .operator-panel,
+    .operator-module,
+    .operator-metric,
+    .operator-list-panel,
+    .profile-shell {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(18px);
+    }
+
+    .operator-panel {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(22px, 4vw, 34px);
+    }
+
+    .operator-panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(233,196,138,.13), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent 42%);
+      opacity: .8;
+      content: "";
+    }
+
+    .operator-panel > * { position: relative; z-index: 1; }
+
+    .operator-panel h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 3vw, 38px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .operator-panel p {
+      margin: 12px 0 0;
+      color: var(--ink-dim);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .operator-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .operator-button,
+    .operator-link-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 44%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--operator-accent) 6%, transparent);
+      color: #f4d28a;
+      padding: 0 16px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color .22s, background .22s, box-shadow .22s, color .22s, transform .22s;
+    }
+
+    .operator-button.secondary,
+    .operator-link-button.secondary {
+      border-color: rgba(255,255,255,.105);
+      background: rgba(255,255,255,.024);
+      color: rgba(255,255,255,.62);
+    }
+
+    .operator-button:hover,
+    .operator-button:focus-visible,
+    .operator-link-button:hover,
+    .operator-link-button:focus-visible {
+      border-color: color-mix(in srgb, var(--operator-accent) 68%, transparent);
+      background: color-mix(in srgb, var(--operator-accent) 11%, transparent);
+      box-shadow: 0 0 28px color-mix(in srgb, var(--operator-accent) 16%, transparent);
+      color: #ffe3ad;
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .operator-link-button[disabled] {
+      cursor: wait;
+      opacity: .62;
+      transform: none;
+    }
+
+    .gateway-shell {
+      display: grid;
+      grid-template-columns: minmax(0, .98fr) minmax(320px, .68fr);
+      gap: clamp(24px, 6vw, 72px);
+      align-items: center;
+      min-height: calc(100vh - 134px);
+      padding: clamp(42px, 8vh, 92px) 0 34px;
+    }
+
+    .gateway-copy h1 {
+      max-width: 11ch;
+    }
+
+    .gateway-panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(233,196,138,.14);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 86% 8%, rgba(233,196,138,.13), transparent 34%),
+        rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      padding: clamp(20px, 4vw, 30px);
+      backdrop-filter: blur(18px);
+    }
+
+    .gateway-panel h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(30px, 3.2vw, 42px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .gateway-panel p {
+      margin: 11px 0 0;
+      color: var(--ink-dim);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .operator-login-form {
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .operator-login-field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .operator-login-field label {
+      color: rgba(245,241,234,.42);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .operator-login-field input {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 8px;
+      background: rgba(0,0,0,.22);
+      color: rgba(255,255,255,.9);
+      padding: 0 13px;
+      outline: none;
+      transition: border-color .22s, box-shadow .22s, background .22s;
+    }
+
+    .operator-login-field input:focus {
+      border-color: rgba(233,196,138,.48);
+      background: rgba(0,0,0,.3);
+      box-shadow: 0 0 0 3px rgba(233,196,138,.075);
+    }
+
+    .operator-login-message {
+      min-height: 18px;
+      color: rgba(245,241,234,.52);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .operator-login-message.is-error { color: rgba(229,112,112,.9); }
+    .operator-login-message.is-success { color: rgba(139,224,173,.9); }
+
+    .runtime-alert {
+      display: none;
+      margin: 18px 0 0;
+      color: rgba(229,112,112,.9);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .runtime-alert.is-visible { display: block; }
+
+    .runtime-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .runtime-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.022);
+      color: rgba(245,241,234,.62);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .12em;
+      line-height: 1.3;
+      padding: 7px 9px;
+      text-transform: uppercase;
+    }
+
+    .runtime-chip::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--operator-accent) 72%, transparent);
+      box-shadow: 0 0 14px color-mix(in srgb, var(--operator-accent) 24%, transparent);
+      content: "";
+      transition: background 1.8s ease, box-shadow 1.8s ease;
+    }
+
+    .runtime-chip.is-live::before {
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.34);
+      animation: livePulse 2.6s ease-in-out infinite;
+    }
+
+    .gateway-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .gateway-meta span {
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      color: rgba(245,241,234,.56);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .13em;
+      line-height: 1.45;
+      padding: 11px;
+      text-transform: uppercase;
+    }
+
+    .hq-shell {
+      display: none;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .38s ease, transform .38s ease;
+    }
+
+    .hq-shell.is-visible,
+    body.is-operator-public .hq-shell,
+    body.is-operator-authenticated .hq-shell {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    body.is-operator-profile .operator-gateway,
+    body.is-operator-authenticated .operator-gateway {
+      display: none;
+    }
+
+    body.is-operator-authenticated .hq-shell a[href="/apply"] {
+      display: none;
+    }
+
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin: 10px 0 34px;
+    }
+
+    .operator-metric {
+      min-height: 124px;
+      padding: 16px;
+    }
+
+    .operator-metric.is-wide { grid-column: span 2; }
+
+    .metric-label {
+      color: rgba(245,241,234,.34);
+      font-size: 8px;
+      letter-spacing: .17em;
+    }
+
+    .metric-value {
+      margin-top: 15px;
+      color: rgba(255,255,255,.9);
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1;
+    }
+
+    .metric-note {
+      margin: 9px 0 0;
+      color: rgba(245,241,234,.42);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .operator-section {
+      margin-top: 34px;
+      scroll-margin-top: 96px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 6px 0 0;
+      color: rgba(255,255,255,.9);
+      font-family: var(--serif);
+      font-size: clamp(26px, 3vw, 38px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .section-head p {
+      max-width: 40ch;
+      margin: 0;
+      color: rgba(245,241,234,.42);
+      font-size: 12px;
+      line-height: 1.55;
+      text-align: right;
+    }
+
+    .operator-two-column {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(300px, .88fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .operator-list-panel {
+      padding: 18px;
+    }
+
+    .operator-list-panel h3 {
+      margin: 0 0 14px;
+      color: rgba(245,241,234,.82);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .operator-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 13px 0;
+      border-top: 1px solid rgba(255,255,255,.055);
+    }
+
+    .operator-row:first-of-type { border-top: 0; padding-top: 0; }
+    .operator-row:last-child { padding-bottom: 0; }
+
+    .operator-row strong {
+      display: block;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+
+    .operator-row span,
+    .operator-row small {
+      display: block;
+      margin-top: 4px;
+      color: rgba(245,241,234,.4);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .status-pill {
+      align-self: start;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 22%, transparent);
+      border-radius: 999px;
+      color: rgba(245,241,234,.62);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .13em;
+      padding: 5px 7px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: border-color 1.8s ease, color 1.8s ease, box-shadow 1.8s ease;
+    }
+
+    .status-pill.is-live { color: var(--green); border-color: rgba(139,224,173,.23); }
+    .status-pill.is-waiting { color: #f4d28a; border-color: color-mix(in srgb, var(--operator-accent) 30%, transparent); }
+    .status-pill.is-review { color: var(--blue); border-color: rgba(151,197,255,.2); }
+    .status-pill.is-muted { color: rgba(245,241,234,.36); }
+
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .operator-module {
+      min-height: 190px;
+      padding: 18px;
+    }
+
+    .operator-module .module-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: rgba(245,241,234,.34);
+      font-size: 8px;
+      letter-spacing: .17em;
+    }
+
+    .operator-module .module-label::before {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--operator-accent) 72%, transparent);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--operator-accent) 22%, transparent);
+      content: "";
+      transition: background 1.8s ease, box-shadow 1.8s ease;
+    }
+
+    .operator-module h3 {
+      margin: 18px 0 8px;
+      color: rgba(255,255,255,.88);
+      font-size: 15px;
+      font-weight: 650;
+      letter-spacing: -.01em;
+    }
+
+    .operator-module p,
+    .module-line {
+      margin: 0;
+      color: rgba(245,241,234,.45);
+      font-size: 12px;
+      line-height: 1.58;
+    }
+
+    .module-lines {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .module-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(255,255,255,.055);
+      padding-top: 8px;
+    }
+
+    .module-line b {
+      color: rgba(245,241,234,.72);
+      font-weight: 600;
+    }
+
+    .profile-shell {
+      display: grid;
+      grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .profile-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 240px;
+      border: 1px solid rgba(233,196,138,.12);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 80% 12%, color-mix(in srgb, var(--operator-accent) 16%, transparent), transparent 35%),
+        rgba(5,6,8,.42);
+      padding: 18px;
+      transition: border-color 1.8s ease, background 1.8s ease, box-shadow 1.8s ease;
+    }
+
+    .profile-card::before,
+    .profile-card::after {
+      position: absolute;
+      inset: -1px;
+      pointer-events: none;
+      content: "";
+    }
+
+    .profile-card::before {
+      background:
+        radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--operator-accent) 16%, transparent), transparent 30%),
+        linear-gradient(115deg, transparent 0 28%, color-mix(in srgb, var(--operator-accent) 7%, transparent) 42%, transparent 58% 100%);
+      background-size: 160% 160%;
+      opacity: .72;
+      animation: chamberDrift 18s ease-in-out infinite;
+    }
+
+    .profile-card::after {
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 16%, transparent);
+      border-radius: inherit;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.04),
+        0 0 38px color-mix(in srgb, var(--operator-accent) 8%, transparent);
+      opacity: .78;
+      animation: chamberBreath 5.8s ease-in-out infinite;
+    }
+
+    .profile-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .profile-avatar {
+      position: relative;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      width: 68px;
+      height: 68px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 34%, transparent);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 20%, color-mix(in srgb, var(--operator-accent) 26%, transparent), transparent 48%),
+        rgba(245,241,234,.035);
+      box-shadow:
+        0 0 0 6px color-mix(in srgb, var(--operator-accent) 5%, transparent),
+        0 0 34px color-mix(in srgb, var(--operator-accent) 18%, transparent);
+      transition: border-color 1.8s ease, background 1.8s ease, box-shadow 1.8s ease;
+    }
+
+    .profile-avatar::before {
+      width: 24px;
+      height: 10px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 52%, transparent);
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--operator-accent) 24%, transparent), transparent);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--operator-accent) 18%, transparent);
+      content: "";
+    }
+
+    .profile-avatar::after {
+      position: absolute;
+      bottom: 12px;
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--operator-accent) 70%, rgba(255,255,255,.2));
+      box-shadow: 0 0 16px color-mix(in srgb, var(--operator-accent) 34%, transparent);
+      content: "";
+      animation: livePulse 3.8s ease-in-out infinite;
+    }
+
+    .profile-avatar.has-image {
+      background-position: center;
+      background-size: cover;
+    }
+
+    .profile-avatar.has-image::before,
+    .profile-avatar.has-image::after {
+      display: none;
+    }
+
+    .profile-atmosphere {
+      grid-column: 1 / -1;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 18%, rgba(255,255,255,.05));
+      border-radius: 7px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--operator-accent) 8%, transparent), rgba(255,255,255,.018));
+      color: rgba(245,241,234,.54);
+      font-size: 11px;
+      line-height: 1.55;
+      padding: 12px;
+      transition: border-color 1.8s ease, background 1.8s ease;
+    }
+
+    .avatar-tools,
+    .accent-tools {
+      display: grid;
+      gap: 8px;
+    }
+
+    .avatar-tool-row,
+    .accent-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .image-dropzone {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 82px;
+      border: 1px dashed color-mix(in srgb, var(--operator-accent) 28%, rgba(255,255,255,.08));
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--operator-accent) 5%, rgba(0,0,0,.18));
+      color: rgba(245,241,234,.62);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      line-height: 1.55;
+      padding: 14px;
+      text-align: center;
+      text-transform: uppercase;
+      transition: border-color .24s ease, background .24s ease, box-shadow .24s ease;
+    }
+
+    .image-dropzone.is-active,
+    .image-dropzone:hover,
+    .image-dropzone:focus-visible {
+      border-color: color-mix(in srgb, var(--operator-accent) 56%, rgba(255,255,255,.1));
+      background: color-mix(in srgb, var(--operator-accent) 9%, rgba(0,0,0,.22));
+      box-shadow: 0 0 24px color-mix(in srgb, var(--operator-accent) 12%, transparent);
+      outline: none;
+    }
+
+    .image-dropzone small {
+      display: block;
+      margin-top: 5px;
+      color: rgba(245,241,234,.36);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .avatar-file {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .avatar-file-label,
+    .accent-swatch {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 999px;
+      background: rgba(255,255,255,.025);
+      color: rgba(245,241,234,.62);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      padding: 0 10px;
+      text-transform: uppercase;
+      transition: border-color .24s ease, box-shadow .24s ease, color .24s ease, background .24s ease;
+    }
+
+    .accent-swatch {
+      gap: 7px;
+    }
+
+    .accent-swatch::before {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--swatch);
+      box-shadow: 0 0 14px color-mix(in srgb, var(--swatch) 40%, transparent);
+      content: "";
+    }
+
+    .avatar-file-label:hover,
+    .avatar-file-label:focus-visible,
+    .accent-swatch:hover,
+    .accent-swatch:focus-visible,
+    .accent-swatch.is-active {
+      border-color: color-mix(in srgb, var(--operator-accent) 46%, rgba(255,255,255,.08));
+      background: color-mix(in srgb, var(--operator-accent) 8%, rgba(255,255,255,.02));
+      box-shadow: 0 0 22px color-mix(in srgb, var(--operator-accent) 12%, transparent);
+      color: rgba(255,255,255,.84);
+      outline: none;
+    }
+
+    .profile-card h3 {
+      margin: 18px 0 6px;
+      color: rgba(255,255,255,.88);
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .profile-status-line {
+      margin-top: 14px;
+      color: color-mix(in srgb, var(--operator-accent) 72%, rgba(245,241,234,.54));
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      line-height: 1.55;
+      text-transform: uppercase;
+    }
+
+    .profile-runtime-message {
+      margin-top: 12px;
+      color: rgba(245,241,234,.52);
+      font-size: 12px;
+      line-height: 1.62;
+    }
+
+    .runtime-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .runtime-link {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 24%, rgba(255,255,255,.07));
+      border-radius: 999px;
+      background: rgba(255,255,255,.022);
+      color: rgba(245,241,234,.68);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      padding: 0 10px;
+      text-transform: uppercase;
+      transition: border-color .24s ease, background .24s ease, color .24s ease, box-shadow .24s ease;
+    }
+
+    .runtime-link.is-visible { display: inline-flex; }
+
+    .runtime-link.is-empty {
+      pointer-events: none;
+      opacity: .58;
+    }
+
+    .runtime-link:hover,
+    .runtime-link:focus-visible {
+      border-color: color-mix(in srgb, var(--operator-accent) 48%, rgba(255,255,255,.08));
+      background: color-mix(in srgb, var(--operator-accent) 8%, rgba(255,255,255,.02));
+      box-shadow: 0 0 20px color-mix(in srgb, var(--operator-accent) 10%, transparent);
+      color: rgba(255,255,255,.88);
+      outline: none;
+    }
+
+    .profile-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .profile-settings {
+      display: none;
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(255,255,255,.07);
+      margin-top: 6px;
+      padding-top: 14px;
+    }
+
+    body.is-operator-authenticated .profile-settings { display: block; }
+
+    .profile-settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .profile-settings .operator-login-field textarea {
+      width: 100%;
+      min-height: 92px;
+      border: 1px solid rgba(255,255,255,.105);
+      border-radius: 7px;
+      background: rgba(0,0,0,.22);
+      color: rgba(255,255,255,.9);
+      padding: 12px 13px;
+      resize: vertical;
+      outline: none;
+    }
+
+    .profile-field {
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 7px;
+      background: rgba(0,0,0,.16);
+      padding: 12px;
+    }
+
+    .profile-field span {
+      display: block;
+      color: rgba(245,241,234,.32);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .profile-field strong {
+      display: block;
+      margin-top: 7px;
+      color: rgba(245,241,234,.78);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    @keyframes signalDrift { 50% { background-position: 140% 0; opacity: .28; } }
+    @keyframes livePulse { 0%, 100% { opacity: .62; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.16); } }
+    @keyframes chamberDrift { 50% { background-position: 82% 44%; opacity: .9; } }
+    @keyframes chamberBreath { 0%, 100% { opacity: .54; } 50% { opacity: .86; } }
+
+    @media (max-width: 980px) {
+      .gateway-shell,
+      .operator-hero,
+      .operator-two-column,
+      .profile-shell { grid-template-columns: 1fr; }
+      .command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .operator-metric.is-wide { grid-column: span 1; }
+      .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .section-head { align-items: start; flex-direction: column; }
+      .section-head p { text-align: left; }
+    }
+
+    @media (max-width: 640px) {
+      .operator-shell { width: min(100% - 28px, 1180px); }
+      .operator-topbar-inner { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .operator-topbar-right { max-width: 100%; }
+      .operator-status { min-width: 0; overflow-wrap: anywhere; }
+      .gateway-meta { grid-template-columns: 1fr; }
+      h1 { max-width: 11ch; }
+      .command-grid,
+      .module-grid,
+      .profile-fields { grid-template-columns: 1fr; }
+      .profile-settings-grid { grid-template-columns: 1fr; }
+      .operator-row { grid-template-columns: 1fr; }
+      .status-pill { width: max-content; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="operator-shell">
+    <header class="operator-topbar">
+      <div class="operator-topbar-inner">
+        <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="../assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT"></a>
+        <div class="operator-topbar-right">
+          <div class="operator-status" id="operatorHeaderStatus">DONEOVERNIGHT | OPERATOR</div>
+          <button class="operator-logout" id="operatorLogout" type="button" hidden>Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="operator-gateway gateway-shell" aria-labelledby="operatorGatewayTitle">
+      <div class="gateway-copy">
+        <p class="eyebrow">Private operator gateway</p>
+        <h1 id="operatorGatewayTitle">Enter the operator layer.</h1>
+        <p class="copy">Private infrastructure for approved specialists. Assigned work, payouts, communication, and delivery flow connect here after approval.</p>
+        <div class="operator-actions">
+          <a class="operator-button" href="/apply">Apply as Operator →</a>
+          <button class="operator-link-button secondary" id="operatorLoginFocus" type="button">Operator Login →</button>
+          <button class="operator-link-button secondary" id="operatorPreviewToggle" type="button">Show HQ Overview →</button>
+        </div>
+        <div class="gateway-meta" aria-label="Operator gateway signals">
+          <span>Approved specialists only</span>
+          <span>Private operational access</span>
+          <span>Execution-focused workflow</span>
+        </div>
+      </div>
+
+      <aside class="gateway-panel" id="operatorLoginPanel">
+        <p class="eyebrow">Operator access</p>
+        <h2>Verify credentials.</h2>
+        <p>Use your issued operator handle or email with the private access key. Verified operator identities can continue securely with Google.</p>
+        <form class="operator-login-form" id="operatorLoginForm">
+          <div class="operator-login-field">
+            <label for="operatorIdentifier">Email or handle</label>
+            <input id="operatorIdentifier" name="identifier" autocomplete="username" placeholder="@handle or your@domain.com" required>
+          </div>
+          <div class="operator-login-field">
+            <label for="operatorAccessKey">Access key</label>
+            <input id="operatorAccessKey" name="access_key" autocomplete="one-time-code" placeholder="DONE-OP-XXXXXX-XXXXXX" required>
+          </div>
+          <button class="operator-link-button" id="operatorLoginSubmit" type="submit">Open Operator Headquarters →</button>
+        </form>
+        <div class="operator-actions">
+          <button class="operator-link-button secondary" id="operatorGoogleAccess" type="button">Continue with Google</button>
+        </div>
+        <p class="operator-login-message" id="operatorLoginMessage" role="status" aria-live="polite"></p>
+        <p class="runtime-alert" id="operatorRuntimeAlert" role="status" aria-live="polite"></p>
+      </aside>
+    </section>
+
+    <div class="hq-shell" id="operatorHq">
+    <section class="operator-hero" aria-labelledby="operatorTitle">
+      <div>
+        <p class="eyebrow" data-runtime="operatorHandle">Private operator headquarters</p>
+        <h1 id="operatorTitle" data-runtime="greeting">Operator presence.</h1>
+        <p class="copy" data-runtime="operatorBio">Private runtime identity is coming online.</p>
+      </div>
+
+      <aside class="operator-panel">
+        <p class="eyebrow">Access state</p>
+        <h2 data-runtime="accessState">Synchronizing operator layer...</h2>
+        <p data-runtime="accessSummary">Runtime presence is connecting to the private operator layer.</p>
+        <div class="runtime-strip" aria-label="Runtime presence">
+          <span class="runtime-chip is-live" data-runtime="presenceState">Operator layer synchronized</span>
+          <span class="runtime-chip" data-runtime="lastActive">Awaiting first activity</span>
+          <span class="runtime-chip" data-runtime="deliveryWindow">No active delivery</span>
+        </div>
+        <div class="operator-actions">
+          <a class="operator-button" href="/apply">Apply as operator →</a>
+          <a class="operator-button" id="operatorRuntimeAction" href="#overview" hidden>Workspace actions →</a>
+          <button class="operator-button secondary" id="operatorInviteClientAction" type="button" hidden>Invite new client →</button>
+          <a class="operator-button secondary" href="#profile">Operator profile</a>
+        </div>
+        <p class="operator-login-message" id="operatorInviteMessage" role="status" aria-live="polite"></p>
+      </aside>
+    </section>
+
+    <section class="operator-section" id="overview" aria-labelledby="overviewTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Overview</p>
+          <h2 id="overviewTitle">Command Center</h2>
+        </div>
+        <p data-runtime="overviewCopy">High-signal operational state only. Counts connect to assigned work once operator sessions and assignments are activated.</p>
+      </div>
+
+      <div class="command-grid" aria-label="Operator command metrics">
+        <article class="operator-metric">
+          <div class="metric-label">Active clients</div>
+          <div class="metric-value" data-metric="active_clients">0</div>
+          <p class="metric-note">Assigned workspace count.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Pending tasks</div>
+          <div class="metric-value" data-metric="pending_tasks">0</div>
+          <p class="metric-note">Requires operator action.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Revisions</div>
+          <div class="metric-value" data-metric="approvals">0</div>
+          <p class="metric-note">Revision or approval pressure.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Updates</div>
+          <div class="metric-value" data-metric="messages">0</div>
+          <p class="metric-note">Unread client movement.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Revenue</div>
+          <div class="metric-value" data-metric="revenue">Private</div>
+          <p class="metric-note">Paid and pending payouts.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Deadlines</div>
+          <div class="metric-value" data-metric="deadlines">No active delivery</div>
+          <p class="metric-note">Nearest delivery window.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="clients" aria-labelledby="clientsTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Clients</p>
+          <h2 id="clientsTitle">Assigned client layer</h2>
+        </div>
+        <p data-runtime="clientSectionCopy">Assigned clients, project state, recent activity, and quick workspace access connect after runtime authentication.</p>
+      </div>
+      <div class="operator-two-column">
+        <article class="operator-list-panel" id="assignedClientsPanel">
+          <h3>Assigned clients</h3>
+          <div class="operator-row">
+            <div><strong>No active assignments yet</strong><span>Operator layer synchronized. Assigned clients will appear here after activation routing.</span></div>
+            <span class="status-pill is-muted">Idle</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>Awaiting first delivery cycle</strong><span>Revisions, delivery status, and quick access attach to assigned workspaces.</span></div>
+            <span class="status-pill is-waiting">Standing by</span>
+          </div>
+        </article>
+
+        <article class="operator-list-panel" id="roleContextPanel">
+          <h3>Role-aware context</h3>
+          <div class="operator-row">
+            <div><strong>Videographer</strong><span>Deliveries, revisions, licensing, export gates.</span></div>
+            <span class="status-pill is-muted">Module</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>Designer</strong><span>Brand assets, approvals, final handoff, revision cycles.</span></div>
+            <span class="status-pill is-muted">Module</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>Trainer</strong><span>Programs, check-ins, client progress, recurring sessions.</span></div>
+            <span class="status-pill is-muted">Module</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="tasks" aria-labelledby="tasksTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Tasks &amp; deliveries</p>
+          <h2 id="tasksTitle">Execution pipeline</h2>
+        </div>
+        <p data-runtime="taskSectionCopy">Delivery movement, approvals, revision pressure, and archived completion history are scoped to assigned work.</p>
+      </div>
+
+      <div class="module-grid" id="taskRuntimeGrid">
+        <article class="operator-module">
+          <div class="module-label">Runtime state</div>
+          <h3>No active tasks</h3>
+          <p>Operator layer synchronized. Assigned tasks will appear when a delivery cycle opens.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Current state</span><b>Idle</b></div>
+            <div class="module-line"><span>Revision pressure</span><b>Clear</b></div>
+            <div class="module-line"><span>Delivery window</span><b>No active delivery</b></div>
+          </div>
+        </article>
+        <article class="operator-module">
+          <div class="module-label">Client updates</div>
+          <h3>No unread updates</h3>
+          <p>Client movement and operator-facing messages will surface here.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Inbox</span><b>Synchronized</b></div>
+            <div class="module-line"><span>Client replies</span><b>Clear</b></div>
+            <div class="module-line"><span>Last activity</span><b data-runtime="taskLastActive">Awaiting first activity</b></div>
+          </div>
+        </article>
+        <article class="operator-module">
+          <div class="module-label">Delivery</div>
+          <h3>Delivery layer</h3>
+          <p>Delivery links, source files, final export notes, and handoff signals attach to assigned tasks.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Upload</span><b>Standing by</b></div>
+            <div class="module-line"><span>Delivery link</span><b>Inactive</b></div>
+            <div class="module-line"><span>Client notified</span><b>Clear</b></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="finance" aria-labelledby="financeTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Payments &amp; revenue</p>
+          <h2 id="financeTitle">Payout visibility</h2>
+        </div>
+        <p data-runtime="financeSectionCopy">Paid revenue, pending approvals, and payout visibility stay scoped to authenticated operator sessions.</p>
+      </div>
+
+      <div class="module-grid">
+        <article class="operator-module">
+          <div class="module-label">Paid</div>
+          <h3>Paid revenue</h3>
+          <p>Completed paid work and operator payout basis.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Source</span><b>Task revenue</b></div>
+            <div class="module-line"><span>Payout</span><b data-finance="paid">Private</b></div>
+          </div>
+        </article>
+        <article class="operator-module">
+          <div class="module-label">Pending</div>
+          <h3>Pending revenue</h3>
+          <p>Quoted or approved work waiting for payment movement.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Awaiting payment</span><b data-finance="pending">Tracked</b></div>
+            <div class="module-line"><span>Overdue</span><b>Clear</b></div>
+          </div>
+        </article>
+        <article class="operator-module">
+          <div class="module-label">Finance</div>
+          <h3>Payout controls</h3>
+          <p>Payout email, payout method, invoice export, and recurring work visibility stay private.</p>
+          <div class="module-lines">
+            <div class="module-line"><span>Payout email</span><b>Profile</b></div>
+            <div class="module-line"><span>Invoices</span><b>Later</b></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="messages-contracts" aria-labelledby="communicationTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Communication &amp; trust</p>
+          <h2 id="communicationTitle">Messages and contracts</h2>
+        </div>
+        <p data-runtime="communicationSectionCopy">Client communication and contract states are operator-scoped and connected to assigned work.</p>
+      </div>
+
+      <div class="operator-two-column">
+        <article class="operator-list-panel" id="messagesPanel">
+          <h3>Messages</h3>
+          <div class="operator-row">
+            <div><strong>No unread client updates</strong><span>Workspace messages, delivery notes, and revision threads will appear here.</span></div>
+            <span class="status-pill is-muted">Clear</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>Operator queue synchronized</strong><span>No client movement needs attention right now.</span></div>
+            <span class="status-pill is-live">Online</span>
+          </div>
+        </article>
+        <article class="operator-list-panel" id="contractsPanel">
+          <h3>Contracts</h3>
+          <div class="operator-row">
+            <div><strong>No contract action pending</strong><span>Signed agreements, quote approvals, and licensing states stay attached to workspaces.</span></div>
+            <span class="status-pill is-muted">Clear</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>Approval state</strong><span>No quote or approval requires operator attention.</span></div>
+            <span class="status-pill is-review">Synchronized</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="profile" aria-labelledby="profileTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operator profile</p>
+          <h2 id="profileTitle">Identity and operating preferences</h2>
+        </div>
+        <p data-runtime="profileSectionCopy">Identity settings remain lightweight and connected to operator runtime.</p>
+      </div>
+
+      <div class="profile-shell">
+        <article class="profile-card">
+          <div class="profile-avatar" id="operatorAvatar" aria-hidden="true"></div>
+          <h3 data-runtime="profileName">Specialist profile</h3>
+          <p class="module-line" data-runtime="profileBio">Profile image, operator logo, subtle accent tint, bio, categories, and links stay controlled.</p>
+          <div class="profile-status-line" id="operatorStatusLine">PRIVATE OPERATOR IDENTITY SYNCHRONIZED</div>
+          <p class="profile-runtime-message" id="operatorRuntimeMessage">Operations routing is standing by.</p>
+          <div class="runtime-links" id="operatorRuntimeLinks" aria-label="Operator runtime links"></div>
+        </article>
+        <div class="profile-fields">
+          <div class="profile-field"><span>Handle</span><strong data-profile-field="handle">@handle</strong></div>
+          <div class="profile-field"><span>Email</span><strong data-profile-field="email">Private</strong></div>
+          <div class="profile-field"><span>Bio</span><strong data-profile-field="bio">Short operational intro</strong></div>
+          <div class="profile-field"><span>Service categories</span><strong data-profile-field="role">Role-aware modules</strong></div>
+          <div class="profile-field"><span>Status</span><strong data-profile-field="status">Active</strong></div>
+          <div class="profile-field"><span>Timezone</span><strong data-profile-field="timezone">Scheduling layer</strong></div>
+          <div class="profile-field"><span>Payout email</span><strong>Finance readiness</strong></div>
+          <div class="profile-field"><span>Last active</span><strong data-profile-field="last_active_at">Runtime</strong></div>
+          <div class="profile-atmosphere" id="operatorAtmosphere">Operator atmosphere will synchronize from your public identity, accent tint, and runtime state.</div>
+          <form class="profile-settings" id="operatorProfileSettings">
+            <p class="eyebrow">Public profile settings</p>
+            <div class="profile-settings-grid">
+              <div class="operator-login-field">
+                <label for="operatorDisplayName">Display name</label>
+                <input id="operatorDisplayName" name="display_name" autocomplete="name" placeholder="Nova Studio">
+              </div>
+              <div class="operator-login-field">
+                <label for="operatorAvatarUrl">Operator image / logo</label>
+                <div class="avatar-tools">
+                  <button class="image-dropzone" id="operatorImageDrop" type="button">
+                    <span id="operatorImageState">Upload operator image</span>
+                    <small>Drop a logo, studio mark, or operator image</small>
+                  </button>
+                  <input id="operatorAvatarUrl" name="avatar_url" type="hidden">
+                  <div class="avatar-tool-row">
+                    <label class="avatar-file-label" for="operatorAvatarFile" id="operatorAvatarAction">Upload image</label>
+                    <input class="avatar-file" id="operatorAvatarFile" name="avatar_file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+                    <button class="avatar-file-label" id="operatorAvatarClear" type="button">Clear image</button>
+                  </div>
+                </div>
+              </div>
+              <div class="operator-login-field">
+                <label for="operatorAccentTint">Accent tint</label>
+                <div class="accent-tools">
+                  <input id="operatorAccentTint" name="accent_tint" placeholder="#e9c48a">
+                  <div class="accent-swatches" aria-label="Accent tint presets">
+                    <button class="accent-swatch" type="button" data-accent="#e9c48a" style="--swatch:#e9c48a">Amber</button>
+                    <button class="accent-swatch" type="button" data-accent="#6fd6a5" style="--swatch:#6fd6a5">Emerald</button>
+                    <button class="accent-swatch" type="button" data-accent="#7ea7ff" style="--swatch:#7ea7ff">Midnight</button>
+                    <button class="accent-swatch" type="button" data-accent="#b69cff" style="--swatch:#b69cff">Violet</button>
+                    <button class="accent-swatch" type="button" data-accent="#6bbdb5" style="--swatch:#6bbdb5">Graphite</button>
+                  </div>
+                </div>
+              </div>
+              <div class="operator-login-field">
+                <label for="operatorPortfolioUrl">Portfolio</label>
+                <input id="operatorPortfolioUrl" name="portfolio" type="text" inputmode="url" placeholder="Portfolio, website, or primary link">
+              </div>
+              <div class="operator-login-field">
+                <label for="operatorInstagramHandle">Instagram handle</label>
+                <input id="operatorInstagramHandle" name="instagram" type="text" placeholder="@doneovernight" autocomplete="off">
+              </div>
+              <div class="operator-login-field" style="grid-column:1/-1">
+                <label for="operatorPublicBio">Bio</label>
+                <textarea id="operatorPublicBio" name="bio" placeholder="Short public operator intro"></textarea>
+              </div>
+            </div>
+            <div class="operator-actions">
+              <button class="operator-link-button" id="operatorProfileSave" type="submit">Save public profile →</button>
+            </div>
+            <p class="operator-login-message" id="operatorProfileMessage" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (() => {
+      const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+      const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const hq = document.getElementById('operatorHq');
+      const previewToggle = document.getElementById('operatorPreviewToggle');
+      const loginFocus = document.getElementById('operatorLoginFocus');
+      const loginPanel = document.getElementById('operatorLoginPanel');
+      const form = document.getElementById('operatorLoginForm');
+      const submit = document.getElementById('operatorLoginSubmit');
+      const message = document.getElementById('operatorLoginMessage');
+      const googleButton = document.getElementById('operatorGoogleAccess');
+      const logoutButton = document.getElementById('operatorLogout');
+      const runtimeAction = document.getElementById('operatorRuntimeAction');
+      const inviteClientAction = document.getElementById('operatorInviteClientAction');
+      const inviteMessage = document.getElementById('operatorInviteMessage');
+      const headerStatus = document.getElementById('operatorHeaderStatus');
+      const profileSettings = document.getElementById('operatorProfileSettings');
+      const profileMessage = document.getElementById('operatorProfileMessage');
+      const profileSave = document.getElementById('operatorProfileSave');
+      const atmosphere = document.getElementById('operatorAtmosphere');
+      const statusLine = document.getElementById('operatorStatusLine');
+      const runtimeMessage = document.getElementById('operatorRuntimeMessage');
+      const runtimeLinks = document.getElementById('operatorRuntimeLinks');
+      const imageDrop = document.getElementById('operatorImageDrop');
+      const imageState = document.getElementById('operatorImageState');
+      const avatarFile = document.getElementById('operatorAvatarFile');
+      const avatarAction = document.getElementById('operatorAvatarAction');
+      const avatarClear = document.getElementById('operatorAvatarClear');
+      const params = new URLSearchParams(window.location.search);
+      const runtimeAlert = document.getElementById('operatorRuntimeAlert');
+      const runtimeHandle = getPathHandle();
+      const LIVE_RELATIONSHIP_HEARTBEAT_MS = 2500;
+      let liveRuntimeChannel = null;
+      let liveRuntimeSignature = '';
+      let liveRuntimeSlugs = new Set();
+      let liveReloadTimer = null;
+      let liveReloading = false;
+      let liveReloadPending = '';
+      let liveHeartbeatTimer = null;
+      let liveHeartbeatActive = false;
+      let liveRuntimeFingerprint = '';
+
+      function getPathHandle() {
+        const rawSegment = window.location.pathname.split('/').filter(Boolean)[0] || '';
+        const segment = safeDecode(rawSegment);
+        if (!segment.startsWith('@')) return '';
+        const handle = normalizeOperatorHandle(segment);
+        const canonicalPath = handle ? `/@${encodeURIComponent(handle)}` : '';
+        if (canonicalPath && window.location.pathname !== canonicalPath) {
+          window.history.replaceState({}, document.title, `${canonicalPath}${window.location.search}${window.location.hash}`);
+        }
+        return handle;
+      }
+
+      function safeDecode(value) {
+        try {
+          return decodeURIComponent(String(value || ''));
+        } catch (error) {
+          return String(value || '');
+        }
+      }
+
+      function normalizeOperatorHandle(value) {
+        const handle = safeDecode(value)
+          .trim()
+          .toLowerCase()
+          .replace(/^@+/, '')
+          .replace(/%20/gi, ' ')
+          .replace(/20connect.*$/i, '')
+          .replace(/\bconnect\b.*$/i, '')
+          .split(/[^a-z0-9_-]+/)[0]
+          .replace(/^[-_]+|[-_]+$/g, '');
+        const reserved = new Set(['apply', 'login', 'admin', 'api', 'auth', 'settings', 'help', 'support', 'system']);
+        if (!/^[a-z0-9][a-z0-9_-]{1,30}$/.test(handle) || reserved.has(handle)) return '';
+        return handle;
+      }
+
+      function usableOperatorHandle(value) {
+        const handle = normalizeOperatorHandle(value);
+        return handle === 'operator' ? '' : handle;
+      }
+
+      function normalizeOperatorLoginIdentifier(value) {
+        const raw = String(value || '').trim();
+        const lower = raw.toLowerCase();
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lower)) return lower;
+        return normalizeOperatorHandle(raw);
+      }
+
+      function getOperatorHandle(operator = {}) {
+        return normalizeOperatorHandle(operator.handle)
+          || normalizeOperatorHandle(sessionStorage.getItem('doneovernight_operator_handle'))
+          || usableOperatorHandle(operator.username)
+          || usableOperatorHandle(sessionStorage.getItem('doneovernight_operator_username'))
+          || normalizeOperatorHandle(String(operator.email || sessionStorage.getItem('doneovernight_operator_email') || '').split('@')[0]);
+      }
+
+      function operatorHandleLabel(handle) {
+        const normalized = normalizeOperatorHandle(handle);
+        return normalized ? `@${normalized}` : '@handle';
+      }
+
+      function setHeaderIdentity(handle) {
+        if (!headerStatus) return;
+        headerStatus.textContent = `${operatorHandleLabel(handle)} | OPERATOR`;
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
+      function redirectToOperatorHandle(operator, { replace = false, redirectTo = '' } = {}) {
+        const handlePath = redirectTo || '';
+        const handle = handlePath.startsWith('/@')
+          ? normalizeOperatorHandle(handlePath.slice(2))
+          : getOperatorHandle(operator);
+        if (!handle && !handlePath) return false;
+        if (runtimeHandle === handle) return false;
+        const destination = handlePath || `/@${encodeURIComponent(handle)}`;
+        if (replace) {
+          window.location.replace(destination);
+        } else {
+          window.location.assign(destination);
+        }
+        return true;
+      }
+
+      function text(selector, value) {
+        const node = document.querySelector(selector);
+        if (node) node.textContent = value;
+      }
+
+      function field(name, value) {
+        text(`[data-profile-field="${name}"]`, value || 'Not set');
+      }
+
+      function metric(name, value) {
+        text(`[data-metric="${name}"]`, value ?? '0');
+      }
+
+      function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[char]));
+      }
+
+      function normalizePublicLink(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (/^https?:\/\//i.test(raw)) return raw;
+        if (/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)?$/i.test(raw)) return `https://${raw}`;
+        return raw;
+      }
+
+      function cleanInstagramHandle(value) {
+        return String(value || '')
+          .trim()
+          .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+          .replace(/^@+/, '')
+          .replace(/\/+$/g, '')
+          .replace(/[^a-z0-9._]/gi, '')
+          .slice(0, 40);
+      }
+
+      function linkLabelFor(value, fallback = 'Portfolio') {
+        try {
+          const host = new URL(normalizePublicLink(value)).hostname.replace(/^www\./, '').toLowerCase();
+          if (host.includes('instagram.')) return 'Instagram';
+          if (host.includes('behance.')) return 'Behance';
+          if (host.includes('github.')) return 'GitHub';
+          if (host.includes('linkedin.')) return 'LinkedIn';
+          if (host.includes('figma.')) return 'Figma';
+          return fallback === 'Portfolio' ? 'Website' : fallback;
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function renderRuntimeLinks(operator = {}) {
+        if (!runtimeLinks) return;
+        const portfolio = normalizePublicLink(operator.portfolio || operator.portfolio_url || '');
+        const instagram = cleanInstagramHandle(operator.instagram || operator.instagram_handle || '');
+        const links = [];
+        if (portfolio) links.push({ href: portfolio, label: linkLabelFor(portfolio, 'Portfolio') });
+        if (instagram) links.push({ href: `https://instagram.com/${instagram}`, label: 'Instagram' });
+        if (!links.length) {
+          runtimeLinks.innerHTML = '<span class="runtime-link is-visible is-empty">Private links standby</span>';
+          return;
+        }
+        runtimeLinks.innerHTML = links.map((link) => `
+          <a class="runtime-link is-visible" href="${escapeHTML(link.href)}" target="_blank" rel="noopener noreferrer">${escapeHTML(link.label)}</a>
+        `).join('');
+      }
+
+      function cleanAccent(value) {
+        const accent = String(value || '').trim();
+        return /^#[0-9a-f]{6}$/i.test(accent) ? accent : '#e9c48a';
+      }
+
+      function applyOperatorAccent(value) {
+        const accent = cleanAccent(value);
+        document.documentElement.style.setProperty('--operator-accent', accent);
+        document.querySelectorAll('.accent-swatch').forEach((button) => {
+          button.classList.toggle('is-active', cleanAccent(button.dataset.accent) === accent);
+        });
+        return accent;
+      }
+
+      function accentName(value) {
+        const accent = cleanAccent(value).toLowerCase();
+        const names = {
+          '#e9c48a': 'AMBER',
+          '#6fd6a5': 'EMERALD',
+          '#7ea7ff': 'MIDNIGHT',
+          '#b69cff': 'VIOLET',
+          '#6bbdb5': 'GRAPHITE'
+        };
+        return names[accent] || 'CUSTOM';
+      }
+
+      function runtimeMessageFor(operator = {}, state = {}) {
+        const presence = String(state.presence_label || state.operational_state || '').toLowerCase();
+        const delivery = String(state.next_delivery_label || '').toLowerCase();
+        if (presence.includes('revision')) return 'Revision pressure detected. Runtime layer remains active.';
+        if (presence.includes('delivery')) return 'Delivery movement is active inside the operator layer.';
+        if (delivery && !delivery.includes('no delivery')) return 'Next delivery window is connected to this identity.';
+        if (presence.includes('public')) return 'Public identity visible. Private runtime unlocks after authentication.';
+        if (presence.includes('idle')) return 'Awaiting first delivery cycle.';
+        return 'Operations routing is standing by.';
+      }
+
+      function applyOperatorAvatar(value) {
+        const avatar = document.getElementById('operatorAvatar');
+        if (!avatar) return;
+        const url = String(value || '').trim();
+        avatar.classList.toggle('has-image', Boolean(url));
+        avatar.style.backgroundImage = url ? `url("${url.replace(/"/g, '%22')}")` : '';
+        imageDrop?.classList.toggle('is-active', Boolean(url));
+        if (imageState) imageState.textContent = url ? 'Operator image synced' : 'Upload operator image';
+        if (avatarAction) avatarAction.textContent = url ? 'Replace image' : 'Upload image';
+      }
+
+      function applyIdentityAtmosphere(operator = {}, state = {}) {
+        const accent = applyOperatorAccent(operator.accent_tint || '#e9c48a');
+        applyOperatorAvatar(operator.avatar_url || '');
+        const handle = operator.handle ? `@${operator.handle}` : '@handle';
+        const timezone = operator.timezone || 'CET';
+        const status = String(operator.status || 'active').toUpperCase();
+        const accentLabel = `${accentName(accent)} ATMOSPHERE`;
+        const message = runtimeMessageFor(operator, state);
+        if (statusLine) statusLine.textContent = `${status} • ${handle} • ${accentLabel} • ${timezone}`;
+        if (runtimeMessage) runtimeMessage.textContent = message;
+        renderRuntimeLinks(operator);
+        if (atmosphere) {
+          atmosphere.textContent = `RUNTIME ACTIVE • ${handle} • ${accentLabel} • ${timezone}`;
+        }
+      }
+
+      function currentProfileDraft() {
+        return {
+          display_name: document.getElementById('operatorDisplayName')?.value.trim(),
+          avatar_url: document.getElementById('operatorAvatarUrl')?.value.trim(),
+          accent_tint: document.getElementById('operatorAccentTint')?.value.trim(),
+          portfolio: normalizePublicLink(document.getElementById('operatorPortfolioUrl')?.value.trim()),
+          instagram: cleanInstagramHandle(document.getElementById('operatorInstagramHandle')?.value.trim()),
+          bio: document.getElementById('operatorPublicBio')?.value.trim()
+        };
+      }
+
+      function applyProfileDraft() {
+        const draft = currentProfileDraft();
+        const displayName = draft.display_name || sessionStorage.getItem('doneovernight_operator_name') || 'Specialist profile';
+        text('[data-runtime="profileName"]', displayName);
+        text('[data-runtime="profileBio"]', draft.bio || 'Short operational intro.');
+        field('bio', draft.bio || 'Short operational intro');
+        applyIdentityAtmosphere({
+          display_name: displayName,
+          handle: sessionStorage.getItem('doneovernight_operator_handle') || '',
+          avatar_url: draft.avatar_url,
+          accent_tint: draft.accent_tint,
+          portfolio: draft.portfolio,
+          instagram: draft.instagram,
+          timezone: document.querySelector('[data-profile-field="timezone"]')?.textContent || 'CET',
+          status: document.querySelector('[data-profile-field="status"]')?.textContent || 'active'
+        }, { presence_label: 'Live identity preview' });
+      }
+
+      function showRuntimeAlert(value) {
+        if (!runtimeAlert) return;
+        runtimeAlert.textContent = value || '';
+        runtimeAlert.classList.toggle('is-visible', Boolean(value));
+      }
+
+      function setSynchronizingState(handle = runtimeHandle || sessionStorage.getItem('doneovernight_operator_handle') || '') {
+        const normalized = normalizeOperatorHandle(handle);
+        if (normalized) setHeaderIdentity(normalized);
+        document.body.classList.add('is-operator-profile');
+        hq?.classList.add('is-visible');
+        text('[data-runtime="operatorHandle"]', `${operatorHandleLabel(normalized)} | OPERATOR`);
+        text('[data-runtime="greeting"]', normalized ? `${operatorHandleLabel(normalized)} runtime.` : 'Operator presence.');
+        text('[data-runtime="operatorBio"]', 'Private runtime identity is coming online.');
+        text('[data-runtime="accessState"]', 'Synchronizing operator layer...');
+        text('[data-runtime="accessSummary"]', 'Runtime presence is connecting to the private operator layer.');
+        text('[data-runtime="presenceState"]', 'Synchronizing');
+        text('[data-runtime="lastActive"]', 'Checking session');
+        text('[data-runtime="deliveryWindow"]', 'Resolving delivery window');
+      }
+
+      function setProfileMessage(text, type = '') {
+        if (!profileMessage) return;
+        profileMessage.textContent = text || '';
+        profileMessage.className = `operator-login-message${type ? ` is-${type}` : ''}`;
+      }
+
+      function setInviteMessage(text, type = '') {
+        if (!inviteMessage) return;
+        inviteMessage.textContent = text || '';
+        inviteMessage.className = `operator-login-message${type ? ` is-${type}` : ''}`;
+      }
+
+      function operatorInviteUrl(handle) {
+        const normalized = normalizeOperatorHandle(handle || runtimeHandle || sessionStorage.getItem('doneovernight_operator_handle'));
+        if (!normalized) return '';
+        const url = new URL(`https://client.doneovernight.com/@${encodeURIComponent(normalized)}`);
+        return url.toString();
+      }
+
+      async function copyTextToClipboard(text) {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-1000px';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        if (!copied) throw new Error('Clipboard unavailable');
+        return true;
+      }
+
+      async function shareOperatorInvite() {
+        const inviteUrl = inviteClientAction?.dataset.inviteUrl || operatorInviteUrl();
+        if (!inviteUrl) {
+          setInviteMessage('Operator invite route is still synchronizing.', 'error');
+          return;
+        }
+
+        const shareData = {
+          title: 'DONEOVERNIGHT',
+          text: 'Connect through my DONEOVERNIGHT operator route.',
+          url: inviteUrl
+        };
+
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+            setInviteMessage('Runtime invite shared.', 'success');
+            return;
+          } catch (error) {
+            if (error?.name === 'AbortError') {
+              setInviteMessage('Invite sharing cancelled.');
+              return;
+            }
+          }
+        }
+
+        try {
+          await copyTextToClipboard(inviteUrl);
+          setInviteMessage('Runtime invite copied.', 'success');
+        } catch (error) {
+          setInviteMessage(inviteUrl, 'success');
+        }
+      }
+
+      function formatLastActive(value) {
+        if (!value) return 'Not yet';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Not yet';
+        return new Intl.DateTimeFormat('en', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(date);
+      }
+
+      function renderRows(panel, rows, fallback) {
+        if (!panel) return;
+        const title = panel.querySelector('h3')?.outerHTML || '';
+        const body = rows.length ? rows.join('') : fallback;
+        panel.innerHTML = `${title}${body}`;
+      }
+
+      function operatorRuntimeSlugs(runtime = {}) {
+        return new Set([
+          ...(runtime.assigned_clients || []).map((item) => item.workspace_slug),
+          ...(runtime.assignments || []).map((item) => item.workspace_slug),
+          ...(runtime.tasks || []).map((item) => item.workspace_slug),
+          ...(runtime.messages || []).map((item) => item.workspace_slug),
+          ...(runtime.contracts || []).map((item) => item.workspace_slug)
+        ].map((value) => String(value || '').trim()).filter(Boolean));
+      }
+
+      function runtimeFingerprint(data = {}) {
+        const runtime = data.runtime || {};
+        const state = runtime.state || {};
+        const metrics = runtime.metrics || {};
+        const compactRows = (rows = []) => rows.map((item) => [
+          item.id,
+          item.workspace_slug,
+          item.status,
+          item.task_state,
+          item.revision_state,
+          item.delivery_state,
+          item.recent_activity
+        ].map((value) => String(value || '')).join(':')).sort();
+        return JSON.stringify({
+          owner: data.is_owner === true,
+          operator: {
+            handle: data.operator?.handle || data.handle || '',
+            display_name: data.operator?.display_name || '',
+            bio: data.operator?.bio || '',
+            avatar_url: data.operator?.avatar_url || '',
+            accent_tint: data.operator?.accent_tint || '',
+            portfolio: data.operator?.portfolio || '',
+            instagram: data.operator?.instagram || data.operator?.instagram_handle || '',
+            last_active_at: data.operator?.last_active_at || ''
+          },
+          metrics,
+          state: {
+            active_tasks: state.active_tasks,
+            revisions_pending: state.revisions_pending,
+            unread_messages: state.unread_messages,
+            next_delivery_label: state.next_delivery_label,
+            operational_state: state.operational_state,
+            presence_label: state.presence_label
+          },
+          clients: compactRows(runtime.assigned_clients),
+          assignments: compactRows(runtime.assignments),
+          tasks: compactRows(runtime.tasks),
+          messages: compactRows(runtime.messages),
+          contracts: compactRows(runtime.contracts)
+        });
+      }
+
+      function teardownLiveRuntimeSync() {
+        liveRuntimeSignature = '';
+        liveRuntimeSlugs = new Set();
+        liveReloadPending = '';
+        liveRuntimeFingerprint = '';
+        if (liveReloadTimer) {
+          window.clearTimeout(liveReloadTimer);
+          liveReloadTimer = null;
+        }
+        if (liveHeartbeatTimer) {
+          window.clearTimeout(liveHeartbeatTimer);
+          liveHeartbeatTimer = null;
+        }
+        liveHeartbeatActive = false;
+        if (liveRuntimeChannel && supabaseClient?.removeChannel) {
+          supabaseClient.removeChannel(liveRuntimeChannel).catch(() => {});
+        }
+        liveRuntimeChannel = null;
+      }
+
+      function scheduleLiveRuntimeReload(reason = 'runtime') {
+        if (!runtimeHandle) return;
+        if (liveReloading) {
+          liveReloadPending = reason;
+          return;
+        }
+        if (liveReloadTimer) window.clearTimeout(liveReloadTimer);
+        liveReloadTimer = window.setTimeout(async () => {
+          liveReloadTimer = null;
+          liveReloading = true;
+          try {
+            await loadOperatorRuntime({ quiet: true, reason });
+          } catch (error) {
+            showRuntimeAlert('Live runtime sync paused. Refresh if movement does not appear.');
+          } finally {
+            liveReloading = false;
+            if (liveReloadPending) {
+              const pendingReason = liveReloadPending;
+              liveReloadPending = '';
+              scheduleLiveRuntimeReload(pendingReason);
+            }
+          }
+        }, 650);
+      }
+
+      function startRelationshipRuntimeHeartbeat() {
+        if (liveHeartbeatActive || !runtimeHandle) return;
+        liveHeartbeatActive = true;
+        const tick = async () => {
+          if (!liveHeartbeatActive || document.hidden) {
+            liveHeartbeatTimer = window.setTimeout(tick, LIVE_RELATIONSHIP_HEARTBEAT_MS);
+            return;
+          }
+          if (!liveReloading && !liveReloadTimer) {
+            liveReloading = true;
+            try {
+              await loadOperatorRuntime({ quiet: true, reason: 'relationship_heartbeat' });
+            } catch (error) {
+              showRuntimeAlert('Live runtime sync paused. Refresh if movement does not appear.');
+            } finally {
+              liveReloading = false;
+              if (liveReloadPending) {
+                const pendingReason = liveReloadPending;
+                liveReloadPending = '';
+                scheduleLiveRuntimeReload(pendingReason);
+              }
+            }
+          }
+          liveHeartbeatTimer = window.setTimeout(tick, LIVE_RELATIONSHIP_HEARTBEAT_MS);
+        };
+        liveHeartbeatTimer = window.setTimeout(tick, LIVE_RELATIONSHIP_HEARTBEAT_MS);
+      }
+
+      function livePayloadSlug(payload = {}) {
+        const record = payload.new || payload.old || {};
+        return String(record.workspace_slug || record.client_workspace_slug || record.slug || '').trim();
+      }
+
+      function scheduleIfWorkspaceRelated(payload, reason) {
+        const slug = livePayloadSlug(payload);
+        if (!slug || liveRuntimeSlugs.has(slug)) scheduleLiveRuntimeReload(reason);
+      }
+
+      function installLiveRuntimeSync(data = {}) {
+        const operator = data.operator || {};
+        const runtime = data.runtime || {};
+        const owner = data.is_owner === true;
+        if (!owner || !supabaseClient?.channel || !operator.id) {
+          teardownLiveRuntimeSync();
+          return;
+        }
+
+        const handle = normalizeOperatorHandle(operator.handle || data.handle);
+        const nextSlugs = operatorRuntimeSlugs(runtime);
+        const signature = [
+          operator.id,
+          handle,
+          [...nextSlugs].sort().join(',')
+        ].join('|');
+        if (signature === liveRuntimeSignature && liveRuntimeChannel) {
+          liveRuntimeSlugs = nextSlugs;
+          return;
+        }
+
+        teardownLiveRuntimeSync();
+        liveRuntimeSignature = signature;
+        liveRuntimeSlugs = nextSlugs;
+
+        const channel = supabaseClient.channel(`operator-runtime-${operator.id}-${Date.now()}`);
+        channel
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_profiles', filter: `id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('profile'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_assignments', filter: `operator_profile_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('assignment'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_assignments', filter: `assigned_operator_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('assignment'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_client_relationships', filter: `operator_profile_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('client_relationship'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_activity', filter: `operator_profile_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('activity'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'assignment_revisions', filter: `operator_profile_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('revision'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_runtime_activity', filter: `operator_profile_id=eq.${operator.id}` }, () => scheduleLiveRuntimeReload('presence'));
+        if (handle) {
+          channel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_assignments', filter: `operator_handle=eq.${handle}` }, () => scheduleLiveRuntimeReload('assignment'))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_client_relationships', filter: `operator_handle=eq.${handle}` }, () => scheduleLiveRuntimeReload('client_relationship'))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'operator_runtime_activity', filter: `operator_handle=eq.${handle}` }, () => scheduleLiveRuntimeReload('presence'));
+        }
+        channel
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'workspace_messages' }, (payload) => scheduleIfWorkspaceRelated(payload, 'message'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'workspace_quotes' }, (payload) => scheduleIfWorkspaceRelated(payload, 'quote'))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'task_requests' }, (payload) => scheduleIfWorkspaceRelated(payload, 'task'))
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              startRelationshipRuntimeHeartbeat();
+            }
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              scheduleLiveRuntimeReload('reconnect');
+              startRelationshipRuntimeHeartbeat();
+            }
+          });
+        liveRuntimeChannel = channel;
+        startRelationshipRuntimeHeartbeat();
+      }
+
+      function renderRuntime(data) {
+        const operator = data.operator || {};
+        const runtime = data.runtime || {};
+        const state = runtime.state || {};
+        const metrics = runtime.metrics || {};
+        const owner = data.is_owner === true;
+        const handleLabel = operator.handle ? `@${operator.handle}` : '@handle';
+
+        document.body.classList.add('is-operator-profile');
+        document.body.classList.toggle('is-operator-public', !owner);
+        document.body.classList.toggle('is-operator-authenticated', owner);
+        installLiveRuntimeSync(data);
+        liveRuntimeFingerprint = runtimeFingerprint(data);
+        applyIdentityAtmosphere(operator, state);
+        setHeaderIdentity(owner ? operator.handle : data.handle || operator.handle);
+        hq?.classList.add('is-visible');
+        if (logoutButton) logoutButton.hidden = !owner;
+        if (runtimeAction) runtimeAction.hidden = !owner;
+        if (inviteClientAction) {
+          inviteClientAction.hidden = !owner;
+          inviteClientAction.dataset.inviteUrl = owner && operator.handle
+            ? operatorInviteUrl(operator.handle)
+            : '';
+        }
+
+        text('[data-runtime="operatorHandle"]', `${handleLabel} | ${operator.role || 'Operator'}`);
+        text('[data-runtime="greeting"]', data.greeting || `Hello, ${operator.display_name || operator.handle || 'operator'}.`);
+        text('[data-runtime="operatorBio"]', owner
+          ? (data.greeting_detail || state.presence_message || 'Operator layer active.')
+          : operator.bio || 'DONEOVERNIGHT operator workspace.');
+        text('[data-runtime="profileName"]', operator.display_name || 'Specialist profile');
+        text('[data-runtime="profileBio"]', operator.bio || 'Short operational intro.');
+        text('[data-runtime="overviewCopy"]', owner
+          ? 'Live operator-scoped state from assignments, messages, revision pressure, revenue, and delivery movement.'
+          : 'Public operator preview. Sign in as this operator to unlock assigned clients, revenue, messages, and delivery windows.');
+        text('[data-runtime="clientSectionCopy"]', owner
+          ? 'Assigned clients, revision state, delivery status, and recent movement from the private operator layer.'
+          : 'Assigned client state remains private until the operator owner is authenticated.');
+        text('[data-runtime="financeSectionCopy"]', owner
+          ? 'Payout visibility is synchronized from paid and pending operator-scoped work.'
+          : 'Revenue and payout visibility remain private.');
+        text('[data-runtime="communicationSectionCopy"]', owner
+          ? 'Client updates, quote approvals, and contract states are connected to assigned workspaces.'
+          : 'Messages, approvals, and contract states remain private.');
+        text('[data-runtime="profileSectionCopy"]', owner
+          ? 'Persistent identity, public profile details, and runtime presence stay attached to this handle.'
+          : 'Public identity details only. Private controls unlock for the owner.');
+        text('[data-runtime="accessState"]', owner
+          ? state.operational_state || `${state.active_tasks || 0} active tasks`
+          : `${operator.status || 'operator'} profile`);
+        text('[data-runtime="accessSummary"]', owner
+          ? `${state.presence_message || 'Operator layer active.'} ${state.active_tasks || 0} active tasks · ${state.revisions_pending || 0} revisions · ${state.unread_messages || 0} unread updates · ${state.next_delivery_label || 'No active delivery'}`
+          : 'Limited public view. Private tasks, messages, clients, revenue, and delivery windows are only visible to the authenticated owner.');
+        text('[data-runtime="presenceState"]', owner ? state.presence_label || 'Online' : 'Public preview');
+        text('[data-runtime="lastActive"]', state.last_active_label || 'Awaiting first activity');
+        text('[data-runtime="deliveryWindow"]', state.next_delivery_label || 'No active delivery');
+        text('[data-runtime="taskLastActive"]', state.last_active_label || 'Awaiting first activity');
+        text('[data-runtime="taskSectionCopy"]', owner
+          ? 'Live task movement, delivery windows, approvals, and revision pressure from assigned workspaces.'
+          : 'Private task movement is visible only to the authenticated operator.');
+
+        metric('active_clients', owner ? metrics.active_clients : 0);
+        metric('pending_tasks', owner ? metrics.pending_tasks : 0);
+        metric('approvals', owner ? metrics.approvals : 0);
+        metric('messages', owner ? metrics.messages : 0);
+        metric('revenue', owner ? metrics.revenue : 'Private');
+        metric('deadlines', owner ? metrics.deadlines : 'Private');
+
+        field('handle', handleLabel);
+        field('email', owner ? operator.email : 'Private');
+        field('bio', operator.bio);
+        field('role', operator.role);
+        field('status', operator.status);
+        field('timezone', operator.timezone);
+        field('last_active_at', formatLastActive(operator.last_active_at));
+        text('[data-finance="paid"]', owner ? runtime.finance?.paid || '€0' : 'Private');
+        text('[data-finance="pending"]', owner ? runtime.finance?.pending || '€0' : 'Private');
+        if (owner && profileSettings) {
+          document.getElementById('operatorDisplayName').value = operator.display_name || '';
+          document.getElementById('operatorAvatarUrl').value = operator.avatar_url || '';
+          document.getElementById('operatorAccentTint').value = operator.accent_tint || '';
+          document.getElementById('operatorPortfolioUrl').value = operator.portfolio || '';
+          document.getElementById('operatorInstagramHandle').value = operator.instagram ? `@${operator.instagram}` : '';
+          document.getElementById('operatorPublicBio').value = operator.bio || '';
+        }
+
+        const clientRows = (runtime.assigned_clients || []).map((client) => `
+          <div class="operator-row">
+            <div><strong>${escapeHTML(client.workspace_slug || 'Assigned workspace')}</strong><span>${escapeHTML(client.task_state || 'No active task')} · ${escapeHTML(client.revision_state || 'Revision clear')} · ${escapeHTML(client.delivery_state || 'Standing by')}</span><small>${escapeHTML(client.recent_activity || 'No recent activity')}</small></div>
+            <span class="status-pill is-live">${escapeHTML(client.status || 'active')}</span>
+          </div>
+        `);
+        renderRows(document.getElementById('assignedClientsPanel'), owner ? clientRows : [], `
+          <div class="operator-row">
+            <div><strong>Private assignments</strong><span>Assigned clients appear after owner authentication.</span></div>
+            <span class="status-pill is-muted">Private</span>
+          </div>
+        `);
+
+        const taskGrid = document.getElementById('taskRuntimeGrid');
+        if (taskGrid && owner) {
+          const tasks = runtime.tasks || [];
+          taskGrid.innerHTML = tasks.length ? tasks.map((task) => `
+            <article class="operator-module">
+              <div class="module-label">${escapeHTML(task.status || 'Task')}</div>
+              <h3>${escapeHTML(task.title || 'Assigned task')}</h3>
+              <p>${escapeHTML(task.workspace_slug || 'Workspace')} is connected to this operator runtime.</p>
+              <div class="module-lines">
+                <div class="module-line"><span>Task ID</span><b>${escapeHTML(task.id || 'Pending')}</b></div>
+                <div class="module-line"><span>Deadline</span><b>${escapeHTML(task.deadline || 'No deadline')}</b></div>
+              </div>
+            </article>
+          `).join('') : `
+            <article class="operator-module">
+              <div class="module-label">${escapeHTML(state.operational_state || 'Idle')}</div>
+              <h3>No active tasks</h3>
+              <p>Operator layer synchronized. Assigned tasks will appear when a delivery cycle opens.</p>
+              <div class="module-lines">
+                <div class="module-line"><span>Current state</span><b>${escapeHTML(state.presence_label || 'Idle')}</b></div>
+                <div class="module-line"><span>Revision pressure</span><b>${Number(state.revisions_pending || 0) ? 'Pending' : 'Clear'}</b></div>
+                <div class="module-line"><span>Delivery window</span><b>${escapeHTML(state.next_delivery_label || 'No active delivery')}</b></div>
+              </div>
+            </article>
+            <article class="operator-module">
+              <div class="module-label">Updates</div>
+              <h3>${Number(state.unread_messages || 0) ? `${state.unread_messages} unread updates` : 'No unread updates'}</h3>
+              <p>Client movement and operator-facing messages will surface here.</p>
+              <div class="module-lines">
+                <div class="module-line"><span>Inbox</span><b>Synchronized</b></div>
+                <div class="module-line"><span>Last activity</span><b>${escapeHTML(state.last_active_label || 'Awaiting first activity')}</b></div>
+              </div>
+            </article>
+            <article class="operator-module">
+              <div class="module-label">Delivery</div>
+              <h3>Delivery layer</h3>
+              <p>Delivery links and handoff signals attach to assigned tasks.</p>
+              <div class="module-lines">
+                <div class="module-line"><span>Upcoming deliveries</span><b>${Number(state.upcoming_deliveries || 0)}</b></div>
+                <div class="module-line"><span>Client notified</span><b>Clear</b></div>
+              </div>
+            </article>
+          `;
+        }
+
+        const rolePanel = document.getElementById('roleContextPanel');
+        renderRows(rolePanel, [`
+          <div class="operator-row">
+            <div><strong>${escapeHTML(operator.role || 'Operator')}</strong><span>${owner ? 'Runtime modules adapt to assigned work and delivery states.' : 'Public role context only.'}</span></div>
+            <span class="status-pill is-review">${owner ? 'Dynamic' : 'Public'}</span>
+          </div>
+          <div class="operator-row">
+            <div><strong>${escapeHTML(operator.timezone || 'Europe/Amsterdam')}</strong><span>${owner ? 'Greeting, delivery windows, and activity labels use operator timezone.' : 'Timezone-aware public identity.'}</span></div>
+            <span class="status-pill is-live">${owner ? 'Synced' : 'Visible'}</span>
+          </div>
+        `], '');
+
+        const messageRows = (runtime.messages || []).map((item) => `
+          <div class="operator-row">
+            <div><strong>${escapeHTML(item.title || 'Client update')}</strong><span>${escapeHTML(item.workspace_slug || 'workspace')} · ${escapeHTML(item.detail || 'Workspace message received.')}</span><small>${escapeHTML(item.created_at || '')}</small></div>
+            <span class="status-pill ${item.status === 'Unread' ? 'is-waiting' : 'is-muted'}">${escapeHTML(item.status || 'Update')}</span>
+          </div>
+        `);
+        renderRows(document.getElementById('messagesPanel'), owner ? messageRows : [], `
+          <div class="operator-row">
+            <div><strong>Private client updates</strong><span>Messages and revision threads unlock for the authenticated owner.</span></div>
+            <span class="status-pill is-muted">Private</span>
+          </div>
+        `);
+
+        const contractRows = (runtime.contracts || []).map((item) => `
+          <div class="operator-row">
+            <div><strong>${escapeHTML(item.title || 'Quote / approval')}</strong><span>${escapeHTML(item.workspace_slug || 'workspace')} · ${escapeHTML(item.amount || '€0')}</span></div>
+            <span class="status-pill is-review">${escapeHTML(item.status || 'Pending')}</span>
+          </div>
+        `);
+        renderRows(document.getElementById('contractsPanel'), owner ? contractRows : [], `
+          <div class="operator-row">
+            <div><strong>Private contract states</strong><span>Quote approvals, signatures, and licensing states unlock for the authenticated owner.</span></div>
+            <span class="status-pill is-muted">Private</span>
+          </div>
+        `);
+      }
+
+      async function loadOperatorRuntime({ quiet = false, reason = '' } = {}) {
+        if (!runtimeHandle) return false;
+        if (!quiet) {
+          showRuntimeAlert('');
+          setSynchronizingState(runtimeHandle);
+        }
+        const startedAt = Date.now();
+        const response = await fetch('/api/operator-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ action: 'operator_runtime', handle: runtimeHandle })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success !== true) {
+          document.body.classList.remove('is-operator-profile');
+          hq?.classList.remove('is-visible');
+          showRuntimeAlert(data?.error || 'Operator profile could not be loaded.');
+          return false;
+        }
+        if (data.redirectTo) {
+          redirectToOperatorHandle(data.operator, { replace: true, redirectTo: data.redirectTo });
+          return true;
+        }
+        if (!quiet) await wait(Math.max(0, 420 - (Date.now() - startedAt)));
+        const nextFingerprint = runtimeFingerprint(data);
+        if (quiet && liveRuntimeFingerprint && nextFingerprint === liveRuntimeFingerprint) {
+          return data.is_owner === true;
+        }
+        renderRuntime(data);
+        return data.is_owner === true;
+      }
+
+      function setMessage(text, type = '') {
+        if (!message) return;
+        message.textContent = text;
+        message.className = `operator-login-message${type ? ` is-${type}` : ''}`;
+      }
+
+      function revealHq({ authenticated = false } = {}) {
+        hq?.classList.add('is-visible');
+        if (authenticated) {
+          document.body.classList.add('is-operator-authenticated');
+          if (logoutButton) logoutButton.hidden = false;
+        }
+      }
+
+      function storeOperator(operator) {
+        if (!operator) return;
+        if (operator.email) sessionStorage.setItem('doneovernight_operator_email', operator.email);
+        if (operator.handle) sessionStorage.setItem('doneovernight_operator_handle', operator.handle);
+        if (operator.username) sessionStorage.setItem('doneovernight_operator_username', operator.username);
+        if (operator.display_name || operator.name) sessionStorage.setItem('doneovernight_operator_name', operator.display_name || operator.name);
+      }
+
+      profileSettings?.addEventListener('input', (event) => {
+        if (event.target?.matches('#operatorDisplayName, #operatorAvatarUrl, #operatorAccentTint, #operatorPortfolioUrl, #operatorInstagramHandle, #operatorPublicBio')) {
+          applyProfileDraft();
+        }
+      });
+
+      document.querySelectorAll('.accent-swatch').forEach((button) => {
+        button.addEventListener('click', () => {
+          const accentInput = document.getElementById('operatorAccentTint');
+          if (accentInput) accentInput.value = button.dataset.accent || '#e9c48a';
+          applyProfileDraft();
+        });
+        button.addEventListener('mouseenter', () => {
+          document.documentElement.style.setProperty('--operator-accent', cleanAccent(button.dataset.accent));
+        });
+        button.addEventListener('focus', () => {
+          document.documentElement.style.setProperty('--operator-accent', cleanAccent(button.dataset.accent));
+        });
+        button.addEventListener('mouseleave', applyProfileDraft);
+        button.addEventListener('blur', applyProfileDraft);
+      });
+
+      function readOperatorImageFile(file, input) {
+        if (!file) return;
+        if (file.size > 96_000) {
+          setProfileMessage('Use a hosted image URL, or upload a logo under 96KB for inline preview.', 'error');
+          if (input) input.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const avatarInput = document.getElementById('operatorAvatarUrl');
+          if (avatarInput) avatarInput.value = String(reader.result || '');
+          applyProfileDraft();
+          setProfileMessage('Operator atmosphere synchronized. Save to persist it.', 'success');
+        };
+        reader.onerror = () => setProfileMessage('Could not read that image. Try a hosted image URL.', 'error');
+        reader.readAsDataURL(file);
+      }
+
+      avatarFile?.addEventListener('change', async (event) => {
+        readOperatorImageFile(event.target.files?.[0], event.target);
+      });
+
+      imageDrop?.addEventListener('click', () => avatarFile?.click());
+      imageDrop?.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        imageDrop.classList.add('is-active');
+      });
+      imageDrop?.addEventListener('dragleave', () => {
+        if (!document.getElementById('operatorAvatarUrl')?.value.trim()) imageDrop.classList.remove('is-active');
+      });
+      imageDrop?.addEventListener('drop', (event) => {
+        event.preventDefault();
+        imageDrop.classList.remove('is-active');
+        readOperatorImageFile(event.dataTransfer?.files?.[0], avatarFile);
+      });
+
+      avatarClear?.addEventListener('click', () => {
+        const avatarInput = document.getElementById('operatorAvatarUrl');
+        if (avatarInput) avatarInput.value = '';
+        if (avatarFile) avatarFile.value = '';
+        applyProfileDraft();
+        setProfileMessage('Operator image cleared. Save to persist it.', 'success');
+      });
+
+      async function verifyOperatorSession() {
+        const response = await fetch('../api/operator-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ action: 'operator_session' })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success !== true) return false;
+        storeOperator(data.operator);
+        setHeaderIdentity(getOperatorHandle(data.operator));
+        if (redirectToOperatorHandle(data.operator, { replace: true, redirectTo: data.redirectTo })) return true;
+        if (runtimeHandle) return loadOperatorRuntime();
+        revealHq({ authenticated: true });
+        setMessage(`Access verified${data.operator?.name ? ` for ${data.operator.name}` : ''}.`, 'success');
+        return true;
+      }
+
+      async function openOperatorWithGoogle(session) {
+        const accessToken = session?.access_token;
+        if (!accessToken) throw new Error('Google session is missing.');
+        const response = await fetch('../api/operator-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ action: 'google_operator_access', access_token: accessToken })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success !== true) {
+          throw new Error(data?.error || 'No active operator access found for this account.');
+        }
+        storeOperator(data.operator);
+        if (redirectToOperatorHandle(data.operator, { replace: true, redirectTo: data.redirectTo })) return;
+        if (runtimeHandle) {
+          await loadOperatorRuntime();
+        } else {
+          revealHq({ authenticated: true });
+        }
+        setMessage('Google verified. Operator Headquarters unlocked.', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      async function completeGoogleReturn() {
+        if (!supabaseClient) return;
+        const isOAuthReturn = params.has('code') || params.has('error') || window.location.hash.includes('access_token');
+        if (params.has('error')) {
+          setMessage('Google access could not be completed. Use your issued operator access key.', 'error');
+          return;
+        }
+        let { data } = await supabaseClient.auth.getSession();
+        if (!data?.session && params.has('code')) {
+          const exchanged = await supabaseClient.auth.exchangeCodeForSession(params.get('code'));
+          if (exchanged.error) throw exchanged.error;
+          data = exchanged.data || {};
+        }
+        if (!isOAuthReturn && sessionStorage.getItem('doneovernight_operator_auth_method') !== 'google') return;
+        if (!data?.session) return;
+        if (submit) submit.disabled = true;
+        if (googleButton) googleButton.disabled = true;
+        setMessage('Verifying Google operator access…');
+        try {
+          await openOperatorWithGoogle(data.session);
+        } catch (error) {
+          await supabaseClient.auth.signOut().catch(() => {});
+          if (submit) submit.disabled = false;
+          if (googleButton) googleButton.disabled = false;
+          setMessage(error.message || 'Google operator access could not be verified.', 'error');
+        }
+      }
+
+      previewToggle?.addEventListener('click', () => {
+        const visible = hq?.classList.toggle('is-visible');
+        previewToggle.textContent = visible ? 'Hide HQ Overview →' : 'Show HQ Overview →';
+        if (visible) hq?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      loginFocus?.addEventListener('click', () => {
+        loginPanel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('operatorIdentifier')?.focus({ preventScroll: true });
+      });
+
+      googleButton?.addEventListener('click', async () => {
+        if (!supabaseClient) {
+          setMessage('Google access is temporarily unavailable. Use your issued operator access key.', 'error');
+          return;
+        }
+        googleButton.disabled = true;
+        sessionStorage.setItem('doneovernight_operator_auth_method', 'google');
+        setMessage('Opening secure Google access…');
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}${window.location.pathname}`,
+            queryParams: { prompt: 'select_account' }
+          }
+        });
+        if (error) {
+          googleButton.disabled = false;
+          setMessage('Could not start Google access. Use your issued operator access key.', 'error');
+        }
+      });
+
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const identifier = normalizeOperatorLoginIdentifier(document.getElementById('operatorIdentifier')?.value);
+        const accessKey = document.getElementById('operatorAccessKey')?.value.trim();
+        if (!identifier || !accessKey) {
+          setMessage('Enter your operator email or handle and access key.', 'error');
+          return;
+        }
+
+        submit.disabled = true;
+        submit.textContent = 'Verifying access…';
+        setMessage('');
+        try {
+          const response = await fetch('../api/operator-apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ action: 'operator_access', identifier, access_key: accessKey })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Access denied');
+          sessionStorage.setItem('doneovernight_operator_auth_method', 'access_key');
+          storeOperator(data.operator);
+          if (redirectToOperatorHandle(data.operator, { redirectTo: data.redirectTo })) return;
+          if (runtimeHandle) {
+            await loadOperatorRuntime();
+          } else {
+            revealHq({ authenticated: true });
+          }
+          setMessage('Operator access verified. Headquarters unlocked.', 'success');
+          hq?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (error) {
+          setMessage(error.message && error.message !== 'Access denied'
+            ? error.message
+            : 'Invalid access credentials.', 'error');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Open Operator Headquarters →';
+        }
+      });
+
+      profileSettings?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (profileSave) {
+          profileSave.disabled = true;
+          profileSave.textContent = 'Saving…';
+        }
+        setProfileMessage('');
+        try {
+          const response = await fetch('../api/operator-apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              action: 'operator_profile_update',
+              ...currentProfileDraft()
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Profile update failed');
+          storeOperator(data.operator);
+          applyIdentityAtmosphere(data.operator || currentProfileDraft(), { presence_label: 'Operator identity synchronized' });
+          setProfileMessage('Runtime signature saved.', 'success');
+          if (runtimeHandle) await loadOperatorRuntime();
+        } catch (error) {
+          setProfileMessage('Could not update public profile.', 'error');
+        } finally {
+          if (profileSave) {
+            profileSave.disabled = false;
+            profileSave.textContent = 'Save public profile →';
+          }
+        }
+      });
+
+      inviteClientAction?.addEventListener('click', (event) => {
+        event.preventDefault();
+        shareOperatorInvite();
+      });
+
+      logoutButton?.addEventListener('click', async () => {
+        logoutButton.disabled = true;
+        teardownLiveRuntimeSync();
+        await fetch('../api/operator-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ action: 'operator_logout' })
+        }).catch(() => {});
+        ['doneovernight_operator_email', 'doneovernight_operator_handle', 'doneovernight_operator_username', 'doneovernight_operator_name', 'doneovernight_operator_auth_method']
+          .forEach((key) => sessionStorage.removeItem(key));
+        window.location.assign('/');
+      });
+
+      window.addEventListener('pagehide', teardownLiveRuntimeSync);
+
+      if (runtimeHandle) {
+        loadOperatorRuntime()
+          .then((isOwner) => {
+            if (!isOwner) return verifyOperatorSession();
+            return true;
+          })
+          .catch(() => {
+            showRuntimeAlert('Operator profile could not be loaded.');
+          });
+      } else {
+        verifyOperatorSession().catch(() => {});
+      }
+      completeGoogleReturn().catch(() => {
+        setMessage('Google access could not be completed. Use your issued operator access key.', 'error');
+      });
+    })();
+  </script>
+<script src="/lang/runtime.js" defer></script>
+</body>
+</html>

@@ -21,21 +21,41 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="shared.css">
 
+<script>
+try {
+  const params = new URLSearchParams(window.location.search);
+  const hasAccessKeySession = sessionStorage.getItem('portal_email') && sessionStorage.getItem('portal_access_key');
+  const hasGoogleSession = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true' || sessionStorage.getItem('portal_auth_method') === 'google';
+  const isOAuthReturn = params.has('code') || params.has('error') || window.location.hash.includes('access_token');
+  const workspaceSlug = sessionStorage.getItem('doneovernight_workspace_slug');
+  if (!params.has('legacy') && !isOAuthReturn) {
+    window.location.replace(`/portal${window.location.search || ''}`);
+  }
+  if (workspaceSlug && !isOAuthReturn && !params.has('legacy')) {
+    window.location.replace(`/workspace/@${workspaceSlug}`);
+  }
+  if (hasAccessKeySession || hasGoogleSession || isOAuthReturn) {
+    window.__portalInitialAuthRestoring = true;
+    document.documentElement.classList.add('portal-precheck');
+  }
+} catch (error) {}
+</script>
+
 <style>
 /* ============================================================
-   PORTAL — password gate + dashboard
+   PORTAL — member entry + client dashboard
    ============================================================ */
 
-/* GATE */
+/* MEMBER ENTRY */
 .gate {
   position: fixed;
   inset: 0;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 24px;
   background: #050608;
+  overflow-y: auto;
   will-change: opacity, transform;
 }
 .gate.is-unlocked {
@@ -73,8 +93,8 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 440px;
-  padding: 52px 44px 44px;
+  max-width: 1040px;
+  padding: clamp(24px, 4vw, 44px);
   background: rgba(245, 241, 234, 0.025);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -82,7 +102,7 @@
   box-shadow:
     0 30px 60px -15px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(245, 241, 234, 0.05);
-  text-align: center;
+  text-align: left;
 }
 .gate-card::before {
   content: "";
@@ -92,22 +112,89 @@
   background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.5), transparent);
 }
 
+.gate-checking {
+  display: none;
+  place-items: center;
+  text-align: center;
+}
+.gate.is-checking,
+body.auth-booting .gate,
+html.portal-precheck .gate {
+  overflow: hidden;
+}
+.gate.is-checking .gate-card,
+body.auth-booting .gate-card,
+html.portal-precheck .gate-card {
+  display: grid;
+  place-items: center;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.gate.is-checking .gate-card::before,
+.gate.is-checking .gate-top,
+body.auth-booting .gate-card::before,
+body.auth-booting .gate-top,
+html.portal-precheck .gate-card::before,
+html.portal-precheck .gate-top {
+  display: none;
+}
+.gate.is-checking .gate-grid,
+body.auth-booting .gate-grid,
+html.portal-precheck .gate-grid { display: none; }
+.gate.is-checking .gate-checking,
+body.auth-booting .gate-checking,
+html.portal-precheck .gate-checking {
+  display: grid;
+  animation: checkingFade 0.5s ease both;
+}
+.gate-checking-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(245, 241, 234, 0.72);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+@keyframes checkingFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gate-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+.gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .gate-lock {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 28px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(233, 196, 138, 0.08);
   border: 1px solid rgba(233, 196, 138, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   color: var(--amber);
   position: relative;
+  flex: 0 0 auto;
 }
 .gate-lock svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   stroke: var(--amber);
   stroke-width: 1.6;
   fill: none;
@@ -126,103 +213,329 @@
 }
 
 .gate-wordmark {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+.gate-wordmark img {
+  display: block;
+  width: clamp(132px, 12vw, 160px);
+  height: auto;
+  object-fit: contain;
+}
+.gate-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.35em;
-  color: var(--amber);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  margin-bottom: 14px;
+  color: var(--green);
+  white-space: nowrap;
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(103, 214, 149, 0.9);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+.gate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: clamp(28px, 5vw, 56px);
+  align-items: start;
 }
 .gate-title {
   font-family: var(--serif);
-  font-size: clamp(28px, 3.6vw, 40px);
+  font-size: clamp(44px, 7vw, 86px);
   line-height: 1.05;
   letter-spacing: -0.02em;
   font-weight: 400;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   color: var(--ink);
 }
 .gate-title em { font-style: italic; color: var(--amber); }
 .gate-sub {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink-dim);
-  line-height: 1.5;
-  max-width: 34ch;
-  margin: 0 auto 32px;
+  line-height: 1.65;
+  max-width: 42ch;
+  margin: 0 0 24px;
+}
+.gate-note {
+  padding: 14px 16px;
+  background: rgba(233, 196, 138, 0.055);
+  border: 1px solid rgba(233, 196, 138, 0.18);
+  border-radius: 8px;
+  color: rgba(245, 241, 234, 0.66);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 44ch;
+}
+.gate-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gate-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+}
+.gate-tab {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.gate-tab:hover,
+.gate-tab.is-active {
+  color: var(--amber);
+  background: rgba(233, 196, 138, 0.08);
+  border-color: rgba(233, 196, 138, 0.28);
+  box-shadow: 0 0 22px rgba(233, 196, 138, 0.08);
+}
+.auth-panel {
+  display: none;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(5, 6, 8, 0.38);
+  box-shadow: inset 0 1px 0 rgba(245, 241, 234, 0.04);
+}
+.auth-panel.is-active { display: block; }
+.auth-panel h3 {
+  font-family: var(--serif);
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.auth-panel h3 em { color: var(--amber); font-style: italic; }
+.auth-panel > p,
+.signin-copy {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.auth-options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.auth-btn,
+.gate-submit {
+  width: 100%;
+  min-height: 48px;
+  padding: 14px 18px;
+  border-radius: 7px;
+  border: 1px solid rgba(233, 196, 138, 0.45);
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+.auth-btn:hover,
+.auth-btn:focus-visible,
+.gate-submit:hover,
+.gate-submit:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.7);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.28),
+    0 0 70px rgba(233, 196, 138, 0.1),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  outline: none;
+}
+.auth-btn:active,
+.gate-submit:active { transform: scale(0.98); }
+.auth-btn:disabled,
+.gate-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+.auth-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+.auth-btn[aria-disabled="true"]:hover,
+.auth-btn[aria-disabled="true"]:focus-visible {
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  border-color: rgba(233, 196, 138, 0.45);
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  transform: none;
+}
+.auth-btn.is-muted {
+  border-color: var(--line-strong);
+  color: var(--ink);
+  background: rgba(245, 241, 234, 0.035);
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
-.gate-form { display: flex; flex-direction: column; gap: 14px; }
-.gate-input-wrap {
-  position: relative;
-}
+.gate-form { display: flex; flex-direction: column; gap: 12px; }
+.gate-input-wrap { position: relative; }
 .gate-input {
   width: 100%;
   background: rgba(245, 241, 234, 0.03);
   border: 1px solid var(--line-strong);
   border-radius: 6px;
-  padding: 16px 18px;
-  font-family: var(--mono);
+  padding: 15px 16px;
+  font-family: var(--sans);
   font-size: 14px;
-  letter-spacing: 0.15em;
+  letter-spacing: 0;
   color: var(--ink);
-  text-align: center;
   outline: none;
   transition: all 0.3s;
 }
-.gate-input::placeholder { color: var(--ink-faint); letter-spacing: 0.15em; }
+.gate-input::placeholder { color: var(--ink-faint); }
 .gate-input:focus {
   border-color: var(--amber);
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.1);
 }
-.gate-input.is-wrong {
+.gate-input.is-wrong,
+.gate-input.is-invalid,
+.consent-row.is-invalid {
   border-color: var(--red);
   animation: shake 0.5s;
 }
+.gate-form.shake { animation: shake 0.5s; }
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-8px); }
   40%, 80% { transform: translateX(8px); }
 }
-.gate-submit {
-  padding: 16px 20px;
-  background: var(--ink);
-  color: #050608;
-  border-radius: 6px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.4s;
-  border: none;
-  position: relative;
-  overflow: hidden;
-}
-.gate-submit::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: translateX(-100%);
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.gate-submit:hover::before { transform: translateX(0); }
-.gate-submit > span { position: relative; z-index: 1; }
-
 .gate-error {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.12em;
   color: var(--red);
   text-transform: uppercase;
-  margin-top: 8px;
   min-height: 14px;
   opacity: 0;
   transition: opacity 0.3s;
 }
 .gate-error.is-shown { opacity: 1; }
+.consent-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.025);
+  color: var(--ink-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.consent-row input {
+  margin-top: 2px;
+  accent-color: var(--amber);
+}
+.legal-copy {
+  margin-top: 16px;
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.legal-copy a,
+.signin-copy button,
+.auth-message a { color: var(--amber); }
+.signin-copy button {
+  border: none;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.auth-message {
+  display: none;
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid rgba(233, 196, 138, 0.22);
+  border-radius: 8px;
+  background: rgba(233, 196, 138, 0.055);
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.auth-message.is-shown { display: block; }
+.auth-message.is-success {
+  border-color: rgba(103, 214, 149, 0.28);
+  background: rgba(103, 214, 149, 0.07);
+}
+.auth-message.is-error {
+  border-color: rgba(255, 107, 107, 0.28);
+  background: rgba(255, 107, 107, 0.07);
+}
+.auth-message h4 {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+}
 
 .gate-back {
   display: inline-flex;
@@ -262,6 +575,10 @@
   border-radius: 4px;
   line-height: 1.5;
 }
+.dash-nav,
+.dash { visibility: hidden; }
+body.is-unlocked .dash-nav,
+body.is-unlocked .dash { visibility: visible; }
 
 /* ============================================================
    DASHBOARD
@@ -294,10 +611,16 @@ body.is-unlocked .dash { opacity: 1; }
   gap: 24px;
 }
 .dash-nav .logo {
-  font-family: var(--sans);
-  font-size: 11px;
-  letter-spacing: 0.30em;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
   color: var(--ink);
+}
+.dash-nav .logo img {
+  display: block;
+  width: clamp(132px, 12vw, 160px);
+  height: auto;
+  object-fit: contain;
 }
 .dash-nav .sep {
   width: 1px; height: 16px;
@@ -345,6 +668,19 @@ body.is-unlocked .dash { opacity: 1; }
   padding: 40px 36px 120px;
 }
 @media (max-width: 720px) {
+  .gate {
+    align-items: start;
+    padding: 16px;
+  }
+  .gate-card { padding: 22px; }
+  .gate-top {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+  .gate-grid { grid-template-columns: 1fr; gap: 24px; }
+  .gate-tabs { grid-template-columns: 1fr; }
+  .auth-panel { padding: 18px; }
   .dash-nav { padding: 14px 20px; flex-wrap: wrap; gap: 8px; }
   .dash-nav .right { flex-wrap: wrap; gap: 12px; }
   .dash-inner { padding: 32px 20px 80px; }
@@ -370,6 +706,12 @@ body.is-unlocked .dash { opacity: 1; }
   font-weight: 400;
 }
 .dash-head h1 em { font-style: italic; color: var(--amber); }
+.dash-head p {
+  margin-top: 10px;
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
 
 .new-task-btn {
   display: inline-flex;
@@ -397,23 +739,37 @@ body.is-unlocked .dash { opacity: 1; }
 /* KPI cards */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-bottom: 40px;
 }
-@media (max-width: 900px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 540px) { .kpi-grid { grid-template-columns: 1fr; } }
 .kpi {
   padding: 22px 24px;
   background: rgba(245, 241, 234, 0.025);
   border: 1px solid var(--line);
   border-radius: 6px;
+  color: inherit;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font: inherit;
+  text-align: left;
   transition: border 0.3s;
 }
 .kpi:hover { border-color: var(--line-strong); }
+.kpi.is-clickable {
+  cursor: pointer;
+}
+.kpi.is-clickable:focus-visible {
+  border-color: rgba(233, 196, 138, 0.55);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08), 0 0 26px rgba(233, 196, 138, 0.12);
+  outline: none;
+}
+.kpi.is-selected {
+  border-color: rgba(233, 196, 138, 0.38);
+  background: rgba(233, 196, 138, 0.045);
+  box-shadow: 0 0 24px rgba(233, 196, 138, 0.08);
+}
 .kpi .kpi-label {
   font-family: var(--mono);
   font-size: 10px;
@@ -467,6 +823,174 @@ body.is-unlocked .dash { opacity: 1; }
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+.modal-form {
+  padding-top: 18px;
+}
+.modal-form .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.modal-form .field-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  display: flex;
+  justify-content: space-between;
+}
+.modal-form .field-label .hint {
+  color: var(--ink-faint);
+  font-size: 9px;
+}
+.modal-form textarea {
+  width: 100%;
+  min-height: 150px;
+  background: rgba(245, 241, 234, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  outline: none;
+  resize: vertical;
+  transition: border 0.3s, background 0.3s, box-shadow 0.3s;
+}
+.modal-form textarea:focus {
+  border-color: var(--amber);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
+}
+.modal-form textarea.is-prefilled {
+  animation: requestGlow 1.3s ease;
+}
+@keyframes requestGlow {
+  0% { box-shadow: 0 0 0 rgba(233, 196, 138, 0); }
+  35% { box-shadow: 0 0 28px rgba(233, 196, 138, 0.16); border-color: rgba(233, 196, 138, 0.62); }
+  100% { box-shadow: 0 0 0 rgba(233, 196, 138, 0); }
+}
+.modal-form .field-group.is-invalid textarea {
+  border-color: var(--red);
+}
+.modal-form.shake { animation: shake 0.5s; }
+.request-help {
+  margin-top: 8px;
+  color: rgba(245, 241, 234, 0.48);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.custom-deadline {
+  display: none;
+  margin-top: 10px;
+}
+.custom-deadline.is-shown { display: block; }
+.custom-deadline input,
+.attachment-link {
+  width: 100%;
+  background: rgba(245, 241, 234, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 13px;
+  color: var(--ink);
+  font: 13px var(--sans);
+  outline: none;
+  transition: border 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.custom-deadline input:focus,
+.attachment-link:focus {
+  border-color: rgba(233, 196, 138, 0.58);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
+}
+.attachment-row {
+  display: grid;
+  gap: 10px;
+}
+.attachment-upload {
+  position: relative;
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(245, 241, 234, 0.16);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.018);
+  color: rgba(245, 241, 234, 0.54);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: border 0.25s, background 0.25s, color 0.25s;
+}
+.attachment-upload:hover {
+  border-color: rgba(233, 196, 138, 0.42);
+  background: rgba(233, 196, 138, 0.035);
+  color: rgba(245, 241, 234, 0.78);
+}
+.attachment-upload input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.attachment-note {
+  color: rgba(245, 241, 234, 0.42);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.empty-state {
+  margin-top: 18px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.history-mode {
+  display: none;
+  margin-top: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.history-mode.is-shown {
+  display: block;
+}
+.history-mode h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: var(--ink);
+}
+.history-mode p {
+  margin-top: 6px;
+  color: var(--ink-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.task-list {
+  animation: dashboardViewIn 0.28s ease both;
+}
+#historyList .task-row {
+  grid-template-columns: 1fr 140px 140px;
+}
+#historyList .task-row .t-actions {
+  justify-content: flex-end;
+}
+@media (max-width: 900px) {
+  #historyList .task-row {
+    grid-template-columns: 1fr;
+  }
+  #historyList .task-row .t-scope,
+  #historyList .task-row .t-actions {
+    grid-column: 1;
+  }
+}
 
 /* Task row (list) */
 .task-list {
@@ -480,7 +1004,8 @@ body.is-unlocked .dash { opacity: 1; }
   align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
-  transition: background 0.3s;
+  cursor: pointer;
+  transition: background 0.3s, opacity 0.25s;
 }
 .task-row:hover {
   background: rgba(245, 241, 234, 0.02);
@@ -514,6 +1039,37 @@ body.is-unlocked .dash { opacity: 1; }
   color: var(--ink-faint);
   text-transform: uppercase;
 }
+.task-row .t-info .task-timestamp {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.4);
+  text-shadow: none;
+}
+.task-row .t-info .task-quote-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.task-row .t-info .task-price {
+  color: #E6D3A3;
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.15);
+}
+.task-row .t-info .task-eta {
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.08);
+}
+.task-row .t-info .task-note {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: none;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
 .task-row .t-scope {
   font-size: 12px;
   color: var(--ink-dim);
@@ -528,6 +1084,30 @@ body.is-unlocked .dash { opacity: 1; }
   letter-spacing: 0.1em;
 }
 .task-row .t-deadline strong { color: var(--ink); display: block; margin-bottom: 2px; }
+.task-expanded {
+  grid-column: 1 / -1;
+  display: none;
+  margin-top: -6px;
+  padding: 0 0 4px;
+  color: rgba(245, 241, 234, 0.62);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.task-row.is-expanded .task-expanded {
+  display: block;
+  animation: dashboardViewIn 0.24s ease both;
+}
+.task-expanded p {
+  margin: 6px 0 0;
+}
+.task-expanded strong {
+  color: rgba(245, 241, 234, 0.82);
+  font-weight: 500;
+}
+.task-expanded a {
+  color: var(--amber);
+  text-decoration: none;
+}
 
 /* Status pill */
 .status-pill {
@@ -560,9 +1140,17 @@ body.is-unlocked .dash { opacity: 1; }
 .status-pill.draft { color: var(--ink-faint); border-color: var(--line); background: transparent; }
 .status-pill.draft .dot { background: var(--ink-faint); }
 
+.status-pill.rejected { color: rgba(229, 112, 112, 0.74); border-color: rgba(229, 112, 112, 0.22); background: rgba(229, 112, 112, 0.055); }
+.status-pill.rejected .dot { background: rgba(229, 112, 112, 0.74); }
+
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+@keyframes dashboardViewIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Task actions */
@@ -597,6 +1185,110 @@ body.is-unlocked .dash { opacity: 1; }
   background: var(--amber);
   border-color: var(--amber);
   color: #050608;
+}
+.task-btn.is-confirming {
+  background: rgba(103, 214, 149, 0.1);
+  border-color: rgba(103, 214, 149, 0.42);
+  color: var(--green);
+  animation: statusPulse 1.8s ease-in-out infinite;
+}
+.task-btn.is-confirming:hover {
+  background: rgba(103, 214, 149, 0.18);
+  border-color: rgba(103, 214, 149, 0.65);
+  color: var(--green);
+}
+
+.recommendations-section {
+  margin-top: 56px;
+}
+.recommendation-list {
+  display: grid;
+  gap: 22px;
+  padding-top: 16px;
+}
+.recommendation-item {
+  padding: 12px 0;
+  cursor: pointer;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.recommendation-item:hover,
+.recommendation-item:focus-within {
+  opacity: 1;
+  transform: translateX(2px);
+}
+.recommendation-item.is-featured h4 {
+  color: #ffe3ad;
+  text-shadow: 0 0 16px rgba(233, 196, 138, 0.12);
+}
+.recommendation-item h4 {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.recommendation-item p {
+  color: rgba(245, 241, 234, 0.68);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+.recommendation-item:hover h4,
+.recommendation-item:hover p,
+.recommendation-item:hover .recommendation-add {
+  color: #ffe3ad;
+}
+.recommendation-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: rgba(245, 241, 234, 0.42);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.recommendation-badge {
+  color: rgba(233, 196, 138, 0.78);
+}
+.recommendation-meta {
+  color: rgba(233, 196, 138, 0.72);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.recommendation-urgency {
+  margin-top: 5px;
+  color: rgba(245, 241, 234, 0.46);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.recommendation-add {
+  border: 0;
+  background: transparent;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 0 0;
+  white-space: nowrap;
+  transition: color 0.25s, text-shadow 0.25s;
+}
+.recommendation-add:hover,
+.recommendation-add:focus-visible {
+  color: #ffe3ad;
+  text-shadow: 0 0 14px rgba(233, 196, 138, 0.22);
+  outline: none;
+}
+@media (max-width: 640px) {
+  .recommendation-item {
+    padding: 10px 0;
+  }
 }
 
 /* Two-column layout for active + queued */
@@ -756,24 +1448,9 @@ body.is-unlocked .dash { opacity: 1; }
   background: rgba(245, 241, 234, 0.05);
 }
 .modal textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
-.modal-microcopy,
-.modal-reassurance {
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ink-dim);
-}
-.modal-reassurance {
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--amber);
-}
 .modal-deadline-pills {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
   gap: 6px;
 }
 .modal-deadline-pill {
@@ -793,6 +1470,32 @@ body.is-unlocked .dash { opacity: 1; }
 .modal-deadline-pill:hover { color: var(--ink); border-color: rgba(233, 196, 138, 0.4); }
 .modal-deadline-pill.active { background: var(--amber); color: #050608; border-color: var(--amber); font-weight: 600; }
 
+.modal-upload {
+  position: relative;
+  padding: 18px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  background: rgba(245, 241, 234, 0.02);
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.modal-upload:hover {
+  border-color: var(--amber);
+  background: rgba(233, 196, 138, 0.04);
+  color: var(--ink);
+}
+.modal-upload input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.modal-upload.has-file {
+  border-style: solid;
+  border-color: rgba(233, 196, 138, 0.5);
+  background: rgba(233, 196, 138, 0.05);
+  color: var(--ink);
+}
 .modal-submit {
   display: flex;
   align-items: center;
@@ -800,65 +1503,240 @@ body.is-unlocked .dash { opacity: 1; }
   gap: 10px;
   width: 100%;
   padding: 16px;
-  background: var(--ink);
-  color: #050608;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
   border-radius: 100px;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all 0.4s;
-  border: none;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border: 1px solid rgba(233, 196, 138, 0.45);
   margin-top: 12px;
   position: relative;
   overflow: hidden;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .modal-submit::before {
-  content: "";
-  position: absolute; inset: 0;
-  background: var(--amber);
-  transform: translateX(-100%);
-  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  content: none;
+  display: none;
 }
-.modal-submit:hover::before { transform: translateX(0); }
-.modal-submit > * { position: relative; z-index: 1; }
+.modal-submit:hover,
+.modal-submit:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.68);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.32),
+    0 0 70px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.modal-submit:active {
+  transform: scale(0.98);
+}
+.modal-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+.modal-submit > *,
+.modal-submit span { position: relative; z-index: 1; color: inherit; }
+.modal-submit:hover span { color: #ffe3ad; }
+.modal .field-group.is-invalid textarea {
+  border-color: rgba(233, 196, 138, 0.85);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.12), 0 0 18px rgba(233, 196, 138, 0.18);
+}
+.modal.sent form { display: none; }
+.modal-confirmation {
+  display: none;
+  padding: 32px 28px;
+  background:
+    linear-gradient(135deg, rgba(58, 165, 90, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+  border: 1px solid rgba(245, 241, 234, 0.10);
+  border-radius: 8px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.modal.sent .modal-confirmation { display: block; }
+.modal-confirmation h4 {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.modal-confirmation p {
+  font-size: 14px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.modal-confirmation .status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.64);
+}
+.modal-confirmation .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3aa55a;
+  box-shadow: 0 0 10px rgba(58, 165, 90, 0.78);
+  animation: modalConfirmPulse 1.7s ease-in-out infinite;
+}
+.modal-confirmation.is-error {
+  border-color: rgba(201, 74, 74, 0.35);
+  background:
+    linear-gradient(135deg, rgba(201, 74, 74, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+}
+@keyframes modalConfirmPulse {
+  0%, 100% { opacity: 0.72; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
 </style>
 </head>
-<body>
+<body class="auth-booting">
 
 <!-- ============================================================
-     PASSWORD GATE
+     MEMBER ENTRY
      ============================================================ -->
 <div class="gate" id="gate">
   <div class="gate-bg"></div>
   <div class="gate-stars"></div>
 
   <div class="gate-card">
-    <div class="gate-lock">
-      <svg viewBox="0 0 24 24">
-        <rect x="5" y="10" width="14" height="10" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-      </svg>
-    </div>
-    <div class="gate-wordmark">Client Portal</div>
-    <h2 class="gate-title">For <em>members</em> only.</h2>
-    <p class="gate-sub">Enter your access key to open your dashboard. If you don't have one, it was included in your welcome email.</p>
-
-    <form class="gate-form" id="gateForm">
-      <div class="gate-input-wrap">
-        <input type="password" id="gateInput" class="gate-input" placeholder="access key" autocomplete="off" autofocus>
+    <div class="gate-top">
+      <div class="gate-brand">
+        <div class="gate-lock" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <rect x="5" y="10" width="14" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
+        </div>
+        <div class="gate-wordmark"><img src="assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT"></div>
       </div>
-      <button type="submit" class="gate-submit"><span>Unlock portal →</span></button>
-      <div class="gate-error" id="gateError">Incorrect access key. Try again.</div>
-    </form>
-
-    <a href="index.html" class="gate-back">← Back to site</a>
-
-    <div class="gate-footer">
-      Lost your key? <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+      <div class="gate-status"><span class="live-dot"></span>Studio online</div>
     </div>
-    <div class="gate-proto-note">
-      Prototype · Real authentication requires backend integration.
+
+    <div class="gate-checking" aria-live="polite">
+      <div class="gate-checking-card"><span class="live-dot"></span>Checking access&hellip;</div>
+    </div>
+
+    <div class="gate-grid">
+      <div class="gate-intro">
+        <h1 class="gate-title">Client <em>Portal</em></h1>
+        <p class="gate-sub">Existing clients can enter their private workspace. New clients can request secure access and receive issued credentials from DONEOVERNIGHT.</p>
+        <div class="gate-note">
+          Private operational access for requests, quotes, updates, delivery movement, and future work.
+        </div>
+        <a href="/" class="gate-back">← Back to site</a>
+      </div>
+
+      <div class="gate-panels">
+        <div class="gate-tabs" role="tablist" aria-label="Portal entry">
+          <button type="button" class="gate-tab" data-panel="signupPanel" role="tab" aria-selected="false">Request member access</button>
+          <button type="button" class="gate-tab is-active" data-panel="accessPanel" role="tab" aria-selected="true">Access your workspace</button>
+        </div>
+
+        <section class="auth-panel" id="signupPanel" role="tabpanel">
+          <h3>Request access</h3>
+          <p>Create a secure workspace request. Operations will review it and issue private access credentials.</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-google-auth" aria-disabled="true">Google access coming soon</button>
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
+          </div>
+
+          <div class="auth-divider">or</div>
+
+          <form class="gate-form" id="signupForm" novalidate>
+            <input type="hidden" name="_subject" value="Portal signup request">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="source" value="portal_signup">
+            <input type="hidden" name="signup_method" value="email">
+            <input type="hidden" name="created_at" id="signupCreatedAt">
+
+            <div class="gate-input-wrap">
+              <input type="text" name="name" id="signupName" class="gate-input" placeholder="Name" autocomplete="name" required>
+            </div>
+            <div class="gate-input-wrap">
+              <input type="email" name="email" id="signupEmail" class="gate-input" placeholder="Email" autocomplete="email" required>
+            </div>
+            <label class="consent-row" id="signupConsentWrap">
+              <input type="checkbox" name="marketing_consent" id="signupConsent" value="yes" required>
+              <span>I agree to receive updates about DONEOVERNIGHT.</span>
+            </label>
+            <button type="submit" class="gate-submit"><span>Request workspace access →</span></button>
+            <div class="gate-error" id="signupError">Complete the required fields.</div>
+          </form>
+
+          <div class="auth-message" id="signupMessage" aria-live="polite"></div>
+          <p class="legal-copy">By signing up, you agree to the <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>, including Cookie Use.</p>
+        </section>
+
+        <section class="auth-panel" id="signinPanel" role="tabpanel">
+          <h3>Sign <em>in</em></h3>
+          <p class="signin-copy">Already have an account?</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-google-auth" aria-disabled="true">Google access coming soon</button>
+            <button type="button" class="auth-btn js-auth-placeholder" data-provider="Apple">Continue with Apple</button>
+            <button type="button" class="auth-btn is-muted js-email-signin">Email sign in</button>
+          </div>
+
+          <p class="signin-copy">Need workspace access? <button type="button" data-panel-link="signupPanel">Request access.</button></p>
+          <div class="auth-message" id="signinMessage" aria-live="polite"></div>
+        </section>
+
+        <section class="auth-panel is-active" id="accessPanel" role="tabpanel">
+          <h3>Private access</h3>
+          <p><strong>Existing clients.</strong><br>Enter your issued workspace credentials to open your private operating environment.</p>
+
+          <div class="auth-options">
+            <button type="button" class="auth-btn js-google-auth" aria-disabled="true">Google access coming soon</button>
+          </div>
+
+          <div class="auth-divider">or</div>
+
+          <form class="gate-form" id="gateForm" novalidate>
+            <input type="hidden" name="_subject" value="Portal access key verification request">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="source" value="portal_access_key">
+            <input type="hidden" name="created_at" id="accessCreatedAt">
+
+            <div class="gate-input-wrap">
+              <input type="email" name="email" id="gateEmail" class="gate-input" placeholder="Email" autocomplete="email" required>
+            </div>
+            <div class="gate-input-wrap">
+              <input type="password" name="access_key" id="gateInput" class="gate-input" placeholder="Access key" autocomplete="off" required>
+            </div>
+            <button type="submit" class="gate-submit"><span>Open workspace →</span></button>
+            <div class="gate-error" id="gateError">Enter your email and access key.</div>
+          </form>
+
+          <div class="auth-message" id="gateMessage" aria-live="polite"></div>
+          <div class="gate-footer">
+            Lost your key? <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+          </div>
+          <div class="gate-proto-note">
+            Access keys are issued privately by DONEOVERNIGHT and remain usable as a recovery method.
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -873,13 +1751,12 @@ body.is-unlocked .dash { opacity: 1; }
 <!-- Dashboard nav -->
 <nav class="dash-nav">
   <div class="left">
-    <a class="logo" href="index.html">DONEOVERNIGHT</a>
+    <a class="logo" href="/"><img src="assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT"></a>
     <div class="sep"></div>
-    <div class="client-label">Acme Studio / Workspace</div>
+    <div class="client-label">Private workspace</div>
   </div>
   <div class="right">
     <div class="status"><span class="dot"></span>Studio online</div>
-    <div style="color:var(--ink-dim);">Alex R.</div>
     <button class="logout" id="logoutBtn">Log out</button>
   </div>
 </nav>
@@ -891,145 +1768,92 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="dash-head">
       <div>
         <span class="eyebrow">Workspace</span>
-        <h1>Good evening, <em>Alex.</em></h1>
+        <h1 id="dashboardGreeting">Good evening.</h1>
+        <p>Your private DONEOVERNIGHT workspace is ready.</p>
       </div>
-      <button class="new-task-btn" id="newTaskBtn">
-        <span class="plus">+</span>
-        <span>Submit new task</span>
+    </div>
+
+    <!-- Status cards -->
+    <div class="kpi-grid">
+      <button class="kpi is-active is-clickable" type="button" data-dashboard-view="active">
+        <div class="kpi-label">Active tasks</div>
+        <div class="kpi-n" id="activeTasksCount">0</div>
+      </button>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="pending">
+        <div class="kpi-label">Pending quotes</div>
+        <div class="kpi-n" id="pendingQuotesCount">0</div>
+      </button>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="delivered">
+        <div class="kpi-label">Delivered</div>
+        <div class="kpi-n" id="deliveredCount">0</div>
+      </button>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="hours">
+        <div class="kpi-label">Hours saved</div>
+        <div class="kpi-n" id="hoursSavedCount">0h</div>
+        <div class="kpi-delta">Starts tracking after your first task</div>
+      </button>
+      <button class="kpi is-clickable" type="button" data-dashboard-view="studio">
+        <div class="kpi-label">Studio status</div>
+        <div class="kpi-n">Online</div>
       </button>
     </div>
 
-    <!-- KPIs -->
-    <div class="kpi-grid">
-      <div class="kpi is-active">
-        <div class="kpi-label">Active now</div>
-        <div class="kpi-n">3</div>
-        <div class="kpi-delta">Due within 24h</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Delivered · this month</div>
-        <div class="kpi-n">14</div>
-        <div class="kpi-delta up">↑ 3 vs last month</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">On-time rate</div>
-        <div class="kpi-n">100<span style="font-size: 0.55em;">%</span></div>
-        <div class="kpi-delta">Rolling 90 days</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Hours saved</div>
-        <div class="kpi-n">47.5</div>
-        <div class="kpi-delta">Estimated · this month</div>
-      </div>
-    </div>
-
-    <!-- Active tasks + activity -->
+    <!-- Submit task + activity -->
     <div class="two-col">
       <div class="dash-section">
         <div class="dash-section-head">
-          <h2>Active tasks</h2>
-          <span class="meta">3 in progress</span>
+          <h2>Submit a task</h2>
         </div>
 
-        <div class="task-list">
-          <div class="task-row">
-            <div class="t-id">#2041</div>
-            <div class="t-info">
-              <h4>Investor deck — Series A · 12 slides</h4>
-              <div class="meta">Submitted tonight · 22:58</div>
+        <form id="dashboardTaskForm" class="modal-form" novalidate>
+          <div class="field-group">
+            <div class="field-label"><span>Request</span><span class="hint">Required</span></div>
+            <textarea id="dashboardTaskDesc" placeholder="What do you need done?" required></textarea>
+            <div class="request-help">The more context you add, the better the outcome.</div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label"><span>Deadline</span><span class="hint">Choose one</span></div>
+            <div class="modal-deadline-pills" id="dashboardDeadlinePills">
+              <div class="modal-deadline-pill active" data-val="tonight">Tonight</div>
+              <div class="modal-deadline-pill" data-val="tomorrow">Tomorrow</div>
+              <div class="modal-deadline-pill" data-val="this-week">This week</div>
+              <div class="modal-deadline-pill" data-val="flexible">Flexible</div>
+              <div class="modal-deadline-pill" data-val="other">Other</div>
             </div>
-            <div class="t-scope">Standard</div>
-            <div class="t-deadline">
-              <strong>Tomorrow · 09:00</strong>
-              <span>in 9h 42m</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill working"><span class="dot"></span>Working</span>
+            <div class="custom-deadline" id="customDeadlineWrap">
+              <input type="datetime-local" id="customDeadlineInput" aria-label="Custom deadline">
             </div>
           </div>
 
-          <div class="task-row">
-            <div class="t-id">#2039</div>
-            <div class="t-info">
-              <h4>n8n workflow — HubSpot → Slack deal alerts</h4>
-              <div class="meta">Submitted · yesterday 14:10</div>
-            </div>
-            <div class="t-scope">Standard</div>
-            <div class="t-deadline">
-              <strong>Tomorrow · 12:00</strong>
-              <span>in 13h</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill review"><span class="dot"></span>In review</span>
+          <div class="field-group">
+            <div class="field-label"><span>Files or link</span><span class="hint">Optional</span></div>
+            <div class="attachment-row">
+              <label class="attachment-upload" id="dashboardAttachmentLabel">
+                <span id="dashboardAttachmentText">Attach PDF, DOC, or images</span>
+                <input type="file" id="dashboardFileUpload" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp">
+              </label>
+              <input class="attachment-link" id="dashboardAttachmentLink" name="files_link" type="url" placeholder="Paste a link">
+              <div class="attachment-note">Files and links help us quote faster. Upload storage can be connected later.</div>
             </div>
           </div>
 
-          <div class="task-row">
-            <div class="t-id">#2038</div>
-            <div class="t-info">
-              <h4>Competitor research — 3 firms, positioning analysis</h4>
-              <div class="meta">Submitted · yesterday 09:22</div>
-            </div>
-            <div class="t-scope">Quick hit</div>
-            <div class="t-deadline">
-              <strong>Today · 18:00</strong>
-              <span>in 3h 15m</span>
-            </div>
-            <div class="t-actions">
-              <span class="status-pill working"><span class="dot"></span>Working</span>
-            </div>
-          </div>
-        </div>
+          <button type="submit" class="modal-submit">
+            <span>Send task</span>
+            <span>→</span>
+          </button>
+        </form>
+        <div class="auth-message" id="dashboardTaskMessage" aria-live="polite"></div>
       </div>
 
       <!-- Activity feed -->
       <div class="dash-section">
         <div class="dash-section-head">
           <h2>Activity</h2>
-          <span class="meta">Live</span>
         </div>
 
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Slide 07 regenerated</h5>
-              <p>Senior operator rejected v2, requested sharper positioning.</p>
-              <div class="a-time">Just now</div>
-            </div>
-          </div>
-          <div class="activity-item is-review">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Task #2039 entered review</h5>
-              <p>n8n workflow passed functional tests. Second operator reviewing.</p>
-              <div class="a-time">18 min ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Research sources locked</h5>
-              <p>12 competitor sources pulled for task #2038.</p>
-              <div class="a-time">2h ago</div>
-            </div>
-          </div>
-          <div class="activity-item is-queued">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Quote confirmed · #2041</h5>
-              <p>€280 · Standard · overnight delivery.</p>
-              <div class="a-time">Tonight · 23:02</div>
-            </div>
-          </div>
-          <div class="activity-item is-delivered">
-            <div class="a-bullet"></div>
-            <div class="a-content">
-              <h5>Task #2037 delivered</h5>
-              <p>Weekly market briefing · delivered 06:14 this morning.</p>
-              <div class="a-time">12h ago</div>
-            </div>
-          </div>
+        <div id="activityList">
+          <div class="empty-state">Your workspace activity will appear here.</div>
         </div>
       </div>
     </div>
@@ -1038,261 +1862,1427 @@ body.is-unlocked .dash { opacity: 1; }
     <div class="dash-section">
       <div class="dash-section-head">
         <h2>History</h2>
-        <span class="meta">Last 30 days · 14 tasks</span>
       </div>
 
-      <div class="task-list">
-        <div class="task-row">
-          <div class="t-id">#2037</div>
-          <div class="t-info">
-            <h4>Weekly market briefing — 3 pages</h4>
-            <div class="meta">Delivered · today 06:14</div>
-          </div>
-          <div class="t-scope">Recurring</div>
-          <div class="t-deadline"><strong>On time</strong><span>−1h 46m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2033</div>
-          <div class="t-info">
-            <h4>Board deck refresh — 18 slides, sections 3-7</h4>
-            <div class="meta">Delivered · Tue 07:45</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+15m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2031</div>
-          <div class="t-info">
-            <h4>Sales one-pager · EU mid-market</h4>
-            <div class="meta">Delivered · Mon 06:30</div>
-          </div>
-          <div class="t-scope">Quick hit</div>
-          <div class="t-deadline"><strong>On time</strong><span>+2h early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2028</div>
-          <div class="t-info">
-            <h4>CSV cleanup & formatting · customer list (4.2k rows)</h4>
-            <div class="meta">Delivered · last Fri 11:20</div>
-          </div>
-          <div class="t-scope">Quick hit</div>
-          <div class="t-deadline"><strong>On time</strong><span>+40m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2025</div>
-          <div class="t-info">
-            <h4>Content pack — 10 LinkedIn posts, launch week</h4>
-            <div class="meta">Delivered · 2 weeks ago</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+1h early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
-
-        <div class="task-row">
-          <div class="t-id">#2022</div>
-          <div class="t-info">
-            <h4>Pitch deck — seed round · 10 slides</h4>
-            <div class="meta">Delivered · 2 weeks ago</div>
-          </div>
-          <div class="t-scope">Standard</div>
-          <div class="t-deadline"><strong>On time</strong><span>+30m early</span></div>
-          <div class="t-actions">
-            <button class="task-btn">Open</button>
-            <span class="status-pill delivered"><span class="dot"></span>Delivered</span>
-          </div>
-        </div>
+      <div class="history-mode" id="historyMode" aria-live="polite"></div>
+      <div id="historyList">
+        <div class="empty-state">No tasks yet. Submit your first request to begin.</div>
       </div>
+    </div>
+
+    <div class="dash-section recommendations-section">
+      <div class="dash-section-head">
+        <h2>Recommended for you</h2>
+        <div class="meta">Useful follow-up tasks based on common client requests.</div>
+      </div>
+
+      <div id="recommendationsList"></div>
     </div>
 
   </div>
 </div>
 
-<!-- ============================================================
-     NEW TASK MODAL
-     ============================================================ -->
-<div class="modal-backdrop" id="taskModal">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Submit a new task</h3>
-      <button class="modal-close" id="modalClose">Close ×</button>
-    </div>
-
-    <form id="modalForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST">
-      <input type="hidden" name="_subject" value="Portal task submission">
-      <input type="hidden" name="_template" value="table">
-      <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_next" value="https://doneovernight.com/portal.html?submitted=1">
-      <input type="hidden" name="_autoresponse" value="Task received. We'll review it and send a quote within 60 minutes. You can reply with attachments after we send your quote.">
-      <input type="hidden" name="deadline" id="modalDeadlineValue" value="Overnight">
-      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
-      <div class="field-group">
-        <div class="field-label"><span>Task description</span><span class="hint">Required</span></div>
-        <textarea id="modalDesc" name="task description" placeholder="What do you need? The more context, the sharper the output." required></textarea>
-      </div>
-
-      <div class="field-group">
-        <div class="field-label"><span>File link</span><span class="hint">Optional</span></div>
-        <input type="url" id="modalFileLink" name="uploaded file info / file link" placeholder="Google Drive, Dropbox, WeTransfer, or Notion link">
-        <div class="modal-microcopy">You can reply with attachments after we send your quote.</div>
-      </div>
-
-      <div class="field-group">
-        <div class="field-label"><span>Contact</span><span class="hint">Required</span></div>
-        <input type="text" id="modalName" name="name" placeholder="Your name" required>
-        <input type="email" id="modalEmail" name="email" placeholder="your@email.com" required>
-      </div>
-
-      <div class="field-group">
-        <div class="field-label"><span>Deadline</span><span class="hint">When do you need it?</span></div>
-        <div class="modal-deadline-pills" id="modalPills">
-          <div class="modal-deadline-pill" data-val="rush">Rush · 4h</div>
-          <div class="modal-deadline-pill active" data-val="overnight">Overnight</div>
-          <div class="modal-deadline-pill" data-val="48h">48 hours</div>
-          <div class="modal-deadline-pill" data-val="flexible">Flexible</div>
-        </div>
-      </div>
-
-      <button type="submit" class="modal-submit">
-        <span>Submit · get quote</span>
-        <span>→</span>
-      </button>
-      <div class="modal-reassurance">No payment required to submit · Quote first</div>
-    </form>
-  </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
 /* ============================================================
-   PASSWORD GATE — password = "executed"
-   Uses sessionStorage so they stay unlocked during their session.
+   MEMBER ENTRY
+   Static-site safe: email signup and access verification use n8n.
    ============================================================ */
 const gate = document.getElementById('gate');
 const gateForm = document.getElementById('gateForm');
 const gateInput = document.getElementById('gateInput');
+const gateEmail = document.getElementById('gateEmail');
 const gateError = document.getElementById('gateError');
-const PASSWORD = 'executed';
+const gateMessage = document.getElementById('gateMessage');
+const signupForm = document.getElementById('signupForm');
+const signupError = document.getElementById('signupError');
+const signupMessage = document.getElementById('signupMessage');
+const signinMessage = document.getElementById('signinMessage');
+const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SIGNUP_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-signup';
+const ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-access';
+const GOOGLE_ACCESS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-google-access';
+const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
+const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
+const ACCEPT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-accept';
+const TASK_FILE_BUCKET = 'task-files';
+const TASK_FILE_MAX_BYTES = 100 * 1024 * 1024;
+const TASK_FILE_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'webp']);
+let dashboardTasks = [];
+let currentView = 'all';
+let expandedTaskKey = '';
+let taskPollingInterval = null;
+let taskHistoryLoading = false;
+const taskRecommendations = [
+  {
+    category: 'Social',
+    title: 'Turn your presentation into 3 social posts',
+    description: 'Repurpose your slides into concise LinkedIn-ready content.',
+    price: 'From €120',
+    timing: 'Tonight',
+    urgency: 'Popular today',
+    tag: 'Most used',
+    deadline: 'tonight',
+    prompt: `Turn my presentation into 3 polished social posts for LinkedIn.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
+  },
+  {
+    category: 'Document',
+    title: 'Create a clean PDF version',
+    description: 'Format your document into a polished, shareable PDF.',
+    price: 'From €90',
+    timing: 'Tomorrow',
+    urgency: 'Ready by morning',
+    deadline: 'tomorrow',
+    prompt: `Create a clean, polished PDF version of my document.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
+  },
+  {
+    category: 'Proofread',
+    title: 'Proofread and optimize your text',
+    description: 'Tighten wording, fix errors, and make the message sharper.',
+    price: 'From €80',
+    timing: 'Tonight',
+    urgency: 'Delivered overnight',
+    deadline: 'tonight',
+    prompt: `Proofread and optimize my text so it reads clearly and professionally.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
+  },
+  {
+    category: 'Strategy',
+    title: 'Convert your notes into a structured document',
+    description: 'Turn rough notes into a clear brief, proposal, or outline.',
+    price: 'From €140',
+    timing: 'This week',
+    urgency: 'Ready by morning',
+    deadline: 'this-week',
+    prompt: `Convert my notes into a structured, professional document.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
+  },
+  {
+    category: 'Recurring',
+    title: 'Weekly content pack',
+    description: 'Turn one idea into posts, captions, and short-form content every week.',
+    price: 'From €249',
+    timing: 'recurring',
+    urgency: 'Popular today',
+    tag: 'Recurring',
+    deadline: 'flexible',
+    prompt: `Create a weekly content pack from one idea, including posts, captions, and short-form content.
+
+Context:
+
+Tone:
+
+Goal:
+
+Files:`
+  }
+];
+let portalVerifiedThisSession = false;
+let googleAccessCheckInFlight = false;
+let isAuthRestoring = true;
+
+function clearPortalSession() {
+  ['portal_email', 'portal_access_key', 'portal_name', 'portal_auth_method'].forEach(key => sessionStorage.removeItem(key));
+  Object.keys(sessionStorage).forEach(key => {
+    if (key.startsWith('doneovernight_portal')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+}
+
+function beginAuthRestore() {
+  isAuthRestoring = true;
+  document.body.classList.add('auth-booting');
+  document.documentElement.classList.add('portal-precheck');
+  gate.classList.add('is-checking');
+  document.body.style.overflow = 'hidden';
+}
+
+function finishAuthRestore() {
+  isAuthRestoring = false;
+  document.body.classList.remove('auth-booting');
+  document.documentElement.classList.remove('portal-precheck');
+  gate.classList.remove('is-checking');
+}
+
+function lockPortal(message = '') {
+  finishAuthRestore();
+  stopPortalPolling();
+  gate.classList.remove('is-unlocked');
+  document.body.classList.remove('is-unlocked');
+  document.body.style.overflow = 'hidden';
+  if (message) {
+    showPanel('accessPanel');
+    showMessage(gateMessage, message, 'error');
+  }
+}
 
 function unlock() {
+  portalVerifiedThisSession = true;
+  finishAuthRestore();
+  updateDashboardGreeting();
   gate.classList.add('is-unlocked');
   document.body.classList.add('is-unlocked');
-  sessionStorage.setItem('doneovernight_portal', '1');
+  sessionStorage.removeItem('doneovernight_portal_demo');
   document.body.style.overflow = '';
+  loadTaskHistory();
+  startPortalPolling();
 }
 
-// Check if already unlocked this session
-if (sessionStorage.getItem('doneovernight_portal') === '1') {
-  gate.style.display = 'none';
-  document.body.classList.add('is-unlocked');
-} else {
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+}
+
+function updateDashboardGreeting() {
+  const greeting = getTimeGreeting();
+  const name = sessionStorage.getItem('portal_name')?.trim();
+  const headline = document.getElementById('dashboardGreeting');
+  headline.textContent = name ? `${greeting}, ${name}.` : `${greeting}.`;
+}
+
+function showPanel(panelId) {
+  document.querySelectorAll('.gate-tab').forEach(tab => {
+    const isActive = tab.dataset.panel === panelId;
+    tab.classList.toggle('is-active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+  document.querySelectorAll('.auth-panel').forEach(panel => {
+    panel.classList.toggle('is-active', panel.id === panelId);
+  });
+}
+
+function showMessage(el, html, type = '') {
+  el.className = `auth-message is-shown${type ? ` is-${type}` : ''}`;
+  el.innerHTML = html;
+}
+
+function clearInvalid(form) {
+  form.querySelectorAll('.is-invalid, .is-wrong').forEach(el => {
+    el.classList.remove('is-invalid', 'is-wrong');
+  });
+}
+
+function markInvalid(input) {
+  input.classList.add('is-invalid');
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function getPortalEmail() {
+  return sessionStorage.getItem('portal_email') || sessionStorage.getItem('doneovernight_portal_email') || '';
+}
+
+function getPortalAccessKey() {
+  return sessionStorage.getItem('portal_access_key') || sessionStorage.getItem('doneovernight_portal_access_key') || '';
+}
+
+function storeGooglePortalAccess(access, fallback = {}) {
+  const email = access?.email || fallback.email || '';
+  const name = access?.name || fallback.name || '';
+  const accessKey = access?.access_key || '';
+
+  if (email) {
+    sessionStorage.setItem('portal_email', email);
+    sessionStorage.setItem('doneovernight_portal_email', email);
+  }
+  sessionStorage.setItem('portal_auth_method', 'google');
+  sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
+  if (name?.trim()) {
+    sessionStorage.setItem('portal_name', name.trim());
+  }
+  if (accessKey) {
+    sessionStorage.setItem('portal_access_key', accessKey);
+    sessionStorage.setItem('doneovernight_portal_access_key', accessKey);
+  }
+
+  return accessKey;
+}
+
+async function getGooglePortalIdentity() {
+  const session = await getSupabaseSessionWithRetry(2, 250);
+  let user = session?.user;
+  if (!user) {
+    const { data } = await supabaseClient.auth.getUser();
+    user = data?.user;
+  }
+
+  const email = user?.email || getPortalEmail();
+  const name = user?.user_metadata?.full_name || user?.user_metadata?.name || sessionStorage.getItem('portal_name') || '';
+  return { email, name, user };
+}
+
+async function restoreGoogleAccessKey() {
+  const existingKey = getPortalAccessKey();
+  if (existingKey) return existingKey;
+  if (sessionStorage.getItem('portal_auth_method') !== 'google') return '';
+
+  const { email, name } = await getGooglePortalIdentity();
+  if (!email) return '';
+
+  const response = await fetch(GOOGLE_ACCESS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ email, name })
+  });
+  if (!response.ok) return '';
+  const access = await response.json().catch(() => ({}));
+  if (access?.success !== true) return '';
+
+  return storeGooglePortalAccess(access, { email, name });
+}
+
+async function verifyStoredPortalSession() {
+  const email = getPortalEmail();
+  const accessKey = getPortalAccessKey();
+
+  if (!email || !accessKey) return false;
+
+  try {
+    const response = await fetch(ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: accessKey
+      })
+    });
+    if (!response.ok) throw new Error('Stored access verification failed');
+    const data = await response.json().catch(() => ({}));
+
+    if (data?.success === true) {
+      sessionStorage.setItem('portal_email', email);
+      sessionStorage.setItem('portal_access_key', accessKey);
+      sessionStorage.setItem('portal_auth_method', 'access_key');
+      sessionStorage.setItem('doneovernight_portal_email', email);
+      sessionStorage.setItem('doneovernight_portal_access_key', accessKey);
+      if (data.name?.trim()) {
+        sessionStorage.setItem('portal_name', data.name.trim());
+      }
+      unlock();
+      return true;
+    }
+
+    clearPortalSession();
+    lockPortal('Your access is no longer active.');
+    return false;
+  } catch (error) {
+    if (!portalVerifiedThisSession) {
+      lockPortal();
+    }
+    return false;
+  }
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function getSupabaseSessionWithRetry(attempts = 5, delay = 300) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const { data } = await supabaseClient.auth.getSession();
+    if (data?.session) return data.session;
+    if (attempt < attempts) await wait(delay);
+  }
+  return null;
+}
+
+async function setSupabaseSessionFromHash() {
+  if (!window.location.hash.includes('access_token') || !window.location.hash.includes('refresh_token')) {
+    return null;
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = hashParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token');
+  if (!accessToken || !refreshToken) return null;
+
+  const { data } = await supabaseClient.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken
+  });
+  window.history.replaceState({}, document.title, window.location.pathname);
+  return data?.session || null;
+}
+
+async function restoreGoogleSession() {
+  const hashSession = await setSupabaseSessionFromHash();
+  return hashSession || getSupabaseSessionWithRetry(5, 300);
+}
+
+function getWorkspaceHandoff() {
+  try {
+    return JSON.parse(sessionStorage.getItem('doneovernight:workspaceHandoff') || 'null');
+  } catch (error) {
+    return null;
+  }
+}
+
+function applyWorkspaceHandoff() {
+  const handoff = getWorkspaceHandoff();
+  if (!handoff?.email) return false;
+
+  const name = handoff.name || '';
+  const email = handoff.email || '';
+  document.getElementById('signupName').value = name;
+  document.getElementById('signupEmail').value = email;
+  gateEmail.value = email;
+
+  sessionStorage.setItem('portal_email', email);
+  sessionStorage.setItem('doneovernight_portal_email', email);
+  if (name.trim()) sessionStorage.setItem('portal_name', name.trim());
+
+  if (handoff.access_key) {
+    sessionStorage.setItem('portal_access_key', handoff.access_key);
+    sessionStorage.setItem('doneovernight_portal_access_key', handoff.access_key);
+    sessionStorage.setItem('portal_auth_method', 'intake_handoff');
+    sessionStorage.setItem('doneovernight_portal_unlocked', 'true');
+    return true;
+  }
+
+  showPanel('signupPanel');
+  showMessage(signupMessage, '<h4>Complete your workspace setup.</h4><p>Your task is already in operations. Create your workspace access to track quotes, files, and future tasks.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending setup</div>', 'success');
+  return true;
+}
+
+async function verifyGooglePortalAccess(options = {}) {
+  const showChecking = Boolean(options.showChecking);
+  if (googleAccessCheckInFlight) return true;
+  googleAccessCheckInFlight = true;
+
+  if (showChecking) {
+    beginAuthRestore();
+  }
+
+  try {
+    let user = options.user;
+    if (!user) {
+      const session = await getSupabaseSessionWithRetry();
+      user = session?.user;
+    }
+    if (!user) {
+      const { data } = await supabaseClient.auth.getUser();
+      user = data?.user;
+    }
+    if (!user?.email) {
+      if (showChecking) lockPortal();
+      googleAccessCheckInFlight = false;
+      return false;
+    }
+
+    const email = user.email;
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
+    const response = await fetch(GOOGLE_ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email, name })
+    });
+    if (!response.ok) throw new Error('Google portal access failed');
+    const access = await response.json().catch(() => ({}));
+
+    if (access?.success === true) {
+      storeGooglePortalAccess(access, { email, name });
+      unlock();
+      googleAccessCheckInFlight = false;
+      return true;
+    }
+
+    clearPortalSession();
+    lockPortal();
+    const googleMessages = {
+      pending: 'Your access is pending approval.',
+      revoked: 'Your access has been revoked.',
+      invalid: 'No portal access found.'
+    };
+    showPanel('accessPanel');
+    showMessage(gateMessage, googleMessages[access?.status] || googleMessages.invalid, 'error');
+    googleAccessCheckInFlight = false;
+    return true;
+  } catch (error) {
+    if (showChecking) lockPortal();
+    showPanel('accessPanel');
+    showMessage(gateMessage, 'Could not verify Google access. Please try again.', 'error');
+    googleAccessCheckInFlight = false;
+    return true;
+  }
+}
+
+function resetTaskStats() {
+  document.getElementById('activeTasksCount').textContent = '0';
+  document.getElementById('pendingQuotesCount').textContent = '0';
+  document.getElementById('deliveredCount').textContent = '0';
+  document.getElementById('hoursSavedCount').textContent = '0h';
+}
+
+function renderEmptyHistory() {
+  document.getElementById('historyList').innerHTML = '<div class="empty-state">No tasks yet. Submit your first request to begin.</div>';
+}
+
+function renderHistorySyncing() {
+  document.getElementById('historyMode').classList.remove('is-shown');
+  document.getElementById('historyMode').innerHTML = '';
+  document.getElementById('historyList').innerHTML = '<div class="empty-state">Task history is syncing…</div>';
+  document.getElementById('activityList').innerHTML = '<div class="empty-state">Task history is syncing…</div>';
+}
+
+function renderEmptyActivity() {
+  document.getElementById('activityList').innerHTML = '<div class="empty-state">Your workspace activity will appear here.</div>';
+}
+
+function renderRecommendations(suggestions = taskRecommendations) {
+  document.getElementById('recommendationsList').innerHTML = `
+    <div class="recommendation-list">
+      ${suggestions.map((suggestion, index) => `
+        <div class="recommendation-item${index === 0 ? ' is-featured' : ''}" data-recommendation-index="${index}" tabindex="0" role="button">
+          <div>
+            <div class="recommendation-kicker">
+              <span>${escapeHTML(suggestion.category)}</span>
+              ${suggestion.tag ? `<span class="recommendation-badge">${escapeHTML(suggestion.tag)}</span>` : ''}
+            </div>
+            <h4>${escapeHTML(suggestion.title)}</h4>
+            <p>${escapeHTML(suggestion.description)}</p>
+            <div class="recommendation-meta">${escapeHTML(suggestion.price)} · ${escapeHTML(suggestion.timing)}</div>
+            <div class="recommendation-urgency">${escapeHTML(suggestion.urgency)}</div>
+            <button type="button" class="recommendation-add" tabindex="-1">Add to request</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function getStatusKey(status) {
+  return String(status || '').toLowerCase();
+}
+
+function getStatusLabel(status) {
+  const key = getStatusKey(status);
+  return {
+    new: 'Quote pending',
+    quoted: 'Quote sent',
+    in_progress: 'In progress',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled',
+    rejected: 'Not accepted'
+  }[key] || 'Quote pending';
+}
+
+function getStatusClass(status) {
+  const key = getStatusKey(status);
+  return {
+    new: 'queued',
+    quoted: 'review',
+    in_progress: 'working',
+    delivered: 'delivered',
+    cancelled: 'draft',
+    rejected: 'rejected'
+  }[key] || 'queued';
+}
+
+function getActivityText(status) {
+  const key = getStatusKey(status);
+  return {
+    new: 'Task received · quote pending',
+    quoted: 'Quote sent · awaiting approval',
+    in_progress: 'Task in progress',
+    delivered: 'Task delivered',
+    cancelled: 'Task cancelled',
+    rejected: 'Request not accepted'
+  }[key] || 'Task received · quote pending';
+}
+
+function formatTaskDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateTaskStats(tasks) {
+  const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
+  const deliveredTasks = tasks.filter(task => getStatusKey(task.status) === 'delivered');
+  document.getElementById('activeTasksCount').textContent = tasks.filter(task => activeStatuses.has(getStatusKey(task.status))).length;
+  document.getElementById('pendingQuotesCount').textContent = tasks.filter(task => getStatusKey(task.status) === 'new').length;
+  document.getElementById('deliveredCount').textContent = deliveredTasks.length;
+  document.getElementById('hoursSavedCount').textContent = `${getHoursSaved(deliveredTasks)}h`;
+}
+
+function getSortedTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    const bTime = new Date(b.created_at || 0).getTime() || 0;
+    const aTime = new Date(a.created_at || 0).getTime() || 0;
+    return bTime - aTime;
+  });
+}
+
+function getTaskHoursSaved(task) {
+  const value = task.hours_saved ?? task.estimated_hours_saved ?? task.hours_saved_estimate;
+  const hours = Number.parseFloat(value);
+  return Number.isFinite(hours) ? hours : 0;
+}
+
+function getHoursSaved(tasks) {
+  const total = tasks.reduce((sum, task) => sum + getTaskHoursSaved(task), 0);
+  return Number.isInteger(total) ? String(total) : total.toFixed(1);
+}
+
+function getTaskKey(task, index = 0) {
+  return String(task.id || task.created_at || `${task.task_description || 'task'}-${index}`);
+}
+
+function renderTaskDetails(task) {
+  const rejectionLine = getStatusKey(task.status) === 'rejected'
+    ? '<div class="meta task-note">This request could not be processed. You can submit a new task anytime.</div>'
+    : '';
+  const quoteLine = task.quote_amount || task.delivery_eta
+    ? `<div class="task-quote-line">
+        ${task.quote_amount ? `<span class="task-price">${escapeHTML(task.quote_amount)}</span>` : ''}
+        ${task.quote_amount && task.delivery_eta ? '<span class="task-eta">·</span>' : ''}
+        ${task.delivery_eta ? `<span class="task-eta">${escapeHTML(task.delivery_eta)}</span>` : ''}
+      </div>`
+    : '';
+  const note = task.quote_note || (getStatusKey(task.status) === 'delivered' ? task.delivery_note : '');
+  const noteLine = note ? `<div class="meta task-note">${escapeHTML(note)}</div>` : '';
+
+  return `${rejectionLine}${quoteLine}${noteLine}`;
+}
+
+function renderTaskExpanded(task) {
+  const status = getStatusKey(task.status);
+  const note = task.quote_note || (status === 'delivered' ? task.delivery_note : '');
+  const deliveryLink = status === 'delivered' && task.delivery_link
+    ? `<p><strong>Delivery:</strong> <a href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer">View delivery</a></p>`
+    : '';
+  const quoteInfo = [task.quote_amount, task.delivery_eta].filter(Boolean).join(' · ');
+  const rejectionMessage = status === 'rejected'
+    ? '<p><strong>Message:</strong> This request could not be processed. You can submit a new task anytime.</p>'
+    : '';
+
+  return `
+    <div class="task-expanded">
+      <p><strong>Request:</strong> ${escapeHTML(task.task_description || 'Untitled task')}</p>
+      <p><strong>Deadline:</strong> ${escapeHTML(task.deadline || 'Flexible')}</p>
+      ${task.created_at ? `<p><strong>Created:</strong> ${escapeHTML(formatTaskDate(task.created_at))}</p>` : ''}
+      <p><strong>Status:</strong> ${escapeHTML(getStatusLabel(task.status))}</p>
+      ${rejectionMessage}
+      ${quoteInfo ? `<p><strong>Quote:</strong> ${escapeHTML(quoteInfo)}</p>` : ''}
+      ${note ? `<p><strong>Notes:</strong> ${escapeHTML(note)}</p>` : ''}
+      ${deliveryLink}
+    </div>
+  `;
+}
+
+function renderTaskActions(task) {
+  const statusPill = `<span class="status-pill ${getStatusClass(task.status)}"><span class="dot"></span>${escapeHTML(getStatusLabel(task.status))}</span>`;
+  if (getStatusKey(task.status) === 'delivered' && task.delivery_link) {
+    return `${statusPill}<a class="task-btn primary" href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer">View delivery</a>`;
+  }
+  if (getStatusKey(task.status) !== 'quoted' || !task.id) return statusPill;
+  return `${statusPill}<button type="button" class="task-btn primary quote-accept-btn" data-task-id="${escapeHTML(task.id)}" data-quote-amount="${escapeHTML(task.quote_amount || '')}" data-quote-eta="${escapeHTML(task.delivery_eta || '')}">Accept Quote</button>`;
+}
+
+function getLatestTask(tasks) {
+  return getSortedTasks(tasks)[0];
+}
+
+function renderTaskActivity(tasks) {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    renderEmptyActivity();
+    return;
+  }
+
+  const latest = getLatestTask(tasks);
+  document.getElementById('activityList').innerHTML = `
+    <div class="activity-list">
+      <div class="activity-item is-${getStatusClass(latest.status)}">
+        <div class="a-bullet"></div>
+        <div class="a-content">
+          <h5>${escapeHTML(getActivityText(latest.status))}</h5>
+          <p>${escapeHTML(latest.task_description || 'Your latest task')}</p>
+          <div class="a-time">${escapeHTML(formatTaskDate(latest.created_at))}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setSelectedStatusCard() {
+  document.querySelectorAll('[data-dashboard-view]').forEach(card => {
+    card.classList.toggle('is-selected', card.dataset.dashboardView === currentView);
+  });
+}
+
+function renderDashboardView(tasks) {
+  const mode = document.getElementById('historyMode');
+  setSelectedStatusCard();
+  if (currentView === 'all') {
+    mode.classList.remove('is-shown');
+    mode.innerHTML = '';
+    return tasks;
+  }
+
+  const activeStatuses = new Set(['new', 'quoted', 'in_progress']);
+  const deliveredTasks = tasks.filter(task => getStatusKey(task.status) === 'delivered');
+  const views = {
+    active: {
+      title: 'Active tasks',
+      body: 'Tasks currently waiting for a quote, approval, or delivery.',
+      tasks: tasks.filter(task => activeStatuses.has(getStatusKey(task.status))),
+      empty: 'No active tasks.'
+    },
+    pending: {
+      title: 'Pending quote requests',
+      body: 'Tasks waiting for a quote from the studio.',
+      tasks: tasks.filter(task => getStatusKey(task.status) === 'new'),
+      empty: 'No pending quotes.'
+    },
+    delivered: {
+      title: 'Delivered work',
+      body: 'Completed tasks and delivery links.',
+      tasks: deliveredTasks,
+      empty: 'No delivered work yet.'
+    },
+    hours: {
+      title: 'Hours saved',
+      body: deliveredTasks.length
+        ? `${getHoursSaved(deliveredTasks)}h saved from delivered work.`
+        : 'Hours saved starts tracking after your first delivered task.',
+      tasks: deliveredTasks,
+      empty: 'Hours saved starts tracking after your first delivered task.'
+    },
+    studio: {
+      title: 'Studio status',
+      body: 'Studio online. Ready to receive tasks.',
+      tasks: [],
+      empty: 'Studio online. Ready to receive tasks.'
+    }
+  };
+  const view = views[currentView] || views.active;
+  mode.classList.add('is-shown');
+  mode.innerHTML = `<h3>${escapeHTML(view.title)}</h3><p>${escapeHTML(view.body)}</p>`;
+  return view.tasks.length ? view.tasks : [{ isEmptyView: true, message: view.empty }];
+}
+
+function renderTaskHistory(tasks) {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    dashboardTasks = [];
+    resetTaskStats();
+    const visibleTasks = renderDashboardView([]);
+    if (visibleTasks[0]?.isEmptyView) {
+      document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
+    } else {
+      renderEmptyHistory();
+    }
+    renderEmptyActivity();
+    return;
+  }
+
+  dashboardTasks = getSortedTasks(tasks);
+  updateTaskStats(tasks);
+  renderTaskActivity(tasks);
+  const visibleTasks = renderDashboardView(dashboardTasks);
+  if (visibleTasks[0]?.isEmptyView) {
+    document.getElementById('historyList').innerHTML = `<div class="empty-state">${escapeHTML(visibleTasks[0].message)}</div>`;
+    return;
+  }
+  document.getElementById('historyList').innerHTML = `
+    <div class="task-list">
+      ${visibleTasks.map((task, index) => {
+        const taskKey = getTaskKey(task, index);
+        return `
+        <div class="task-row ${expandedTaskKey === taskKey ? 'is-expanded' : ''}" data-task-key="${escapeHTML(taskKey)}" tabindex="0" role="button" aria-expanded="${expandedTaskKey === taskKey ? 'true' : 'false'}">
+          <div class="t-info">
+            <h4>${escapeHTML(task.task_description || 'Untitled task')}</h4>
+            <div class="meta task-timestamp">${escapeHTML(formatTaskDate(task.created_at))}</div>
+            ${renderTaskDetails(task)}
+          </div>
+          <div class="t-scope">${escapeHTML(task.deadline || 'Flexible')}</div>
+          <div class="t-actions">
+            ${renderTaskActions(task)}
+          </div>
+          ${renderTaskExpanded(task)}
+        </div>
+      `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function mergeOptimisticTask(tasks, optimisticTask) {
+  if (!optimisticTask) return tasks;
+  const hasMatch = tasks.some(task =>
+    task.created_at === optimisticTask.created_at ||
+    (task.task_description === optimisticTask.task_description && task.deadline === optimisticTask.deadline)
+  );
+  return hasMatch ? tasks : [optimisticTask, ...tasks];
+}
+
+function parseTaskRequest(value) {
+  const sections = {
+    task_description: '',
+    context: '',
+    tone: '',
+    goal: '',
+    files_link: ''
+  };
+  let currentSection = 'task_description';
+
+  String(value || '').split(/\r?\n/).forEach((line) => {
+    const match = line.match(/^\s*(Context|Tone|Goal|Files)\s*:\s*(.*)$/i);
+    if (match) {
+      currentSection = match[1].toLowerCase() === 'files' ? 'files_link' : match[1].toLowerCase();
+      if (match[2].trim()) {
+        sections[currentSection] = [sections[currentSection], match[2].trim()].filter(Boolean).join('\n');
+      }
+      return;
+    }
+
+    if (line.trim()) {
+      sections[currentSection] = [sections[currentSection], line.trim()].filter(Boolean).join('\n');
+    }
+  });
+
+  Object.keys(sections).forEach((key) => {
+    sections[key] = sections[key].trim();
+  });
+
+  return sections;
+}
+
+function getFileExtension(fileName) {
+  return String(fileName || '').split('.').pop().toLowerCase();
+}
+
+function getSafeFileName(fileName) {
+  return String(fileName || 'upload')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'upload';
+}
+
+async function uploadTaskFile(file) {
+  if (!file) return '';
+  if (!supabaseClient?.storage) {
+    throw new Error('File upload is not available. Please paste a link instead.');
+  }
+  const extension = getFileExtension(file.name);
+  if (!TASK_FILE_EXTENSIONS.has(extension)) {
+    throw new Error('Please upload a PDF, DOC, DOCX, PNG, JPG, JPEG, or WEBP file.');
+  }
+  if (file.size > TASK_FILE_MAX_BYTES) {
+    throw new Error('File is too large. Please upload a file under 100MB.');
+  }
+
+  const safeFileName = getSafeFileName(file.name);
+  const filePath = `tasks/${Date.now()}-${safeFileName}`;
+  console.log('selected file name:', file.name);
+  console.log('upload path:', filePath);
+  const { error } = await supabaseClient.storage
+    .from(TASK_FILE_BUCKET)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      contentType: file.type || 'application/octet-stream',
+      upsert: false
+    });
+
+  if (error) {
+    console.error('Supabase upload error:', error);
+    throw new Error('File upload failed. Please try again or paste a link.');
+  }
+
+  const { data } = supabaseClient.storage
+    .from(TASK_FILE_BUCKET)
+    .getPublicUrl(filePath);
+
+  console.log('generated public URL:', data?.publicUrl || '');
+  if (!data?.publicUrl) throw new Error('Could not create file link. Please try again.');
+  return data.publicUrl;
+}
+
+function startPortalPolling() {
+  if (taskPollingInterval || !document.body.classList.contains('is-unlocked')) return;
+
+  taskPollingInterval = setInterval(async () => {
+    if (!document.hasFocus()) return;
+    try {
+      await loadTaskHistory({ silent: true });
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, 10000);
+}
+
+function stopPortalPolling() {
+  if (!taskPollingInterval) return;
+  clearInterval(taskPollingInterval);
+  taskPollingInterval = null;
+}
+
+async function loadTaskHistory(options = {}) {
+  if (taskHistoryLoading) {
+    if (options.optimisticTask) {
+      renderTaskHistory(mergeOptimisticTask(dashboardTasks, options.optimisticTask));
+    }
+    return;
+  }
+
+  taskHistoryLoading = true;
+  const email = getPortalEmail();
+  let accessKey = getPortalAccessKey();
+  const isGoogleSession = sessionStorage.getItem('portal_auth_method') === 'google';
+
+  if (!email) {
+    if (!dashboardTasks.length) {
+      renderHistorySyncing();
+    }
+    taskHistoryLoading = false;
+    return;
+  }
+
+  if (!accessKey) {
+    if (isGoogleSession) {
+      accessKey = await restoreGoogleAccessKey().catch(() => '');
+      if (!accessKey) {
+        renderHistorySyncing();
+        taskHistoryLoading = false;
+        return;
+      }
+    } else {
+      if (!dashboardTasks.length) {
+        renderHistorySyncing();
+      }
+      taskHistoryLoading = false;
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(TASKS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: accessKey
+      })
+    });
+    if (!response.ok) throw new Error('Task history request failed');
+    const data = await response.json().catch(() => ({}));
+    const tasks = data?.success === true && Array.isArray(data.tasks) ? data.tasks : [];
+    renderTaskHistory(mergeOptimisticTask(tasks, options.optimisticTask));
+  } catch (error) {
+    if (options.optimisticTask) {
+      renderTaskHistory(mergeOptimisticTask(dashboardTasks, options.optimisticTask));
+      return;
+    }
+    if (!dashboardTasks.length) {
+      renderHistorySyncing();
+    }
+  } finally {
+    taskHistoryLoading = false;
+  }
+}
+
+async function acceptQuote(button) {
+  const taskId = button.dataset.taskId;
+  const message = document.getElementById('dashboardTaskMessage');
+  const previousText = button.textContent;
+
+  button.disabled = true;
+  button.textContent = 'Processing...';
+  message.classList.remove('is-shown', 'is-success', 'is-error');
+
+  try {
+    const response = await fetch(ACCEPT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        task_id: taskId,
+        email: getPortalEmail(),
+        access_key: getPortalAccessKey()
+      })
+    });
+    if (!response.ok) throw new Error('Quote accept request failed');
+    showMessage(message, 'Quote accepted. Work is now in progress.', 'success');
+    loadTaskHistory();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    showMessage(message, 'Could not accept quote. Try again.', 'error');
+  }
+}
+
+document.querySelectorAll('.gate-tab, [data-panel-link]').forEach(control => {
+  control.addEventListener('click', () => showPanel(control.dataset.panel || control.dataset.panelLink));
+});
+
+document.querySelectorAll('.js-google-auth').forEach(button => {
+  button.addEventListener('click', () => {
+    const panelMessage = button.closest('.auth-panel')?.querySelector('.auth-message') || gateMessage;
+    showMessage(panelMessage, 'Google workspace access is being connected to the private workspace system. Use your issued access key for now.', 'error');
+  });
+});
+
+document.querySelectorAll('.js-auth-placeholder').forEach(button => {
+  button.addEventListener('click', () => {
+    const provider = button.dataset.provider;
+    const panelMessage = button.closest('.auth-panel')?.querySelector('.auth-message') || signupMessage;
+    showMessage(panelMessage, `${provider} sign-in is opening soon. Use email signup for early access.`);
+  });
+});
+
+document.querySelector('.js-email-signin').addEventListener('click', () => {
+  showMessage(signinMessage, 'Email sign-in is opening soon. Use the access key from your welcome email, or create an account with email for early access.');
+});
+
+async function initializePortalSession() {
+  const url = new URL(window.location.href);
+  const hasWorkspaceHandoff = url.searchParams.get('handoff') === 'intake' || Boolean(getWorkspaceHandoff());
+  const isOAuthReturn = url.searchParams.has('code') || url.searchParams.has('error') || window.location.hash.includes('access_token');
+  const hasGoogleUnlock = sessionStorage.getItem('doneovernight_portal_unlocked') === 'true' || sessionStorage.getItem('portal_auth_method') === 'google';
+  const shouldCheckGoogle = isOAuthReturn || hasGoogleUnlock;
+  if (shouldCheckGoogle || hasWorkspaceHandoff) {
+    beginAuthRestore();
+  }
+  if (hasWorkspaceHandoff) {
+    applyWorkspaceHandoff();
+  }
+  const session = shouldCheckGoogle
+    ? await restoreGoogleSession()
+    : (await supabaseClient.auth.getSession()).data?.session;
+  const hasSupabaseSession = Boolean(session?.user);
+
+  // Re-check stored portal access on restore.
+  if (getPortalEmail() && getPortalAccessKey()) {
+    beginAuthRestore();
+    verifyStoredPortalSession();
+    return;
+  }
+
+  if (shouldCheckGoogle && !hasSupabaseSession) {
+    lockPortal();
+    return;
+  }
+
+  if (isOAuthReturn || hasGoogleUnlock || hasSupabaseSession) {
+    const handledGoogle = await verifyGooglePortalAccess({
+      showChecking: true,
+      user: session?.user
+    });
+    if (handledGoogle) return;
+  }
+
+  finishAuthRestore();
   document.body.style.overflow = 'hidden';
-  setTimeout(() => gateInput.focus(), 100);
+  setTimeout(() => (hasWorkspaceHandoff ? document.getElementById('signupName') : gateEmail).focus(), 100);
 }
 
-gateForm.addEventListener('submit', (e) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user && !document.body.classList.contains('is-unlocked')) {
+    verifyGooglePortalAccess({
+      showChecking: true,
+      user: session.user
+    });
+  }
+});
+
+initializePortalSession();
+
+signupForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const val = gateInput.value.trim().toLowerCase();
-  if (val === PASSWORD) {
-    gateError.classList.remove('is-shown');
-    unlock();
-  } else {
-    gateInput.classList.add('is-wrong');
+  clearInvalid(signupForm);
+  signupError.classList.remove('is-shown');
+
+  const name = document.getElementById('signupName');
+  const email = document.getElementById('signupEmail');
+  const consent = document.getElementById('signupConsent');
+  const consentWrap = document.getElementById('signupConsentWrap');
+  const submit = signupForm.querySelector('.gate-submit');
+  let hasError = false;
+
+  if (!name.value.trim()) { markInvalid(name); hasError = true; }
+  if (!isValidEmail(email.value.trim())) { markInvalid(email); hasError = true; }
+  if (!consent.checked) { consentWrap.classList.add('is-invalid'); hasError = true; }
+
+  if (hasError) {
+    signupError.classList.add('is-shown');
+    signupForm.classList.remove('shake');
+    void signupForm.offsetWidth;
+    signupForm.classList.add('shake');
+    (signupForm.querySelector('.is-invalid') || name).focus?.();
+    return;
+  }
+
+  const createdAt = new Date().toISOString();
+  document.getElementById('signupCreatedAt').value = createdAt;
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Sending request...</span>';
+
+  try {
+    const response = await fetch(SIGNUP_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: name.value.trim(),
+        email: email.value.trim(),
+        marketing_consent: consent.checked,
+        source: 'portal_signup',
+        signup_method: 'email',
+        created_at: createdAt
+      })
+    });
+    if (!response.ok) throw new Error('Signup request failed');
+    const data = await response.json().catch(() => ({}));
+    const accessKey = data?.access_key;
+    sessionStorage.setItem('portal_name', name.value.trim());
+    signupForm.style.display = 'none';
+    if (accessKey) {
+      showMessage(signupMessage, `<h4>Member request received.</h4><p>Your access key has been issued.</p><p><strong>Access key:</strong> ${escapeHTML(accessKey)}</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>`, 'success');
+    } else {
+      showMessage(signupMessage, '<h4>Member request received.</h4><p>We’ll send your access key by email.</p><div class="status-line"><span class="live-dot"></span>Studio is live · pending approval</div>', 'success');
+    }
+  } catch (error) {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    showMessage(signupMessage, 'Something went wrong. Please email <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a> directly.', 'error');
+  }
+});
+
+gateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearInvalid(gateForm);
+  gateError.classList.remove('is-shown');
+
+  const email = gateEmail.value.trim();
+  const key = gateInput.value.trim();
+  const submit = gateForm.querySelector('.gate-submit');
+  let hasError = false;
+
+  if (!isValidEmail(email)) { markInvalid(gateEmail); hasError = true; }
+  if (!key) { markInvalid(gateInput); hasError = true; }
+
+  if (hasError) {
     gateError.classList.add('is-shown');
-    setTimeout(() => gateInput.classList.remove('is-wrong'), 500);
-    gateInput.value = '';
-    gateInput.focus();
+    gateForm.classList.remove('shake');
+    void gateForm.offsetWidth;
+    gateForm.classList.add('shake');
+    (gateForm.querySelector('.is-invalid') || gateEmail).focus?.();
+    return;
+  }
+
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Checking...</span>';
+
+  try {
+    const response = await fetch(ACCESS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        email,
+        access_key: key
+      })
+    });
+    if (!response.ok) throw new Error('Access verification failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === true) {
+      gateMessage.classList.remove('is-shown');
+      sessionStorage.setItem('portal_email', email);
+      sessionStorage.setItem('portal_access_key', key);
+      sessionStorage.setItem('portal_auth_method', 'access_key');
+      sessionStorage.setItem('doneovernight_portal_email', email);
+      sessionStorage.setItem('doneovernight_portal_access_key', key);
+      sessionStorage.removeItem('doneovernight_portal_demo');
+      if (data.name?.trim()) {
+        sessionStorage.setItem('portal_name', data.name.trim());
+      }
+      unlock();
+      return;
+    }
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    const accessMessages = {
+      pending: 'Your access request is being reviewed. We’ll notify you once your workspace is ready.',
+      revoked: 'This access key is no longer active.',
+      invalid: 'Invalid access key. Check your email and try again.'
+    };
+    showMessage(gateMessage, accessMessages[data?.status] || accessMessages.invalid, 'error');
+  } catch (error) {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+    showMessage(gateMessage, 'Could not verify access key. Please try again.', 'error');
   }
 });
 
 // Logout
-document.getElementById('logoutBtn').addEventListener('click', () => {
-  sessionStorage.removeItem('doneovernight_portal');
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut().catch(() => {});
+  clearPortalSession();
   location.reload();
 });
 
 /* ============================================================
-   NEW TASK MODAL
+   DASHBOARD TASK SUBMIT
    ============================================================ */
-const taskModal = document.getElementById('taskModal');
-const newTaskBtn = document.getElementById('newTaskBtn');
-const modalClose = document.getElementById('modalClose');
-
-newTaskBtn.addEventListener('click', () => {
-  taskModal.classList.add('is-open');
-});
-modalClose.addEventListener('click', () => {
-  taskModal.classList.remove('is-open');
-});
-taskModal.addEventListener('click', (e) => {
-  if (e.target === taskModal) taskModal.classList.remove('is-open');
-});
-
-// Deadline pills
-document.querySelectorAll('.modal-deadline-pill').forEach(p => {
+document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('.modal-deadline-pill').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    document.getElementById('modalDeadlineValue').value = {rush:'Rush · 4h', overnight:'Overnight', '48h':'48 hours', flexible:'Flexible'}[p.dataset.val] || 'Overnight';
+    setDashboardDeadline(p.dataset.val);
   });
 });
 
-// Submit → sends to FormSubmit.
-document.getElementById('modalForm').addEventListener('submit', async (e) => {
+function setDashboardDeadline(value) {
+  document.querySelectorAll('#dashboardDeadlinePills .modal-deadline-pill').forEach(x => x.classList.remove('active'));
+  const pill = document.querySelector(`#dashboardDeadlinePills .modal-deadline-pill[data-val="${value}"]`);
+  (pill || document.querySelector('#dashboardDeadlinePills .modal-deadline-pill[data-val="flexible"]'))?.classList.add('active');
+  document.getElementById('customDeadlineWrap').classList.toggle('is-shown', value === 'other');
+  if (value === 'other') {
+    document.getElementById('customDeadlineInput').focus();
+  }
+}
+
+document.getElementById('dashboardFileUpload').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  document.getElementById('dashboardAttachmentText').textContent = files.length
+    ? files.map(file => file.name).join(', ')
+    : 'Attach PDF, DOC, or images';
+});
+
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const button = e.target.closest('.quote-accept-btn');
+  const deliveryLink = e.target.closest('a');
+  if (button) {
+    if (button.dataset.confirming !== 'true') {
+      // First click — show confirmation with quote summary
+      const amount = button.dataset.quoteAmount;
+      const eta    = button.dataset.quoteEta;
+      const label  = [amount, eta].filter(Boolean).join(' · ');
+      button.dataset.confirming = 'true';
+      button.textContent = label ? `Confirm — ${label} →` : 'Confirm →';
+      button.classList.remove('primary');
+      button.classList.add('is-confirming');
+      // Auto-reset after 6 seconds if not confirmed
+      setTimeout(() => {
+        if (button.dataset.confirming === 'true') {
+          button.dataset.confirming = '';
+          button.textContent = 'Accept Quote';
+          button.classList.add('primary');
+          button.classList.remove('is-confirming');
+        }
+      }, 6000);
+    } else {
+      // Second click — fire the accept
+      acceptQuote(button);
+    }
+    return;
+  }
+  if (deliveryLink) return;
+  const row = e.target.closest('.task-row');
+  if (!row) return;
+  expandedTaskKey = expandedTaskKey === row.dataset.taskKey ? '' : row.dataset.taskKey;
+  renderTaskHistory(dashboardTasks);
+});
+
+document.getElementById('historyList').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const row = e.target.closest('.task-row');
+  if (!row) return;
   e.preventDefault();
-  const form = e.currentTarget;
-  const desc = document.getElementById('modalDesc').value.trim();
-  const name = document.getElementById('modalName').value.trim();
-  const email = document.getElementById('modalEmail').value.trim();
-  const deadline = document.querySelector('.modal-deadline-pill.active').dataset.val;
-  const deadlineLabel = {rush:'Rush · 4h', overnight:'Overnight', '48h':'48 hours', flexible:'Flexible'}[deadline];
+  row.click();
+});
 
-  if (!desc || !name || !email) return;
+document.querySelectorAll('[data-dashboard-view]').forEach(card => {
+  card.addEventListener('click', () => {
+    currentView = card.dataset.dashboardView || 'all';
+    renderTaskHistory(dashboardTasks);
+  });
+});
 
-  document.getElementById('modalDeadlineValue').value = deadlineLabel;
-  const submitBtn = form.querySelector('.modal-submit');
-  submitBtn.disabled = true;
-  const formData = new FormData(form);
-  formData.set('_subject', `Portal submission · ${deadlineLabel} · ${name}`);
+document.querySelectorAll('[data-dashboard-reset]').forEach(card => {
+  card.addEventListener('click', () => {
+    currentView = 'all';
+    renderTaskHistory(dashboardTasks);
+  });
+});
 
-  try {
-    const res = await fetch(form.action, {
-      method: 'POST',
-      body: formData,
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error('FormSubmit request failed');
-  } catch (err) {
-    const fallback = form.cloneNode(true);
-    fallback.style.display = 'none';
-    document.body.appendChild(fallback);
-    fallback.submit();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPortalPolling();
     return;
   }
 
-  form.innerHTML = "<div style=\"text-align:center;padding:28px 10px;\"><div style=\"font-family:var(--serif);font-size:28px;margin-bottom:10px;\">Task received.</div><p style=\"color:var(--ink-dim);line-height:1.5;\">We'll review it and send a quote within 60 minutes.</p></div>";
+  if (document.body.classList.contains('is-unlocked')) {
+    loadTaskHistory({ silent: true });
+    startPortalPolling();
+  }
+});
+
+document.getElementById('recommendationsList').addEventListener('click', (e) => {
+  const item = e.target.closest('.recommendation-item');
+  if (!item) return;
+
+  const suggestion = taskRecommendations[Number(item.dataset.recommendationIndex)];
+  if (!suggestion) return;
+
+  const descField = document.getElementById('dashboardTaskDesc');
+  descField.value = suggestion.prompt;
+  setDashboardDeadline(suggestion.deadline || 'flexible');
+  descField.classList.remove('is-prefilled');
+  void descField.offsetWidth;
+  descField.classList.add('is-prefilled');
+  descField.focus();
+  descField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+document.getElementById('recommendationsList').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const item = e.target.closest('.recommendation-item');
+  if (!item) return;
+  e.preventDefault();
+  item.click();
+});
+
+renderRecommendations();
+
+document.getElementById('dashboardTaskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const descField = document.getElementById('dashboardTaskDesc');
+  const message = document.getElementById('dashboardTaskMessage');
+  const submit = form.querySelector('.modal-submit');
+  const linkInput = document.querySelector('#dashboardAttachmentLink') || document.querySelector('[name="files_link"]') || document.querySelector('[name="link"]') || document.querySelector('#link');
+  const fileInput = document.querySelector('#dashboardFileUpload');
+  const desc = descField.value.trim();
+  const requestParts = parseTaskRequest(desc);
+
+  form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  message.classList.remove('is-shown', 'is-success', 'is-error');
+  if (!desc || !requestParts.task_description) {
+    descField.closest('.field-group')?.classList.add('is-invalid');
+    form.classList.remove('shake');
+    void form.offsetWidth;
+    form.classList.add('shake');
+    descField.focus();
+    return;
+  }
+
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Sending...</span>';
+
+  try {
+    const selectedDeadline = document.querySelector('#dashboardDeadlinePills .modal-deadline-pill.active')?.dataset.val || 'flexible';
+    const customDeadline = document.getElementById('customDeadlineInput').value;
+    const deadline = selectedDeadline === 'other' && customDeadline ? customDeadline : selectedDeadline;
+    const taskDescription = requestParts.task_description;
+    const selectedFile = fileInput?.files?.[0] || null;
+    const filesLink = selectedFile
+      ? await uploadTaskFile(selectedFile)
+      : linkInput?.value?.trim() || requestParts.files_link || '';
+    console.log('final payload.files_link:', filesLink);
+    const createdAt = new Date().toISOString();
+    let accessKey = sessionStorage.getItem('portal_access_key');
+    if (!accessKey && sessionStorage.getItem('portal_auth_method') === 'google') {
+      accessKey = await restoreGoogleAccessKey();
+    }
+    if (!accessKey) {
+      throw new Error('Missing portal access key');
+    }
+    const payload = {
+      email: sessionStorage.getItem('portal_email'),
+      access_key: accessKey,
+      name: sessionStorage.getItem('portal_name') || '',
+      company: '',
+      task_summary: taskDescription,
+      task_description: taskDescription,
+      context: requestParts.context,
+      tone: requestParts.tone,
+      goal: requestParts.goal,
+      deadline,
+      source: 'portal_dashboard',
+      created_at: createdAt,
+      files_link: filesLink,
+      links: filesLink ? [filesLink] : [],
+      attachments: []
+    };
+    const response = await fetch(TASK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Task request failed');
+    const submittedTask = {
+      email: payload.email,
+      task_description: taskDescription,
+      deadline,
+      status: 'new',
+      created_at: createdAt
+    };
+    currentView = 'pending';
+    renderTaskHistory(mergeOptimisticTask(dashboardTasks, submittedTask));
+    showMessage(message, 'Task received. We’ll review it and send a quote within 60 minutes.', 'success');
+    form.reset();
+    document.getElementById('dashboardAttachmentText').textContent = 'Attach PDF, DOC, or images';
+    setDashboardDeadline('tonight');
+    await loadTaskHistory({ optimisticTask: submittedTask });
+  } catch (error) {
+    showMessage(message, error.message || 'Could not send task. Please try again.', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+  }
 });
 </script>
 
@@ -1304,5 +3294,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+<script src="/lang/runtime.js" defer></script>
 </body>
 </html>

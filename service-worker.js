@@ -2,12 +2,11 @@
  * DONEOVERNIGHT — Service Worker
  * Minimal offline support. Caches the shell, network-first for everything else.
  */
-const VERSION = 'v5.0.2';
+const VERSION = 'v5.0.1';
 const SHELL_CACHE = `overnight-shell-${VERSION}`;
 
 const SHELL_ASSETS = [
   '/',
-  '/index.html',
   '/trust.html',
   '/enterprise.html',
   '/portal.html',
@@ -66,6 +65,6 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match('/index.html')))
+      .catch(() => caches.match(req).then((cached) => cached || caches.match('/')))
   );
 });

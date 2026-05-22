@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>DONEOVERNIGHT — Submit before bed. Wake up to results.</title>
 <meta name="description" content="An overnight execution layer. Submit a task before bed, wake up to results. For founders, operators, business owners — anyone who values time over effort." />
+<link rel="canonical" href="https://doneovernight.com/">
 
 <!-- PWA support -->
 <link rel="manifest" href="manifest.webmanifest?v=20260428">
@@ -105,14 +106,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* Wordmark — uses mix-blend-difference so it reads on any bg */
 .nav .logo {
-  font-family: var(--sans);
-  font-weight: 500;
-  letter-spacing: 0.30em;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
   color: #fff;
   mix-blend-mode: difference;
-  text-transform: uppercase;
   transition: opacity 0.3s;
+}
+.nav .logo img {
+  display: block;
+  width: clamp(132px, 12vw, 160px);
+  height: auto;
+  object-fit: contain;
 }
 .nav .logo:hover { opacity: 0.7; }
 
@@ -120,7 +125,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-pill {
   position: fixed !important;
   top: 24px !important;
-  right: 150px !important;
+  right: 28px !important;
   left: auto !important;
   z-index: 9999 !important;
   opacity: 1 !important;
@@ -244,11 +249,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .nav-pill.is-open,
 .nav-pill:hover,
 .nav-pill:focus-within {
-  max-width: calc(100vw - 210px) !important;
+  max-width: calc(100vw - 56px) !important;
   overflow: visible !important;
   transform-origin: right center !important;
+  flex-direction: row-reverse;
   padding-left: 10px;
   padding-right: 4px;
+  background: rgba(10, 11, 15, 0.62);
+  border-color: rgba(233, 196, 138, 0.14);
+  box-shadow:
+    0 18px 48px -22px rgba(0, 0, 0, 0.72),
+    0 0 34px rgba(233, 196, 138, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 .nav-pill.is-open .nav-dot,
 .nav-pill:hover .nav-dot,
@@ -262,9 +274,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   display: flex;
   align-items: center;
   gap: clamp(8px, 1vw, 18px);
-  padding-left: 8px;
+  padding-left: 0;
+  padding-right: 8px;
   opacity: 0;
-  transform: translateX(-8px);
+  transform: translateX(8px);
   transition:
     opacity 0.45s cubic-bezier(0.22, 0.68, 0.26, 1) 0.12s,
     transform 0.55s cubic-bezier(0.22, 0.68, 0.26, 1) 0.12s;
@@ -387,7 +400,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .nav { padding: 16px 18px; }
   .nav-pill {
     top: 16px !important;
-    right: 118px !important;
+    right: 18px !important;
   }
   .nav-pill.is-open,
   .nav-pill:hover,
@@ -728,7 +741,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   line-height: 1.55;
   color: rgba(245, 241, 234, 0.6);
   opacity: 0;
-  animation: fadeInTitle 1.8s ease-out 2.2s forwards;
+  animation: fadeInTitle 1s ease-out 1.25s forwards;
   font-weight: 400;
   letter-spacing: -0.005em;
 }
@@ -836,6 +849,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh;
   width: 100%;
   overflow: hidden;
 }
@@ -887,8 +901,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   opacity: 0;
   transform: translateY(110%);
   transition:
-    transform 1.1s cubic-bezier(0.22, 0.68, 0.26, 1),
-    opacity 0.9s cubic-bezier(0.22, 0.68, 0.26, 1);
+    transform 0.76s cubic-bezier(0.22, 0.68, 0.26, 1),
+    opacity 0.62s cubic-bezier(0.22, 0.68, 0.26, 1);
   will-change: transform, opacity;
 }
 /* Wrap each in its own overflow clip so translateY(110%) masks it like text rising */
@@ -904,8 +918,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 /* Staggered reveal when active */
 .copy-slide.is-active .eyebrow { opacity: 0.9; transform: translateY(0); transition-delay: 0.05s; }
-.copy-slide.is-active .display { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
-.copy-slide.is-active .sub     { opacity: 1; transform: translateY(0); transition-delay: 0.38s; }
+.copy-slide.is-active .display { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
+.copy-slide.is-active .sub     { opacity: 1; transform: translateY(0); transition-delay: 0.22s; }
 
 /* Display lines — split each line so they stagger */
 .copy-slide .display .ln {
@@ -916,12 +930,12 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .copy-slide .display .ln > span {
   display: block;
   transform: translateY(110%);
-  transition: transform 1.1s cubic-bezier(0.22, 0.68, 0.26, 1);
+  transition: transform 0.76s cubic-bezier(0.22, 0.68, 0.26, 1);
   will-change: transform;
 }
 .copy-slide.is-active .display .ln > span { transform: translateY(0); }
-.copy-slide.is-active .display .ln:nth-child(1) > span { transition-delay: 0.18s; }
-.copy-slide.is-active .display .ln:nth-child(2) > span { transition-delay: 0.28s; }
+.copy-slide.is-active .display .ln:nth-child(1) > span { transition-delay: 0.12s; }
+.copy-slide.is-active .display .ln:nth-child(2) > span { transition-delay: 0.18s; }
 
 /* When we're in bright day phase, copy gets darker */
 .copy-slide.theme-dark { color: #1a1a1a; }
@@ -1867,6 +1881,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 14vh 6vw;
+  min-height: 100svh;
   position: relative;
   overflow: hidden;
   z-index: 20;
@@ -1918,6 +1933,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 @media (max-width: 720px) {
   .proof-head .right { text-align: left; }
+  .proof-section { padding-top: 96px; padding-bottom: 96px; }
 }
 
 .proof-grid {
@@ -2261,6 +2277,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
     #050608;
   position: relative;
   overflow: hidden;
+  scroll-margin-top: 96px;
 }
 .intake-section::before {
   content: "";
@@ -2285,6 +2302,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   z-index: 1;
 }
 @media (max-width: 900px) { .intake-grid { grid-template-columns: 1fr; gap: 48px; } }
+@media (max-width: 700px) { .intake-section { scroll-margin-top: 76px; } }
 
 .intake-left { display: flex; flex-direction: column; justify-content: center; gap: 24px; }
 .intake-left .eyebrow { color: var(--amber); }
@@ -2420,6 +2438,37 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   background: rgba(245, 241, 234, 0.05);
   box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
 }
+.field-group.field-error input,
+.field-group.field-error textarea {
+  border-color: rgba(233, 196, 138, 0.72);
+  background: rgba(233, 196, 138, 0.06);
+  box-shadow:
+    0 0 0 3px rgba(233, 196, 138, 0.09),
+    0 0 24px rgba(233, 196, 138, 0.12);
+}
+.form-error {
+  display: none;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(233, 196, 138, 0.26);
+  border-radius: 6px;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.form-error.is-visible { display: block; }
+.intake-form.is-shaking {
+  animation: intakeShake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes intakeShake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-5px); }
+  36% { transform: translateX(5px); }
+  54% { transform: translateX(-3px); }
+  72% { transform: translateX(3px); }
+}
 .form-microcopy,
 .form-reassurance {
   margin-top: 8px;
@@ -2490,32 +2539,77 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   gap: 12px;
   width: 100%;
   padding: 18px 20px;
-  background: var(--ink);
-  color: #050608;
+  background: rgba(233, 196, 138, 0.08);
+  color: #f4d28a;
+  border: 1px solid rgba(233, 196, 138, 0.45);
   border-radius: 100px;
   font-family: var(--sans);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    background 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.25s ease;
   position: relative;
   overflow: hidden;
   margin-top: 8px;
-  border: none;
+  box-shadow:
+    0 0 22px rgba(233, 196, 138, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
+
 .submit-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform: translateX(-100%);
-  transition: transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: none;
+  content: none;
 }
-.submit-btn:hover::before { transform: translateX(0); }
-.submit-btn > * { position: relative; z-index: 1; }
-.submit-btn span { transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); font-size: 16px; }
-.submit-btn:hover span { transform: translateX(6px); }
+
+.submit-btn > *,
+.submit-btn span {
+  position: relative;
+  z-index: 2;
+  color: inherit;
+}
+
+.submit-btn span {
+  transition: transform 0.35s ease;
+  font-size: 16px;
+}
+
+.submit-btn:hover,
+.submit-btn:focus-visible {
+  background: rgba(233, 196, 138, 0.14);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.8);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.38),
+    0 0 90px rgba(233, 196, 138, 0.14),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.submit-btn:hover span,
+.submit-btn:focus-visible span {
+  transform: translateX(6px);
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+}
+
+.submit-btn.is-sending {
+  pointer-events: none;
+  color: rgba(255, 227, 173, 0.75);
+  background: rgba(233, 196, 138, 0.10);
+  border-color: rgba(233, 196, 138, 0.55);
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.25),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
 
 .intake-alt {
   display: flex;
@@ -2570,6 +2664,57 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   max-width: 36ch;
   margin: 0 auto;
   line-height: 1.5;
+}
+.intake-confirmation {
+  padding: 32px 28px;
+  background:
+    linear-gradient(135deg, rgba(58, 165, 90, 0.08), transparent 70%),
+    rgba(5, 6, 8, 0.58);
+  border: 1px solid rgba(245, 241, 234, 0.10);
+  border-radius: 8px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.intake-confirmation h4 {
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+.intake-confirmation p {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.65;
+  max-width: 42ch;
+  margin: 0;
+}
+.intake-confirmation .status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.64);
+}
+.intake-confirmation .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3aa55a;
+  box-shadow: 0 0 10px rgba(58, 165, 90, 0.78);
+  animation: confirmPulse 1.7s ease-in-out infinite;
+}
+@keyframes confirmPulse {
+  0%, 100% { opacity: 0.72; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 
@@ -2924,6 +3069,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* Responsive */
 @media (max-width: 900px) {
   .stage { height: 800vh; }
+  .opening { min-height: 100svh; }
   .device-3d { max-width: 100%; }
   .moon { width: 120px; height: 120px; }
   .moon-halo { width: 220px; height: 220px; }
@@ -2933,6 +3079,18 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .stage-progress .bar { width: 60px; }
   .nav .nav-links { display: none; }
   .opening .opening-scroll-hint { bottom: 24px; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening .opening-subline,
+  .copy-slide .eyebrow,
+  .copy-slide .display,
+  .copy-slide .sub,
+  .copy-slide .display .ln > span {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
 }
 </style>
 </head>
@@ -2973,9 +3131,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 <!-- NAV — hidden dot, expands on intent -->
 <nav class="nav" aria-label="Primary">
-  <a class="logo" href="#top">DONEOVERNIGHT</a>
-  <div class="nav-pill" id="navPill" onclick="if (event.target === this || event.target.closest('.nav-dot')) { event.stopImmediatePropagation(); this.classList.add('is-open'); const d=this.querySelector('.nav-dot'); d && (d.setAttribute('aria-expanded','true'), d.setAttribute('aria-label','Close menu')); }">
-    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks" onclick="event.stopImmediatePropagation(); const p=this.closest('.nav-pill'); p.classList.add('is-open'); this.setAttribute('aria-expanded','true'); this.setAttribute('aria-label','Close menu');"></button>
+  <a class="logo" href="#top"><img src="assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT"></a>
+  <div class="nav-pill" id="navPill">
+    <button class="nav-dot" id="navDot" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks"></button>
     <div class="nav-links-wrap" id="navLinks">
       <a href="#top" class="is-current">Home</a>
       <a href="#proof">Proof</a>
@@ -3523,12 +3681,11 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
     </div>
 
-	    <form class="intake-form" id="intakeForm" action="https://formsubmit.co/ask@doneovernight.com" method="POST">
+	    <form class="intake-form" id="intakeForm" action="/api/task-submit" method="POST" novalidate>
 	      <input type="hidden" name="_subject" value="New DONEOVERNIGHT task submission">
 	      <input type="hidden" name="_template" value="table">
 	      <input type="hidden" name="_captcha" value="false">
 	      <input type="hidden" name="_autoresponse" value="Task received. We'll review it and send a quote within 60 minutes. You can reply with attachments after we send your quote.">
-	      <input type="hidden" name="_next" value="https://doneovernight.com/thanks.html">
 	      <input type="hidden" name="deadline" id="fDeadlineValue" value="Overnight">
 	      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
 	      <div class="intake-form-head">
@@ -3537,9 +3694,10 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
       </div>
 
       <div class="intake-form-body">
+        <div class="form-error" id="intakeError" role="alert" aria-live="polite"></div>
 
         <!-- Describe -->
-        <div class="field-group">
+        <div class="field-group" data-field="task">
           <div class="label">
 	            <span>Describe your task</span>
 	            <span class="hint">Required</span>
@@ -3552,7 +3710,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
 	        <!-- File link -->
-	        <div class="field-group">
+	        <div class="field-group" data-field="file_link">
 	          <div class="label">
 	            <span>Files / references</span>
 	            <span class="hint">Optional</span>
@@ -3562,7 +3720,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 	        </div>
 
         <!-- Deadline -->
-        <div class="field-group">
+        <div class="field-group" data-field="deadline">
           <div class="label">
             <span>Deadline</span>
             <span class="hint">When do you need it?</span>
@@ -3576,7 +3734,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
         </div>
 
         <!-- Contact -->
-        <div class="field-group">
+        <div class="field-group" data-field="contact">
           <div class="label">
             <span>Contact</span>
             <span class="hint">So we can send your quote</span>
@@ -3600,9 +3758,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
       <!-- Sent state -->
       <div class="sent-state">
-        <div class="check">✓</div>
 	        <h4>Task received.</h4>
-	        <p>We'll review it and send a quote within 60 minutes.</p>
+	        <p>We’ll review it and send a quote within 60 minutes.</p>
+          <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
       </div>
     </form>
 
@@ -3948,6 +4106,8 @@ ScrollTrigger.create({
   start: 'top top',
   end: 'bottom bottom',
   scrub: 0.5,
+  anticipatePin: 1,
+  invalidateOnRefresh: true,
   onUpdate: (self) => {
     const p = self.progress;
     const vw = window.innerWidth;
@@ -4123,6 +4283,11 @@ ScrollTrigger.create({
   }
 });
 
+window.addEventListener('load', () => ScrollTrigger.refresh());
+if (document.fonts?.ready) {
+  document.fonts.ready.then(() => ScrollTrigger.refresh());
+}
+
 /* ============================================================
    Section reveals
    ============================================================ */
@@ -4136,6 +4301,22 @@ gsap.utils.toArray('.section').forEach(section => {
 /* ============================================================
    Smooth anchor scroll
    ============================================================ */
+const prefersReducedAnchorMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function getAnchorOffset() {
+  return window.matchMedia('(max-width: 700px)').matches ? 76 : 96;
+}
+
+function scrollToCtaAnchor(behavior = 'smooth') {
+  const target = document.getElementById('cta');
+  if (!target) return;
+  const top = target.getBoundingClientRect().top + window.pageYOffset - getAnchorOffset();
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior: prefersReducedAnchorMotion ? 'auto' : behavior
+  });
+}
+
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     const id = a.getAttribute('href');
@@ -4143,9 +4324,34 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     const target = document.querySelector(id);
     if (!target) return;
     e.preventDefault();
+    if (id === '#cta') {
+      history.pushState(null, '', '#cta');
+      scrollToCtaAnchor();
+      return;
+    }
     gsap.to(window, { duration: 1.2, scrollTo: { y: target, offsetY: 0 }, ease: 'power3.inOut' });
   });
 });
+
+document.querySelectorAll('a[href="/#cta"]').forEach(a => {
+  a.addEventListener('click', e => {
+    if (window.location.pathname !== '/' && !window.location.pathname.endsWith('/index.html')) return;
+    e.preventDefault();
+    history.pushState(null, '', '#cta');
+    scrollToCtaAnchor();
+  });
+});
+
+if (window.location.hash === '#cta') {
+  window.addEventListener('load', () => {
+    const behavior = prefersReducedAnchorMotion ? 'auto' : 'smooth';
+    requestAnimationFrame(() => {
+      scrollToCtaAnchor('auto');
+      window.setTimeout(() => scrollToCtaAnchor(behavior), 180);
+      window.setTimeout(() => scrollToCtaAnchor('auto'), 650);
+    });
+  });
+}
 
 /* ============================================================
    INTAKE FORM BEHAVIOR
@@ -4154,10 +4360,13 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
   const form = document.getElementById('intakeForm');
   if (!form) return;
 
-  // Deadline pills
   const pills = document.querySelectorAll('#fDeadline .deadline-pill');
   const deadlineInput = document.getElementById('fDeadlineValue');
+  const errorEl = document.getElementById('intakeError');
+  const submitBtn = form.querySelector('.submit-btn');
+  const submitIdleHtml = submitBtn ? submitBtn.innerHTML : '';
   let deadlineVal = 'overnight';
+
   pills.forEach(p => {
     p.addEventListener('click', () => {
       pills.forEach(x => x.classList.remove('active'));
@@ -4172,24 +4381,116 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     });
   });
 
-  form.addEventListener('submit', (e) => {
-    if (!form.checkValidity()) {
-      e.preventDefault();
-      form.reportValidity();
-      gsap.fromTo(form,
-        { x: -6 },
-        { x: 6, duration: 0.08, yoyo: true, repeat: 5, ease: 'power1.inOut',
-          onComplete: () => gsap.set(form, { x: 0 }) }
-      );
-      return;
-    }
-
+  function syncDeadline() {
     deadlineInput.value = {
       'rush': 'Rush · 4 hours',
       'overnight': 'Overnight',
       '48h': '48 hours',
       'flexible': 'Flexible'
     }[deadlineVal] || 'Overnight';
+  }
+
+  function clearErrors() {
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.remove('is-visible');
+    }
+    form.querySelectorAll('.field-error').forEach((field) => field.classList.remove('field-error'));
+  }
+
+  function showError(message, fields = []) {
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.classList.add('is-visible');
+    }
+    fields.forEach((field) => {
+      const group = field.closest('.field-group');
+      if (group) group.classList.add('field-error');
+    });
+    form.classList.remove('is-shaking');
+    void form.offsetWidth;
+    form.classList.add('is-shaking');
+  }
+
+  function setSending(isSending) {
+    if (!submitBtn) return;
+    submitBtn.disabled = isSending;
+    submitBtn.classList.toggle('is-sending', isSending);
+    submitBtn.innerHTML = isSending ? 'Sending…' : submitIdleHtml;
+  }
+
+  function renderConfirmation() {
+    form.innerHTML = `
+      <div class="intake-confirmation">
+        <h4>Task received.</h4>
+        <p>We’ll review it and send a quote within 60 minutes.</p>
+        <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
+      </div>
+    `;
+  }
+
+  function getTaskPayload() {
+    return {
+      taskSummary: form.querySelector('[name="task"]')?.value.trim() || '',
+      deadline: deadlineInput?.value.trim() || 'Overnight',
+      name: form.querySelector('[name="name"]')?.value.trim() || '',
+      email: form.querySelector('[name="email"]')?.value.trim() || '',
+      company: '',
+      links: form.querySelector('[name="file_link"]')?.value.trim() || '',
+      attachments: [],
+      source: 'homepage_cta',
+      intakeVersion: 'homepage_cta_v1'
+    };
+  }
+
+  function getSubmitErrorMessage(code) {
+    if (code === 'TASK_PERSISTENCE_TIMEOUT' || code === 'TASK_PERSISTENCE_NETWORK_ERROR') {
+      return 'Operations could not confirm receipt yet. Please try again in a moment.';
+    }
+    return 'Something went wrong. Please email ask@doneovernight.com directly.';
+  }
+
+  function validateRequired() {
+    const task = form.querySelector('[name="task"]');
+    const name = form.querySelector('[name="name"]');
+    const email = form.querySelector('[name="email"]');
+    const invalid = [];
+    if (!task.value.trim()) invalid.push(task);
+    if (!name.value.trim()) invalid.push(name);
+    if (!email.value.trim() || !email.validity.valid) invalid.push(email);
+    return invalid;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+    syncDeadline();
+
+    const invalid = validateRequired();
+    if (invalid.length) {
+      showError('Complete the required fields to start your overnight cycle.', invalid);
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: JSON.stringify(getTaskPayload()),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.code || 'Task intake request failed');
+      renderConfirmation();
+      form.querySelector('.intake-confirmation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {
+      setSending(false);
+      showError(getSubmitErrorMessage(err.message));
+    }
   });
 })();
 
@@ -4347,12 +4648,11 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
     if (!pill.contains(e.target)) close();
   });
 
-  // Close on any link click within the pill (smooth nav)
+  // Close immediately for every menu action without fighting the dot toggle.
   pill.addEventListener('click', (e) => {
-    if (e.target.closest('a')) {
-      setTimeout(close, 220);
-    }
-  });
+    if (e.target.closest('#navDot')) return;
+    if (e.target.closest('a, button')) close();
+  }, true);
 
   // Close on Escape
   document.addEventListener('keydown', (e) => {
@@ -4384,5 +4684,6 @@ gsap.utils.toArray('.intake-step').forEach((step, i) => {
 ScrollTrigger.refresh();
 </script>
 
+<script src="/lang/runtime.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,4486 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workspace | DONEOVERNIGHT</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050608;
+      --ink: rgba(255,255,255,.92);
+      --ink-dim: rgba(255,255,255,.62);
+      --ink-faint: rgba(255,255,255,.38);
+      --line: rgba(255,255,255,.105);
+      --amber: #e9c48a;
+      --green: #8be0ad;
+      --red: #e57070;
+      --sans: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); color-scheme: dark; scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, 0.08), transparent 64%),
+        radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, 0.06), transparent 68%),
+        #050608;
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    body::before {
+      opacity: .42;
+      background-image:
+        radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+        radial-gradient(.9px .9px at 36% 12%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+        radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+        radial-gradient(.9px .9px at 68% 82%, #fff, transparent);
+    }
+
+    body::after {
+      opacity: .24;
+      background: linear-gradient(90deg, transparent, rgba(233,196,138,.055), transparent);
+      background-size: 220% 100%;
+      background-position: -80% 0;
+      mix-blend-mode: soft-light;
+      animation: signalDrift 34s ease-in-out infinite;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font: inherit; }
+
+    .workspace-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 36px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 78px 0 52px;
+    }
+
+    .workspace-topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      z-index: 40;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(5,6,8,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .workspace-topbar-inner {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 0 18px;
+    }
+
+    .workspace-topbar-left {
+      display: inline-flex;
+      align-items: center;
+      line-height: 0;
+    }
+
+    .wordmark {
+      display: inline-flex;
+      align-items: center;
+      line-height: 0;
+    }
+
+    .wordmark img {
+      display: block;
+      width: clamp(142px, 15vw, 164px);
+      height: auto;
+    }
+
+    .workspace-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(139,224,173,.86);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .workspace-status .live-dot,
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.44);
+    }
+
+    .workspace-status.is-syncing .live-dot,
+    .workspace-status.is-live .live-dot {
+      animation: livePulse 2.6s ease-in-out infinite;
+    }
+
+    .workspace-topbar-actions,
+    .workspace-topbar-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.018);
+      padding: 5px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .workspace-logout {
+      min-height: 30px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,255,255,.48);
+      padding: 0 12px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: border-color .2s, color .2s, background .2s, transform .2s;
+    }
+
+    .workspace-logout:hover,
+    .workspace-logout:focus-visible {
+      border-color: rgba(233,196,138,.38);
+      background: rgba(233,196,138,.055);
+      color: var(--amber);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .workspace-shell.is-private .workspace-logout { display: none; }
+    .workspace-shell.is-private #newRequestBtn { display: none; }
+    .workspace-shell.is-private .workspace-signal-grid,
+    .workspace-shell.is-private .runtime-engine,
+    .workspace-shell.is-private .workspace-metrics,
+    .workspace-shell.is-private .workspace-metric-drawer,
+    .workspace-shell.is-private .quote-center,
+    .workspace-shell.is-private #taskFeedSection,
+    .workspace-shell.is-private #recommendationSection,
+    .workspace-shell.is-private #workspaceActivitySection,
+    .workspace-shell.is-private .request-panel,
+    .workspace-shell.is-private #completedHistorySection {
+      display: none;
+    }
+
+    .workspace-shell.is-private .workspace-hero {
+      align-items: center;
+      min-height: calc(100vh - 150px);
+      padding-top: clamp(54px, 9vh, 96px);
+      padding-bottom: clamp(44px, 8vh, 88px);
+    }
+
+    .workspace-shell.is-private .hero-panel {
+      justify-content: center;
+    }
+
+    .workspace-shell.is-private .eyebrow {
+      color: rgba(233,196,138,.78);
+    }
+
+    .workspace-shell.is-private #workspaceTitle {
+      max-width: 11ch;
+    }
+
+    .workspace-shell.is-private #workspaceHeroCopy {
+      max-width: 52ch;
+      color: rgba(245,241,234,.56);
+    }
+
+    .workspace-shell.is-private .workspace-card {
+      display: grid;
+      align-content: center;
+      min-height: 360px;
+      border-color: rgba(233,196,138,.16);
+      background:
+        linear-gradient(145deg, rgba(245,241,234,.04), rgba(245,241,234,.012)),
+        rgba(5,6,8,.58);
+      box-shadow:
+        0 36px 90px -34px rgba(0,0,0,.82),
+        0 0 70px rgba(233,196,138,.045),
+        inset 0 1px 0 rgba(255,255,255,.055);
+    }
+
+    .workspace-shell.is-private .workspace-card::before {
+      background:
+        radial-gradient(circle at 82% 14%, rgba(233,196,138,.18), transparent 34%),
+        radial-gradient(circle at 14% 92%, rgba(139,224,173,.055), transparent 38%),
+        linear-gradient(180deg, rgba(255,255,255,.045), transparent 44%);
+      opacity: .82;
+    }
+
+    .workspace-shell.is-private .workspace-card::after {
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(255,255,255,.045);
+      border-radius: 6px;
+      pointer-events: none;
+      content: "";
+    }
+
+    .workspace-shell.is-private .workspace-client {
+      color: rgba(233,196,138,.62);
+    }
+
+    .workspace-shell.is-private .workspace-client strong {
+      margin-top: 12px;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .workspace-shell.is-private .workspace-card .hero-copy {
+      max-width: 32ch;
+      margin-top: 16px;
+      color: rgba(245,241,234,.52);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .workspace-shell.is-private .workspace-actions {
+      margin-top: 28px;
+    }
+
+    .workspace-shell.is-private #portalAccessLink {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 54px;
+      padding: 1px 24px 0;
+      border-color: rgba(233,196,138,.5);
+      background: linear-gradient(135deg, rgba(233,196,138,.15), rgba(233,196,138,.045));
+      color: #f4d28a;
+      box-shadow: 0 0 30px rgba(233,196,138,.14), inset 0 1px 0 rgba(255,255,255,.08);
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .workspace-shell.is-private #portalAccessLink:hover,
+    .workspace-shell.is-private #portalAccessLink:focus-visible {
+      border-color: rgba(233,196,138,.76);
+      background: rgba(233,196,138,.12);
+      color: #ffe3ad;
+      box-shadow: 0 0 38px rgba(233,196,138,.24), 0 0 76px rgba(233,196,138,.09);
+    }
+
+    .workspace-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(300px, .55fr);
+      gap: clamp(22px, 5vw, 68px);
+      align-items: stretch;
+      padding: clamp(38px, 7vh, 78px) 0 clamp(28px, 5vw, 44px);
+    }
+
+    .hero-panel {
+      display: flex;
+      min-height: 100%;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 13ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(42px, 7vw, 82px);
+      font-weight: 400;
+      line-height: .98;
+      letter-spacing: -.035em;
+    }
+
+    .hero-copy {
+      max-width: 48ch;
+      margin: 20px 0 0;
+      color: var(--ink-dim);
+      font-size: clamp(15px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+
+    .workspace-signal-grid {
+      display: grid;
+      max-width: 700px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .workspace-signal {
+      min-height: 78px;
+      border-top: 1px solid rgba(233,196,138,.18);
+      padding-top: 13px;
+    }
+
+    .workspace-signal span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .workspace-signal strong {
+      display: block;
+      margin-top: 8px;
+      color: rgba(255,255,255,.86);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .workspace-card,
+    .workspace-metric,
+    .activity-panel,
+    .request-panel,
+    .task-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(18px);
+    }
+
+    .workspace-card {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(22px, 3vw, 28px);
+    }
+
+    .workspace-card::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 85% 12%, rgba(233,196,138,.12), transparent 32%),
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent 42%);
+      opacity: .8;
+      content: "";
+    }
+
+    .workspace-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .workspace-client {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .workspace-client strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 18px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .workspace-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .workspace-button {
+      min-height: 50px;
+      border: 1px solid rgba(233,196,138,.45);
+      border-radius: 999px;
+      background: rgba(233,196,138,.065);
+      color: #f4d28a;
+      padding: 0 18px;
+      box-shadow: 0 0 24px rgba(233,196,138,.13), inset 0 1px 0 rgba(255,255,255,.08);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .22s, border-color .22s, color .22s, box-shadow .22s, transform .22s;
+    }
+
+    .workspace-button:hover,
+    .workspace-button:focus-visible {
+      border-color: rgba(233,196,138,.75);
+      background: rgba(233,196,138,.12);
+      color: #ffe3ad;
+      box-shadow: 0 0 34px rgba(233,196,138,.25), 0 0 72px rgba(233,196,138,.1);
+      outline: none;
+    }
+
+    .workspace-button:active { transform: scale(.985); }
+    .workspace-button:disabled { cursor: wait; opacity: .68; }
+
+    .workspace-button.secondary {
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.025);
+      color: var(--ink-dim);
+      box-shadow: none;
+    }
+
+    .workspace-button.primary-command {
+      border-color: rgba(233,196,138,.58);
+      background: linear-gradient(135deg, rgba(233,196,138,.16), rgba(233,196,138,.055));
+      box-shadow: 0 0 34px rgba(233,196,138,.2), inset 0 1px 0 rgba(255,255,255,.1);
+    }
+
+    .access-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(18px);
+    }
+
+    .access-modal-backdrop.is-visible { display: grid; }
+
+    .access-modal {
+      width: min(520px, 100%);
+      border: 1px solid rgba(233,196,138,.22);
+      border-radius: 10px;
+      background: rgba(8,9,11,.94);
+      box-shadow: 0 30px 90px rgba(0,0,0,.58), 0 0 70px rgba(233,196,138,.08), inset 0 1px 0 rgba(255,255,255,.06);
+      padding: clamp(22px, 4vw, 32px);
+    }
+
+    .access-modal h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(30px, 5vw, 44px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .access-modal p {
+      margin: 10px 0 18px;
+      color: var(--ink-dim);
+      line-height: 1.65;
+    }
+
+    .credential-grid {
+      display: grid;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .credential-item {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,.025);
+      padding: 12px 14px;
+    }
+
+    .credential-item span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .credential-item strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+      word-break: break-word;
+    }
+
+    .access-modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .workspace-metrics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .workspace-metric {
+      position: relative;
+      overflow: hidden;
+      min-height: 106px;
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color .24s, background .24s, box-shadow .24s, transform .24s;
+    }
+
+    .workspace-metric::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(233,196,138,.07), transparent 48%);
+      opacity: .65;
+      content: "";
+    }
+
+    .workspace-metric:hover,
+    .workspace-metric:focus-visible,
+    .workspace-metric.is-active {
+      border-color: rgba(233,196,138,.28);
+      background: rgba(233,196,138,.04);
+      box-shadow: 0 0 34px rgba(233,196,138,.12), inset 0 1px 0 rgba(255,255,255,.06);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .workspace-metric span,
+    .workspace-metric strong,
+    .workspace-metric small {
+      position: relative;
+      z-index: 1;
+      display: block;
+    }
+
+    .workspace-metric span {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .workspace-metric strong {
+      margin-top: 10px;
+      color: var(--amber);
+      font-family: var(--serif);
+      font-size: 34px;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .workspace-metric small {
+      margin-top: 10px;
+      color: rgba(255,255,255,.42);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .activity-panel,
+    .request-panel {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(18px, 2.6vw, 24px);
+      margin: 30px 0;
+      scroll-margin-top: 24px;
+    }
+
+    .quote-center,
+    #taskFeedSection,
+    #completedHistorySection,
+    #workspaceActivitySection,
+    .workspace-metric-drawer {
+      scroll-margin-top: 96px;
+    }
+
+    .activity-panel::before,
+    .request-panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 9% 0%, rgba(139,224,173,.045), transparent 28%),
+        linear-gradient(90deg, rgba(255,255,255,.025), transparent 42%);
+      content: "";
+    }
+
+    .activity-panel {
+      background: rgba(245,241,234,.018);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .activity-panel > *,
+    .request-panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .activity-feed {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .activity-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 11px;
+      align-items: start;
+      color: var(--ink-dim);
+      font-size: 12px;
+      line-height: 1.55;
+      animation: softRise .24s ease both;
+    }
+
+    .activity-item::before {
+      width: 7px;
+      height: 7px;
+      margin-top: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(139,224,173,.34);
+      content: "";
+    }
+
+    .activity-item strong {
+      display: block;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .activity-item span {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .runtime-engine {
+      position: relative;
+      display: grid;
+      gap: 18px;
+      margin: 0 0 30px;
+    }
+
+    .runtime-chamber {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(233,196,138,.14);
+      border-radius: 10px;
+      background:
+        radial-gradient(ellipse 760px 360px at 10% 0%, rgba(233,196,138,.09), transparent 66%),
+        radial-gradient(ellipse 520px 340px at 88% 10%, rgba(139,224,173,.055), transparent 70%),
+        rgba(245,241,234,.02);
+      box-shadow: 0 38px 95px -36px rgba(0,0,0,.78), 0 0 78px rgba(233,196,138,.04), inset 0 1px 0 rgba(255,255,255,.055);
+      backdrop-filter: blur(20px);
+    }
+
+    .runtime-chamber::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(115deg, rgba(255,255,255,.035), transparent 44%, rgba(233,196,138,.04)),
+        linear-gradient(90deg, transparent, rgba(139,224,173,.035), transparent);
+      opacity: .8;
+      content: "";
+    }
+
+    .runtime-chamber > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .runtime-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, .42fr);
+      gap: clamp(22px, 5vw, 54px);
+      align-items: end;
+      padding: clamp(24px, 5vw, 42px);
+    }
+
+    .runtime-header h2 {
+      max-width: 12ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(40px, 7vw, 76px);
+      font-weight: 400;
+      line-height: .95;
+      letter-spacing: -.04em;
+    }
+
+    .runtime-header p {
+      max-width: 56ch;
+      margin: 18px 0 0;
+      color: var(--ink-dim);
+      font-size: clamp(14px, 1.4vw, 16px);
+      line-height: 1.75;
+    }
+
+    .runtime-signal-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .runtime-signal {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 54px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 13px 14px;
+      color: rgba(245,241,234,.68);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .runtime-signal::after {
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.44);
+      content: "";
+      animation: livePulse 2.7s ease-in-out infinite;
+    }
+
+    .runtime-grid {
+      display: grid;
+      grid-template-columns: minmax(0, .78fr) minmax(320px, .52fr);
+      gap: 14px;
+    }
+
+    .runtime-panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.085);
+      border-radius: 10px;
+      background: rgba(245,241,234,.018);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      padding: clamp(18px, 3vw, 24px);
+    }
+
+    .runtime-panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 12% 0%, rgba(233,196,138,.075), transparent 34%);
+      content: "";
+    }
+
+    .runtime-panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .runtime-panel h3 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .runtime-feed {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .runtime-feed-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      min-height: 48px;
+      color: var(--ink-dim);
+      animation: softRise .28s ease both;
+    }
+
+    .runtime-feed-dot {
+      width: 8px;
+      height: 8px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: var(--amber);
+      box-shadow: 0 0 16px rgba(233,196,138,.32);
+    }
+
+    .runtime-feed-item.is-live .runtime-feed-dot {
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(139,224,173,.42);
+      animation: livePulse 2.5s ease-in-out infinite;
+    }
+
+    .runtime-feed-item strong {
+      display: block;
+      color: rgba(255,255,255,.86);
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+
+    .runtime-feed-item span {
+      display: block;
+      margin-top: 3px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .runtime-status-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .runtime-status-card {
+      min-height: 118px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: linear-gradient(145deg, rgba(255,255,255,.028), rgba(255,255,255,.01));
+      padding: 16px;
+      transition: border-color .28s, background .28s, box-shadow .28s;
+    }
+
+    .runtime-status-card.is-active {
+      border-color: rgba(233,196,138,.26);
+      background: rgba(233,196,138,.045);
+      box-shadow: 0 0 28px rgba(233,196,138,.08), inset 0 1px 0 rgba(255,255,255,.055);
+    }
+
+    .runtime-status-card span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .runtime-status-card strong {
+      display: block;
+      margin-top: 10px;
+      color: rgba(255,255,255,.84);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .runtime-ops-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .runtime-delivery-zone {
+      border: 1px dashed rgba(233,196,138,.24);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 86% 14%, rgba(233,196,138,.11), transparent 32%),
+        rgba(0,0,0,.12);
+      padding: 18px;
+    }
+
+    .runtime-delivery-zone p,
+    .runtime-operator-card p,
+    .runtime-archive-card p {
+      margin: 10px 0 0;
+      color: var(--ink-dim);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .runtime-module-title {
+      color: rgba(245,241,234,.88);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .runtime-kv {
+      display: grid;
+      gap: 9px;
+      margin-top: 16px;
+    }
+
+    .runtime-kv div {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(255,255,255,.065);
+      padding-top: 9px;
+    }
+
+    .runtime-kv span {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .runtime-kv strong {
+      color: rgba(255,255,255,.78);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .runtime-command {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      margin-top: 18px;
+      border: 1px solid rgba(233,196,138,.38);
+      border-radius: 999px;
+      background: rgba(233,196,138,.055);
+      color: #f4d28a;
+      padding: 0 16px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      transition: border-color .22s, background .22s, color .22s, box-shadow .22s, transform .22s;
+    }
+
+    .runtime-command:hover,
+    .runtime-command:focus-visible {
+      border-color: rgba(233,196,138,.68);
+      background: rgba(233,196,138,.1);
+      color: #ffe3ad;
+      box-shadow: 0 0 26px rgba(233,196,138,.15);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .runtime-command.is-muted {
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.02);
+      color: var(--ink-dim);
+      box-shadow: none;
+    }
+
+    .runtime-operator-card {
+      border: 1px solid rgba(139,224,173,.14);
+      border-radius: 10px;
+      background: rgba(139,224,173,.025);
+      padding: 18px;
+    }
+
+    .runtime-operator-name {
+      margin-top: 8px;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 38px);
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+
+    .runtime-archive-card {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,.018);
+      padding: 18px;
+      transition: border-color .28s, box-shadow .28s, background .28s;
+    }
+
+    .runtime-archive-card.is-complete {
+      border-color: rgba(139,224,173,.22);
+      background: rgba(139,224,173,.035);
+      box-shadow: 0 0 36px rgba(139,224,173,.08);
+    }
+
+    .request-panel {
+      margin: 30px 0;
+      background:
+        radial-gradient(circle at 88% 12%, rgba(233,196,138,.11), transparent 30%),
+        rgba(245,241,234,.025);
+      transition: border-color .24s, box-shadow .24s, background .24s;
+    }
+
+    .request-panel.is-expanded {
+      border-color: rgba(233,196,138,.24);
+      box-shadow: 0 0 32px rgba(233,196,138,.1), 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.055);
+    }
+
+    .request-panel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      cursor: pointer;
+    }
+
+    .request-panel-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(233,196,138,.32);
+      border-radius: 999px;
+      background: rgba(233,196,138,.055);
+      color: var(--amber);
+      cursor: pointer;
+      transition: background .22s, border-color .22s, box-shadow .22s, transform .22s;
+    }
+
+    .request-panel-toggle::before {
+      content: "+";
+      font-family: var(--mono);
+      font-size: 18px;
+      line-height: 1;
+      transition: transform .22s;
+    }
+
+    .request-panel.is-expanded .request-panel-toggle::before {
+      transform: rotate(45deg);
+    }
+
+    .request-panel-toggle:hover,
+    .request-panel-toggle:focus-visible {
+      border-color: rgba(233,196,138,.62);
+      background: rgba(233,196,138,.11);
+      box-shadow: 0 0 24px rgba(233,196,138,.16);
+      outline: none;
+    }
+
+    .request-panel-details {
+      display: grid;
+      max-height: 0;
+      gap: 18px;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height .28s ease, opacity .22s ease, margin .28s ease;
+    }
+
+    .request-panel.is-expanded .request-panel-details {
+      max-height: 1600px;
+      margin-top: 22px;
+      opacity: 1;
+    }
+
+    .request-panel h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .request-panel p {
+      max-width: 58ch;
+      margin: 8px 0 0;
+      color: var(--ink-dim);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 18px 0 16px;
+      scroll-margin-top: 24px;
+    }
+
+    section {
+      scroll-margin-top: 24px;
+    }
+
+    section.is-highlighted,
+    .activity-panel.is-highlighted,
+    .request-panel.is-highlighted,
+    .quote-center.is-highlighted,
+    .workspace-metric-drawer.is-highlighted {
+      border-radius: 8px;
+      animation: workspaceSectionPulse 1.55s ease both;
+    }
+
+    .recommendation-panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.085);
+      border-radius: 8px;
+      background: rgba(245,241,234,.018);
+      margin: 30px 0;
+      padding: clamp(18px, 2.5vw, 24px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .recommendation-panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 10% 12%, rgba(233,196,138,.08), transparent 30%);
+      content: "";
+    }
+
+    .recommendation-panel > * { position: relative; z-index: 1; }
+
+    .recommendation-rail {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scroll-snap-type: x proximity;
+    }
+
+    .recommendation-item {
+      min-width: min(280px, 82vw);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,.022);
+      padding: 16px;
+      scroll-snap-align: start;
+      cursor: pointer;
+      transition: border-color .22s, background .22s, box-shadow .22s, transform .22s;
+    }
+
+    .recommendation-item:hover,
+    .recommendation-item:focus-visible {
+      border-color: rgba(233,196,138,.28);
+      background: rgba(233,196,138,.045);
+      box-shadow: 0 0 26px rgba(233,196,138,.08);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .recommendation-item span {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .recommendation-item strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .recommendation-item p {
+      margin: 8px 0 0;
+      color: var(--ink-dim);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .section-meta {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .task-feed {
+      display: grid;
+      gap: 16px;
+    }
+
+    .task-card {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(18px, 3vw, 24px);
+      transition: border-color .24s, box-shadow .24s, transform .24s, background .24s, opacity .24s;
+    }
+
+    .task-card::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(233,196,138,.08), transparent 32%),
+        linear-gradient(90deg, rgba(255,255,255,.028), transparent 38%);
+      opacity: .72;
+      content: "";
+    }
+
+    .task-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .task-card:hover {
+      border-color: rgba(233,196,138,.18);
+      background: rgba(245,241,234,.035);
+      box-shadow: 0 34px 82px -34px rgba(0,0,0,.82), 0 0 42px rgba(233,196,138,.055), inset 0 1px 0 rgba(255,255,255,.055);
+      transform: translateY(-1px);
+    }
+
+    .task-card.is-complete {
+      opacity: .82;
+    }
+
+    .task-card.is-active::after {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.36);
+      content: "";
+    }
+
+    .task-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .task-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.55;
+    }
+
+    .task-id {
+      margin-top: 7px;
+      color: rgba(233,196,138,.68);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .task-card-kicker {
+      margin-bottom: 7px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .task-status-stack {
+      display: flex;
+      flex: 0 0 auto;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border: 1px solid rgba(233,196,138,.24);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      background: rgba(233,196,138,.04);
+      box-shadow: 0 0 18px rgba(233,196,138,.06);
+    }
+
+    .status-pill.delivered { color: var(--green); border-color: rgba(139,224,173,.28); }
+    .status-pill.rejected, .status-pill.cancelled { color: rgba(229,112,112,.76); border-color: rgba(229,112,112,.22); }
+    .status-pill.progress { color: rgba(151,197,255,.86); border-color: rgba(151,197,255,.22); }
+    .status-pill.revision { color: rgba(244,210,138,.86); border-color: rgba(244,210,138,.24); }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+      border: 1px solid rgba(255,255,255,.065);
+      border-radius: 8px;
+      background: rgba(0,0,0,.12);
+      padding: 16px;
+    }
+
+    .task-kv span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .task-kv strong {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .task-kv:nth-child(2) strong,
+    .task-kv:nth-child(3) strong,
+    .task-kv:nth-child(5) strong {
+      color: rgba(230,211,163,.88);
+      text-shadow: 0 0 10px rgba(230,211,163,.08);
+    }
+
+    .task-timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(9, minmax(92px, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+      padding: 16px 0 4px;
+      overflow-x: auto;
+    }
+
+    .task-timeline::before {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      right: 24px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(233,196,138,.08), rgba(233,196,138,.24), rgba(233,196,138,.08));
+      content: "";
+    }
+
+    .task-timeline::after {
+      position: absolute;
+      top: 21px;
+      left: 20px;
+      width: 90px;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(233,196,138,.5), transparent);
+      content: "";
+      opacity: .65;
+      animation: progressSignal 7s ease-in-out infinite;
+    }
+
+    .timeline-step {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 9px;
+      justify-items: center;
+      color: rgba(255,255,255,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .timeline-step::before {
+      width: 8px;
+      height: 8px;
+      border: 1px solid rgba(233,196,138,.3);
+      border-radius: 999px;
+      background: #08090b;
+      box-shadow: 0 0 10px rgba(233,196,138,.08);
+      content: "";
+    }
+
+    .timeline-step.is-complete {
+      color: rgba(255,255,255,.62);
+    }
+
+    .timeline-step.is-complete::before {
+      background: rgba(233,196,138,.7);
+      box-shadow: 0 0 12px rgba(233,196,138,.18);
+    }
+
+    .timeline-step.is-current {
+      color: rgba(255,255,255,.94);
+      text-shadow: 0 0 14px rgba(233,196,138,.24);
+    }
+
+    .timeline-step.is-current::before {
+      width: 10px;
+      height: 10px;
+      background: var(--amber);
+      border-color: rgba(233,196,138,.82);
+      box-shadow: 0 0 22px rgba(233,196,138,.48);
+      animation: livePulse 2.8s ease-in-out infinite;
+    }
+
+    .timeline-time {
+      display: block;
+      color: rgba(255,255,255,.32);
+      font-size: 8px;
+      letter-spacing: .08em;
+      text-transform: none;
+    }
+
+    .quote-panel {
+      margin-top: 18px;
+      border: 1px solid rgba(233,196,138,.14);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(233,196,138,.07), rgba(255,255,255,.018));
+      padding: 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    .quote-panel h4 {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .quote-panel h4::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--amber);
+      box-shadow: 0 0 14px rgba(233,196,138,.38);
+      content: "";
+    }
+
+    .quote-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+      color: rgba(255,255,255,.82);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .quote-amount {
+      color: #e6d3a3;
+      font-size: 18px;
+      font-weight: 700;
+      text-shadow: 0 0 10px rgba(230,211,163,.14);
+    }
+
+    .quote-note {
+      margin: 8px 0 0;
+      color: rgba(255,255,255,.58);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .payment-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 44px;
+      margin-top: 16px;
+      border: 1px solid rgba(233,196,138,.48);
+      border-radius: 8px;
+      background: rgba(233,196,138,.08);
+      color: #f4d28a;
+      padding: 0 18px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      box-shadow: 0 0 28px rgba(233,196,138,.14);
+      transition: border-color .22s, background .22s, color .22s, box-shadow .22s, transform .22s;
+    }
+
+    .payment-cta:hover,
+    .payment-cta:focus-visible {
+      border-color: rgba(233,196,138,.72);
+      background: rgba(233,196,138,.12);
+      color: #ffe3ad;
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      padding: clamp(24px, 5vw, 42px);
+      color: var(--ink-dim);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(233,196,138,.08), transparent 34%),
+        rgba(255,255,255,.018);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      line-height: 1.65;
+    }
+
+    .empty-state::before {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(139,224,173,.34);
+      content: "";
+    }
+
+    .empty-title {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .empty-copy {
+      max-width: 54ch;
+      margin: 10px 0 22px;
+      color: var(--ink-dim);
+    }
+
+    .request-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field-group { display: grid; gap: 8px; }
+    .field-group label {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .field-group input,
+    .field-group textarea,
+    .field-group select {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 7px;
+      background: rgba(255,255,255,.025);
+      color: var(--ink);
+      padding: 14px 15px;
+      outline: none;
+      transition: border .22s, background .22s, box-shadow .22s;
+    }
+
+    .field-group textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    .field-group input:focus,
+    .field-group textarea:focus,
+    .field-group select:focus {
+      border-color: rgba(233,196,138,.58);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 0 0 3px rgba(233,196,138,.08);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .workspace-message {
+      min-height: 18px;
+      color: var(--ink-faint);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .workspace-message.is-error { color: #f4b0a8; }
+    .workspace-message.is-success { color: rgba(139,224,173,.9); }
+
+    .deadline-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .deadline-pill {
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.025);
+      color: var(--ink-dim);
+      padding: 0 14px;
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
+    }
+
+    .deadline-pill.is-active,
+    .deadline-pill:hover,
+    .deadline-pill:focus-visible {
+      border-color: rgba(233,196,138,.5);
+      background: rgba(233,196,138,.08);
+      color: #f4d28a;
+      box-shadow: 0 0 20px rgba(233,196,138,.08);
+      outline: none;
+    }
+
+    .other-deadline {
+      display: none;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .other-deadline.is-visible { display: grid; }
+
+    .file-support {
+      display: grid;
+      gap: 10px;
+      border: 1px dashed rgba(255,255,255,.13);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      padding: 14px;
+    }
+
+    .file-support input[type="file"] {
+      border: none;
+      padding: 0;
+      background: transparent;
+      color: var(--ink-dim);
+    }
+
+    .field-helper {
+      margin: 0;
+      color: var(--ink-faint);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .request-panel.is-shaking,
+    .field-group.is-invalid textarea {
+      animation: workspaceShake .32s ease both;
+    }
+
+    .field-group.is-invalid textarea {
+      border-color: rgba(229,112,112,.62);
+      box-shadow: 0 0 0 3px rgba(229,112,112,.08), 0 0 24px rgba(229,112,112,.12);
+    }
+
+    @keyframes signalDrift {
+      0%, 100% { background-position: -90% 0; opacity: .2; }
+      50% { background-position: 140% 0; opacity: .28; }
+    }
+
+    @keyframes progressSignal {
+      0%, 10% { transform: translateX(0); opacity: 0; }
+      24% { opacity: .62; }
+      78% { opacity: .62; }
+      100% { transform: translateX(calc(100vw - 190px)); opacity: 0; }
+    }
+
+    @keyframes workspaceShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-2px); }
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: .62; transform: scale(.96); }
+      50% { opacity: 1; transform: scale(1.16); }
+    }
+
+    @keyframes softRise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes workspaceSectionPulse {
+      0%, 100% {
+        border-color: var(--line);
+        box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      }
+      42% {
+        border-color: rgba(233,196,138,.34);
+        box-shadow: 0 0 38px rgba(233,196,138,.12), inset 0 1px 0 rgba(255,255,255,.06);
+      }
+    }
+
+    /* ── Quote & Payment Status Center ─────────────────────── */
+
+    .quote-center {
+      margin-bottom: 30px;
+    }
+
+    .quote-center-eyebrow {
+      margin: 0 0 10px;
+      color: rgba(255,255,255,.24);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    .quote-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .quote-card {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(18px);
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color .24s, background .24s, box-shadow .24s, transform .24s;
+    }
+
+    .quote-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(233,196,138,.06), transparent 46%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .24s;
+    }
+
+    .quote-card:hover::before,
+    .quote-card.is-open::before { opacity: 1; }
+
+    .quote-card:hover,
+    .quote-card:focus-visible {
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .quote-card-inner { flex: 1; min-width: 0; }
+
+    .quote-card-label {
+      color: rgba(255,255,255,.34);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    .quote-card-value {
+      margin-top: 8px;
+      font-family: var(--serif);
+      font-size: 32px;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--amber);
+    }
+
+    .quote-card-sub {
+      margin-top: 7px;
+      color: rgba(255,255,255,.28);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .quote-card.quote-card-payment .quote-card-value { color: #f4d28a; }
+
+    .quote-card.quote-card-review:hover,
+    .quote-card.quote-card-review.is-open {
+      border-color: rgba(233,196,138,.26);
+      box-shadow: 0 0 28px rgba(233,196,138,.09), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .quote-card.quote-card-payment:hover,
+    .quote-card.quote-card-payment.is-open {
+      border-color: rgba(244,210,138,.3);
+      box-shadow: 0 0 28px rgba(244,210,138,.11), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .quote-toggle-icon {
+      flex: 0 0 auto;
+      margin-top: 3px;
+      color: rgba(255,255,255,.18);
+      font-family: var(--mono);
+      font-size: 15px;
+      line-height: 1;
+      transition: transform .22s, color .22s;
+      user-select: none;
+    }
+
+    .quote-card.is-open .quote-toggle-icon {
+      transform: rotate(45deg);
+      color: rgba(255,255,255,.48);
+    }
+
+    /* Quote Drawer */
+
+    .quote-drawer {
+      grid-column: 1 / -1;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      border-radius: 8px;
+      transition: max-height .32s ease, opacity .26s ease, margin-top .32s ease;
+    }
+
+    .quote-drawer.is-open {
+      max-height: 420px;
+      margin-top: 4px;
+      opacity: 1;
+    }
+
+    .quote-drawer-content {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(245,241,234,.018);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 18px 20px;
+      max-height: 380px;
+      overflow-y: auto;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 32px rgba(0,0,0,.28);
+    }
+
+    .quote-drawer-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+
+    .quote-drawer-title {
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .quote-drawer-total {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .quote-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 14px;
+      align-items: start;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      animation: softRise .2s ease both;
+    }
+
+    .quote-item:last-child { border-bottom: none; }
+
+    .quote-item-title {
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .quote-item-id {
+      display: block;
+      margin-top: 3px;
+      color: rgba(233,196,138,.48);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .quote-item-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .quote-item-amount {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--amber);
+      white-space: nowrap;
+    }
+
+    .quote-item-amount.is-payment { color: #f4d28a; }
+
+    .quote-item-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      border: 1px solid rgba(233,196,138,.4);
+      border-radius: 999px;
+      background: rgba(233,196,138,.065);
+      color: #f4d28a;
+      padding: 0 10px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-decoration: none;
+      text-transform: uppercase;
+      box-shadow: 0 0 18px rgba(233,196,138,.1);
+      white-space: nowrap;
+      transition: border-color .22s, background .22s, color .22s, transform .18s;
+    }
+
+    .quote-item-link:hover {
+      border-color: rgba(233,196,138,.68);
+      background: rgba(233,196,138,.11);
+      color: #ffe3ad;
+      transform: translateY(-1px);
+    }
+
+    .project-assets {
+      margin-top: 16px;
+      border: 1px solid rgba(233,196,138,.12);
+      border-radius: 8px;
+      background: rgba(233,196,138,.028);
+      padding: 14px;
+    }
+
+    .project-assets-title {
+      margin-bottom: 10px;
+      color: rgba(233,196,138,.72);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .project-asset-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid rgba(255,255,255,.055);
+      padding: 10px 0 0;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
+      font-weight: 600;
+      transition: color .22s, transform .22s;
+    }
+
+    .project-asset-link + .project-asset-link {
+      margin-top: 10px;
+    }
+
+    .project-asset-link::after {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      content: "Open →";
+    }
+
+    .project-asset-link:hover {
+      color: #ffe3ad;
+      transform: translateX(1px);
+    }
+
+    .quote-item-status {
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .quote-empty {
+      color: rgba(255,255,255,.26);
+      font-size: 13px;
+      padding: 10px 0;
+      text-align: center;
+    }
+
+    /* ── Task card status scanning ───────────────────────── */
+
+    .task-card[data-task-state="awaiting-payment"] {
+      border-left: 2px solid rgba(244,210,138,.42);
+      background: rgba(244,210,138,.016);
+    }
+
+    .task-card[data-task-state="in-progress"] {
+      border-left: 2px solid rgba(151,197,255,.22);
+    }
+
+    .task-card[data-task-state="delivered"] {
+      border-left: 2px solid rgba(139,224,173,.28);
+    }
+
+    .task-card[data-task-state="review"] {
+      border-left: 2px solid rgba(233,196,138,.14);
+    }
+
+    /* Payment urgency notice (inline, above quote panel) */
+
+    .task-payment-notice {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 14px;
+      color: rgba(244,210,138,.78);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .task-payment-notice::before {
+      width: 5px;
+      height: 5px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: rgba(244,210,138,.82);
+      box-shadow: 0 0 10px rgba(244,210,138,.32);
+      content: "";
+      animation: livePulse 2.2s ease-in-out infinite;
+    }
+
+    @media (max-width: 800px) {
+      .workspace-shell { width: min(100% - 28px, 1180px); }
+      .workspace-hero { grid-template-columns: 1fr; align-items: start; }
+      .runtime-header,
+      .runtime-grid,
+      .runtime-ops-grid {
+        grid-template-columns: 1fr;
+      }
+      .runtime-status-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .workspace-topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+        width: min(100% - 36px, 1180px);
+      }
+      .workspace-topbar-actions,
+      .workspace-topbar-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .workspace-signal-grid { grid-template-columns: 1fr; }
+      .workspace-metrics { grid-template-columns: 1fr 1fr; }
+      .quote-cards-grid { grid-template-columns: 1fr; }
+      .request-panel-row { align-items: flex-start; }
+      .task-top { flex-direction: column; }
+      .task-status-stack { align-items: flex-start; }
+      .task-grid { grid-template-columns: 1fr 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .workspace-button { width: 100%; }
+    }
+
+    @media (max-width: 520px) {
+      .workspace-shell { width: min(100% - 24px, 1180px); }
+      h1 { font-size: clamp(40px, 15vw, 58px); }
+      .runtime-header,
+      .runtime-panel {
+        padding: 18px;
+      }
+      .runtime-status-grid,
+      .runtime-signal-stack {
+        grid-template-columns: 1fr;
+      }
+      .runtime-signal {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .runtime-kv div {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .runtime-kv strong {
+        text-align: left;
+      }
+      .workspace-metrics { grid-template-columns: 1fr; }
+      .task-grid { grid-template-columns: 1fr; }
+      .task-timeline { grid-template-columns: repeat(9, minmax(78px, 1fr)); }
+    }
+
+    /* ── Metric inline drawer ───────────────────────────── */
+
+    .workspace-metric-drawer {
+      grid-column: 1 / -1;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      margin-bottom: 0;
+      border-radius: 8px;
+      transition: max-height .32s ease, opacity .26s ease, margin .32s ease;
+    }
+
+    .workspace-metric-drawer.is-open {
+      max-height: 380px;
+      margin-bottom: 30px;
+      opacity: 1;
+    }
+
+    .workspace-metric-drawer-content {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      background: rgba(245,241,234,.018);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 18px 20px;
+      max-height: 340px;
+      overflow-y: auto;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 32px rgba(0,0,0,.28);
+    }
+
+    .metric-drawer-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+
+    .metric-drawer-title {
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .metric-drawer-count {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--amber);
+    }
+
+    .metric-drawer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      animation: softRise .2s ease both;
+    }
+
+    .metric-drawer-item:last-child { border-bottom: none; }
+
+    .metric-drawer-item-text {
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .metric-drawer-item-sub {
+      display: block;
+      margin-top: 2px;
+      color: rgba(245,241,234,.38);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .metric-drawer-item-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border: 1px solid rgba(233,196,138,.38);
+      border-radius: 999px;
+      background: rgba(233,196,138,.06);
+      color: #f4d28a;
+      padding: 0 10px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-decoration: none;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: border-color .2s, background .2s;
+    }
+
+    .metric-drawer-item-action:hover {
+      border-color: rgba(233,196,138,.65);
+      background: rgba(233,196,138,.11);
+    }
+
+    .metric-drawer-empty {
+      color: rgba(255,255,255,.26);
+      font-size: 13px;
+      padding: 10px 0;
+      text-align: center;
+    }
+
+    /* ── Operational timeline ───────────────────────────── */
+
+    .op-timeline {
+      display: grid;
+      gap: 0;
+      margin-top: 14px;
+    }
+
+    .op-timeline-item {
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      animation: softRise .24s ease both;
+    }
+
+    .op-timeline-item:last-child { border-bottom: none; }
+
+    .op-timeline-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      background: rgba(139,224,173,.6);
+      box-shadow: 0 0 10px rgba(139,224,173,.24);
+      flex-shrink: 0;
+    }
+
+    .op-timeline-dot.is-urgent {
+      background: rgba(233,196,138,.88);
+      box-shadow: 0 0 12px rgba(233,196,138,.34);
+      animation: livePulse 2.2s ease-in-out infinite;
+    }
+
+    .op-timeline-body strong {
+      display: block;
+      color: rgba(255,255,255,.86);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .op-timeline-body span {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .op-timeline-body a,
+    .op-timeline-cta {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 7px;
+      border: 1px solid rgba(233,196,138,.38);
+      border-radius: 999px;
+      padding: 4px 10px;
+      color: #f4d28a;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-decoration: none;
+      text-transform: uppercase;
+      background: rgba(233,196,138,.06);
+      transition: border-color .2s, background .2s;
+    }
+
+    .op-timeline-body a:hover,
+    .op-timeline-cta:hover {
+      border-color: rgba(233,196,138,.62);
+      background: rgba(233,196,138,.11);
+    }
+
+    .op-timeline-body a.is-delivery {
+      border-color: rgba(139,224,173,.34);
+      color: var(--green);
+      background: rgba(139,224,173,.05);
+    }
+
+    .op-timeline-body a.is-delivery:hover {
+      border-color: rgba(139,224,173,.58);
+      background: rgba(139,224,173,.1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="workspace-shell is-private" id="workspaceShell">
+    <header class="workspace-topbar">
+      <div class="workspace-topbar-inner">
+        <div class="workspace-topbar-left">
+          <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="../assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT"></a>
+        </div>
+        <div class="workspace-topbar-actions workspace-topbar-right">
+          <div class="workspace-status is-syncing" id="workspaceConnection"><span class="live-dot"></span>Workspace syncing</div>
+          <button class="workspace-logout" id="workspaceLogout" type="button">Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="workspace-hero" aria-labelledby="workspaceTitle">
+      <div class="hero-panel">
+        <p class="eyebrow">Private execution portal</p>
+        <h1 id="workspaceTitle">Private workspace</h1>
+        <p class="hero-copy" id="workspaceHeroCopy">This operating environment is protected. Verify through the portal before requests, quotes, files, updates, and delivery movement are revealed.</p>
+        <div class="workspace-signal-grid" aria-label="Workspace operating state">
+          <div class="workspace-signal"><span>Workspace state</span><strong>Live</strong></div>
+          <div class="workspace-signal"><span>Review window</span><strong>&lt; 60 min</strong></div>
+          <div class="workspace-signal"><span>Execution layer</span><strong>Online</strong></div>
+        </div>
+      </div>
+
+      <aside class="workspace-card" aria-label="Workspace identity">
+        <div class="workspace-client">Workspace <strong id="workspaceName">Secure access required</strong></div>
+        <p class="hero-copy" id="workspaceSubcopy">Open the secure portal with your issued credentials to continue into the private workspace.</p>
+        <div class="workspace-actions">
+          <button class="workspace-button primary-command" id="newRequestBtn" type="button">+ New Request</button>
+          <a class="workspace-button secondary" id="portalAccessLink" href="../portal/">Continue to Portal →</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="workspace-metrics" aria-label="Workspace metrics">
+      <div class="workspace-metric" data-metric-drawer="active" tabindex="0" role="button" aria-expanded="false"><span>Active tasks</span><strong id="workspaceActiveCount">0</strong><small>Currently moving through operations</small></div>
+      <div class="workspace-metric" data-metric-drawer="quotes" tabindex="0" role="button" aria-expanded="false"><span>Pending quotes</span><strong id="workspaceQuoteCount">0</strong><small>Awaiting quote or approval</small></div>
+      <div class="workspace-metric" data-metric-drawer="delivered" tabindex="0" role="button" aria-expanded="false"><span>Delivered</span><strong id="workspaceDeliveredCount">0</strong><small>Completed delivery movement</small></div>
+      <div class="workspace-metric" data-metric-drawer="hours" tabindex="0" role="button" aria-expanded="false"><span>Hours saved</span><strong id="workspaceHoursSaved">—</strong><small>Tracking begins after operational completion</small></div>
+      <div class="workspace-metric" data-metric-drawer="studio" tabindex="0" role="button" aria-expanded="false"><span>Studio status</span><strong id="workspaceLiveState">Live</strong><small>Realtime operational sync</small></div>
+    </section>
+
+    <div class="workspace-metric-drawer" id="workspaceMetricDrawer" aria-hidden="true">
+      <div class="workspace-metric-drawer-content" id="workspaceMetricDrawerContent"></div>
+    </div>
+
+    <section class="runtime-engine" id="workspaceRuntimeEngine" aria-label="Workspace runtime engine">
+      <div class="runtime-chamber runtime-header">
+        <div>
+          <p class="eyebrow" id="runtimeHeaderKicker">Execution Layer Active</p>
+          <h2 id="runtimeHeaderTitle">DONEOVERNIGHT Core synchronized</h2>
+          <p id="runtimeHeaderCopy">Your workspace is operating inside a private synchronized execution chamber. Review, quote, delivery, and revision signals stay connected to DONEOVERNIGHT Core.</p>
+        </div>
+        <div class="runtime-signal-stack" aria-label="Execution signals">
+          <div class="runtime-signal" id="runtimeSignalA">Execution signal stable</div>
+          <div class="runtime-signal" id="runtimeSignalB">Workspace synchronized</div>
+          <div class="runtime-signal" id="runtimeSignalC">Core runtime connected</div>
+        </div>
+      </div>
+
+      <div class="runtime-status-grid" aria-label="Execution status">
+        <div class="runtime-status-card is-active" data-runtime-status="execution"><span>Execution State</span><strong id="runtimeExecutionState">Core active</strong></div>
+        <div class="runtime-status-card" data-runtime-status="review"><span>Review State</span><strong id="runtimeReviewState">Review synchronized</strong></div>
+        <div class="runtime-status-card" data-runtime-status="queue"><span>Queue State</span><strong id="runtimeQueueState">Live standby</strong></div>
+        <div class="runtime-status-card" data-runtime-status="delivery"><span>Delivery State</span><strong id="runtimeDeliveryState">Awaiting upload</strong></div>
+        <div class="runtime-status-card" data-runtime-status="revision"><span>Revision State</span><strong id="runtimeRevisionState">Revision standby</strong></div>
+      </div>
+
+      <div class="runtime-grid">
+        <section class="runtime-panel" aria-labelledby="runtimeFeedTitle">
+          <p class="eyebrow">Live operation feed</p>
+          <h3 id="runtimeFeedTitle">Operational movement</h3>
+          <div class="runtime-feed" id="runtimeOperationFeed" aria-live="polite">
+            <div class="runtime-feed-item is-live"><div class="runtime-feed-dot"></div><div><strong>Workspace signal stable</strong><span>Core runtime connected</span></div></div>
+            <div class="runtime-feed-item"><div class="runtime-feed-dot"></div><div><strong>Execution queue updated</strong><span>Private layer synchronized</span></div></div>
+            <div class="runtime-feed-item"><div class="runtime-feed-dot"></div><div><strong>Revision channel standby</strong><span>Delivery cycle reserved</span></div></div>
+          </div>
+        </section>
+
+        <section class="runtime-panel" aria-labelledby="runtimeOperatorTitle">
+          <p class="eyebrow">Operator layer</p>
+          <h3 id="runtimeOperatorTitle">Primary layer</h3>
+          <div class="runtime-operator-card">
+            <span class="runtime-module-title">Execution Specialist</span>
+            <div class="runtime-operator-name" id="runtimeOperatorName">DONEOVERNIGHT Core</div>
+            <p id="runtimeOperatorCopy">DONEOVERNIGHT Core remains the central intelligence layer. Specialists connect as execution extensions when assigned.</p>
+            <div class="runtime-kv">
+              <div><span>Specialization</span><strong id="runtimeOperatorSpecialization">Core Operations</strong></div>
+              <div><span>Status</span><strong id="runtimeOperatorStatus">Online</strong></div>
+              <div><span>Signal</span><strong id="runtimeOperatorSignal">Synchronized</strong></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="runtime-ops-grid">
+        <section class="runtime-panel runtime-delivery-zone" aria-labelledby="runtimeDeliveryTitle">
+          <p class="eyebrow">Delivery layer</p>
+          <div class="runtime-module-title" id="runtimeDeliveryTitle">File / delivery zone</div>
+          <p id="runtimeDeliveryCopy">Delivery channel is reserved. Upload and export controls are placeholder-safe until backend storage is connected.</p>
+          <div class="runtime-kv">
+            <div><span>Files</span><strong id="runtimeFilesState">Awaiting upload</strong></div>
+            <div><span>Delivery</span><strong id="runtimeDeliveryMeta">Delivery pending</strong></div>
+          </div>
+          <button class="runtime-command is-muted" type="button" id="runtimeDeliveryCommand">Export placeholder</button>
+        </section>
+
+        <section class="runtime-panel" aria-labelledby="runtimeRevisionTitle">
+          <p class="eyebrow">Revision engine</p>
+          <div class="runtime-module-title" id="runtimeRevisionTitle">Revision channel standby</div>
+          <p id="runtimeRevisionCopy">Request a revision when delivery needs another operational pass. This frontend state is local for now.</p>
+          <div class="runtime-kv">
+            <div><span>Revision</span><strong id="runtimeRevisionMeta">Standby</strong></div>
+            <div><span>Cycle</span><strong id="runtimeRevisionCycle">Available after delivery</strong></div>
+          </div>
+          <button class="runtime-command" type="button" id="runtimeRevisionCommand">Request Revision</button>
+        </section>
+
+        <section class="runtime-panel runtime-archive-card" id="runtimeArchiveCard" aria-labelledby="runtimeArchiveTitle">
+          <p class="eyebrow">Archive state</p>
+          <div class="runtime-module-title" id="runtimeArchiveTitle">Archive standby</div>
+          <p id="runtimeArchiveCopy">Completed execution cycles will settle into a calm archive state with delivery references preserved.</p>
+          <div class="runtime-kv">
+            <div><span>Archive</span><strong id="runtimeArchiveState">Pending delivery</strong></div>
+            <div><span>Cycle</span><strong id="runtimeCycleState">Execution active</strong></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="quote-center" id="quoteCenterSection">
+      <p class="quote-center-eyebrow">Quotes &amp; Payments</p>
+      <div class="quote-cards-grid">
+
+        <div class="quote-card quote-card-review" id="quotesReviewCard" tabindex="0" role="button" aria-expanded="false" aria-controls="quoteDrawer">
+          <div class="quote-card-inner">
+            <div class="quote-card-label">Quotes to review</div>
+            <div class="quote-card-value" id="quotesReviewCount">0</div>
+            <div class="quote-card-sub" id="quotesReviewSub">No quotes pending</div>
+          </div>
+          <span class="quote-toggle-icon" aria-hidden="true">+</span>
+        </div>
+
+        <div class="quote-card quote-card-payment" id="paymentDueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="quoteDrawer">
+          <div class="quote-card-inner">
+            <div class="quote-card-label">Awaiting payment</div>
+            <div class="quote-card-value" id="paymentDueCount">0</div>
+            <div class="quote-card-sub" id="paymentDueSub">No payment required</div>
+          </div>
+          <span class="quote-toggle-icon" aria-hidden="true">+</span>
+        </div>
+
+        <div class="quote-drawer" id="quoteDrawer" aria-hidden="true" aria-live="polite">
+          <div class="quote-drawer-content" id="quoteDrawerContent"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <section id="taskFeedSection" aria-labelledby="taskFeedTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Active operations</p>
+          <h2 id="taskFeedTitle">Current tasks</h2>
+        </div>
+        <div class="section-meta" id="taskFeedMeta">Syncing…</div>
+      </div>
+      <div class="task-feed" id="taskFeed">
+        <div class="empty-state">Task history is syncing…</div>
+      </div>
+    </section>
+
+    <section class="recommendation-panel" id="recommendationSection" aria-labelledby="recommendationTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Recommended for you</p>
+          <h2 id="recommendationTitle">Useful next requests</h2>
+        </div>
+        <div class="section-meta">Tap to prefill</div>
+      </div>
+      <div class="recommendation-rail" id="recommendationRail" aria-label="Recommended requests"></div>
+    </section>
+
+    <section class="activity-panel" id="workspaceActivitySection" aria-labelledby="updatesTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operational updates</p>
+          <h2 id="updatesTitle">Latest movement</h2>
+        </div>
+        <div class="section-meta">Realtime feed</div>
+      </div>
+      <div class="activity-feed" id="workspaceActivityFeed">
+        <div class="activity-item"><div><strong>Workspace is syncing.</strong><span>Realtime connected</span></div></div>
+      </div>
+      <form class="request-form" id="workspaceReplyForm" style="margin-top:16px" novalidate>
+        <div class="field-group">
+          <label for="workspaceReply">Reply to operations</label>
+          <textarea id="workspaceReply" rows="3" placeholder="Add context, approval, or a quick note for operations."></textarea>
+        </div>
+        <button class="workspace-button secondary" id="workspaceReplySubmit" type="submit">Send reply →</button>
+      </form>
+    </section>
+
+    <section class="request-panel" aria-labelledby="requestPanelTitle">
+      <div class="request-panel-row">
+        <div>
+          <p class="eyebrow">Command module</p>
+          <h2 id="requestPanelTitle">New request</h2>
+        </div>
+        <button class="request-panel-toggle" id="requestPanelToggle" type="button" aria-expanded="false" aria-controls="requestPanelDetails" aria-label="Toggle request intake"></button>
+      </div>
+      <div class="request-panel-details" id="requestPanelDetails">
+        <p>Send a focused request from inside your workspace. Your identity and operational context stay attached.</p>
+        <form class="request-form" id="workspaceRequestForm" novalidate>
+          <div class="field-group">
+            <label for="requestSummary">Task</label>
+            <textarea id="requestSummary" name="task_description" placeholder="Describe what needs to be handled, fixed, researched, built, cleaned up, or delivered." required></textarea>
+          </div>
+
+          <div class="field-group">
+            <label>Deadline</label>
+            <div class="deadline-pills" id="requestDeadlinePills" role="radiogroup" aria-label="Deadline">
+              <button class="deadline-pill is-active" type="button" data-deadline="Tonight" role="radio" aria-checked="true">Tonight</button>
+              <button class="deadline-pill" type="button" data-deadline="Tomorrow" role="radio" aria-checked="false">Tomorrow</button>
+              <button class="deadline-pill" type="button" data-deadline="This week" role="radio" aria-checked="false">This week</button>
+              <button class="deadline-pill" type="button" data-deadline="Flexible" role="radio" aria-checked="false">Flexible</button>
+              <button class="deadline-pill" type="button" data-deadline="Other" role="radio" aria-checked="false">Other</button>
+            </div>
+            <input id="requestDeadline" name="deadline" type="hidden" value="Tonight">
+          </div>
+
+          <div class="other-deadline" id="otherDeadlinePanel">
+            <div class="field-group">
+              <label for="requestOtherDeadline">Other deadline</label>
+              <input id="requestOtherDeadline" type="datetime-local">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Files / references</label>
+            <div class="file-support">
+              <label for="requestFileUpload">Attach PDF, DOC, or images</label>
+              <input id="requestFileUpload" name="attachments" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
+              <input id="requestLinks" name="files_link" type="url" placeholder="Paste a link">
+              <p class="field-helper">Files and links help us quote faster. Upload storage can be connected later.</p>
+            </div>
+          </div>
+
+          <div class="workspace-message" id="requestMessage" aria-live="polite"></div>
+          <button class="workspace-button primary-command" id="submitRequestBtn" type="submit">Send request →</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="completedHistorySection" aria-labelledby="completedHistoryTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">History</p>
+          <h2 id="completedHistoryTitle">Delivered work</h2>
+        </div>
+        <div class="section-meta" id="completedHistoryMeta">No delivered work yet</div>
+      </div>
+      <div class="task-feed" id="completedHistoryFeed">
+        <div class="empty-state">Delivered work and historical outcomes will appear here.</div>
+      </div>
+    </section>
+  </main>
+
+  <div class="access-modal-backdrop" id="accessCredentialModal" aria-hidden="true">
+    <div class="access-modal" role="dialog" aria-modal="true" aria-labelledby="accessCredentialTitle">
+      <p class="eyebrow">Private access</p>
+      <h2 id="accessCredentialTitle">Your private access credentials</h2>
+      <p>Keep these details somewhere safe. Your access key remains usable as a recovery method, even after faster password login is added.</p>
+      <div class="credential-grid">
+        <div class="credential-item"><span>Username</span><strong id="credentialUsername">—</strong></div>
+        <div class="credential-item"><span>Access key</span><strong id="credentialAccessKey">—</strong></div>
+        <div class="credential-item"><span>Workspace URL</span><strong id="credentialWorkspaceUrl">—</strong></div>
+      </div>
+      <div class="access-modal-actions">
+        <button class="workspace-button primary-command" id="copyAccessDetails" type="button">Copy access details</button>
+        <button class="workspace-button secondary" id="saveAccessKey" type="button">Save access key</button>
+        <button class="workspace-button secondary" id="closeAccessModal" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    (() => {
+      const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+      const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
+      const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
+      const WORKSPACE_DATA_ENDPOINT = '../api/workspace-data';
+      const WORKSPACE_MESSAGES_ENDPOINT = '../api/workspace-messages';
+      const WORKSPACE_QUOTES_ENDPOINT = '../api/workspace-quotes';
+      const WORKSPACE_SESSION_ENDPOINT = '../api/workspace-data';
+      const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const workspaceShell = document.getElementById('workspaceShell');
+      const taskFeed = document.getElementById('taskFeed');
+      const taskFeedMeta = document.getElementById('taskFeedMeta');
+      const workspaceConnection = document.getElementById('workspaceConnection');
+      const workspaceTitle = document.getElementById('workspaceTitle');
+      const workspaceHeroCopy = document.getElementById('workspaceHeroCopy');
+      const workspaceName = document.getElementById('workspaceName');
+      const workspaceSubcopy = document.getElementById('workspaceSubcopy');
+      const workspaceActiveCount = document.getElementById('workspaceActiveCount');
+      const workspaceQuoteCount = document.getElementById('workspaceQuoteCount');
+      const workspaceDeliveredCount = document.getElementById('workspaceDeliveredCount');
+      const workspaceHoursSaved = document.getElementById('workspaceHoursSaved');
+      const workspaceActivityFeed = document.getElementById('workspaceActivityFeed');
+      const completedHistoryFeed = document.getElementById('completedHistoryFeed');
+      const completedHistoryMeta = document.getElementById('completedHistoryMeta');
+      const requestForm = document.getElementById('workspaceRequestForm');
+      const requestMessage = document.getElementById('requestMessage');
+      const submitRequestBtn = document.getElementById('submitRequestBtn');
+      const requestPanel = document.querySelector('.request-panel');
+      const requestPanelToggle = document.getElementById('requestPanelToggle');
+      const workspaceReplyForm = document.getElementById('workspaceReplyForm');
+      const recommendationRail = document.getElementById('recommendationRail');
+      const portalAccessLink = document.getElementById('portalAccessLink');
+      const workspaceLogout = document.getElementById('workspaceLogout');
+      const runtimeOperationFeed = document.getElementById('runtimeOperationFeed');
+      const runtimeRevisionCommand = document.getElementById('runtimeRevisionCommand');
+      const runtimeDeliveryCommand = document.getElementById('runtimeDeliveryCommand');
+      const runtimeArchiveCard = document.getElementById('runtimeArchiveCard');
+      let workspaceTasks = [];
+      let realtimeChannel = null;
+      let tasksLoading = false;
+      let queuedReload = false;
+      let realtimeConnected = false;
+      let realtimeReloadTimer = null;
+      let realtimeFallbackInterval = null;
+      let realtimeFallbackEnabled = false;
+      let activeWorkspaceMetric = '';
+      let activeQuoteDrawer = null;
+      let workspaceSlug = '';
+      let workspaceMessages = [];
+      let workspaceQuotes = [];
+      let selectedWorkspaceDeadline = 'Tonight';
+      let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
+      let localDeliveryState = sessionStorage.getItem('doneovernight:runtimeDeliveryState') || '';
+      const REQUEST_RECOMMENDATIONS = [
+        { category: 'Deck', title: 'Investor deck formatting', description: 'Clean typography, slide rhythm, spacing, and export-ready polish.' },
+        { category: 'Research', title: 'Overnight research brief', description: 'Turn open questions into a concise decision memo by morning.' },
+        { category: 'Automation', title: 'Workflow automation cleanup', description: 'Map repetitive steps and prepare the next automation request.' },
+        { category: 'Website', title: 'Website update pass', description: 'Copy, layout, bugs, assets, and launch-adjacent fixes.' },
+        { category: 'Content', title: 'Social content preparation', description: 'Shape raw notes into ready-to-review post drafts and assets.' },
+        { category: 'Docs', title: 'Presentation cleanup', description: 'Convert rough content into a polished PDF or client-ready document.' }
+      ];
+      const LIFECYCLE_STAGES = [
+        { key: 'review_pending', label: 'Review', timestamp: 'created_at' },
+        { key: 'quoted', label: 'Quoted', timestamp: 'quoted_at' },
+        { key: 'awaiting_payment', label: 'Payment', timestamp: null },
+        { key: 'verification_pending', label: 'Verify', timestamp: 'paid_at' },
+        { key: 'queued', label: 'Queued', timestamp: null },
+        { key: 'in_progress', label: 'Execution', timestamp: 'started_at' },
+        { key: 'delivery_prep', label: 'Prep', timestamp: null },
+        { key: 'delivered', label: 'Delivered', timestamp: 'delivered_at' },
+        { key: 'completed', label: 'Complete', timestamp: 'completed_at' }
+      ];
+
+      function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
+      }
+
+      function getHandoff() {
+        try { return JSON.parse(sessionStorage.getItem('doneovernight:workspaceHandoff') || 'null'); }
+        catch (error) { return null; }
+      }
+
+      function getSession() {
+        const handoff = getHandoff() || {};
+        const routeSlug = getWorkspaceSlugFromRoute();
+        return {
+          email: sessionStorage.getItem('portal_email') || sessionStorage.getItem('doneovernight_portal_email') || handoff.email || '',
+          accessKey: sessionStorage.getItem('portal_access_key') || sessionStorage.getItem('doneovernight_portal_access_key') || handoff.access_key || '',
+          name: sessionStorage.getItem('portal_name') || handoff.name || '',
+          username: sessionStorage.getItem('doneovernight_workspace_username') || handoff.username || '',
+          company: sessionStorage.getItem('portal_company') || handoff.company || '',
+          clientId: sessionStorage.getItem('portal_client_id') || handoff.clientId || handoff.client_id || '',
+          taskId: handoff.taskId || handoff.task_id || '',
+          slug: routeSlug || handoff.slug || ''
+        };
+      }
+
+      function normalizeSlug(value) {
+        return String(value || '').trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      }
+
+      function getWorkspaceSlugFromRoute() {
+        const path = window.location.pathname.replace(/\/+$/, '');
+        const parts = path.split('/').filter(Boolean);
+        const last = parts[parts.length - 1] || '';
+        if (last.startsWith('@')) return normalizeSlug(last);
+        if (window.location.hostname === 'portal.doneovernight.com' && last) return normalizeSlug(last);
+        return '';
+      }
+
+      function storeSession(session) {
+        if (session.email) {
+          sessionStorage.setItem('portal_email', session.email);
+          sessionStorage.setItem('doneovernight_portal_email', session.email);
+        }
+        if (session.accessKey) {
+          sessionStorage.setItem('portal_access_key', session.accessKey);
+          sessionStorage.setItem('doneovernight_portal_access_key', session.accessKey);
+        }
+        if (session.name) sessionStorage.setItem('portal_name', session.name);
+        if (session.username) sessionStorage.setItem('doneovernight_workspace_username', session.username);
+        if (session.company) sessionStorage.setItem('portal_company', session.company);
+        if (session.clientId) sessionStorage.setItem('portal_client_id', session.clientId);
+      }
+
+      function setWorkspaceAuthState(isAuthenticated) {
+        workspaceShell.classList.toggle('is-private', !isAuthenticated);
+        workspaceShell.classList.toggle('is-authenticated', isAuthenticated);
+        if (portalAccessLink) portalAccessLink.style.display = isAuthenticated ? 'none' : 'inline-flex';
+      }
+
+      function renderWorkspacePendingState(message = 'Open the secure portal to verify access.') {
+        const lockedMessage = /access key|private workspace access required|workspace_session_required|request a fresh/i.test(String(message || ''))
+          ? 'Open the secure portal with your issued credentials to continue into the private workspace.'
+          : message;
+        setWorkspaceAuthState(false);
+        workspaceConnection.innerHTML = '<span class="live-dot"></span>Private gateway';
+        workspaceConnection.classList.remove('is-live');
+        workspaceConnection.classList.add('is-syncing');
+        workspaceTitle.textContent = 'Private workspace';
+        workspaceHeroCopy.textContent = 'This operating environment is protected. Verify through the portal before requests, quotes, files, updates, and delivery movement are revealed.';
+        workspaceName.textContent = 'Secure access required';
+        workspaceSubcopy.textContent = lockedMessage || 'Open the secure portal with your issued credentials to continue into the private workspace.';
+        const routeSlug = getWorkspaceSlugFromRoute();
+        if (portalAccessLink) {
+          portalAccessLink.textContent = 'Continue to Portal →';
+          portalAccessLink.href = routeSlug ? `../portal/?workspace=${encodeURIComponent(routeSlug)}` : '../portal/';
+        }
+        if (requestPanel) requestPanel.classList.remove('is-expanded');
+        workspaceActivityFeed.innerHTML = '';
+      }
+
+      async function redeemWorkspaceToken() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (!token) return true;
+        if (workspaceConnection) {
+          workspaceConnection.textContent = 'Verifying access';
+          workspaceConnection.classList.add('is-syncing');
+        }
+        try {
+          const response = await fetch(WORKSPACE_SESSION_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              action: 'redeem',
+              token,
+              slug: getWorkspaceSlugFromRoute()
+            })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || payload?.success !== true) throw new Error(payload?.error || 'Workspace access failed');
+          if (payload.workspace) {
+            workspaceSlug = payload.workspace.slug || workspaceSlug;
+            storeSession({
+              email: payload.workspace.email || '',
+              name: payload.workspace.name || '',
+              username: payload.workspace.username || '',
+              company: payload.workspace.company || ''
+            });
+          }
+          window.location.replace(payload.redirectTo || window.location.pathname);
+          return false;
+        } catch (error) {
+          renderWorkspacePendingState('This private workspace link is invalid or expired. Request a fresh link from operations.');
+          return false;
+        }
+      }
+
+      function getHandoffProjectTask() {
+        const handoff = getHandoff();
+        const projectName = handoff?.company || '';
+        const source = handoff?.source || '';
+        if (!handoff?.email || !String(source).includes('saiuniversity_preview') || !String(projectName).toLowerCase().includes('saiuniversity')) {
+          return null;
+        }
+
+        return {
+          id: handoff.taskId || handoff.task_id || 'saiuniversity-preview',
+          task_id: handoff.taskId || handoff.task_id || 'Pending ID',
+          task_summary: 'SaiUniversity Project',
+          task_description: 'SaiUniversity Project',
+          status: 'review_pending',
+          payment_status: 'not_required_yet',
+          queue_state: 'client workspace',
+          deadline: 'Manual release',
+          links: '/workspace-assets/saiuniversity-preview/',
+          source,
+          email: handoff.email,
+          name: handoff.name || '',
+          company: projectName,
+          created_at: new Date().toISOString()
+        };
+      }
+
+      function formatDate(value) {
+        if (!value) return 'Pending';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Pending';
+        return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
+      }
+
+      function statusLabel(status) {
+        const labels = {
+          review_pending: 'Review pending',
+          new: 'Quote pending',
+          quoted: 'Quote sent',
+          awaiting_payment: 'Awaiting payment',
+          verification_pending: 'Verification pending',
+          queued: 'Queued',
+          in_progress: 'In progress',
+          delivery_prep: 'Delivery prep',
+          delivered: 'Delivered',
+          completed: 'Completed',
+          revision_requested: 'Revision requested',
+          rejected: 'Not accepted',
+          cancelled: 'Cancelled'
+        };
+        return labels[String(status || '').toLowerCase()] || 'Review pending';
+      }
+
+      function paymentStatusLabel(status) {
+        const labels = {
+          not_required_yet: 'Not required yet',
+          awaiting_payment: 'Awaiting payment',
+          paid: 'Paid',
+          payment_failed: 'Payment failed',
+          refunded: 'Refunded'
+        };
+        return labels[String(status || '').toLowerCase()] || 'Not required yet';
+      }
+
+      function statusClass(status) {
+        const key = String(status || '').toLowerCase();
+        if (key === 'delivered' || key === 'completed') return 'delivered';
+        if (key === 'in_progress' || key === 'queued' || key === 'delivery_prep') return 'progress';
+        if (key === 'revision_requested') return 'revision';
+        if (key === 'rejected' || key === 'cancelled') return key;
+        return '';
+      }
+
+      function taskCardClass(status) {
+        const key = normalizeTaskStatus(status);
+        if (key === 'delivered' || key === 'completed') return 'is-complete';
+        if (['review_pending', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep'].includes(key)) return 'is-active';
+        return '';
+      }
+
+      function isCompletedTask(task) {
+        const key = normalizeTaskStatus(task.status);
+        return ['delivered', 'completed', 'cancelled', 'rejected'].includes(key);
+      }
+
+      function normalizeTaskStatus(status) {
+        const key = String(status || '').toLowerCase();
+        return key === 'new' ? 'review_pending' : key;
+      }
+
+      function getLifecycleIndex(status) {
+        const key = normalizeTaskStatus(status);
+        const index = LIFECYCLE_STAGES.findIndex((stage) => stage.key === key);
+        if (key === 'revision_requested') return LIFECYCLE_STAGES.findIndex((stage) => stage.key === 'in_progress');
+        if (key === 'cancelled' || key === 'rejected') return 0;
+        return index >= 0 ? index : 0;
+      }
+
+      function renderTimeline(task) {
+        const currentIndex = getLifecycleIndex(task.status);
+        const currentStatus = normalizeTaskStatus(task.status);
+        return `
+          <div class="task-timeline" aria-label="Task lifecycle">
+            ${LIFECYCLE_STAGES.map((stage, index) => {
+              const timestamp = stage.timestamp ? task[stage.timestamp] : '';
+              const stateClass = index < currentIndex || timestamp ? 'is-complete' : (stage.key === currentStatus ? 'is-current' : '');
+              return `
+                <div class="timeline-step ${stateClass}">
+                  <span>${escapeHTML(stage.label)}</span>
+                  ${timestamp ? `<span class="timeline-time">${escapeHTML(formatDate(timestamp))}</span>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      function renderOperationalQuote(task) {
+        const hasQuote = task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link;
+        if (!hasQuote) return '';
+        const paymentStatus = paymentStatusLabel(task.payment_status || task.paymentStatus);
+        return `
+          <section class="quote-panel" aria-label="Operational Quote">
+            <h4>Operational Quote</h4>
+            <div class="quote-line">
+              ${task.quote_amount ? `<span class="quote-amount">${escapeHTML(task.quote_amount)}</span>` : '<span class="quote-amount">Quote pending</span>'}
+              ${task.delivery_eta ? `<span>${escapeHTML(task.delivery_eta)}</span>` : ''}
+              <span>${escapeHTML(paymentStatus)}</span>
+            </div>
+            ${task.quote_note ? `<p class="quote-note">${escapeHTML(task.quote_note)}</p>` : ''}
+            ${task.payment_link && String(task.payment_status || '').toLowerCase() !== 'paid'
+              ? `<a class="payment-cta" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Approve / pay quote →</a>`
+              : ''}
+          </section>
+        `;
+      }
+
+      function getTaskLinks(task) {
+        if (Array.isArray(task.links)) return task.links.map(String).map((link) => link.trim()).filter(Boolean);
+        return String(task.links || '')
+          .split(/[\n,\s]+/)
+          .map((link) => link.trim())
+          .filter(Boolean);
+      }
+
+      function isSaiUniversityProject(task) {
+        const signal = [
+          task.task_summary,
+          task.task_description,
+          task.company,
+          task.source
+        ].filter(Boolean).join(' ').toLowerCase();
+        return signal.includes('saiuniversity') && signal.includes('branding');
+      }
+
+      function renderProjectAssets(task) {
+        if (!isSaiUniversityProject(task)) return '';
+        const links = getTaskLinks(task);
+        const previewLink = links.find((link) => link.includes('/workspace-assets/saiuniversity-preview/')) || '/workspace-assets/saiuniversity-preview/';
+        const assets = [{ label: 'SaiUniversity Preview', href: previewLink }];
+        if (task.delivery_link && String(task.delivery_link).includes('/SaiUniversity-Branding/')) {
+          assets.push({ label: ['SaiUniversity', 'Branding'].join(' '), href: task.delivery_link });
+        }
+
+        return `
+          <section class="project-assets" aria-label="Project assets">
+            <div class="project-assets-title">Project workspace</div>
+            ${assets.map((asset) => `<a class="project-asset-link" href="${escapeHTML(asset.href)}" target="_blank" rel="noopener noreferrer">${escapeHTML(asset.label)}</a>`).join('')}
+          </section>
+        `;
+      }
+
+      function getTaskSummary(task) {
+        return task.task_summary || task.task_description || task.taskSummary || 'Untitled request';
+      }
+
+      function getTaskId(task) {
+        return task.task_id || task.taskId || task.id || 'Pending ID';
+      }
+
+      function sortTasks(tasks) {
+        return [...tasks].sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0));
+      }
+
+      function getRelativeTime(value) {
+        if (!value) return 'Realtime connected';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Realtime connected';
+        const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+        if (seconds < 45) return 'Updated just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return formatDate(value);
+      }
+
+      function updateWorkspaceMetrics(tasks) {
+        const activeStatuses = ['review_pending', 'new', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'];
+        const pendingQuoteStatuses = ['review_pending', 'new', 'quoted', 'awaiting_payment'];
+        workspaceActiveCount.textContent = tasks.filter((task) => activeStatuses.includes(String(task.status || '').toLowerCase())).length;
+        workspaceQuoteCount.textContent = tasks.filter((task) => pendingQuoteStatuses.includes(String(task.status || '').toLowerCase())).length;
+        const deliveredCount = tasks.filter((task) => ['delivered', 'completed'].includes(String(task.status || '').toLowerCase())).length;
+        const savedHours = tasks.reduce((total, task) => {
+          const value = Number(task.hours_saved || task.estimated_hours_saved || task.hoursSaved || 0);
+          return Number.isFinite(value) ? total + value : total;
+        }, 0);
+        workspaceDeliveredCount.textContent = deliveredCount;
+        workspaceHoursSaved.textContent = savedHours > 0 ? `${savedHours}h` : '—';
+      }
+
+      function getGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 5) return 'Good night';
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        if (hour < 22) return 'Good evening';
+        return 'Good night';
+      }
+
+      function updateWorkspaceHero(tasks = workspaceTasks) {
+        const session = getSession();
+        const name = (session.name || workspaceName.textContent || 'there').split(/\s+/)[0];
+        const pendingQuote = tasks.some((task) => ['quoted', 'awaiting_payment'].includes(normalizeTaskStatus(task.status)) || String(task.payment_status || '').toLowerCase() === 'awaiting_payment');
+        const activeTask = tasks.some((task) => !isCompletedTask(task));
+        workspaceTitle.textContent = `${getGreeting()}, ${name}.`;
+        if (pendingQuote) {
+          workspaceHeroCopy.textContent = 'A quote is waiting for review. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
+        } else if (activeTask) {
+          workspaceHeroCopy.textContent = 'Your current operation is moving through review. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
+        } else {
+          workspaceHeroCopy.textContent = 'Your private workspace is ready. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
+        }
+      }
+
+      function getRuntimeOperatorProfile() {
+        const params = new URLSearchParams(window.location.search);
+        const cleanHandle = (value) => String(value || '')
+          .trim()
+          .replace(/^@+/, '')
+          .replace(/[^a-z0-9_-]/gi, '')
+          .slice(0, 36);
+        const handle = cleanHandle(params.get('operator') || params.get('operator_handle') || params.get('specialist') || sessionStorage.getItem('doneovernight_operator_handle'));
+        const specialization = String(params.get('specialization') || sessionStorage.getItem('doneovernight_operator_specialization') || 'Web Systems').trim().slice(0, 80);
+        if (!handle) {
+          return {
+            name: 'DONEOVERNIGHT Core',
+            title: 'Primary layer',
+            specialization: 'Core Operations',
+            status: 'Online',
+            signal: 'Synchronized',
+            copy: 'DONEOVERNIGHT Core remains the central intelligence layer. Specialists connect as execution extensions when assigned.'
+          };
+        }
+        return {
+          name: `@${handle}`,
+          title: 'Specialist connected',
+          specialization: specialization || 'Web Systems',
+          status: 'Online',
+          signal: 'Connected',
+          copy: `${'@' + handle} is connected as an execution extension of DONEOVERNIGHT Core. Core remains the primary operating layer.`
+        };
+      }
+
+      function deriveRuntimeState(tasks = []) {
+        const statuses = tasks.map((task) => normalizeTaskStatus(task.status));
+        const payments = tasks.map((task) => String(task.payment_status || task.paymentStatus || '').toLowerCase());
+        const hasCompleted = statuses.some((status) => ['delivered', 'completed'].includes(status)) || localDeliveryState === 'archive_ready';
+        const hasRevision = localRevisionState === 'requested' || statuses.includes('revision_requested');
+        const hasDeliveryPrep = statuses.includes('delivery_prep');
+        const hasExecution = statuses.some((status) => ['queued', 'in_progress'].includes(status));
+        const hasQuote = statuses.some((status) => ['quoted', 'awaiting_payment', 'verification_pending'].includes(status)) || payments.includes('awaiting_payment');
+        const hasReview = statuses.some((status) => ['review_pending', 'new'].includes(status));
+        const hasTasks = tasks.length > 0;
+
+        if (hasRevision) return 'revision';
+        if (hasCompleted) return 'archive';
+        if (hasDeliveryPrep) return 'delivery';
+        if (hasExecution) return 'execution';
+        if (hasQuote) return 'approval';
+        if (hasReview) return 'review';
+        if (hasTasks) return 'execution';
+        return 'standby';
+      }
+
+      function getRuntimeModel(tasks = []) {
+        const state = deriveRuntimeState(tasks);
+        const operator = getRuntimeOperatorProfile();
+        const sortedTasks = sortTasks(tasks);
+        const activeTask = sortedTasks.find((task) => !isCompletedTask(task)) || sortedTasks[0] || null;
+        const taskName = activeTask ? getTaskSummary(activeTask) : 'Workspace channel';
+        const models = {
+          standby: {
+            kicker: 'Execution Layer Active',
+            title: 'DONEOVERNIGHT Core synchronized',
+            copy: 'Your workspace is operating inside a private synchronized execution chamber. Review, quote, delivery, and revision signals stay connected to DONEOVERNIGHT Core.',
+            execution: 'Core active',
+            review: 'Workspace ready',
+            queue: 'Live standby',
+            delivery: 'Awaiting upload',
+            revision: 'Revision standby',
+            files: 'Awaiting upload',
+            deliveryMeta: 'Delivery pending',
+            deliveryCopy: 'Delivery channel is reserved. Upload and export controls are placeholder-safe until backend storage is connected.',
+            revisionMeta: 'Standby',
+            revisionCycle: 'Available after delivery',
+            archive: 'Pending delivery',
+            cycle: 'Execution active',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Completed execution cycles will settle into a calm archive state with delivery references preserved.',
+            activeCards: ['execution', 'queue'],
+            signals: ['Execution signal stable', 'Workspace synchronized', 'Core runtime connected'],
+            feed: [
+              ['Workspace signal stable', 'Core runtime connected'],
+              ['Execution queue updated', 'Private layer synchronized'],
+              ['Revision channel standby', 'Delivery cycle reserved'],
+              ['Operator layer online', 'DONEOVERNIGHT Core active']
+            ]
+          },
+          review: {
+            kicker: 'Review layer moving',
+            title: 'Execution queue preparing',
+            copy: `${taskName} is moving through review while DONEOVERNIGHT Core keeps the workspace channel synchronized.`,
+            execution: 'Core active',
+            review: 'Under review',
+            queue: 'Preparing',
+            delivery: 'Awaiting upload',
+            revision: 'Standby',
+            files: 'References syncing',
+            deliveryMeta: 'Delivery pending',
+            deliveryCopy: 'Files and references are being staged for execution. Delivery opens when the review path clears.',
+            revisionMeta: 'Standby',
+            revisionCycle: 'Available after delivery',
+            archive: 'Pending delivery',
+            cycle: 'Review active',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Archive state activates after delivery or completion.',
+            activeCards: ['execution', 'review', 'queue'],
+            signals: ['Operator reviewing assets', 'Workspace synchronized', 'Execution layer online'],
+            feed: [
+              ['Operator reviewing assets', 'Scope and references under active review'],
+              ['Execution queue updated', 'Core routing layer synchronized'],
+              ['Files synchronized', 'Workspace references secured'],
+              ['Revision channel standby', 'Awaiting delivery cycle']
+            ]
+          },
+          approval: {
+            kicker: 'Approval layer active',
+            title: 'Quote signal synchronized',
+            copy: 'Execution terms are ready or waiting for payment verification. DONEOVERNIGHT Core is holding the queue position.',
+            execution: 'Core active',
+            review: 'Quote ready',
+            queue: 'Reserved',
+            delivery: 'Pending approval',
+            revision: 'Standby',
+            files: 'Files synchronized',
+            deliveryMeta: 'Execution locked pending approval',
+            deliveryCopy: 'Delivery channel is reserved. Execution opens after approval and payment clearance.',
+            revisionMeta: 'Standby',
+            revisionCycle: 'Available after delivery',
+            archive: 'Pending delivery',
+            cycle: 'Approval active',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Archive state activates after delivery or completion.',
+            activeCards: ['execution', 'review', 'queue'],
+            signals: ['Quote signal synchronized', 'Workspace synchronized', 'Approval layer active'],
+            feed: [
+              ['Quote signal synchronized', 'Approval layer active'],
+              ['Execution layer prepared', 'Queue position reserved'],
+              ['Workspace channel stable', 'Private approval route online'],
+              ['Delivery layer preparing', 'Pending approval signal']
+            ]
+          },
+          execution: {
+            kicker: 'Execution queue live',
+            title: 'Execution cycle active',
+            copy: `${taskName} is inside the live execution queue. DONEOVERNIGHT Core is coordinating review, files, operator layer, and delivery movement.`,
+            execution: 'Execution active',
+            review: 'Cleared',
+            queue: 'Live',
+            delivery: 'Preparing',
+            revision: 'Standby',
+            files: 'Files synchronized',
+            deliveryMeta: 'Delivery layer preparing',
+            deliveryCopy: 'Delivery package is preparing. Export/download controls stay placeholder-safe until files are attached.',
+            revisionMeta: 'Standby',
+            revisionCycle: 'Available after delivery',
+            archive: 'Pending delivery',
+            cycle: 'Execution live',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Archive will synchronize when delivery completes.',
+            activeCards: ['execution', 'queue', 'delivery'],
+            signals: ['Execution queue active', 'Operator online', 'Delivery queue active'],
+            feed: [
+              ['Execution cycle active', 'Core runtime connected'],
+              ['Deployment layer preparing', 'Delivery route staging'],
+              ['Files synchronized', 'Operator layer stable'],
+              ['Revision channel standby', 'Reserved for post-delivery pass']
+            ]
+          },
+          delivery: {
+            kicker: 'Delivery layer preparing',
+            title: 'Delivery queue active',
+            copy: 'The delivery layer is assembling the output package. Workspace signals remain live until the cycle is complete.',
+            execution: 'Execution active',
+            review: 'Cleared',
+            queue: 'Live',
+            delivery: 'Preparing',
+            revision: 'Standby',
+            files: 'Delivery staging',
+            deliveryMeta: 'Upload pending',
+            deliveryCopy: 'Delivery assets are being staged. Download/export remains visual until the delivery link is attached.',
+            revisionMeta: 'Standby',
+            revisionCycle: 'Available after delivery',
+            archive: 'Pending delivery',
+            cycle: 'Delivery active',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Archive will synchronize when delivery completes.',
+            activeCards: ['execution', 'queue', 'delivery'],
+            signals: ['Delivery layer preparing', 'Workspace synchronized', 'Execution signal stable'],
+            feed: [
+              ['Delivery layer preparing', 'Output package staging'],
+              ['Files synchronized', 'Delivery channel reserved'],
+              ['Execution signal stable', 'Core runtime connected'],
+              ['Archive standby', 'Waiting for delivery confirmation']
+            ]
+          },
+          revision: {
+            kicker: 'Revision engine active',
+            title: 'Revision channel synchronized',
+            copy: 'A revision pass is active inside the execution chamber. DONEOVERNIGHT Core is preserving delivery context and routing the next pass.',
+            execution: 'Revision active',
+            review: 'Cleared',
+            queue: 'Live',
+            delivery: 'Under revision',
+            revision: 'Revision requested',
+            files: 'Delivery synchronized',
+            deliveryMeta: 'Revision layer active',
+            deliveryCopy: 'Delivery references remain attached while the revision pass moves through operations.',
+            revisionMeta: 'Revision requested',
+            revisionCycle: 'Reviewing revision scope',
+            archive: 'Pending revision',
+            cycle: 'Revision active',
+            archiveTitle: 'Archive standby',
+            archiveCopy: 'Archive synchronization pauses until the revision pass completes.',
+            activeCards: ['execution', 'delivery', 'revision'],
+            signals: ['Revision channel active', 'Workspace synchronized', 'Operator online'],
+            feed: [
+              ['Revision channel active', 'Scope routed to operations'],
+              ['Delivery context preserved', 'Files remain synchronized'],
+              ['Operator reviewing revision', 'Execution layer connected'],
+              ['Archive pending', 'Completion waits for revision pass']
+            ]
+          },
+          archive: {
+            kicker: 'Execution cycle completed',
+            title: 'Archive synchronized',
+            copy: 'The execution cycle has settled into archive state. Delivery references and operational movement remain preserved inside the workspace.',
+            execution: 'Completed',
+            review: 'Cleared',
+            queue: 'Calm',
+            delivery: 'Delivered',
+            revision: 'Available',
+            files: 'Delivery uploaded',
+            deliveryMeta: 'Archive ready',
+            deliveryCopy: 'Delivery references are preserved. Export and download placeholders are ready for connected storage.',
+            revisionMeta: 'Available',
+            revisionCycle: 'Request if needed',
+            archive: 'Synchronized',
+            cycle: 'Completed',
+            archiveTitle: 'Execution cycle completed',
+            archiveCopy: 'Archive synchronized. The workspace remains ready for revisions, future requests, and delivery history.',
+            activeCards: ['delivery', 'revision'],
+            signals: ['Archive synchronized', 'Workspace stable', 'Core runtime connected'],
+            feed: [
+              ['Execution cycle completed', 'Archive synchronized'],
+              ['Delivery uploaded', 'References preserved'],
+              ['Workspace signal stable', 'Private layer calm'],
+              ['Revision channel available', 'Standing by for next pass']
+            ],
+            complete: true
+          }
+        };
+
+        return { ...models[state], operator };
+      }
+
+      function setRuntimeText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
+      function updateWorkspaceRuntimeEngine(tasks = workspaceTasks) {
+        const model = getRuntimeModel(tasks);
+        setRuntimeText('runtimeHeaderKicker', model.kicker);
+        setRuntimeText('runtimeHeaderTitle', model.title);
+        setRuntimeText('runtimeHeaderCopy', model.copy);
+        setRuntimeText('runtimeSignalA', model.signals[0]);
+        setRuntimeText('runtimeSignalB', model.signals[1]);
+        setRuntimeText('runtimeSignalC', model.signals[2]);
+        setRuntimeText('runtimeExecutionState', model.execution);
+        setRuntimeText('runtimeReviewState', model.review);
+        setRuntimeText('runtimeQueueState', model.queue);
+        setRuntimeText('runtimeDeliveryState', model.delivery);
+        setRuntimeText('runtimeRevisionState', model.revision);
+        setRuntimeText('runtimeOperatorTitle', model.operator.title);
+        setRuntimeText('runtimeOperatorName', model.operator.name);
+        setRuntimeText('runtimeOperatorCopy', model.operator.copy);
+        setRuntimeText('runtimeOperatorSpecialization', model.operator.specialization);
+        setRuntimeText('runtimeOperatorStatus', model.operator.status);
+        setRuntimeText('runtimeOperatorSignal', model.operator.signal);
+        setRuntimeText('runtimeFilesState', model.files);
+        setRuntimeText('runtimeDeliveryMeta', model.deliveryMeta);
+        setRuntimeText('runtimeDeliveryCopy', model.deliveryCopy);
+        setRuntimeText('runtimeRevisionMeta', model.revisionMeta);
+        setRuntimeText('runtimeRevisionCycle', model.revisionCycle);
+        setRuntimeText('runtimeRevisionCopy', model.revision === 'Revision requested'
+          ? 'Revision request received locally. Operations can connect this control to the backend revision pipeline later.'
+          : 'Request a revision when delivery needs another operational pass. This frontend state is local for now.');
+        setRuntimeText('runtimeArchiveState', model.archive);
+        setRuntimeText('runtimeCycleState', model.cycle);
+        setRuntimeText('runtimeArchiveTitle', model.archiveTitle);
+        setRuntimeText('runtimeArchiveCopy', model.archiveCopy);
+
+        document.querySelectorAll('[data-runtime-status]').forEach((card) => {
+          card.classList.toggle('is-active', model.activeCards.includes(card.dataset.runtimeStatus));
+        });
+        runtimeArchiveCard?.classList.toggle('is-complete', model.complete === true);
+        if (runtimeRevisionCommand) {
+          runtimeRevisionCommand.textContent = model.revision === 'Revision requested' ? 'Revision Requested' : 'Request Revision';
+        }
+        if (runtimeDeliveryCommand) {
+          runtimeDeliveryCommand.textContent = model.complete ? 'Archive ready' : 'Export placeholder';
+          runtimeDeliveryCommand.classList.toggle('is-muted', !model.complete);
+        }
+        if (runtimeOperationFeed) {
+          runtimeOperationFeed.innerHTML = model.feed.map((item, index) => `
+            <div class="runtime-feed-item${index === 0 ? ' is-live' : ''}">
+              <div class="runtime-feed-dot"></div>
+              <div><strong>${escapeHTML(item[0])}</strong><span>${escapeHTML(item[1])}</span></div>
+            </div>
+          `).join('');
+        }
+      }
+
+      function renderRecommendations() {
+        if (!recommendationRail) return;
+        recommendationRail.innerHTML = REQUEST_RECOMMENDATIONS.map((item, index) => `
+          <button class="recommendation-item" type="button" data-recommendation-index="${index}">
+            <span>${escapeHTML(item.category)}</span>
+            <strong>${escapeHTML(item.title)}</strong>
+            <p>${escapeHTML(item.description)}</p>
+          </button>
+        `).join('');
+      }
+
+      function useRecommendation(index) {
+        const item = REQUEST_RECOMMENDATIONS[index];
+        if (!item) return;
+        expandRequestPanel({ scroll: true, focus: false });
+        const textarea = document.getElementById('requestSummary');
+        textarea.value = `${item.title}\n\nContext:\n\nGoal:\n${item.description}\n\nFiles:\n`;
+        window.setTimeout(() => textarea.focus({ preventScroll: true }), 180);
+      }
+
+      function showAccessCredentials() {
+        let credentials = null;
+        try { credentials = JSON.parse(sessionStorage.getItem('doneovernight:accessCredentials') || 'null'); }
+        catch (error) { credentials = null; }
+        if (!credentials?.username || !credentials?.accessKey) return;
+        const modal = document.getElementById('accessCredentialModal');
+        if (!modal || sessionStorage.getItem('doneovernight:accessCredentialsSeen') === credentials.accessKey) return;
+        document.getElementById('credentialUsername').textContent = credentials.username;
+        document.getElementById('credentialAccessKey').textContent = credentials.accessKey;
+        document.getElementById('credentialWorkspaceUrl').textContent = credentials.workspaceUrl || window.location.href;
+        modal.classList.add('is-visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeAccessCredentials() {
+        const modal = document.getElementById('accessCredentialModal');
+        let credentials = null;
+        try { credentials = JSON.parse(sessionStorage.getItem('doneovernight:accessCredentials') || 'null'); }
+        catch (error) { credentials = null; }
+        if (credentials?.accessKey) sessionStorage.setItem('doneovernight:accessCredentialsSeen', credentials.accessKey);
+        modal?.classList.remove('is-visible');
+        modal?.setAttribute('aria-hidden', 'true');
+      }
+
+      function focusWorkspaceSection(targetId) {
+        const section = document.getElementById(targetId);
+        if (!section) return;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        activeWorkspaceMetric = targetId;
+        document.querySelectorAll('.workspace-metric[data-workspace-target]').forEach((metric) => {
+          metric.classList.toggle('is-active', metric.dataset.workspaceTarget === activeWorkspaceMetric);
+        });
+        section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+        section.classList.remove('is-highlighted');
+        void section.offsetWidth;
+        section.classList.add('is-highlighted');
+        window.setTimeout(() => section.classList.remove('is-highlighted'), 1700);
+      }
+
+      function revealWorkspaceDestination(targetId) {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+        target.classList.remove('is-highlighted');
+        void target.offsetWidth;
+        target.classList.add('is-highlighted');
+        window.setTimeout(() => target.classList.remove('is-highlighted'), 1700);
+      }
+
+      function getActivityTitle(task) {
+        const status = normalizeTaskStatus(task.status);
+        const labels = {
+          review_pending: 'Operations is reviewing your request.',
+          quoted: 'A quote is ready for review.',
+          awaiting_payment: 'Payment is awaiting completion.',
+          verification_pending: 'Payment verification is in progress.',
+          queued: 'Your request is queued for execution.',
+          in_progress: 'Execution is active.',
+          delivery_prep: 'Delivery is being prepared.',
+          delivered: 'Delivery is ready.',
+          completed: 'Task completed.',
+          revision_requested: 'Revision request received.',
+          rejected: 'Request was not accepted.',
+          cancelled: 'Task cancelled.'
+        };
+        return labels[status] || 'Workspace activity updated.';
+      }
+
+      function getTimelineEventLabel(task) {
+        const s = normalizeTaskStatus(task.status);
+        const ps = String(task.payment_status || '').toLowerCase();
+        if (s === 'completed')                   return 'Task completed';
+        if (s === 'delivered')                   return 'Delivery ready';
+        if (s === 'delivery_prep')               return 'Delivery being prepared';
+        if (s === 'in_progress')                 return 'Execution active';
+        if (s === 'queued')                      return 'Queued for execution';
+        if (s === 'verification_pending')         return 'Payment verification in progress';
+        if (ps === 'awaiting_payment' || s === 'awaiting_payment') return 'Payment required';
+        if (s === 'quoted')                      return 'Quote ready for review';
+        if (s === 'revision_requested')          return 'Revision requested';
+        if (s === 'rejected')                    return 'Request not accepted';
+        if (s === 'cancelled')                   return 'Task cancelled';
+        return 'Review in progress';
+      }
+
+      function isTimelineUrgent(task) {
+        const s = normalizeTaskStatus(task.status);
+        const ps = String(task.payment_status || '').toLowerCase();
+        return s === 'quoted' || ps === 'awaiting_payment' || s === 'awaiting_payment';
+      }
+
+      function isInternalValidationMessage(message = {}) {
+        const text = [
+          message.message,
+          message.message_type,
+          message.task_id,
+          message.metadata?.source,
+          message.metadata?.note
+        ].filter(Boolean).join(' ').toLowerCase();
+        return /\b(realtime verification|signal verification|safe to delete|don realtime|don diagnostic|validation test|test verification|diagnostic check)\b/.test(text);
+      }
+
+      function renderActivity(tasks) {
+        const visibleMessages = workspaceMessages.filter((message) => !isInternalValidationMessage(message));
+        if (visibleMessages.length) {
+          workspaceActivityFeed.innerHTML = `<div class="op-timeline">${visibleMessages.slice(0, 8).map((message) => {
+            const relatedTask = tasks.find((task) => getTaskId(task) === (message.task_id || message.taskId));
+            const taskName = relatedTask ? getTaskSummary(relatedTask) : (message.task_title || message.task_summary || '');
+            return `
+              <div class="op-timeline-item">
+                <div class="op-timeline-dot${message.message_type === 'approval_request' ? ' is-urgent' : ''}"></div>
+                <div class="op-timeline-body">
+                  <strong>${taskName ? `${escapeHTML(taskName)} — ` : ''}${escapeHTML(message.message || 'Workspace updated.')}</strong>
+                  <span>${escapeHTML(message.task_id || message.taskId || message.message_type || 'system_update')} · ${escapeHTML(getRelativeTime(message.created_at))}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}</div>`;
+          return;
+        }
+
+        if (!tasks.length) {
+          workspaceActivityFeed.innerHTML = '<div class="op-timeline-item"><div class="op-timeline-dot"></div><div class="op-timeline-body"><strong>Workspace ready.</strong><span>Submit your first overnight request</span></div></div>';
+          return;
+        }
+
+        const sorted = sortTasks(tasks).slice(0, 5);
+        workspaceActivityFeed.innerHTML = `<div class="op-timeline">${sorted.map((task) => {
+          const urgent = isTimelineUrgent(task);
+          const label  = getTimelineEventLabel(task);
+          const time   = getRelativeTime(task.updated_at || task.created_at || task.createdAt);
+          const id     = getTaskId(task);
+
+          let cta = '';
+          const s  = normalizeTaskStatus(task.status);
+          const ps = String(task.payment_status || '').toLowerCase();
+          if (task.delivery_link && (s === 'delivered' || s === 'completed')) {
+            cta = `<a href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer" class="is-delivery">Open deliverable →</a>`;
+          } else if (task.payment_link && (ps === 'awaiting_payment' || s === 'awaiting_payment')) {
+            cta = `<a href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Pay quote →</a>`;
+          } else if (s === 'quoted' && task.payment_link) {
+            cta = `<a href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Review &amp; pay →</a>`;
+          }
+
+          return `
+            <div class="op-timeline-item">
+              <div class="op-timeline-dot${urgent ? ' is-urgent' : ''}"></div>
+              <div class="op-timeline-body">
+                <strong>${escapeHTML(getTaskSummary(task))} — ${escapeHTML(label)}</strong>
+                <span>${escapeHTML(id)} · ${escapeHTML(time)}</span>
+                ${cta}
+              </div>
+            </div>`;
+        }).join('')}</div>`;
+      }
+
+      function renderEmptyState() {
+        return `
+          <div class="empty-state">
+            <p class="eyebrow">Workspace ready</p>
+            <h3 class="empty-title">No active requests yet.</h3>
+            <p class="empty-copy">Create your first overnight request and operations will route it into review, quote, execution, and delivery.</p>
+            <button class="workspace-button primary-command" type="button" data-empty-new-request>+ New Request</button>
+          </div>
+        `;
+      }
+
+      function getTaskState(task) {
+        const s = normalizeTaskStatus(task.status);
+        const ps = String(task.payment_status || '').toLowerCase();
+        if (ps === 'awaiting_payment' || s === 'awaiting_payment') return 'awaiting-payment';
+        if (['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(s)) return 'in-progress';
+        if (['delivered', 'completed'].includes(s)) return 'delivered';
+        if (['cancelled', 'rejected'].includes(s)) return 'complete';
+        return 'review';
+      }
+
+      function renderTaskList(tasks) {
+        return tasks.map((task) => {
+          const paymentStatus = paymentStatusLabel(task.payment_status || task.paymentStatus);
+          const normalizedStatus = normalizeTaskStatus(task.status);
+          const deliveryStatus = task.delivery_link ? 'Delivery ready' : (['delivered', 'completed'].includes(normalizedStatus) ? statusLabel(normalizedStatus) : 'Pending');
+          const taskState = getTaskState(task);
+          const needsPayment = taskState === 'awaiting-payment' && task.payment_link && String(task.payment_status || '').toLowerCase() !== 'paid';
+          return `
+            <article class="task-card ${taskCardClass(task.status)}" data-task-state="${escapeHTML(taskState)}">
+              <div class="task-top">
+                <div>
+                  <div class="task-card-kicker">Private operation</div>
+                  <h3 class="task-title">${escapeHTML(getTaskSummary(task))}</h3>
+                  <div class="task-id">${escapeHTML(getTaskId(task))}</div>
+                </div>
+                <div class="task-status-stack">
+                  <span class="status-pill ${statusClass(task.status)}">${escapeHTML(statusLabel(task.status))}</span>
+                  <span class="status-pill">${escapeHTML(paymentStatus)}</span>
+                </div>
+              </div>
+              <div class="task-grid">
+                <div class="task-kv"><span>Created</span><strong>${escapeHTML(formatDate(task.created_at || task.createdAt))}</strong></div>
+                <div class="task-kv"><span>Deadline</span><strong>${escapeHTML(task.deadline || 'Flexible')}</strong></div>
+                <div class="task-kv"><span>Quote</span><strong>${escapeHTML(task.quote_amount || 'Pending')}</strong></div>
+                <div class="task-kv"><span>Delivery</span><strong>${escapeHTML(deliveryStatus)}</strong></div>
+                <div class="task-kv"><span>ETA</span><strong>${escapeHTML(task.delivery_eta || 'Pending')}</strong></div>
+                <div class="task-kv"><span>Queue</span><strong>${escapeHTML(task.queue_state || task.queueState || 'Intake')}</strong></div>
+              </div>
+              ${needsPayment ? '<div class="task-payment-notice">Payment required to continue execution</div>' : ''}
+              ${renderProjectAssets(task)}
+              ${renderOperationalQuote(task)}
+              ${renderTimeline(task)}
+            </article>
+          `;
+        }).join('');
+      }
+
+      function renderTasks(tasks) {
+        workspaceTasks = sortTasks(tasks);
+        const activeTasks = workspaceTasks.filter((task) => !isCompletedTask(task));
+        const completedTasks = workspaceTasks.filter(isCompletedTask);
+
+        taskFeedMeta.textContent = activeTasks.length
+          ? `${activeTasks.length} active operation${activeTasks.length === 1 ? '' : 's'}`
+          : 'No active operations';
+        completedHistoryMeta.textContent = completedTasks.length
+          ? `${completedTasks.length} delivered / historical`
+          : 'No delivered work yet';
+
+        updateWorkspaceMetrics(workspaceTasks);
+        updateQuoteMetrics(workspaceTasks);
+        renderActivity(workspaceTasks);
+        updateWorkspaceHero(workspaceTasks);
+        updateWorkspaceRuntimeEngine(workspaceTasks);
+
+        taskFeed.innerHTML = activeTasks.length ? renderTaskList(activeTasks) : renderEmptyState();
+        completedHistoryFeed.innerHTML = completedTasks.length
+          ? renderTaskList(completedTasks)
+          : '<div class="empty-state">Delivered work and historical outcomes will appear here.</div>';
+      }
+
+      async function loadTasks(options = {}) {
+        if (tasksLoading) {
+          queuedReload = true;
+          return;
+        }
+        tasksLoading = true;
+        if (!options.silent && !workspaceTasks.length) {
+          taskFeed.innerHTML = '<div class="empty-state">Task history is syncing…</div>';
+        }
+
+        const session = getSession();
+        let tasks = [];
+        try {
+          if (workspaceConnection) {
+            workspaceConnection.textContent = 'Workspace syncing';
+            workspaceConnection.classList.add('is-syncing');
+          }
+          const params = new URLSearchParams();
+          if (session.slug) params.set('slug', session.slug);
+          const response = await fetch(`${WORKSPACE_DATA_ENDPOINT}${params.toString() ? `?${params.toString()}` : ''}`, {
+            headers: { 'Accept': 'application/json' }
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (payload?.success !== true) {
+            renderWorkspacePendingState(payload?.error || 'Enter your access key or request a fresh private workspace link.');
+            return;
+          }
+          setWorkspaceAuthState(true);
+          workspaceSlug = payload.workspace?.slug || session.slug;
+          storeSession({
+            email: payload.workspace?.email || '',
+            name: payload.workspace?.name || '',
+            username: payload.workspace?.username || '',
+            company: payload.workspace?.company || '',
+            clientId: payload.workspace?.id || ''
+          });
+          workspaceName.textContent = payload.workspace?.name || payload.workspace?.company || `@${workspaceSlug}`;
+          workspaceSubcopy.textContent = `${payload.workspace?.email || `@${workspaceSlug}`}${payload.workspace?.company ? ` · ${payload.workspace.company}` : ''}`;
+          tasks = payload.tasks || [];
+          await Promise.all([loadWorkspaceMessages(), loadWorkspaceQuotes()]);
+        } catch (error) {
+          if (!workspaceTasks.length) renderWorkspacePendingState('Enter your access key or request a fresh private workspace link.');
+          return;
+        } finally {
+          tasksLoading = false;
+        }
+
+        if (!tasks.length) {
+          const handoffProject = getHandoffProjectTask();
+          if (handoffProject) tasks = [handoffProject];
+        }
+        await Promise.all([loadWorkspaceMessages(), loadWorkspaceQuotes()]);
+        if (tasks.length || !workspaceTasks.length) renderTasks(tasks);
+        if (workspaceConnection) {
+          workspaceConnection.textContent = 'Workspace live';
+          workspaceConnection.classList.remove('is-syncing');
+          workspaceConnection.classList.add('is-live');
+        }
+        if (queuedReload) {
+          queuedReload = false;
+          loadTasks({ silent: true });
+        }
+      }
+
+      async function loadWorkspaceMessages() {
+        const session = getSession();
+        const params = new URLSearchParams();
+        if (session.email) params.set('email', session.email);
+        if (session.slug || workspaceSlug) params.set('slug', session.slug || workspaceSlug);
+        const response = await fetch(`${WORKSPACE_MESSAGES_ENDPOINT}?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
+        const data = await response.json().catch(() => ({}));
+        workspaceMessages = Array.isArray(data.messages) ? data.messages : [];
+      }
+
+      async function loadWorkspaceQuotes() {
+        const session = getSession();
+        const params = new URLSearchParams();
+        if (session.email) params.set('email', session.email);
+        if (session.slug || workspaceSlug) params.set('slug', session.slug || workspaceSlug);
+        const response = await fetch(`${WORKSPACE_QUOTES_ENDPOINT}?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
+        const data = await response.json().catch(() => ({}));
+        workspaceQuotes = Array.isArray(data.quotes) ? data.quotes : [];
+      }
+
+      async function submitWorkspaceReply(event) {
+        event.preventDefault();
+        const textarea = document.getElementById('workspaceReply');
+        const button = document.getElementById('workspaceReplySubmit');
+        const message = textarea.value.trim();
+        if (!message) return;
+        const session = getSession();
+        button.disabled = true;
+        button.textContent = 'Sending…';
+        try {
+          const response = await fetch(WORKSPACE_MESSAGES_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              workspace_slug: session.slug || workspaceSlug,
+              email: session.email,
+              author_role: 'client',
+              message_type: 'client_reply',
+              message
+            })
+          });
+          if (!response.ok) throw new Error('Reply failed');
+          textarea.value = '';
+          await loadWorkspaceMessages();
+          renderActivity(workspaceTasks);
+        } catch (error) {
+          textarea.value = message;
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Send reply →';
+        }
+      }
+
+      async function logoutWorkspace() {
+        workspaceLogout.disabled = true;
+        workspaceLogout.textContent = 'Leaving…';
+        try {
+          await fetch(WORKSPACE_SESSION_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ action: 'logout' })
+          });
+        } catch (error) {
+          // The cookie clear is best-effort; local state is still cleared below.
+        } finally {
+          [
+            'portal_email',
+            'doneovernight_portal_email',
+            'portal_access_key',
+            'doneovernight_portal_access_key',
+            'portal_name',
+            'portal_company',
+            'portal_client_id',
+            'doneovernight_workspace_username',
+            'doneovernight_workspace_slug',
+            'doneovernight:workspaceHandoff',
+            'doneovernight:accessCredentials'
+          ].forEach((key) => sessionStorage.removeItem(key));
+          window.location.assign('../portal/');
+        }
+      }
+
+      function setWorkspaceStatus(text, mode = 'live') {
+        if (!workspaceConnection) return;
+        workspaceConnection.textContent = text;
+        workspaceConnection.classList.toggle('is-syncing', mode === 'syncing');
+        workspaceConnection.classList.toggle('is-live', mode !== 'syncing');
+      }
+
+      function announceWorkspaceUpdated() {
+        setWorkspaceStatus('Workspace updated', 'live');
+        window.clearTimeout(announceWorkspaceUpdated.timer);
+        announceWorkspaceUpdated.timer = window.setTimeout(() => {
+          setWorkspaceStatus(realtimeConnected ? 'Realtime connected' : 'Workspace live', 'live');
+        }, 2200);
+      }
+
+      function scheduleRealtimeRefresh(reason = 'workspace') {
+        window.clearTimeout(realtimeReloadTimer);
+        realtimeReloadTimer = window.setTimeout(async () => {
+          await loadTasks({ silent: true });
+          announceWorkspaceUpdated();
+          console.log('WORKSPACE UPDATED', reason);
+        }, 180);
+      }
+
+      function stopRealtimeFallback() {
+        if (realtimeFallbackInterval) {
+          window.clearInterval(realtimeFallbackInterval);
+          realtimeFallbackInterval = null;
+        }
+        realtimeFallbackEnabled = false;
+      }
+
+      function startRealtimeFallback() {
+        if (realtimeConnected || realtimeFallbackInterval) return;
+        realtimeFallbackEnabled = true;
+        setWorkspaceStatus('Realtime fallback active', 'live');
+        realtimeFallbackInterval = window.setInterval(() => {
+          if (document.hidden || realtimeConnected) return;
+          loadTasks({ silent: true, fallback: true }).catch(() => {});
+        }, 60000);
+      }
+
+      function handleVisibilityPolling() {
+        if (document.hidden) {
+          if (realtimeFallbackInterval) {
+            window.clearInterval(realtimeFallbackInterval);
+            realtimeFallbackInterval = null;
+          }
+          return;
+        }
+        if (realtimeFallbackEnabled && !realtimeConnected) startRealtimeFallback();
+      }
+
+      function startRealtime() {
+        const session = getSession();
+        const slug = session.slug || workspaceSlug;
+        if (!workspaceShell.classList.contains('is-authenticated')) return;
+        if (!supabaseClient || !session.email || realtimeChannel) {
+          if (!supabaseClient) startRealtimeFallback();
+          return;
+        }
+        realtimeChannel = supabaseClient
+          .channel(`doneovernight-workspace-${slug || 'client'}`)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'workspace_update_events', filter: `workspace_slug=eq.${slug}` }, (payload) => {
+            const table = payload.new?.record_table || 'workspace';
+            scheduleRealtimeRefresh(`workspace_update_events:${table}`);
+          })
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              realtimeConnected = true;
+              stopRealtimeFallback();
+              setWorkspaceStatus('Realtime connected', 'live');
+              console.log('REALTIME CONNECTED', 'workspace');
+            } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
+              realtimeConnected = false;
+              console.warn('REALTIME FALLBACK', status);
+              startRealtimeFallback();
+            }
+          });
+      }
+
+      function expandRequestPanel(options = {}) {
+        requestMessage.textContent = '';
+        requestMessage.className = 'workspace-message';
+        requestPanel.classList.add('is-expanded');
+        requestPanelToggle.setAttribute('aria-expanded', 'true');
+        if (options.scroll !== false) {
+          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          requestPanel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+        }
+        if (options.focus !== false) {
+          window.setTimeout(() => document.getElementById('requestSummary').focus({ preventScroll: true }), 180);
+        }
+      }
+
+      function toggleRequestPanel() {
+        const isExpanded = requestPanel.classList.toggle('is-expanded');
+        requestPanelToggle.setAttribute('aria-expanded', String(isExpanded));
+        if (isExpanded) {
+          window.setTimeout(() => document.getElementById('requestSummary').focus({ preventScroll: true }), 180);
+        }
+      }
+
+      function setWorkspaceDeadline(value) {
+        selectedWorkspaceDeadline = value;
+        document.getElementById('requestDeadline').value = value;
+        document.querySelectorAll('.deadline-pill[data-deadline]').forEach((pill) => {
+          const active = pill.dataset.deadline === value;
+          pill.classList.toggle('is-active', active);
+          pill.setAttribute('aria-checked', String(active));
+        });
+        document.getElementById('otherDeadlinePanel').classList.toggle('is-visible', value === 'Other');
+      }
+
+      function getWorkspaceDeadline() {
+        if (selectedWorkspaceDeadline !== 'Other') return selectedWorkspaceDeadline;
+        const other = document.getElementById('requestOtherDeadline').value;
+        return other ? `Other: ${other}` : 'Other';
+      }
+
+      function getAttachmentMetadata() {
+        const input = document.getElementById('requestFileUpload');
+        return Array.from(input?.files || []).map((file) => ({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size
+        }));
+      }
+
+      function shakeRequestForm() {
+        const field = document.getElementById('requestSummary').closest('.field-group');
+        field.classList.remove('is-invalid');
+        requestPanel.classList.remove('is-shaking');
+        void requestPanel.offsetWidth;
+        field.classList.add('is-invalid');
+        requestPanel.classList.add('is-shaking');
+        window.setTimeout(() => {
+          field.classList.remove('is-invalid');
+          requestPanel.classList.remove('is-shaking');
+        }, 520);
+      }
+
+      async function submitWorkspaceRequest(event) {
+        event.preventDefault();
+        const session = getSession();
+        const taskDescription = document.getElementById('requestSummary').value.trim();
+        const email = session.email;
+        const name = session.name;
+        const company = session.company;
+        const deadline = getWorkspaceDeadline();
+        const filesLink = document.getElementById('requestLinks').value.trim();
+        const attachments = getAttachmentMetadata();
+
+        requestMessage.className = 'workspace-message';
+        if (!taskDescription || !email) {
+          if (!taskDescription) shakeRequestForm();
+          requestMessage.textContent = taskDescription ? 'Private workspace access is required before sending.' : 'Add the request so operations can route it.';
+          requestMessage.classList.add('is-error');
+          return;
+        }
+
+        submitRequestBtn.disabled = true;
+        submitRequestBtn.textContent = 'Routing to operations…';
+        try {
+          let response;
+          if (session.accessKey) {
+            response = await fetch(TASK_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                email,
+                access_key: session.accessKey,
+                name,
+                company,
+                client_id: session.clientId,
+                task_summary: taskDescription,
+                task_description: taskDescription,
+                deadline,
+                files_link: filesLink,
+                links: filesLink ? [filesLink] : [],
+                attachments,
+                source: 'client_workspace',
+                created_at: new Date().toISOString()
+              })
+            });
+          } else {
+            response = await fetch('../api/task-submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                taskSummary: taskDescription,
+                deadline,
+                name,
+                email,
+                company,
+                links: filesLink,
+                attachments,
+                source: 'client_workspace',
+                intakeVersion: 'workspace_v1'
+              })
+            });
+          }
+
+          if (!response.ok) throw new Error('Workspace request failed');
+          const data = await response.json().catch(() => ({}));
+          const createdAt = new Date().toISOString();
+          const optimisticTask = {
+            id: data.taskId || data.task_id || createdAt,
+            task_id: data.taskId || data.task_id || 'Pending ID',
+            task_summary: taskDescription,
+            task_description: taskDescription,
+            status: 'new',
+            payment_status: 'not_required_yet',
+            queue_state: 'intake',
+            deadline,
+            quote_amount: null,
+            delivery_eta: null,
+            created_at: createdAt,
+            source: 'client_workspace',
+            email,
+            attachments
+          };
+          renderTasks([optimisticTask, ...workspaceTasks]);
+          requestMessage.textContent = 'Task received. We’ll review it and send a quote within 60 minutes.';
+          requestMessage.classList.add('is-success');
+          requestForm.reset();
+          setWorkspaceDeadline('Tonight');
+          document.getElementById('otherDeadlinePanel').classList.remove('is-visible');
+          await loadTasks({ silent: true });
+        } catch (error) {
+          requestMessage.textContent = 'Could not send task. Please try again.';
+          requestMessage.classList.add('is-error');
+        } finally {
+          submitRequestBtn.disabled = false;
+          submitRequestBtn.textContent = 'Send request →';
+        }
+      }
+
+      /* ── Quote & Payment Drawer ─────────────────────────── */
+
+      function parseQuoteAmount(value) {
+        if (!value) return 0;
+        const n = Number.parseFloat(String(value).replace(/[^\d.]/g, ''));
+        return Number.isFinite(n) ? n : 0;
+      }
+
+      function formatQuoteTotal(value) {
+        return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value || 0);
+      }
+
+      function updateQuoteMetrics(tasks) {
+        const quotedTasks = tasks.filter((t) => {
+          const s = normalizeTaskStatus(t.status);
+          const ps = String(t.payment_status || '').toLowerCase();
+          return s === 'quoted' && t.quote_amount && ps !== 'paid';
+        });
+        const paymentTasks = tasks.filter((t) => {
+          const ps = String(t.payment_status || '').toLowerCase();
+          const s = normalizeTaskStatus(t.status);
+          return ps === 'awaiting_payment' || s === 'awaiting_payment';
+        });
+
+        const qCount = document.getElementById('quotesReviewCount');
+        const pCount = document.getElementById('paymentDueCount');
+        const qSub   = document.getElementById('quotesReviewSub');
+        const pSub   = document.getElementById('paymentDueSub');
+
+        const approvalQuotes = workspaceQuotes.filter((quote) => ['sent', 'draft'].includes(String(quote.status || '').toLowerCase()));
+        if (qCount) qCount.textContent = quotedTasks.length + approvalQuotes.length;
+        if (pCount) pCount.textContent = paymentTasks.length;
+
+        if (qSub) {
+          const total = quotedTasks.reduce((sum, t) => sum + parseQuoteAmount(t.quote_amount), 0)
+            + approvalQuotes.reduce((sum, q) => sum + Number(q.amount || 0), 0);
+          qSub.textContent = (quotedTasks.length + approvalQuotes.length) > 0 ? formatQuoteTotal(total) + ' total' : 'No quotes pending';
+        }
+        if (pSub) {
+          const total = paymentTasks.reduce((sum, t) => sum + parseQuoteAmount(t.quote_amount), 0);
+          pSub.textContent = paymentTasks.length > 0 ? formatQuoteTotal(total) + ' outstanding' : 'No payment required';
+        }
+
+        if (activeQuoteDrawer) {
+          const drawerContent = document.getElementById('quoteDrawerContent');
+          if (drawerContent) drawerContent.innerHTML = renderQuoteDrawerContent(activeQuoteDrawer, tasks);
+        }
+      }
+
+      function renderQuoteDrawerContent(type, tasks) {
+        if (type === 'review') {
+          const items = tasks.filter((t) => {
+            const s = normalizeTaskStatus(t.status);
+            const ps = String(t.payment_status || '').toLowerCase();
+            return s === 'quoted' && t.quote_amount && ps !== 'paid';
+          });
+          const approvalQuotes = workspaceQuotes.filter((quote) => ['sent', 'draft'].includes(String(quote.status || '').toLowerCase()));
+          if (!items.length && !approvalQuotes.length) return '<div class="quote-empty">No quotes awaiting review.</div>';
+          const total = items.reduce((sum, t) => sum + parseQuoteAmount(t.quote_amount), 0);
+          return `
+            <div class="quote-drawer-head">
+              <span class="quote-drawer-title">Quotes to review</span>
+              <span class="quote-drawer-total" style="color:var(--amber)">${formatQuoteTotal(total + approvalQuotes.reduce((sum, q) => sum + Number(q.amount || 0), 0))}</span>
+            </div>
+            ${approvalQuotes.map((q) => `
+              <div class="quote-item">
+                <div>
+                  <div class="quote-item-title">${escapeHTML(q.title || 'Operational quote')}</div>
+                  <span class="quote-item-id">${escapeHTML(q.scope_summary || q.task_id || 'Awaiting approval')}</span>
+                  ${q.notes ? `<div class="quote-item-status" style="margin-top:4px;color:rgba(255,255,255,.42);font-family:var(--sans);font-size:12px;letter-spacing:0;text-transform:none;">${escapeHTML(q.notes)}</div>` : ''}
+                </div>
+                <div class="quote-item-meta">
+                  <span class="quote-item-amount">${escapeHTML(`${q.currency || 'EUR'} ${q.amount || ''}`.trim())}</span>
+                  <button class="quote-item-link" type="button" data-quote-action="approve" data-quote-id="${escapeHTML(q.id)}">Approve →</button>
+                  <button class="quote-item-link" type="button" data-quote-action="reject" data-quote-id="${escapeHTML(q.id)}">Reject</button>
+                </div>
+              </div>
+            `).join('')}
+            ${items.map((t) => `
+              <div class="quote-item">
+                <div>
+                  <div class="quote-item-title">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="quote-item-id">${escapeHTML(getTaskId(t))}</span>
+                  ${t.delivery_eta ? `<div class="quote-item-status">ETA: ${escapeHTML(t.delivery_eta)}</div>` : ''}
+                  ${t.quote_note ? `<div class="quote-item-status" style="margin-top:4px;color:rgba(255,255,255,.42);font-family:var(--sans);font-size:12px;letter-spacing:0;text-transform:none;">${escapeHTML(t.quote_note)}</div>` : ''}
+                </div>
+                <div class="quote-item-meta">
+                  <span class="quote-item-amount">${escapeHTML(String(t.quote_amount))}</span>
+                  ${t.payment_link ? `<a class="quote-item-link" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : '<span class="quote-item-status">Awaiting link</span>'}
+                </div>
+              </div>
+            `).join('')}
+          `;
+        }
+
+        if (type === 'payment') {
+          const items = tasks.filter((t) => {
+            const ps = String(t.payment_status || '').toLowerCase();
+            const s = normalizeTaskStatus(t.status);
+            return ps === 'awaiting_payment' || s === 'awaiting_payment';
+          });
+          if (!items.length) return '<div class="quote-empty">No payments outstanding.</div>';
+          const total = items.reduce((sum, t) => sum + parseQuoteAmount(t.quote_amount), 0);
+          return `
+            <div class="quote-drawer-head">
+              <span class="quote-drawer-title">Awaiting payment</span>
+              <span class="quote-drawer-total" style="color:#f4d28a">${formatQuoteTotal(total)}</span>
+            </div>
+            ${items.map((t) => `
+              <div class="quote-item">
+                <div>
+                  <div class="quote-item-title">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="quote-item-id">${escapeHTML(getTaskId(t))}</span>
+                  ${t.delivery_eta ? `<div class="quote-item-status">ETA: ${escapeHTML(t.delivery_eta)}</div>` : ''}
+                </div>
+                <div class="quote-item-meta">
+                  <span class="quote-item-amount is-payment">${t.quote_amount ? escapeHTML(String(t.quote_amount)) : 'TBD'}</span>
+                  ${t.payment_link ? `<a class="quote-item-link" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : '<span class="quote-item-status">Link pending</span>'}
+                </div>
+              </div>
+            `).join('')}
+          `;
+        }
+
+        return '';
+      }
+
+      function openQuoteDrawer(type) {
+        const drawer  = document.getElementById('quoteDrawer');
+        const content = document.getElementById('quoteDrawerContent');
+        const reviewCard  = document.getElementById('quotesReviewCard');
+        const paymentCard = document.getElementById('paymentDueCard');
+        if (!drawer || !content) return;
+
+        if (activeQuoteDrawer === type) { closeQuoteDrawer(); return; }
+
+        activeQuoteDrawer = type;
+        [reviewCard, paymentCard].forEach((c) => { if (c) { c.classList.remove('is-open'); c.setAttribute('aria-expanded', 'false'); } });
+
+        if (type === 'review')  { reviewCard?.classList.add('is-open');  reviewCard?.setAttribute('aria-expanded', 'true'); }
+        if (type === 'payment') { paymentCard?.classList.add('is-open'); paymentCard?.setAttribute('aria-expanded', 'true'); }
+
+        content.innerHTML = renderQuoteDrawerContent(type, workspaceTasks);
+        drawer.classList.add('is-open');
+        drawer.setAttribute('aria-hidden', 'false');
+        drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function closeQuoteDrawer() {
+        const drawer = document.getElementById('quoteDrawer');
+        activeQuoteDrawer = null;
+        if (drawer) { drawer.classList.remove('is-open'); drawer.setAttribute('aria-hidden', 'true'); }
+        ['quotesReviewCard', 'paymentDueCard'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) { el.classList.remove('is-open'); el.setAttribute('aria-expanded', 'false'); }
+        });
+      }
+
+      document.getElementById('quotesReviewCard')?.addEventListener('click', () => openQuoteDrawer('review'));
+      document.getElementById('paymentDueCard')?.addEventListener('click', () => openQuoteDrawer('payment'));
+      document.getElementById('quoteDrawer')?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-quote-action]');
+        if (!button || button.disabled) return;
+        const quoteId = button.dataset.quoteId;
+        const action = button.dataset.quoteAction;
+        if (!quoteId || !action) return;
+        button.disabled = true;
+        const previous = button.textContent;
+        button.textContent = action === 'approve' ? 'Approving…' : 'Rejecting…';
+        try {
+          const response = await fetch(WORKSPACE_QUOTES_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ id: quoteId, action })
+          });
+          if (!response.ok) throw new Error('Quote update failed');
+          await loadWorkspaceQuotes();
+          updateQuoteMetrics(workspaceTasks);
+        } catch (error) {
+          button.textContent = 'Try again';
+          window.setTimeout(() => { button.textContent = previous; button.disabled = false; }, 1200);
+        }
+      });
+
+      ['quotesReviewCard', 'paymentDueCard'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById(id)?.click(); }
+        });
+      });
+
+      /* ── End Quote Drawer ───────────────────────────────── */
+
+      /* ── Metric inline drawers ──────────────────────────── */
+
+      let activeMetricDrawer = null;
+
+      function renderMetricDrawerContent(type) {
+        const tasks = workspaceTasks;
+
+        if (type === 'active') {
+          const items = tasks.filter((t) => !isCompletedTask(t));
+          if (!items.length) return '<div class="metric-drawer-empty">No active operations.</div>';
+          return `
+            <div class="metric-drawer-head">
+              <span class="metric-drawer-title">Active operations</span>
+              <span class="metric-drawer-count">${items.length}</span>
+            </div>
+            ${items.map((t) => `
+              <div class="metric-drawer-item">
+                <div>
+                  <div class="metric-drawer-item-text">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="metric-drawer-item-sub">${escapeHTML(statusLabel(t.status))} · ${escapeHTML(getTaskId(t))}</span>
+                </div>
+              </div>`).join('')}`;
+        }
+
+        if (type === 'quotes') {
+          const items = tasks.filter((t) => {
+            const s = normalizeTaskStatus(t.status);
+            const ps = String(t.payment_status || '').toLowerCase();
+            return (s === 'quoted' || ps === 'awaiting_payment' || s === 'awaiting_payment');
+          });
+          if (!items.length) return '<div class="metric-drawer-empty">No pending quotes.</div>';
+          return `
+            <div class="metric-drawer-head">
+              <span class="metric-drawer-title">Pending quotes &amp; payments</span>
+              <span class="metric-drawer-count">${items.length}</span>
+            </div>
+            ${items.map((t) => `
+              <div class="metric-drawer-item">
+                <div>
+                  <div class="metric-drawer-item-text">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="metric-drawer-item-sub">${t.quote_amount ? escapeHTML(t.quote_amount) : 'Quote pending'} · ${escapeHTML(getTaskId(t))}</span>
+                </div>
+                ${t.payment_link ? `<a class="metric-drawer-item-action" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : ''}
+              </div>`).join('')}`;
+        }
+
+        if (type === 'delivered') {
+          const items = tasks.filter((t) => isCompletedTask(t));
+          if (!items.length) return '<div class="metric-drawer-empty">No delivered work yet.</div>';
+          return `
+            <div class="metric-drawer-head">
+              <span class="metric-drawer-title">Delivered work</span>
+              <span class="metric-drawer-count">${items.length}</span>
+            </div>
+            ${items.map((t) => `
+              <div class="metric-drawer-item">
+                <div>
+                  <div class="metric-drawer-item-text">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="metric-drawer-item-sub">${escapeHTML(getTaskId(t))} · ${escapeHTML(formatDate(t.delivered_at || t.created_at))}</span>
+                </div>
+                ${t.delivery_link ? `<a class="metric-drawer-item-action" href="${escapeHTML(t.delivery_link)}" target="_blank" rel="noopener noreferrer">Open →</a>` : ''}
+              </div>`).join('')}`;
+        }
+
+        if (type === 'hours') {
+          const items = tasks.filter((t) => isCompletedTask(t) && (t.hours_saved || t.estimated_hours_saved));
+          if (!items.length) return '<div class="metric-drawer-empty">Hours tracking begins after first delivery.</div>';
+          return `
+            <div class="metric-drawer-head">
+              <span class="metric-drawer-title">Hours saved</span>
+              <span class="metric-drawer-count">${workspaceHoursSaved.textContent}</span>
+            </div>
+            ${items.map((t) => {
+              const h = Number(t.hours_saved || t.estimated_hours_saved || 0);
+              return `
+              <div class="metric-drawer-item">
+                <div>
+                  <div class="metric-drawer-item-text">${escapeHTML(getTaskSummary(t))}</div>
+                  <span class="metric-drawer-item-sub">${escapeHTML(getTaskId(t))}</span>
+                </div>
+                <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);flex-shrink:0">${h}h</span>
+              </div>`;
+            }).join('')}`;
+        }
+
+        if (type === 'studio') {
+          return `
+            <div class="metric-drawer-head">
+              <span class="metric-drawer-title">Studio status</span>
+              <span class="metric-drawer-count" style="color:var(--green)">Live</span>
+            </div>
+            <div class="metric-drawer-item">
+              <div><div class="metric-drawer-item-text">Operations running</div><span class="metric-drawer-item-sub">Realtime sync active · Review window &lt; 60 min</span></div>
+            </div>`;
+        }
+
+        return '';
+      }
+
+      function openMetricDrawer(type) {
+        const drawer  = document.getElementById('workspaceMetricDrawer');
+        const content = document.getElementById('workspaceMetricDrawerContent');
+        if (!drawer || !content) return;
+        const targetMap = {
+          active: 'taskFeedSection',
+          quotes: 'quoteCenterSection',
+          delivered: 'completedHistorySection',
+          hours: 'completedHistorySection',
+          studio: 'workspaceActivitySection'
+        };
+
+        document.querySelectorAll('.workspace-metric[data-metric-drawer]').forEach((m) => {
+          m.classList.remove('is-active');
+          m.setAttribute('aria-expanded', 'false');
+        });
+
+        if (activeMetricDrawer === type) {
+          activeMetricDrawer = null;
+          drawer.classList.remove('is-open');
+          drawer.setAttribute('aria-hidden', 'true');
+          return;
+        }
+
+        activeMetricDrawer = type;
+        const activeMetric = document.querySelector(`.workspace-metric[data-metric-drawer="${type}"]`);
+        if (activeMetric) { activeMetric.classList.add('is-active'); activeMetric.setAttribute('aria-expanded', 'true'); }
+
+        content.innerHTML = renderMetricDrawerContent(type);
+        drawer.classList.add('is-open');
+        drawer.removeAttribute('aria-hidden');
+        window.requestAnimationFrame(() => {
+          revealWorkspaceDestination(targetMap[type] || 'workspaceMetricDrawer');
+        });
+      }
+
+      /* ── End metric drawers ─────────────────────────────── */
+
+      async function initWorkspace() {
+        const shouldContinue = await redeemWorkspaceToken();
+        if (!shouldContinue) return;
+        const session = getSession();
+        storeSession(session);
+        workspaceName.textContent = session.name || session.email || 'Workspace setup';
+        workspaceSubcopy.textContent = session.email
+          ? `${session.email}${session.company ? ` · ${session.company}` : ''}`
+          : 'Open portal access to complete workspace setup.';
+        requestPanel.querySelector('.request-panel-row').addEventListener('click', toggleRequestPanel);
+        requestPanelToggle.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggleRequestPanel();
+        });
+        document.getElementById('newRequestBtn').addEventListener('click', () => expandRequestPanel());
+        renderRecommendations();
+        recommendationRail?.addEventListener('click', (event) => {
+          const item = event.target.closest('[data-recommendation-index]');
+          if (item) useRecommendation(Number(item.dataset.recommendationIndex));
+        });
+        document.getElementById('requestDeadlinePills')?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-deadline]');
+          if (button) setWorkspaceDeadline(button.dataset.deadline);
+        });
+        workspaceLogout.addEventListener('click', logoutWorkspace);
+        document.getElementById('copyAccessDetails')?.addEventListener('click', async () => {
+          const text = [
+            `Username: ${document.getElementById('credentialUsername').textContent}`,
+            `Access key: ${document.getElementById('credentialAccessKey').textContent}`,
+            `Workspace: ${document.getElementById('credentialWorkspaceUrl').textContent}`
+          ].join('\n');
+          await navigator.clipboard?.writeText(text).catch(() => {});
+        });
+        document.getElementById('saveAccessKey')?.addEventListener('click', () => {
+          const text = [
+            'DONEOVERNIGHT private workspace access',
+            `Username: ${document.getElementById('credentialUsername').textContent}`,
+            `Access key: ${document.getElementById('credentialAccessKey').textContent}`,
+            `Workspace: ${document.getElementById('credentialWorkspaceUrl').textContent}`
+          ].join('\n');
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+          link.download = 'doneovernight-workspace-access.txt';
+          link.click();
+          URL.revokeObjectURL(link.href);
+        });
+        document.getElementById('closeAccessModal')?.addEventListener('click', closeAccessCredentials);
+        runtimeRevisionCommand?.addEventListener('click', () => {
+          localRevisionState = localRevisionState === 'requested' ? '' : 'requested';
+          if (localRevisionState) {
+            sessionStorage.setItem('doneovernight:runtimeRevisionState', localRevisionState);
+          } else {
+            sessionStorage.removeItem('doneovernight:runtimeRevisionState');
+          }
+          updateWorkspaceRuntimeEngine(workspaceTasks);
+        });
+        runtimeDeliveryCommand?.addEventListener('click', () => {
+          localDeliveryState = localDeliveryState === 'archive_ready' ? '' : 'archive_ready';
+          if (localDeliveryState) {
+            sessionStorage.setItem('doneovernight:runtimeDeliveryState', localDeliveryState);
+          } else {
+            sessionStorage.removeItem('doneovernight:runtimeDeliveryState');
+          }
+          updateWorkspaceRuntimeEngine(workspaceTasks);
+        });
+
+        // Metric cards → inline drawers below metrics row
+        document.querySelectorAll('.workspace-metric[data-metric-drawer]').forEach((metric) => {
+          const activate = () => openMetricDrawer(metric.dataset.metricDrawer);
+          metric.addEventListener('click', activate);
+          metric.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              activate();
+            }
+          });
+        });
+
+        taskFeed.addEventListener('click', (event) => {
+          if (event.target.closest('[data-empty-new-request]')) expandRequestPanel();
+        });
+        requestForm.addEventListener('submit', submitWorkspaceRequest);
+        workspaceReplyForm.addEventListener('submit', submitWorkspaceReply);
+        document.addEventListener('visibilitychange', handleVisibilityPolling);
+        showAccessCredentials();
+        loadTasks().then(() => startRealtime());
+      }
+
+      initWorkspace();
+    })();
+  </script>
+<script src="/lang/runtime.js" defer></script>
+</body>
+</html>

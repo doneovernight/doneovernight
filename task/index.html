@@ -1,0 +1,1975 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Intake | DONEOVERNIGHT</title>
+  <meta name="description" content="Private DONEOVERNIGHT task intake for overnight execution support.">
+  <link rel="canonical" href="https://doneovernight.com/task">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <style>
+    :root {
+      --bg: #050608;
+      --panel: rgba(12, 13, 16, 0.74);
+      --panel-soft: rgba(255, 255, 255, 0.035);
+      --line: rgba(255, 255, 255, 0.105);
+      --line-strong: rgba(233, 196, 138, 0.28);
+      --text: rgba(255, 255, 255, 0.92);
+      --muted: rgba(255, 255, 255, 0.58);
+      --faint: rgba(255, 255, 255, 0.36);
+      --amber: #e9c48a;
+      --amber-soft: rgba(233, 196, 138, 0.13);
+      --green: #8be0ad;
+      --danger: #e19b8f;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.52);
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --ink: var(--text);
+      --ink-dim: var(--muted);
+      --ink-faint: var(--faint);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      color-scheme: dark;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, 0.08), transparent 64%),
+        radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, 0.06), transparent 68%),
+        #050608;
+      color: var(--text);
+      font-family: var(--sans);
+      letter-spacing: 0;
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    body::before {
+      opacity: 0.45;
+      background-image:
+        radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+        radial-gradient(0.9px 0.9px at 36% 12%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+        radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+        radial-gradient(0.9px 0.9px at 68% 82%, #fff, transparent);
+      background-size: 100% 100%;
+    }
+
+    body::after {
+      opacity: 0.28;
+      background:
+        linear-gradient(180deg, rgba(245, 241, 234, 0.025), transparent 20%),
+        linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.055), transparent);
+      background-size: 100% 100%, 220% 100%;
+      background-position: center, -80% 0;
+      mix-blend-mode: soft-light;
+      animation: taskSignalDrift 32s ease-in-out infinite;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .task-page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      padding: clamp(18px, 3vw, 34px);
+    }
+
+    .task-page::before {
+      position: fixed;
+      inset: 12% -12% auto auto;
+      width: 46vw;
+      height: 46vw;
+      min-width: 420px;
+      min-height: 420px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(233, 196, 138, 0.055), transparent 62%);
+      filter: blur(6px);
+      opacity: 0.5;
+      pointer-events: none;
+      content: "";
+    }
+
+    .task-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 4px 0 22px;
+    }
+
+    .task-header::after {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 100vw;
+      transform: translateX(-50%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      content: "";
+      pointer-events: none;
+    }
+
+    .task-logo {
+      display: block;
+      width: clamp(142px, 15vw, 164px);
+      height: auto;
+      object-fit: contain;
+    }
+
+    .task-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--faint);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .task-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139, 224, 173, 0.44);
+      animation: taskPulse 2.4s ease-in-out infinite;
+    }
+
+    .task-shell {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6vw;
+      align-items: center;
+      width: min(1200px, 100%);
+      min-height: calc(100vh - 112px);
+      margin: 0 auto;
+      padding: clamp(30px, 6vh, 62px) 0 26px;
+    }
+
+    .task-hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 610px;
+      gap: 0;
+    }
+
+    .task-hero::after {
+      position: absolute;
+      top: 10%;
+      right: -5%;
+      width: 1px;
+      height: 64%;
+      background: linear-gradient(180deg, transparent, rgba(233, 196, 138, 0.13), transparent);
+      opacity: 0.62;
+      content: "";
+    }
+
+    .task-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 16px;
+      color: var(--amber);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .task-eyebrow::before {
+      width: 26px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(233, 196, 138, 0.85), transparent);
+      content: "";
+    }
+
+    .task-title {
+      max-width: 14ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2.35rem, 5.6vw, 4.65rem);
+      font-weight: 400;
+      line-height: 1.02;
+      letter-spacing: -0.032em;
+      text-wrap: balance;
+      text-shadow: 0 26px 90px rgba(233, 196, 138, 0.08);
+    }
+
+    .task-copy {
+      max-width: 40ch;
+      margin: clamp(18px, 2.4vw, 24px) 0 0;
+      color: var(--muted);
+      font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+      line-height: 1.66;
+    }
+
+    .task-indicators {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: clamp(22px, 3.4vw, 34px) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .task-indicators li {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.075);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.024);
+      color: rgba(255, 255, 255, 0.64);
+      font-size: 0.78rem;
+      backdrop-filter: blur(18px);
+    }
+
+    .task-indicators li::before {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--amber);
+      box-shadow: 0 0 10px rgba(233, 196, 138, 0.24);
+      content: "";
+    }
+
+    .task-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 28px;
+      border-top: 1px solid rgba(255, 255, 255, 0.075);
+    }
+
+    .task-step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .task-step .n {
+      color: var(--amber);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+    }
+
+    .task-step .t {
+      color: rgba(255, 255, 255, 0.88);
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+
+    .task-step .d {
+      grid-column: 2 / 3;
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.48);
+      font-size: 0.82rem;
+      line-height: 1.42;
+    }
+
+    .task-flow {
+      position: relative;
+      max-width: 560px;
+      margin-top: 22px;
+      border: 0;
+    }
+
+    .task-flow-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 0 13px;
+      color: rgba(255, 255, 255, 0.46);
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .task-routing {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 12px 0 8px;
+      overflow: hidden;
+    }
+
+    .task-routing::before {
+      position: absolute;
+      top: 18px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background:
+        linear-gradient(90deg, rgba(233, 196, 138, 0.05), rgba(233, 196, 138, 0.26), rgba(233, 196, 138, 0.05));
+      content: "";
+    }
+
+    .task-routing::after {
+      position: absolute;
+      top: 17px;
+      left: -12%;
+      width: 18%;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.48), transparent);
+      box-shadow: 0 0 14px rgba(233, 196, 138, 0.2);
+      animation: taskSignalScan 7s cubic-bezier(0.22, 0.68, 0.26, 1) infinite;
+      content: "";
+    }
+
+    .task-route-step {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 13px;
+      color: rgba(255, 255, 255, 0.44);
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .task-route-step::before {
+      position: relative;
+      z-index: 1;
+      width: 8px;
+      height: 8px;
+      border: 1px solid rgba(233, 196, 138, 0.42);
+      border-radius: 999px;
+      background: #08090b;
+      box-shadow: 0 0 10px rgba(233, 196, 138, 0.1);
+      content: "";
+    }
+
+    .task-route-step:nth-child(2)::before {
+      background: rgba(233, 196, 138, 0.58);
+      animation: taskPulse 3.4s ease-in-out infinite;
+    }
+
+    .task-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.085);
+      border-radius: 6px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022)),
+        rgba(8, 9, 12, 0.78);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+      backdrop-filter: blur(28px);
+      transition:
+        border-color 260ms ease,
+        box-shadow 260ms ease,
+        transform 260ms cubic-bezier(0.22, 0.68, 0.26, 1);
+    }
+
+    .task-card:focus-within {
+      border-color: rgba(233, 196, 138, 0.22);
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.46),
+        0 0 54px rgba(233, 196, 138, 0.065);
+      transform: translateY(-1px);
+    }
+
+    .task-card::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 22% 0%, rgba(233, 196, 138, 0.1), transparent 24rem),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 28%);
+      content: "";
+    }
+
+    .task-card-inner {
+      position: relative;
+      padding: clamp(20px, 3.2vw, 30px);
+    }
+
+    .task-form-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .task-form-head h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(1.55rem, 2.5vw, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.025em;
+    }
+
+    .task-form-head p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .task-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      margin-top: 6px;
+      color: rgba(139, 224, 173, 0.9);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .task-live::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139, 224, 173, 0.5);
+      content: "";
+    }
+
+    .task-assurance {
+      margin: 2px 0 6px;
+      color: var(--amber);
+      font-size: 0.64rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      line-height: 1.55;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .task-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .task-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .task-field label {
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .task-field input,
+    .task-field textarea,
+    .task-field select {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 4px;
+      outline: 0;
+      background: rgba(255, 255, 255, 0.032);
+      color: rgba(255, 255, 255, 0.88);
+      transition:
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        background 180ms ease,
+        transform 180ms ease;
+    }
+
+    .task-field input,
+    .task-field select {
+      height: 46px;
+      padding: 0 14px;
+    }
+
+    .task-field textarea {
+      min-height: 150px;
+      resize: vertical;
+      padding: 14px;
+      line-height: 1.55;
+    }
+
+    .task-field input::placeholder,
+    .task-field textarea::placeholder {
+      color: rgba(255, 255, 255, 0.34);
+    }
+
+    .task-field input:focus,
+    .task-field textarea:focus,
+    .task-field select:focus {
+      border-color: rgba(233, 196, 138, 0.38);
+      background: rgba(233, 196, 138, 0.04);
+      box-shadow:
+        0 0 0 3px rgba(233, 196, 138, 0.08),
+        0 0 26px rgba(233, 196, 138, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    }
+
+    .task-field.is-invalid input,
+    .task-field.is-invalid textarea {
+      border-color: rgba(225, 155, 143, 0.68);
+      box-shadow: 0 0 0 4px rgba(225, 155, 143, 0.08), 0 0 22px rgba(225, 155, 143, 0.12);
+      animation: taskShake 260ms ease;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .task-deadline {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .task-deadline button {
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.085);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.028);
+      color: rgba(255, 255, 255, 0.58);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition:
+        border-color 180ms ease,
+        background 180ms ease,
+        box-shadow 180ms ease,
+        color 180ms ease,
+        transform 180ms ease;
+    }
+
+    .task-deadline button:hover,
+    .task-deadline button:focus-visible {
+      border-color: rgba(233, 196, 138, 0.32);
+      background: rgba(233, 196, 138, 0.055);
+      color: rgba(255, 227, 173, 0.86);
+      outline: 0;
+    }
+
+    .task-deadline button.is-active {
+      border-color: var(--amber);
+      background: var(--amber);
+      color: #050608;
+      box-shadow: none;
+    }
+
+    .task-deadline button:active {
+      transform: scale(0.98);
+    }
+
+    .task-file {
+      position: relative;
+      display: grid;
+      gap: 9px;
+      min-height: 68px;
+      padding: 13px;
+      border: 1px dashed rgba(233, 196, 138, 0.18);
+      border-radius: 6px;
+      background: rgba(233, 196, 138, 0.032);
+      transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    }
+
+    .task-file:hover,
+    .task-file:focus-within {
+      border-color: rgba(233, 196, 138, 0.3);
+      background: rgba(233, 196, 138, 0.048);
+      box-shadow: 0 0 20px rgba(233, 196, 138, 0.055);
+    }
+
+    .task-file input {
+      height: auto;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 0.82rem;
+    }
+
+    .task-file input::file-selector-button {
+      min-height: 34px;
+      margin-right: 12px;
+      border: 1px solid rgba(233, 196, 138, 0.38);
+      border-radius: 999px;
+      background: rgba(233, 196, 138, 0.08);
+      color: var(--amber);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      padding: 0 12px;
+    }
+
+    .task-help {
+      color: var(--faint);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .task-submit {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 52px;
+      margin-top: 4px;
+      border: 1px solid rgba(233, 196, 138, 0.42);
+      border-radius: 999px;
+      background: rgba(233, 196, 138, 0.065);
+      color: #f4d28a;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow:
+        0 0 22px rgba(233, 196, 138, 0.13),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      transition:
+        transform 220ms cubic-bezier(0.22, 0.68, 0.26, 1),
+        border-color 180ms ease,
+        background 180ms ease,
+        box-shadow 180ms ease,
+        color 180ms ease;
+    }
+
+    .task-submit::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.16) 42%, transparent 72%);
+      opacity: 0;
+      transform: translateX(-120%);
+      transition: opacity 220ms ease;
+      content: "";
+    }
+
+    .task-submit span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .task-submit:hover,
+    .task-submit:focus-visible {
+      border-color: rgba(233, 196, 138, 0.72);
+      background: rgba(233, 196, 138, 0.11);
+      color: #ffe3ad;
+      box-shadow:
+        0 0 32px rgba(233, 196, 138, 0.24),
+        0 0 70px rgba(233, 196, 138, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.11);
+      transform: translateY(-2px);
+    }
+
+    .task-submit:hover::before,
+    .task-submit:focus-visible::before {
+      opacity: 1;
+      animation: taskButtonSweep 1.2s cubic-bezier(0.22, 0.68, 0.26, 1) forwards;
+    }
+
+    .task-submit:active {
+      transform: scale(0.985);
+    }
+
+    .task-submit[disabled] {
+      cursor: wait;
+      opacity: 0.76;
+      transform: none;
+    }
+
+    .task-submit.is-sending {
+      border-color: rgba(233, 196, 138, 0.64);
+      box-shadow:
+        0 0 34px rgba(233, 196, 138, 0.24),
+        0 0 78px rgba(233, 196, 138, 0.1);
+    }
+
+    .task-message {
+      min-height: 20px;
+      color: var(--danger);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .intake-section {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .intake-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6vw;
+      align-items: center;
+      width: min(1200px, 100%);
+      min-height: calc(100vh - 112px);
+      margin: 0 auto;
+      padding: clamp(30px, 6vh, 62px) 0 26px;
+    }
+
+    .intake-left {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 610px;
+      gap: 24px;
+    }
+
+    .intake-left::after {
+      position: absolute;
+      top: 10%;
+      right: -5%;
+      width: 1px;
+      height: 64%;
+      background: linear-gradient(180deg, transparent, rgba(233, 196, 138, 0.13), transparent);
+      opacity: 0.62;
+      content: "";
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 26px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(233, 196, 138, 0.85), transparent);
+      content: "";
+    }
+
+    .display {
+      max-width: 14ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2.35rem, 5.6vw, 4.65rem);
+      font-weight: 400;
+      line-height: 1.02;
+      letter-spacing: -0.032em;
+      text-wrap: balance;
+      text-shadow: 0 26px 90px rgba(233, 196, 138, 0.08);
+    }
+
+    .sub {
+      max-width: 40ch;
+      margin: 0;
+      color: var(--ink-dim);
+      font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+      line-height: 1.66;
+    }
+
+    .intake-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .intake-step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 16px;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .intake-step .n {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+    }
+
+    .intake-step .t {
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .intake-step .d {
+      grid-column: 2 / 3;
+      margin-top: 2px;
+      color: var(--ink-dim);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .intake-form {
+      position: relative;
+      overflow: hidden;
+      padding: 36px 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(245, 241, 234, 0.02);
+      box-shadow:
+        0 30px 60px -15px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(245, 241, 234, 0.04);
+      backdrop-filter: blur(20px);
+    }
+
+    .intake-form::before {
+      position: absolute;
+      top: -1px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.4), transparent);
+      content: "";
+    }
+
+    .intake-form-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .intake-form-head .title {
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .intake-form-head .meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--ink-dim);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .intake-form-head .meta .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #3aa55a;
+      box-shadow: 0 0 6px #3aa55a;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .field-group .label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink-dim);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .field-group .label .hint {
+      color: var(--ink-faint);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+    }
+
+    .field-group input[type="text"],
+    .field-group input[type="email"],
+    .field-group input[type="url"],
+    .field-group input[type="file"],
+    .field-group textarea,
+    .field-group select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      outline: none;
+      background: rgba(245, 241, 234, 0.03);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      transition: border 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .field-group input[type="text"],
+    .field-group input[type="email"],
+    .field-group input[type="url"],
+    .field-group select {
+      min-height: 46px;
+      padding: 12px 14px;
+    }
+
+    .field-group input[type="file"] {
+      min-height: 46px;
+      padding: 9px 12px;
+      color: var(--ink-dim);
+    }
+
+    .field-group input::placeholder,
+    .field-group textarea::placeholder {
+      color: var(--ink-faint);
+    }
+
+    .field-group input[type="file"]::file-selector-button {
+      min-height: 28px;
+      margin-right: 12px;
+      border: 1px solid rgba(233, 196, 138, 0.38);
+      border-radius: 999px;
+      background: rgba(233, 196, 138, 0.08);
+      color: var(--amber);
+      cursor: pointer;
+      font: inherit;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      padding: 0 12px;
+      text-transform: uppercase;
+    }
+
+    .field-group textarea {
+      min-height: 110px;
+      padding: 12px 14px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .field-group input:focus,
+    .field-group textarea:focus,
+    .field-group select:focus {
+      border-color: var(--amber);
+      background: rgba(245, 241, 234, 0.05);
+      box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08);
+    }
+
+    .field-group.field-error input,
+    .field-group.field-error textarea {
+      border-color: rgba(233, 196, 138, 0.72);
+      background: rgba(233, 196, 138, 0.06);
+      box-shadow:
+        0 0 0 3px rgba(233, 196, 138, 0.09),
+        0 0 24px rgba(233, 196, 138, 0.12);
+    }
+
+    .form-error {
+      display: none;
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border: 1px solid rgba(233, 196, 138, 0.26);
+      border-radius: 6px;
+      background: rgba(233, 196, 138, 0.06);
+      color: #f4d28a;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .form-error.is-visible {
+      display: block;
+    }
+
+    .intake-form.is-shaking {
+      animation: intakeShake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    }
+
+    .intake-form.is-sent {
+      border-color: rgba(139, 224, 173, 0.28);
+      box-shadow:
+        0 30px 60px -15px rgba(0, 0, 0, 0.6),
+        0 0 38px rgba(139, 224, 173, 0.08),
+        inset 0 1px 0 rgba(245, 241, 234, 0.04);
+    }
+
+    .intake-form.is-sent .form-error {
+      border-color: rgba(139, 224, 173, 0.24);
+      background: rgba(139, 224, 173, 0.055);
+      color: rgba(221, 255, 232, 0.92);
+    }
+
+    .form-microcopy,
+    .form-reassurance {
+      margin-top: 8px;
+      color: var(--ink-dim);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .form-reassurance {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .deadline-pills {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .deadline-pill {
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      background: rgba(245, 241, 234, 0.03);
+      color: var(--ink-dim);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+    }
+
+    .deadline-pill:hover,
+    .deadline-pill:focus-visible {
+      border-color: rgba(233, 196, 138, 0.4);
+      color: var(--ink);
+      outline: none;
+    }
+
+    .deadline-pill.active {
+      border-color: var(--amber);
+      background: var(--amber);
+      color: #050608;
+      font-weight: 600;
+    }
+
+    .contact-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .contact-row .field-group {
+      margin-bottom: 0;
+    }
+
+    .submit-btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      margin-top: 8px;
+      padding: 18px 20px;
+      overflow: hidden;
+      border: 1px solid rgba(233, 196, 138, 0.45);
+      border-radius: 100px;
+      background: rgba(233, 196, 138, 0.08);
+      color: #f4d28a;
+      cursor: pointer;
+      box-shadow:
+        0 0 22px rgba(233, 196, 138, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      transition:
+        background 0.35s ease,
+        border-color 0.35s ease,
+        box-shadow 0.35s ease,
+        color 0.35s ease,
+        transform 0.2s ease;
+    }
+
+    .submit-btn::before {
+      display: none;
+      content: none;
+    }
+
+    .submit-btn > *,
+    .submit-btn span {
+      position: relative;
+      z-index: 2;
+      color: inherit;
+    }
+
+    .submit-btn span {
+      font-size: 16px;
+      transition: transform 0.35s ease;
+    }
+
+    .submit-btn:hover,
+    .submit-btn:focus-visible {
+      border-color: rgba(233, 196, 138, 0.8);
+      background: rgba(233, 196, 138, 0.14);
+      color: #ffe3ad;
+      box-shadow:
+        0 0 34px rgba(233, 196, 138, 0.38),
+        0 0 90px rgba(233, 196, 138, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      outline: none;
+    }
+
+    .submit-btn:hover span,
+    .submit-btn:focus-visible span {
+      transform: translateX(6px);
+    }
+
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    .submit-btn.is-sending {
+      pointer-events: none;
+      border-color: rgba(233, 196, 138, 0.55);
+      background: rgba(233, 196, 138, 0.1);
+      color: rgba(255, 227, 173, 0.75);
+      box-shadow:
+        0 0 24px rgba(233, 196, 138, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .intake-alt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--ink-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .intake-alt a {
+      color: var(--amber);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .intake-alt a:hover {
+      color: var(--ink);
+    }
+
+    .recent-executions {
+      margin-top: 18px;
+      padding: 18px 0 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .recent-executions-title {
+      margin: 0 0 10px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .recent-executions-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .recent-executions-list li {
+      min-height: 32px;
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.075);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.022);
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .runtime-handoff {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(ellipse 680px 420px at 50% 34%, rgba(233, 196, 138, 0.12), transparent 68%),
+        rgba(5, 6, 8, 0.86);
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(22px);
+      transition: opacity 360ms ease;
+    }
+
+    .runtime-handoff.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .runtime-handoff-card {
+      width: min(520px, 100%);
+      border: 1px solid rgba(233, 196, 138, 0.2);
+      border-radius: 8px;
+      background: rgba(10, 11, 14, 0.86);
+      box-shadow: 0 34px 90px rgba(0, 0, 0, 0.56), 0 0 70px rgba(233, 196, 138, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      padding: clamp(24px, 5vw, 38px);
+      transform: translateY(10px);
+      transition: transform 360ms ease;
+    }
+
+    .runtime-handoff.is-visible .runtime-handoff-card {
+      transform: translateY(0);
+    }
+
+    .runtime-handoff-card h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2.1rem, 7vw, 3.6rem);
+      font-weight: 400;
+      letter-spacing: -0.035em;
+      line-height: 0.98;
+    }
+
+    .runtime-handoff-card p {
+      margin: 14px 0 0;
+      color: var(--ink-dim);
+      line-height: 1.65;
+    }
+
+    .runtime-handoff-signals {
+      display: grid;
+      gap: 9px;
+      margin-top: 24px;
+    }
+
+    .runtime-handoff-signals span {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      padding-top: 9px;
+      color: rgba(255, 255, 255, 0.58);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .runtime-handoff-signals span::after {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139, 224, 173, 0.44);
+      content: "";
+      animation: taskPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes intakeShake {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+      18% {
+        transform: translateX(-5px);
+      }
+      36% {
+        transform: translateX(5px);
+      }
+      54% {
+        transform: translateX(-3px);
+      }
+      72% {
+        transform: translateX(3px);
+      }
+    }
+
+    .task-confirmation {
+      display: grid;
+      gap: 14px;
+      padding: clamp(30px, 5vw, 48px) 0 10px;
+      animation: taskConfirmIn 520ms cubic-bezier(0.22, 0.68, 0.26, 1) both;
+    }
+
+    .task-confirmation h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 400;
+      letter-spacing: -0.035em;
+    }
+
+    .task-confirmation p {
+      max-width: 430px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .task-confirmation .task-live {
+      margin-top: 10px;
+    }
+
+    @keyframes taskPulse {
+      0%,
+      100% {
+        opacity: 0.64;
+        transform: scale(0.9);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes taskSignalScan {
+      0% {
+        transform: translateX(0);
+        opacity: 0;
+      }
+      16%,
+      74% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(660%);
+        opacity: 0;
+      }
+    }
+
+    @keyframes taskButtonSweep {
+      0% {
+        transform: translateX(-120%);
+      }
+      100% {
+        transform: translateX(120%);
+      }
+    }
+
+    @keyframes taskConfirmIn {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes taskSignalDrift {
+      0%,
+      100% {
+        background-position: center, -90% 0;
+        opacity: 0.22;
+      }
+      50% {
+        background-position: center, 140% 0;
+        opacity: 0.28;
+      }
+    }
+
+    @keyframes taskShake {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+      25% {
+        transform: translateX(-5px);
+      }
+      75% {
+        transform: translateX(5px);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .task-shell,
+      .intake-grid {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        padding-top: 34px;
+      }
+
+      .task-hero,
+      .intake-left {
+        max-width: none;
+      }
+
+      .task-hero::after,
+      .intake-left::after {
+        display: none;
+      }
+
+      .task-card {
+        border-radius: 18px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .task-page {
+        padding: 16px;
+      }
+
+      .task-header {
+        padding-bottom: 16px;
+      }
+
+      .task-logo {
+        width: 142px;
+      }
+
+      .task-status {
+        font-size: 0;
+        gap: 0;
+      }
+
+      .task-status-dot {
+        width: 8px;
+        height: 8px;
+      }
+
+      .task-title {
+        font-size: clamp(2.6rem, 12.5vw, 3.7rem);
+      }
+
+      .display {
+        font-size: clamp(2.6rem, 12.5vw, 3.7rem);
+      }
+
+      .task-copy {
+        font-size: 1rem;
+      }
+
+      .task-indicators {
+        display: grid;
+      }
+
+      .task-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .task-deadline {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .deadline-pills {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .task-form-head {
+        display: grid;
+      }
+
+      .task-field textarea {
+        min-height: 158px;
+      }
+
+      .field-group textarea {
+        min-height: 138px;
+      }
+
+      .task-steps {
+        margin-top: 24px;
+      }
+
+      .task-routing {
+        grid-template-columns: repeat(5, minmax(48px, 1fr));
+        overflow-x: auto;
+        padding-bottom: 12px;
+      }
+
+      .task-routing::before {
+        left: 24px;
+        right: 24px;
+      }
+
+      .task-route-step {
+        min-width: 58px;
+      }
+
+      .intake-form {
+        padding: 28px 22px;
+      }
+
+      .contact-row {
+        grid-template-columns: 1fr;
+      }
+
+      .intake-alt {
+        display: grid;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="task-page">
+    <header class="task-header" aria-label="DONEOVERNIGHT task intake">
+      <a href="../" aria-label="DONEOVERNIGHT home">
+        <img class="task-logo" src="../assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </a>
+      <div class="task-status" aria-label="Studio online">
+        <span class="task-status-dot" aria-hidden="true"></span>
+        Studio online
+      </div>
+    </header>
+
+    <section class="intake-section" aria-labelledby="taskTitle">
+      <div class="intake-grid">
+        <div class="intake-left">
+          <p class="eyebrow">Secure task intake</p>
+          <h1 class="display" id="taskTitle">What needs to be handled overnight?</h1>
+          <p class="sub">
+            Private operational intake for tasks, fixes, research, systems, edits, documents, automation, and execution support.
+          </p>
+
+          <div class="intake-steps" aria-label="How task intake works">
+            <div class="intake-step">
+              <span class="n">01</span>
+              <span class="t">Describe the task</span>
+              <span class="d">What you need handled. More context means a sharper quote.</span>
+            </div>
+            <div class="intake-step">
+              <span class="n">02</span>
+              <span class="t">Attach what matters</span>
+              <span class="d">Files, links, references, notes, screenshots, or working docs.</span>
+            </div>
+            <div class="intake-step">
+              <span class="n">03</span>
+              <span class="t">We reply with a quote</span>
+              <span class="d">Review starts within 60 minutes. Confirm, then execution begins.</span>
+            </div>
+          </div>
+
+          <div class="task-flow" aria-label="Operational routing progression">
+            <p class="task-flow-title">Operational routing</p>
+            <div class="task-routing">
+              <span class="task-route-step">Submit</span>
+              <span class="task-route-step">Review</span>
+              <span class="task-route-step">Queue</span>
+              <span class="task-route-step">Execution</span>
+              <span class="task-route-step">Delivery</span>
+            </div>
+          </div>
+        </div>
+
+        <aside aria-label="Submit an overnight task">
+          <form class="intake-form" id="taskIntakeForm" action="/api/task-submit" method="POST" novalidate>
+            <input type="hidden" name="_subject" value="New DONEOVERNIGHT task intake">
+            <input type="hidden" name="_template" value="table">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_autoresponse" value="Task received. Operational review begins shortly.">
+            <input type="hidden" name="source" value="task_intake">
+            <input type="hidden" name="file_names" id="taskFileNames" value="">
+
+            <div class="intake-form-head">
+              <span class="title">New task</span>
+              <span class="meta"><span class="dot" aria-hidden="true"></span>Studio online</span>
+            </div>
+
+            <div class="form-error" id="taskMessage" role="alert" aria-live="polite"></div>
+
+            <div class="field-group" data-field="task_description">
+              <label class="label" for="taskDescription">
+                <span>Describe your task</span>
+                <span class="hint">Required</span>
+              </label>
+              <textarea id="taskDescription" name="task_description" required placeholder="e.g. Build an investor-ready 12-slide deck from this outline. Series A, fintech. Sharp, minimal, confident. Attached: Google Doc + logo."></textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="label" for="taskFiles">
+                <span>Execution references</span>
+                <span class="hint">Optional</span>
+              </label>
+              <input id="taskFiles" name="attachments" type="file" multiple>
+              <input id="taskLinks" name="links" type="url" inputmode="url" placeholder="https://">
+              <span class="form-microcopy">Drop references, screenshots, decks, links, or working materials for the execution layer.</span>
+            </div>
+
+            <div class="field-group">
+              <label class="label" for="taskDeadline">
+                <span>Deadline</span>
+                <span class="hint">Optional</span>
+              </label>
+              <input id="taskDeadline" name="deadline" type="hidden" value="Overnight">
+              <div class="deadline-pills" role="group" aria-label="Optional deadline">
+                <button class="deadline-pill" type="button" data-deadline="Rush · 4h">Rush · 4h</button>
+                <button class="deadline-pill active" type="button" data-deadline="Overnight">Overnight</button>
+                <button class="deadline-pill" type="button" data-deadline="48 Hours">48 Hours</button>
+                <button class="deadline-pill" type="button" data-deadline="Flexible">Flexible</button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="label">
+                <span>Contact</span>
+                <span class="hint">Required</span>
+              </label>
+              <div class="contact-row">
+                <div class="field-group" data-field="name">
+                  <label class="label" for="taskName">
+                    <span>Name</span>
+                    <span class="hint">Required</span>
+                  </label>
+                  <input id="taskName" name="name" type="text" autocomplete="name" required placeholder="Your name">
+                </div>
+                <div class="field-group" data-field="email">
+                  <label class="label" for="taskEmail">
+                    <span>Email</span>
+                    <span class="hint">Required</span>
+                  </label>
+                  <input id="taskEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
+                </div>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="label" for="taskCompany">
+                <span>Company</span>
+                <span class="hint">Optional</span>
+              </label>
+              <input id="taskCompany" name="company" type="text" autocomplete="organization" placeholder="Company or team">
+            </div>
+
+            <button class="submit-btn" type="submit">
+              Start your overnight cycle <span>&rarr;</span>
+            </button>
+            <div class="form-reassurance">No payment required to submit · Quote first</div>
+            <div class="intake-alt">
+              <span>Prefer email?</span>
+              <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+            </div>
+          </form>
+
+          <div class="recent-executions" aria-label="Recently handled execution categories">
+            <p class="recent-executions-title">Recently handled</p>
+            <ul class="recent-executions-list">
+              <li>websites</li>
+              <li>automation systems</li>
+              <li>investor decks</li>
+              <li>operational workflows</li>
+              <li>brand revisions</li>
+              <li>SEO infrastructure</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="runtime-handoff" id="runtimeHandoff" aria-hidden="true">
+    <div class="runtime-handoff-card" role="status" aria-live="polite">
+      <p class="eyebrow">Runtime handoff</p>
+      <h2>Review layer activating.</h2>
+      <p>Your request is being synchronized into the DONEOVERNIGHT review runtime.</p>
+      <div class="runtime-handoff-signals">
+        <span>Intake secured</span>
+        <span>Review signal opening</span>
+        <span>Execution layer standing by</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const form = document.querySelector("#taskIntakeForm");
+      const message = document.querySelector("#taskMessage");
+      const submitButton = form?.querySelector(".submit-btn");
+      const submitIdleHtml = submitButton?.innerHTML || "";
+      const fileInput = document.querySelector("#taskFiles");
+      const fileNamesInput = document.querySelector("#taskFileNames");
+      const deadlineInput = document.querySelector("#taskDeadline");
+      const deadlineButtons = [...document.querySelectorAll("[data-deadline]")];
+      const runtimeHandoff = document.querySelector("#runtimeHandoff");
+      const MAX_ATTACHMENT_METADATA = 12;
+
+      if (!form || !message || !submitButton) return;
+
+      const requiredFields = [
+        { input: document.querySelector("#taskDescription"), label: "Task description" },
+        { input: document.querySelector("#taskName"), label: "Name" },
+        { input: document.querySelector("#taskEmail"), label: "Email" }
+      ];
+
+      function setMessage(text, isError = true) {
+        message.textContent = text;
+        message.classList.toggle("is-visible", Boolean(text));
+        message.style.color = isError ? "#f4d28a" : "rgba(139, 224, 173, 0.9)";
+      }
+
+      function readField(selector) {
+        return document.querySelector(selector)?.value.trim() || "";
+      }
+
+      function getSelectedFiles() {
+        return Array.prototype.slice.call(fileInput?.files || [], 0, MAX_ATTACHMENT_METADATA);
+      }
+
+      function clearInvalidState() {
+        form.querySelectorAll(".field-group.field-error").forEach((field) => {
+          field.classList.remove("field-error");
+        });
+        form.classList.remove("is-shaking");
+      }
+
+      function validateForm() {
+        clearInvalidState();
+        const invalid = requiredFields.filter(({ input }) => !input?.value.trim());
+
+        if (invalid.length) {
+          invalid.forEach(({ input }) => input?.closest(".field-group")?.classList.add("field-error"));
+          invalid[0].input?.focus({ preventScroll: true });
+          invalid[0].input?.scrollIntoView({ behavior: "smooth", block: "center" });
+          form.classList.remove("is-shaking");
+          void form.offsetWidth;
+          form.classList.add("is-shaking");
+          setMessage("Add the task description, name, and email so operations can review it.");
+          return false;
+        }
+
+        const email = document.querySelector("#taskEmail");
+        if (email && !email.checkValidity()) {
+          email.closest(".field-group")?.classList.add("field-error");
+          email.focus({ preventScroll: true });
+          email.scrollIntoView({ behavior: "smooth", block: "center" });
+          form.classList.remove("is-shaking");
+          void form.offsetWidth;
+          form.classList.add("is-shaking");
+          setMessage("Enter a valid email so we can respond.");
+          return false;
+        }
+
+        return true;
+      }
+
+      function updateSelectedFileNames() {
+        const files = getSelectedFiles();
+        const names = files.map((file) => file.name.trim()).filter(Boolean);
+        const remaining = Math.max((fileInput?.files?.length || 0) - files.length, 0);
+        if (fileNamesInput) fileNamesInput.value = `${names.join(", ")}${remaining ? `, +${remaining} more` : ""}`.replace(/^, /, "");
+      }
+
+      function getAttachmentMetadata() {
+        return getSelectedFiles().map((file) => ({
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size
+        }));
+      }
+
+      function getPayload() {
+        return {
+          task_description: readField("#taskDescription"),
+          deadline: deadlineInput?.value.trim() || "",
+          email: readField("#taskEmail"),
+          name: readField("#taskName"),
+          company: readField("#taskCompany"),
+          links: readField("#taskLinks"),
+          attachments: getAttachmentMetadata(),
+          source: "task_intake",
+          intakeVersion: "homepage_intake_v1"
+        };
+      }
+
+      function getSubmitErrorMessage(code) {
+        if (code === "TASK_PERSISTENCE_NOT_CONFIGURED") {
+          return "Intake is temporarily unavailable while operations reconnects. Please email ask@doneovernight.com directly.";
+        }
+
+        if (code === "TASK_PERSISTENCE_TIMEOUT" || code === "TASK_PERSISTENCE_NETWORK_ERROR") {
+          return "Operations could not confirm receipt yet. Please try again in a moment.";
+        }
+
+        return "Something went wrong. Please email ask@doneovernight.com directly.";
+      }
+
+      function buildReviewUrl(data, payload) {
+        const reviewUrl = new URL("https://portal.doneovernight.com/review");
+        const taskId = data?.taskId || data?.task?.taskId || "";
+        const submitted = data?.task?.createdAt || new Date().toISOString();
+        const params = {
+          state: "review_active",
+          request: payload.task_description,
+          task_id: taskId,
+          client: payload.name,
+          deadline: payload.deadline || "Under review",
+          source: "Secure task intake",
+          submitted,
+          priority: payload.deadline && /rush|4h|tonight|overnight/i.test(payload.deadline) ? "Priority review" : "Evaluating"
+        };
+
+        Object.entries(params).forEach(([key, value]) => {
+          if (value) reviewUrl.searchParams.set(key, String(value).slice(0, 220));
+        });
+
+        return reviewUrl.toString();
+      }
+
+      function activateRuntimeHandoff() {
+        runtimeHandoff?.classList.add("is-visible");
+        runtimeHandoff?.setAttribute("aria-hidden", "false");
+      }
+
+      fileInput?.addEventListener("change", () => {
+        window.setTimeout(updateSelectedFileNames, 0);
+      });
+
+      deadlineButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          deadlineButtons.forEach((item) => item.classList.remove("active"));
+          if (deadlineInput) deadlineInput.value = button.dataset.deadline || "";
+          button.classList.add("active");
+        });
+      });
+
+      form.addEventListener("input", (event) => {
+        event.target?.closest(".field-group")?.classList.remove("field-error");
+        if (message.textContent) setMessage("", false);
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        updateSelectedFileNames();
+
+        if (!validateForm()) return;
+
+        submitButton.disabled = true;
+        form.setAttribute("aria-busy", "true");
+        submitButton.classList.add("is-sending");
+        submitButton.innerHTML = "Routing to operations <span>&rarr;</span>";
+        setMessage("Secure intake is receiving your task.", false);
+        const payload = getPayload();
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            }
+          });
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data?.code || "Task intake failed");
+          if (!data?.success) throw new Error("Task intake failed");
+          const reviewUrl = buildReviewUrl(data, payload);
+          sessionStorage.setItem("doneovernight:lastTask", JSON.stringify({
+            taskId: data.taskId,
+            taskSummary: data.task?.taskSummary || payload.task_description,
+            email: data.task?.email || payload.email,
+            name: data.task?.name || payload.name,
+            company: data.task?.company || payload.company,
+            source: data.task?.source || payload.source,
+            status: data.task?.status || "review_pending",
+            reviewWindowEstimate: data.task?.reviewWindowEstimate || "< 60 min",
+            reviewUrl
+          }));
+          form.classList.add("is-sent");
+          submitButton.classList.remove("is-sending");
+          submitButton.innerHTML = "Task received <span>&rarr;</span>";
+          setMessage("Task received. Opening the review runtime.", false);
+          activateRuntimeHandoff();
+          window.setTimeout(() => {
+            window.location.assign(reviewUrl);
+          }, 860);
+        } catch (error) {
+          submitButton.disabled = false;
+          form.removeAttribute("aria-busy");
+          submitButton.classList.remove("is-sending");
+          submitButton.innerHTML = submitIdleHtml;
+          setMessage(getSubmitErrorMessage(error.message));
+        }
+      });
+    })();
+  </script>
+<script src="/lang/runtime.js" defer></script>
+</body>
+</html>
