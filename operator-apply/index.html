@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operator application | DONEOVERNIGHT</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050608;
+      --ink: rgba(255,255,255,.92);
+      --ink-dim: rgba(255,255,255,.62);
+      --ink-faint: rgba(255,255,255,.38);
+      --line: rgba(255,255,255,.105);
+      --amber: #e9c48a;
+      --green: #8be0ad;
+      --red: #e57070;
+      --sans: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); color-scheme: dark; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, .08), transparent 64%),
+        radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, .06), transparent 68%),
+        #050608;
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    body::before {
+      opacity: .42;
+      background-image:
+        radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+        radial-gradient(.9px .9px at 36% 12%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+        radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+        radial-gradient(.9px .9px at 68% 82%, #fff, transparent);
+    }
+
+    body::after {
+      opacity: .24;
+      background: linear-gradient(90deg, transparent, rgba(233,196,138,.055), transparent);
+      background-size: 220% 100%;
+      background-position: -80% 0;
+      mix-blend-mode: soft-light;
+      animation: signalDrift 34s ease-in-out infinite;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea { font: inherit; }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(980px, calc(100% - 36px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 78px 0 52px;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      width: 100%;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(5,6,8,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .topbar-inner {
+      width: min(980px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 0 18px;
+    }
+
+    .wordmark { display: inline-flex; align-items: center; line-height: 0; }
+    .wordmark img { display: block; width: clamp(142px, 15vw, 164px); height: auto; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(139,224,173,.86);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .status::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.44);
+      content: "";
+      animation: livePulse 2.6s ease-in-out infinite;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, .92fr) minmax(320px, .78fr);
+      gap: clamp(24px, 6vw, 72px);
+      align-items: center;
+      min-height: calc(100vh - 130px);
+      padding: clamp(38px, 7vh, 78px) 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 11ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(44px, 7vw, 82px);
+      font-weight: 400;
+      line-height: .98;
+      letter-spacing: -.035em;
+    }
+
+    .copy {
+      max-width: 48ch;
+      margin: 20px 0 0;
+      color: var(--ink-dim);
+      font-size: clamp(15px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(18px);
+      padding: clamp(22px, 4vw, 34px);
+    }
+
+    .panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(233,196,138,.13), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent 42%);
+      opacity: .8;
+      content: "";
+    }
+
+    .panel > * { position: relative; z-index: 1; }
+    .form { display: grid; gap: 14px; }
+    .field { display: grid; gap: 8px; }
+    .field label {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 7px;
+      background: rgba(255,255,255,.028);
+      color: var(--ink);
+      padding: 14px;
+      outline: none;
+      transition: border-color .22s, background .22s, box-shadow .22s;
+    }
+
+    .field textarea { min-height: 120px; resize: vertical; }
+    .field input:focus,
+    .field textarea:focus {
+      border-color: rgba(233,196,138,.52);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 0 0 3px rgba(233,196,138,.085), 0 0 22px rgba(233,196,138,.09);
+    }
+
+    .button {
+      min-height: 50px;
+      border: 1px solid rgba(233,196,138,.58);
+      border-radius: 7px;
+      background: linear-gradient(135deg, rgba(233,196,138,.16), rgba(233,196,138,.055));
+      color: #f4d28a;
+      box-shadow: 0 0 34px rgba(233,196,138,.2), inset 0 1px 0 rgba(255,255,255,.1);
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: border-color .22s, background .22s, box-shadow .22s, transform .22s;
+    }
+
+    .button.is-secondary {
+      width: 100%;
+      min-height: 46px;
+      border-color: rgba(255,255,255,.105);
+      border-radius: 999px;
+      background: rgba(255,255,255,.026);
+      color: rgba(255,255,255,.76);
+      box-shadow: none;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .13em;
+    }
+
+    .button.is-secondary:hover,
+    .button.is-secondary:focus-visible {
+      border-color: rgba(233,196,138,.34);
+      background: rgba(233,196,138,.055);
+      color: #f4d28a;
+      box-shadow: none;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .divider::before,
+    .divider::after {
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+      content: "";
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      border-color: rgba(233,196,138,.75);
+      background: rgba(233,196,138,.12);
+      color: #ffe3ad;
+      box-shadow: 0 0 34px rgba(233,196,138,.25), 0 0 72px rgba(233,196,138,.1);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .button:disabled { cursor: wait; opacity: .68; transform: none; }
+    .message {
+      min-height: 18px;
+      color: var(--ink-faint);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .message.is-error { color: var(--red); }
+    .message.is-success { color: var(--green); }
+
+    .success-card {
+      display: none;
+      gap: 14px;
+      color: var(--ink-dim);
+      line-height: 1.7;
+    }
+
+    .success-card.is-visible { display: grid; }
+    .success-card strong { color: var(--ink); font-size: 18px; }
+    .success-card a {
+      display: inline-flex;
+      width: fit-content;
+      border-bottom: 1px solid rgba(233,196,138,.42);
+      color: var(--amber);
+      padding-bottom: 3px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-path {
+      display: grid;
+      gap: 10px;
+      margin-top: 24px;
+      max-width: 48ch;
+    }
+
+    .operator-path-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      color: rgba(245,241,234,.46);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .operator-path-item span {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(233,196,138,.28);
+      border-radius: 999px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 9px;
+      box-shadow: 0 0 16px rgba(233,196,138,.08);
+    }
+
+    @keyframes signalDrift { 50% { background-position: 140% 0; opacity: .28; } }
+    @keyframes livePulse { 0%, 100% { opacity: .62; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.16); } }
+
+    @media (max-width: 780px) {
+      .layout { grid-template-columns: 1fr; align-items: start; }
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: 12px; }
+      h1 { max-width: 12ch; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
+        <div class="status">Operator application</div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div>
+        <p class="eyebrow">Operator onboarding</p>
+        <h1>Enter the specialist layer.</h1>
+        <p class="copy">A selective onboarding path for independent operators who can handle serious creative, visual, strategic, or execution-heavy work inside the DONEOVERNIGHT operating system.</p>
+        <div class="operator-path" aria-label="Operator onboarding path">
+          <div class="operator-path-item"><span>1</span><div>Submit identity, specialist role, skills, location, and payout details.</div></div>
+          <div class="operator-path-item"><span>2</span><div>Operations reviews fit, trust, availability, and assignment readiness.</div></div>
+          <div class="operator-path-item"><span>3</span><div>Approved specialists receive operator access for assigned work only.</div></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <form class="form" id="onboardingForm" novalidate>
+          <button class="button is-secondary" id="googleOnboarding" type="button">Continue with Google</button>
+          <div class="divider">or complete manually</div>
+          <div class="field">
+            <label for="clientName">Name</label>
+            <input id="clientName" name="name" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="clientEmail">Email</label>
+            <input id="clientEmail" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="projectName">Role / skills</label>
+            <input id="projectName" name="skills" placeholder="Design, automation, research, systems…" required>
+          </div>
+          <div class="field">
+            <label for="operatorRole">Operational role type</label>
+            <input id="operatorRole" name="role" placeholder="Designer, editor, automation specialist…" required>
+          </div>
+          <div class="field">
+            <label for="operatorCountry">Country / location</label>
+            <input id="operatorCountry" name="country" autocomplete="country-name" required>
+          </div>
+          <div class="field">
+            <label for="operatorBirthdate">Birthdate</label>
+            <input id="operatorBirthdate" name="birthdate" type="date" required>
+          </div>
+          <div class="field">
+            <label for="operatorPayoutEmail">Preferred payout email</label>
+            <input id="operatorPayoutEmail" name="payout_email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="operatorTools">Tools</label>
+            <input id="operatorTools" name="tools" placeholder="Figma, Webflow, Zapier, n8n, Notion…">
+          </div>
+          <div class="field">
+            <label for="operatorTimezone">Timezone</label>
+            <input id="operatorTimezone" name="timezone" placeholder="CET, EST, GMT…">
+          </div>
+          <div class="field">
+            <label for="operatorAvailability">Availability</label>
+            <input id="operatorAvailability" name="availability" placeholder="Weeknights, weekends, 10h/week…">
+          </div>
+          <div class="field">
+            <label for="operatorPortfolio">Portfolio / link</label>
+            <input id="operatorPortfolio" name="portfolio" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label for="clientNotes">Notes <span style="opacity:.55">optional</span></label>
+            <textarea id="clientNotes" name="notes" placeholder="What kind of work should operations route to you?"></textarea>
+          </div>
+          <div class="message" id="onboardingMessage" aria-live="polite"></div>
+          <button class="button" id="onboardingSubmit" type="submit">Submit operator application →</button>
+        </form>
+
+        <div class="success-card" id="onboardingSuccess">
+          <strong>Operator profile received.</strong>
+          <p>Operations will review the profile before any specialist workspace access is opened.</p>
+          <a href="../">Return home</a>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (() => {
+      const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+      const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+      const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const form = document.getElementById('onboardingForm');
+      const message = document.getElementById('onboardingMessage');
+      const submit = document.getElementById('onboardingSubmit');
+      const success = document.getElementById('onboardingSuccess');
+      const projectInput = document.getElementById('projectName');
+      const googleButton = document.getElementById('googleOnboarding');
+      let googleAccessToken = '';
+      let googleProfileImage = '';
+
+      function getOperatorOnboardingRedirect() {
+        return window.location.hostname === 'operator.doneovernight.com'
+          ? `${window.location.origin}/apply/`
+          : `${window.location.origin}/operator-onboarding/`;
+      }
+
+      function setMessage(text, type = '') {
+        message.textContent = text;
+        message.className = `message${type ? ` is-${type}` : ''}`;
+      }
+
+      function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      }
+
+      async function hydrateGoogleIdentity() {
+        if (!supabaseClient) return;
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('error')) {
+          setMessage('Google onboarding could not be completed. You can continue manually.', 'error');
+          return;
+        }
+        let { data } = await supabaseClient.auth.getSession();
+        if (!data?.session && params.has('code')) {
+          const exchanged = await supabaseClient.auth.exchangeCodeForSession(params.get('code'));
+          if (exchanged.error) throw exchanged.error;
+          data = exchanged.data || {};
+        }
+        const session = data?.session;
+        if (!session) return;
+        const user = session.user || {};
+        const meta = user.user_metadata || {};
+        googleAccessToken = session.access_token || '';
+        googleProfileImage = meta.avatar_url || meta.picture || '';
+        const name = meta.full_name || meta.name || '';
+        if (name && !document.getElementById('clientName').value.trim()) document.getElementById('clientName').value = name;
+        if (user.email && !document.getElementById('clientEmail').value.trim()) document.getElementById('clientEmail').value = user.email;
+        if (user.email && !document.getElementById('operatorPayoutEmail').value.trim()) document.getElementById('operatorPayoutEmail').value = user.email;
+        if (meta.locale && !document.getElementById('operatorTimezone').value.trim()) document.getElementById('operatorTimezone').value = meta.locale;
+        setMessage('Google identity verified. Complete the remaining operator details.', 'success');
+      }
+
+      googleButton?.addEventListener('click', async () => {
+        if (!supabaseClient) {
+          setMessage('Google onboarding is temporarily unavailable. Continue manually.', 'error');
+          return;
+        }
+        googleButton.disabled = true;
+        setMessage('Opening secure Google onboarding…');
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: getOperatorOnboardingRedirect(),
+            queryParams: { prompt: 'select_account' }
+          }
+        });
+        if (error) {
+          googleButton.disabled = false;
+          setMessage('Could not start Google onboarding. Continue manually or try again.', 'error');
+        }
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const payload = {
+          name: document.getElementById('clientName').value.trim(),
+          email: document.getElementById('clientEmail').value.trim(),
+          skills: projectInput.value.trim(),
+          role: document.getElementById('operatorRole').value.trim(),
+          country: document.getElementById('operatorCountry').value.trim(),
+          birthdate: document.getElementById('operatorBirthdate').value.trim(),
+          payout_email: document.getElementById('operatorPayoutEmail').value.trim(),
+          tools: document.getElementById('operatorTools').value.trim(),
+          timezone: document.getElementById('operatorTimezone').value.trim(),
+          availability: document.getElementById('operatorAvailability').value.trim(),
+          portfolio: document.getElementById('operatorPortfolio').value.trim(),
+          notes: document.getElementById('clientNotes').value.trim(),
+          source: 'operator_apply',
+          google_access_token: googleAccessToken,
+          profile_image: googleProfileImage
+        };
+
+        if (!payload.name) {
+          setMessage('Add your name so operations can review the application.', 'error');
+          return;
+        }
+
+        if (!payload.email || !isValidEmail(payload.email)) {
+          setMessage('Please enter a valid email address.', 'error');
+          return;
+        }
+
+        if (!payload.skills || !payload.role || !payload.country || !payload.birthdate || !isValidEmail(payload.payout_email)) {
+          setMessage('Complete the required operator details before submitting.', 'error');
+          return;
+        }
+
+        submit.disabled = true;
+        submit.textContent = 'Submitting application…';
+        setMessage('');
+        try {
+          const response = await fetch('../api/operator-apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Onboarding failed');
+
+          form.style.display = 'none';
+          success.classList.add('is-visible');
+        } catch (error) {
+          setMessage(error.message === 'Please enter a valid email address.'
+            ? 'Please enter a valid email address.'
+            : 'Could not submit the operator application. Please try again.', 'error');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Submit operator application →';
+        }
+      });
+
+      hydrateGoogleIdentity().catch(() => {
+        setMessage('Google identity could not be restored. You can continue manually.', 'error');
+      });
+    })();
+  </script>
+<script src="/lang/runtime.js" defer></script>
+</body>
+</html>

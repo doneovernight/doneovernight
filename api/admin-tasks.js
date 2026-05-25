@@ -1,0 +1,128 @@
+const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+const SUPABASE_TIMEOUT_MS = 10_000;
+
+function send(res, statusCode, payload) {
+  res.statusCode = statusCode;
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(JSON.stringify(payload));
+}
+
+function clean(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getSupabaseConfig() {
+  const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !serviceRoleKey) {
+    const error = new Error("Admin tasks are not configured");
+    error.code = "ADMIN_TASKS_NOT_CONFIGURED";
+    error.statusCode = 503;
+    throw error;
+  }
+  return { url, serviceRoleKey };
+}
+
+function parseBody(req) {
+  if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
+
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+      if (body.length > 50_000) {
+        reject(new Error("Payload too large"));
+        req.destroy();
+      }
+    });
+    req.on("end", () => {
+      if (!body) return resolve({});
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(new Error("Invalid JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+async function verifyAdminKey(adminKey) {
+  if (!adminKey) return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ admin_key: adminKey }),
+      signal: controller.signal
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    return data?.success === true;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchTasks() {
+  const { url, serviceRoleKey } = getSupabaseConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${url}/rest/v1/task_requests?select=*&order=created_at.desc`, {
+      method: "GET",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        Accept: "application/json"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const error = new Error(`Supabase tasks read failed: ${response.status}`);
+      error.statusCode = response.status;
+      throw error;
+    }
+
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return send(res, 405, { success: false, error: "Method not allowed" });
+  }
+
+  try {
+    const input = await parseBody(req);
+    const adminKey = clean(input.admin_key || input.adminKey);
+    const authorized = await verifyAdminKey(adminKey);
+    if (!authorized) {
+      return send(res, 401, { success: false, error: "Admin access denied" });
+    }
+
+    const tasks = await fetchTasks();
+    return send(res, 200, { success: true, tasks: Array.isArray(tasks) ? tasks : [] });
+  } catch (error) {
+    if (error.message === "Invalid JSON") {
+      return send(res, 400, { success: false, error: "Invalid JSON", code: "INVALID_JSON" });
+    }
+    if (error.message === "Payload too large") {
+      return send(res, 413, { success: false, error: "Payload too large", code: "PAYLOAD_TOO_LARGE" });
+    }
+    return send(res, error.statusCode || 500, {
+      success: false,
+      error: "Could not load admin tasks",
+      code: error.code || "ADMIN_TASKS_FAILED"
+    });
+  }
+};

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Client invite | DONEOVERNIGHT</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050608;
+      --ink: rgba(255,255,255,.92);
+      --ink-dim: rgba(255,255,255,.62);
+      --ink-faint: rgba(255,255,255,.38);
+      --line: rgba(255,255,255,.105);
+      --amber: #e9c48a;
+      --green: #8be0ad;
+      --red: #e57070;
+      --sans: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); color-scheme: dark; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, .08), transparent 64%),
+        radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, .06), transparent 68%),
+        #050608;
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    body::before {
+      opacity: .42;
+      background-image:
+        radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+        radial-gradient(.9px .9px at 36% 12%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+        radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+        radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+        radial-gradient(.9px .9px at 68% 82%, #fff, transparent);
+    }
+
+    body::after {
+      opacity: .24;
+      background: linear-gradient(90deg, transparent, rgba(233,196,138,.055), transparent);
+      background-size: 220% 100%;
+      background-position: -80% 0;
+      mix-blend-mode: soft-light;
+      animation: signalDrift 34s ease-in-out infinite;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea { font: inherit; }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(980px, calc(100% - 36px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 78px 0 52px;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      width: 100%;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(5,6,8,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .topbar-inner {
+      width: min(980px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 0 18px;
+    }
+
+    .wordmark { display: inline-flex; align-items: center; line-height: 0; }
+    .wordmark img { display: block; width: clamp(142px, 15vw, 164px); height: auto; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(139,224,173,.86);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .status::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139,224,173,.44);
+      content: "";
+      animation: livePulse 2.6s ease-in-out infinite;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, .92fr) minmax(320px, .78fr);
+      gap: clamp(24px, 6vw, 72px);
+      align-items: center;
+      min-height: calc(100vh - 130px);
+      padding: clamp(38px, 7vh, 78px) 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 11ch;
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(44px, 7vw, 82px);
+      font-weight: 400;
+      line-height: .98;
+      letter-spacing: -.035em;
+    }
+
+    .copy {
+      max-width: 48ch;
+      margin: 20px 0 0;
+      color: var(--ink-dim);
+      font-size: clamp(15px, 1.4vw, 17px);
+      line-height: 1.75;
+    }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(245,241,234,.025);
+      box-shadow: 0 28px 70px -28px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(18px);
+      padding: clamp(22px, 4vw, 34px);
+    }
+
+    .panel::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(233,196,138,.13), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent 42%);
+      opacity: .8;
+      content: "";
+    }
+
+    .panel > * { position: relative; z-index: 1; }
+    .form { display: grid; gap: 14px; }
+    .field { display: grid; gap: 8px; }
+    .field label {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 7px;
+      background: rgba(255,255,255,.028);
+      color: var(--ink);
+      padding: 14px;
+      outline: none;
+      transition: border-color .22s, background .22s, box-shadow .22s;
+    }
+
+    .field textarea { min-height: 120px; resize: vertical; }
+    .field input:focus,
+    .field textarea:focus {
+      border-color: rgba(233,196,138,.52);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 0 0 3px rgba(233,196,138,.085), 0 0 22px rgba(233,196,138,.09);
+    }
+
+    .button {
+      min-height: 50px;
+      border: 1px solid rgba(233,196,138,.58);
+      border-radius: 7px;
+      background: linear-gradient(135deg, rgba(233,196,138,.16), rgba(233,196,138,.055));
+      color: #f4d28a;
+      box-shadow: 0 0 34px rgba(233,196,138,.2), inset 0 1px 0 rgba(255,255,255,.1);
+      cursor: pointer;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: border-color .22s, background .22s, box-shadow .22s, transform .22s;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      border-color: rgba(233,196,138,.75);
+      background: rgba(233,196,138,.12);
+      color: #ffe3ad;
+      box-shadow: 0 0 34px rgba(233,196,138,.25), 0 0 72px rgba(233,196,138,.1);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .button:disabled { cursor: wait; opacity: .68; transform: none; }
+    .message {
+      min-height: 18px;
+      color: var(--ink-faint);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .message.is-error { color: var(--red); }
+    .message.is-success { color: var(--green); }
+
+    .success-card {
+      display: none;
+      gap: 14px;
+      color: var(--ink-dim);
+      line-height: 1.7;
+    }
+
+    .success-card.is-visible { display: grid; }
+    .success-card strong { color: var(--ink); font-size: 18px; }
+    .success-card a {
+      display: inline-flex;
+      width: fit-content;
+      border-bottom: 1px solid rgba(233,196,138,.42);
+      color: var(--amber);
+      padding-bottom: 3px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    @keyframes signalDrift { 50% { background-position: 140% 0; opacity: .28; } }
+    @keyframes livePulse { 0%, 100% { opacity: .62; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.16); } }
+
+    @media (max-width: 780px) {
+      .layout { grid-template-columns: 1fr; align-items: start; }
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: 12px; }
+      h1 { max-width: 12ch; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
+        <div class="status">Private client request</div>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div>
+        <p class="eyebrow">Private client invite</p>
+        <h1>Request access to operations.</h1>
+        <p class="copy">Tell us what you need handled. If there is a fit, operations will approve the workspace and route the first request into review.</p>
+      </div>
+
+      <aside class="panel">
+        <form class="form" id="onboardingForm" novalidate>
+          <div class="field">
+            <label for="clientName">Name</label>
+            <input id="clientName" name="name" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="clientEmail">Email</label>
+            <input id="clientEmail" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="projectName">Project name</label>
+            <input id="projectName" name="project_name" placeholder="Website, automation, document, research…" required>
+          </div>
+          <div class="field">
+            <label for="clientNotes">Notes <span style="opacity:.55">optional</span></label>
+            <textarea id="clientNotes" name="notes" placeholder="Anything operations should know before the workspace is prepared."></textarea>
+          </div>
+          <div class="message" id="onboardingMessage" aria-live="polite"></div>
+          <button class="button" id="onboardingSubmit" type="submit">Request client access →</button>
+        </form>
+
+        <div class="success-card" id="onboardingSuccess">
+          <strong>Request received.</strong>
+          <p>Operations will review the request and approve a private workspace when capacity is confirmed.</p>
+          <a href="../">Return home</a>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const form = document.getElementById('onboardingForm');
+      const message = document.getElementById('onboardingMessage');
+      const submit = document.getElementById('onboardingSubmit');
+      const success = document.getElementById('onboardingSuccess');
+      const projectInput = document.getElementById('projectName');
+      const params = new URLSearchParams(window.location.search);
+      const projectName = params.get('project');
+      if (projectName) projectInput.value = projectName;
+
+      function setMessage(text, type = '') {
+        message.textContent = text;
+        message.className = `message${type ? ` is-${type}` : ''}`;
+      }
+
+      function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      }
+
+      function isSaiAmyException(payload) {
+        const project = payload.project_name.toLowerCase();
+        const name = payload.name.toLowerCase();
+        const identifier = payload.email.toLowerCase();
+        return false;
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const payload = {
+          name: document.getElementById('clientName').value.trim(),
+          email: document.getElementById('clientEmail').value.trim(),
+          project_name: projectInput.value.trim() || 'Client request',
+          notes: document.getElementById('clientNotes').value.trim(),
+          source: 'client_invite'
+        };
+
+        if (!payload.name) {
+          setMessage('Add your name so operations can prepare the workspace.', 'error');
+          return;
+        }
+
+        if (!payload.email || (!isValidEmail(payload.email) && !isSaiAmyException(payload))) {
+          setMessage('Please enter a valid email address.', 'error');
+          return;
+        }
+
+        submit.disabled = true;
+        submit.textContent = 'Preparing workspace…';
+        setMessage('');
+        try {
+          const response = await fetch('../api/client-invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Onboarding failed');
+
+          form.style.display = 'none';
+          success.classList.add('is-visible');
+        } catch (error) {
+          setMessage(error.message === 'Please enter a valid email address.'
+            ? 'Please enter a valid email address.'
+            : 'Could not submit the client request. Please try again.', 'error');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Request client access →';
+        }
+      });
+    })();
+  </script>
+  <script src="/lang/runtime.js" defer></script>
+</body>
+</html>

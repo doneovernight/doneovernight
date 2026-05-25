@@ -1,0 +1,4762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Control — DONEOVERNIGHT</title>
+<meta name="description" content="Private DONEOVERNIGHT admin control layer for internal realtime operations." />
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="stylesheet" href="../shared.css">
+
+<style>
+body {
+  min-height: 100vh;
+  background: #050608;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.admin-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 800px 580px at 50% 8%, rgba(233, 196, 138, 0.08), transparent 64%),
+    radial-gradient(ellipse 640px 420px at 12% 92%, rgba(120, 100, 180, 0.06), transparent 68%),
+    #050608;
+}
+
+.admin-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.45;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.1px 1.1px at 16% 18%, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 36% 12%, #ffeed0, transparent),
+    radial-gradient(1px 1px at 58% 24%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 82% 10%, #fff, transparent),
+    radial-gradient(1px 1px at 14% 54%, #ffeed0, transparent),
+    radial-gradient(1.1px 1.1px at 76% 52%, #fff, transparent),
+    radial-gradient(0.9px 0.9px at 68% 82%, #fff, transparent);
+}
+
+.admin-shell {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+body.is-admin .admin-shell {
+  width: min(1320px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 78px 0 52px;
+}
+
+.admin-gate {
+  min-height: calc(100vh - clamp(44px, 8vw, 84px));
+  display: grid;
+  place-items: center;
+}
+
+.admin-card,
+.admin-section,
+.stat-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.025);
+  box-shadow:
+    0 30px 60px -18px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(245, 241, 234, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.admin-card {
+  width: min(100%, 440px);
+  padding: clamp(24px, 4vw, 42px);
+  text-align: left;
+}
+
+.admin-wordmark {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.admin-wordmark img {
+  display: block;
+  width: clamp(132px, 12vw, 160px);
+  height: auto;
+  object-fit: contain;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+
+.admin-card h1,
+.admin-head h1 {
+  margin-top: 14px;
+  font-family: var(--serif);
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+
+.admin-card p,
+.admin-head p,
+.placeholder {
+  color: var(--ink-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-card p { margin: 14px 0 26px; }
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: rgba(245, 241, 234, 0.03);
+  color: var(--ink);
+  padding: 15px 16px;
+  font: 14px var(--sans);
+  outline: none;
+  transition: border 0.25s, background 0.25s, box-shadow 0.25s;
+}
+
+.admin-input:focus {
+  border-color: var(--amber);
+  background: rgba(245, 241, 234, 0.05);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.1);
+}
+
+.admin-button {
+  min-height: 48px;
+  border: 1px solid rgba(233, 196, 138, 0.45);
+  border-radius: 7px;
+  background: rgba(233, 196, 138, 0.06);
+  color: #f4d28a;
+  box-shadow:
+    0 0 24px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font: 600 13px var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.admin-button:hover,
+.admin-button:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  color: #ffe3ad;
+  border-color: rgba(233, 196, 138, 0.7);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.28),
+    0 0 70px rgba(233, 196, 138, 0.1);
+  outline: none;
+}
+
+.admin-button:active { transform: scale(0.98); }
+.admin-button:disabled { cursor: wait; opacity: 0.72; }
+
+.admin-error {
+  min-height: 16px;
+  color: var(--red);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.admin-error.is-shown { opacity: 1; }
+
+.admin-dashboard {
+  display: none;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+body.is-admin .admin-gate { display: none; }
+body.is-admin .admin-dashboard { display: block; }
+
+.admin-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 40;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  background: rgba(5,6,8,.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.admin-topbar-inner {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0 18px;
+}
+
+.admin-dashboard {
+  padding-top: 0;
+}
+
+.admin-topbar-left {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.wordmark img {
+  display: block;
+  width: clamp(142px, 15vw, 164px);
+  height: auto;
+  object-fit: contain;
+}
+
+.admin-designation {
+  color: rgba(245,241,234,.38);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255,255,255,.09);
+}
+
+.admin-topbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 999px;
+  background: rgba(255,255,255,.018);
+  padding: 5px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.admin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(139,224,173,.86);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.admin-logout {
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,.48);
+  padding: 0 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s, transform .2s;
+}
+
+.admin-logout:hover,
+.admin-logout:focus-visible {
+  border-color: rgba(233,196,138,.38);
+  background: rgba(233,196,138,.055);
+  color: var(--amber);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 16px rgba(139,224,173,.44);
+  animation: operatorDotPulse 2.6s ease-in-out infinite;
+}
+
+.admin-head {
+  margin-bottom: 34px;
+}
+
+.admin-head p {
+  margin-top: 10px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 18px;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(233, 196, 138, 0.055), transparent 44%);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.stat-card.is-live::before {
+  opacity: 1;
+}
+
+.stat-card:hover::before,
+.stat-card:focus-visible::before,
+.stat-card.is-active::before {
+  opacity: 1;
+}
+
+.stat-card.is-active {
+  border-color: rgba(233, 196, 138, 0.34);
+  background: rgba(233, 196, 138, 0.045);
+  box-shadow:
+    0 0 34px rgba(233, 196, 138, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.stat-card:hover,
+.stat-card:focus-visible {
+  border-color: rgba(233, 196, 138, 0.34);
+  background: rgba(233, 196, 138, 0.032);
+  box-shadow:
+    0 0 28px rgba(233, 196, 138, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.stat-card.has-new-tasks {
+  animation: operatorPulse 2.8s ease-in-out infinite;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.stat-value {
+  margin-top: 8px;
+  font-family: var(--serif);
+  font-size: 32px;
+  line-height: 1;
+  color: var(--amber);
+}
+
+.stat-card.revenue-paid .stat-value {
+  color: var(--green);
+  text-shadow: 0 0 14px rgba(103, 214, 149, 0.14);
+}
+
+.stat-card.revenue-pending .stat-value {
+  color: #f4d28a;
+  text-shadow: 0 0 14px rgba(244, 210, 138, 0.14);
+}
+
+.stat-card.revenue-potential .stat-value {
+  color: #e6d3a3;
+  text-shadow: 0 0 12px rgba(230, 211, 163, 0.1);
+}
+
+/* ── Operational Revenue Center ─────────────────────────── */
+
+.revenue-center {
+  margin-bottom: 34px;
+}
+
+.revenue-center-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.revenue-center-eyebrow {
+  margin: 0;
+  color: rgba(245,241,234,.3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.revenue-center-title {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,.9);
+  font-family: var(--serif);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 400;
+  letter-spacing: -.02em;
+}
+
+.revenue-center-note {
+  max-width: 34ch;
+  margin: 0;
+  color: rgba(245,241,234,.4);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.revenue-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.revenue-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(245,241,234,.025);
+  box-shadow: 0 30px 60px -18px rgba(0,0,0,.62), inset 0 1px 0 rgba(245,241,234,.05);
+  backdrop-filter: blur(18px);
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color .24s, background .24s, box-shadow .24s, transform .24s;
+}
+
+.revenue-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(245,241,234,.03), transparent 44%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .24s;
+}
+
+.revenue-card:hover,
+.revenue-card:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.revenue-card:hover::before,
+.revenue-card.is-open::before { opacity: 1; }
+
+.revenue-card-inner { flex: 1; min-width: 0; }
+
+.revenue-card-sub {
+  margin-top: 7px;
+  color: rgba(245,241,234,.32);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.revenue-toggle-icon {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: rgba(255,255,255,.22);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1;
+  transition: transform .22s, color .22s;
+  user-select: none;
+}
+
+.revenue-card.is-open .revenue-toggle-icon {
+  transform: rotate(45deg);
+  color: rgba(255,255,255,.52);
+}
+
+.revenue-card.revenue-paid .stat-value  { color: var(--green); text-shadow: 0 0 14px rgba(103,214,149,.14); }
+.revenue-card.revenue-pending .stat-value { color: #f4d28a; text-shadow: 0 0 14px rgba(244,210,138,.14); }
+.revenue-card.revenue-potential .stat-value { color: #e6d3a3; text-shadow: 0 0 12px rgba(230,211,163,.1); }
+
+.revenue-card.revenue-paid:hover,
+.revenue-card.revenue-paid.is-open {
+  border-color: rgba(139,224,173,.24);
+  box-shadow: 0 0 30px rgba(139,224,173,.09), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.revenue-card.revenue-pending:hover,
+.revenue-card.revenue-pending.is-open {
+  border-color: rgba(233,196,138,.3);
+  box-shadow: 0 0 30px rgba(233,196,138,.11), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.revenue-card.revenue-potential:hover,
+.revenue-card.revenue-potential.is-open {
+  border-color: rgba(230,211,163,.22);
+  box-shadow: 0 0 26px rgba(230,211,163,.08), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* ── Revenue Drawer ─────────────────────────────────────── */
+
+.revenue-drawer {
+  grid-column: 1 / -1;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  border-radius: 8px;
+  transition: max-height .32s ease, opacity .26s ease, margin-top .32s ease;
+}
+
+.revenue-drawer.is-open {
+  max-height: 520px;
+  margin-top: 8px;
+  opacity: 1;
+}
+
+.revenue-drawer-content {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(245,241,234,.018);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 18px 20px;
+  max-height: 470px;
+  overflow-y: auto;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 32px rgba(0,0,0,.28);
+}
+
+.revenue-drawer.is-paid .revenue-drawer-content {
+  border-color: rgba(139,224,173,.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 34px rgba(139,224,173,.07);
+}
+
+.revenue-drawer.is-pending .revenue-drawer-content {
+  border-color: rgba(233,196,138,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 34px rgba(233,196,138,.08);
+}
+
+.revenue-drawer.is-potential .revenue-drawer-content {
+  border-color: rgba(230,211,163,.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 30px rgba(230,211,163,.06);
+}
+
+.revenue-drawer-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.revenue-drawer-title {
+  color: rgba(245,241,234,.38);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.revenue-drawer-total {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── Specialist Operating Layer ─────────────────────────── */
+
+.operator-layer {
+  margin-bottom: 34px;
+}
+
+.operator-layer-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.operator-layer-eyebrow {
+  margin: 0;
+  color: rgba(245,241,234,.3);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.operator-layer-title {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,.9);
+  font-family: var(--serif);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 400;
+  letter-spacing: -.02em;
+}
+
+.operator-layer-note {
+  max-width: 42ch;
+  margin: 0;
+  color: rgba(245,241,234,.4);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.operator-surface-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operator-surface-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 146px;
+  border: 1px solid rgba(245,241,234,.085);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(245,241,234,.036), rgba(245,241,234,.012)),
+    rgba(5,6,8,.62);
+  box-shadow: inset 0 1px 0 rgba(245,241,234,.04);
+  padding: 16px;
+  transition: border-color .24s, background .24s, box-shadow .24s, transform .24s;
+}
+
+.operator-surface-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 82% 16%, rgba(233,196,138,.105), transparent 34%),
+    linear-gradient(135deg, rgba(233,196,138,.035), transparent 46%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .24s;
+}
+
+.operator-surface-card:hover {
+  border-color: rgba(233,196,138,.22);
+  background: rgba(245,241,234,.03);
+  box-shadow: 0 0 30px rgba(233,196,138,.07), inset 0 1px 0 rgba(245,241,234,.05);
+  transform: translateY(-1px);
+}
+
+.operator-surface-card:hover::before { opacity: 1; }
+
+.operator-surface-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.operator-surface-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(245,241,234,.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.operator-surface-status::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(233,196,138,.62);
+  box-shadow: 0 0 12px rgba(233,196,138,.2);
+  content: "";
+}
+
+.operator-surface-card.is-live .operator-surface-status {
+  color: rgba(139,224,173,.72);
+}
+
+.operator-surface-card.is-live .operator-surface-status::before {
+  background: rgba(139,224,173,.82);
+  box-shadow: 0 0 14px rgba(139,224,173,.28);
+}
+
+.operator-surface-card h3 {
+  margin: 18px 0 8px;
+  color: rgba(255,255,255,.88);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.operator-surface-card p {
+  margin: 0;
+  color: rgba(245,241,234,.45);
+  font-size: 12px;
+  line-height: 1.58;
+}
+
+.specialist-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.specialist-chip {
+  border: 1px solid rgba(245,241,234,.09);
+  border-radius: 999px;
+  background: rgba(245,241,234,.018);
+  color: rgba(245,241,234,.42);
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.revenue-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px 16px;
+  align-items: start;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  animation: softRise .2s ease both;
+}
+
+.revenue-item:last-child { border-bottom: none; }
+
+.revenue-item-name {
+  color: rgba(255,255,255,.82);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.revenue-item-email {
+  margin-top: 3px;
+  color: rgba(245,241,234,.34);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.revenue-item-task {
+  margin-top: 3px;
+  color: rgba(245,241,234,.42);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.revenue-item-id {
+  display: block;
+  margin-top: 3px;
+  color: rgba(233,196,138,.48);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.revenue-item-stage {
+  color: rgba(245,241,234,.5);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+
+.revenue-item-stage strong {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,.7);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.revenue-item-date {
+  margin-top: 4px;
+  color: rgba(245,241,234,.32);
+  font-size: 11px;
+}
+
+.revenue-item-blocker {
+  margin-top: 4px;
+  color: rgba(233,196,138,.6);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.revenue-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.revenue-item-amount {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.revenue-paid-amount  { color: var(--green); }
+.revenue-pending-amount { color: #f4d28a; }
+.revenue-potential-amount { color: #e6d3a3; }
+
+.revenue-empty {
+  color: rgba(245,241,234,.32);
+  font-size: 13px;
+  padding: 10px 0;
+  text-align: center;
+}
+
+/* ── Task group scanning improvements ────────────────────── */
+
+.operation-group + .operation-group {
+  margin-top: 26px;
+}
+
+[data-operation-section="awaiting-payment"] .operation-group-title::before {
+  background: rgba(244,210,138,.9);
+  box-shadow: 0 0 12px rgba(244,210,138,.36);
+}
+
+[data-operation-section="awaiting-payment"] .operation-group-title {
+  color: rgba(244,210,138,.88);
+}
+
+[data-operation-section="awaiting-payment"] .admin-task-row {
+  border-left: 2px solid rgba(244,210,138,.32);
+}
+
+[data-operation-section="in-progress"] .operation-group-title::before {
+  background: rgba(151,197,255,.8);
+  box-shadow: 0 0 12px rgba(151,197,255,.28);
+}
+
+[data-operation-section="in-progress"] .operation-group-title {
+  color: rgba(151,197,255,.82);
+}
+
+[data-operation-section="in-progress"] .admin-task-row {
+  border-left: 2px solid rgba(151,197,255,.2);
+}
+
+[data-operation-section="delivered"] .operation-group-title::before {
+  background: rgba(139,224,173,.8);
+  box-shadow: 0 0 12px rgba(139,224,173,.28);
+}
+
+[data-operation-section="delivered"] .operation-group-title {
+  color: rgba(139,224,173,.82);
+}
+
+[data-operation-section="delivered"] .admin-task-row {
+  border-left: 2px solid rgba(139,224,173,.24);
+}
+
+[data-operation-section="completed-archive"] {
+  opacity: .62;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-section {
+  padding: clamp(22px, 3vw, 30px);
+  scroll-margin-top: 96px;
+}
+
+.admin-section h2 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: 18px;
+}
+
+.admin-section.is-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-section.is-highlighted {
+  animation: sectionPulse 1.55s ease both;
+}
+
+.placeholder {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-client-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  max-height: min(680px, calc(100vh - 220px));
+  overflow-y: auto;
+  padding-right: 2px;
+  overscroll-behavior: contain;
+}
+
+.admin-client-section {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-client-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 14px;
+}
+
+.admin-client-tab {
+  border: 1px solid rgba(245, 241, 234, 0.12);
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.025);
+  color: rgba(245, 241, 234, 0.52);
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.admin-client-tab.is-active,
+.admin-client-tab:hover,
+.admin-client-tab:focus-visible {
+  border-color: rgba(233, 196, 138, 0.36);
+  background: rgba(233, 196, 138, 0.055);
+  color: #f4d28a;
+  box-shadow: 0 0 18px rgba(233, 196, 138, 0.08);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.admin-client-section-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background:
+    linear-gradient(180deg, rgba(5,6,8,.96), rgba(5,6,8,.86));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(245,241,234,.38);
+}
+
+.admin-client-section-head--urgent {
+  color: rgba(233,196,138,.7);
+}
+
+.admin-client-section-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(245,241,234,.3);
+  flex-shrink: 0;
+}
+
+.admin-client-section-dot--urgent {
+  background: rgba(233,196,138,.88);
+  box-shadow: 0 0 10px rgba(233,196,138,.34);
+  animation: operatorDotPulse 2.4s ease-in-out infinite;
+}
+
+.admin-client-section-count {
+  margin-left: auto;
+  color: rgba(245,241,234,.24);
+}
+
+.admin-client-row {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(245, 241, 234, 0.08);
+}
+
+.admin-client-row.is-needs-approval {
+  border-color: rgba(233, 196, 138, 0.14);
+  background: linear-gradient(90deg, rgba(233,196,138,.035), transparent 42%);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.admin-client-row.is-inactive-client {
+  opacity: .62;
+}
+
+.admin-operator-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  max-height: min(680px, calc(100vh - 220px));
+  overflow-y: auto;
+  padding-right: 2px;
+  overscroll-behavior: contain;
+}
+
+.admin-operator-row {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(245, 241, 234, 0.08);
+}
+
+.admin-operator-row.is-needs-approval {
+  border-color: rgba(233, 196, 138, 0.14);
+  background: linear-gradient(90deg, rgba(233,196,138,.035), transparent 42%);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.admin-operator-row.is-inactive-operator {
+  opacity: .62;
+}
+
+.admin-operator-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-operator-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid rgba(245, 241, 234, 0.065);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.13);
+  padding: 12px;
+}
+
+.admin-operator-detail {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-operator-detail span {
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-operator-detail strong {
+  overflow-wrap: anywhere;
+  color: rgba(245, 241, 234, 0.74);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-operator-notes {
+  margin-top: 10px;
+  color: rgba(245, 241, 234, 0.54);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.admin-task-list {
+  display: grid;
+  gap: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  max-height: min(720px, calc(100vh - 214px));
+  overflow-y: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233,196,138,.26) rgba(255,255,255,.04);
+}
+
+.operation-group {
+  display: grid;
+  gap: 12px;
+  scroll-margin-top: 96px;
+  transition: opacity 0.25s, transform 0.25s;
+  animation: sectionFlow 0.28s ease both;
+}
+
+.operation-group.is-highlighted {
+  border-radius: 8px;
+  animation: groupPulse 1.55s ease both;
+}
+
+.operation-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 2px 9px;
+  border-bottom: 1px solid rgba(255,255,255,.055);
+  background:
+    linear-gradient(180deg, rgba(5,6,8,.98), rgba(5,6,8,.82));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.operation-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: rgba(245, 241, 234, 0.76);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.operation-group-title::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(233, 196, 138, 0.7);
+  box-shadow: 0 0 12px rgba(233, 196, 138, 0.24);
+  content: "";
+}
+
+.operation-group-count {
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-task-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(245, 241, 234, 0.09);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(245, 241, 234, 0.035), rgba(245, 241, 234, 0.014)),
+    rgba(5, 6, 8, 0.34);
+  padding: 18px;
+  box-shadow:
+    0 24px 48px -34px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 0.24s, box-shadow 0.24s, opacity 0.24s, transform 0.24s, background 0.24s;
+}
+
+.admin-task-row.is-entering {
+  animation: taskEnter 0.28s ease both;
+}
+
+.admin-task-row.is-removing {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.admin-task-row.is-new-task {
+  border-color: rgba(230, 211, 163, 0.2);
+  box-shadow:
+    0 0 30px rgba(230, 211, 163, 0.055),
+    0 24px 48px -34px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.admin-task-row.is-new-task::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e6d3a3;
+  box-shadow: 0 0 14px rgba(230, 211, 163, 0.28);
+  animation: operatorDotPulse 2.4s ease-in-out infinite;
+}
+
+.admin-task-row.is-active-operation {
+  border-color: rgba(151, 197, 255, 0.15);
+}
+
+.admin-task-row.is-awaiting-payment-operation {
+  border-color: rgba(244, 210, 138, 0.22);
+  background:
+    linear-gradient(135deg, rgba(244, 210, 138, 0.045), rgba(245, 241, 234, 0.012)),
+    rgba(5, 6, 8, 0.34);
+}
+
+.admin-task-row.is-delivered-operation {
+  border-color: rgba(139, 224, 173, 0.18);
+}
+
+.admin-task-row.is-complete-operation {
+  opacity: 0.58;
+}
+
+.admin-task-row:last-child,
+.admin-client-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-task-top,
+.admin-client-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.admin-task-title,
+.admin-client-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+.admin-task-row.is-new-task .admin-task-title {
+  padding-left: 12px;
+}
+
+.admin-task-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.admin-task-email,
+.admin-task-meta,
+.admin-client-email,
+.admin-client-meta,
+.admin-activity-time {
+  color: rgba(245, 241, 234, 0.45);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-task-id {
+  color: rgba(233, 196, 138, 0.72);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-task-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  border: 1px solid rgba(245, 241, 234, 0.065);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.13);
+  padding: 14px;
+}
+
+.admin-task-meta + .admin-task-meta {
+  margin-top: 10px;
+}
+
+.admin-task-metric {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-task-metric span {
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-task-metric strong {
+  color: rgba(245, 241, 234, 0.78);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-task-metric:nth-child(3) strong,
+.admin-task-meta + .admin-task-meta .admin-task-metric:nth-child(1) strong,
+.admin-task-meta + .admin-task-meta .admin-task-metric:nth-child(2) strong {
+  color: rgba(230, 211, 163, 0.86);
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.08);
+}
+
+.admin-task-detail {
+  margin-top: 14px;
+  border: 1px solid rgba(233, 196, 138, 0.11);
+  border-radius: 7px;
+  background: rgba(233, 196, 138, 0.035);
+  padding: 12px;
+  color: rgba(245, 241, 234, 0.72);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-payment-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  border: 1px solid rgba(244, 210, 138, 0.22);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(244,210,138,.11), transparent 42%),
+    rgba(244, 210, 138, 0.045);
+  padding: 13px 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 24px rgba(244,210,138,.055);
+}
+
+.admin-payment-callout strong {
+  display: block;
+  color: #f4d28a;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.admin-payment-callout span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(245,241,234,.58);
+  font-size: 12px;
+}
+
+.admin-payment-link {
+  flex-shrink: 0;
+  border: 1px solid rgba(244,210,138,.32);
+  border-radius: 999px;
+  background: rgba(244,210,138,.08);
+  color: #f4d28a;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: transform .2s, border-color .2s, background .2s;
+}
+
+.admin-payment-link:hover,
+.admin-payment-link:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(244,210,138,.5);
+  background: rgba(244,210,138,.12);
+  outline: none;
+}
+
+.admin-task-activity {
+  margin-top: 10px;
+  color: rgba(139, 224, 173, 0.72);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.admin-task-detail-label {
+  display: block;
+  margin-bottom: 7px;
+  color: rgba(233, 196, 138, 0.72);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.admin-task-priority {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-task-priority.priority-high {
+  border: 1px solid rgba(230, 211, 163, 0.26);
+}
+
+.admin-task-priority.priority-high {
+  color: #e6d3a3;
+  background: rgba(230, 211, 163, 0.08);
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.14);
+}
+
+.admin-task-priority.priority-medium {
+  color: rgba(245, 241, 234, 0.68);
+  background: rgba(245, 241, 234, 0.055);
+}
+
+.admin-task-priority.priority-normal {
+  color: rgba(245, 241, 234, 0.38);
+  background: rgba(245, 241, 234, 0.035);
+}
+
+.admin-task-actions,
+.admin-client-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-task-action,
+.admin-client-action {
+  border: 1px solid rgba(233, 196, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(233, 196, 138, 0.055);
+  color: #f4d28a;
+  padding: 8px 11px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(233, 196, 138, 0.08);
+  transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.admin-task-action:hover,
+.admin-task-action:focus-visible,
+.admin-client-action:hover,
+.admin-client-action:focus-visible {
+  background: rgba(233, 196, 138, 0.12);
+  border-color: rgba(233, 196, 138, 0.62);
+  color: #ffe3ad;
+  box-shadow: 0 0 26px rgba(233, 196, 138, 0.18);
+  outline: none;
+}
+
+.admin-task-action:active { transform: scale(0.98); }
+.admin-task-action:disabled { cursor: wait; opacity: 0.66; }
+.admin-client-action:active { transform: scale(0.98); }
+.admin-client-action:disabled { cursor: wait; opacity: 0.66; }
+
+.workspace-control-head,
+.workspace-record-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workspace-control-head p,
+.workspace-record-empty {
+  margin: 6px 0 0;
+  color: rgba(245, 241, 234, 0.44);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.workspace-control-grid,
+.workspace-records-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.workspace-control-panel,
+.workspace-record-panel {
+  border: 1px solid rgba(245, 241, 234, 0.075);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(245, 241, 234, 0.032), rgba(245, 241, 234, 0.012)),
+    rgba(5, 6, 8, 0.3);
+  padding: 16px;
+}
+
+.workspace-control-panel h3,
+.workspace-record-panel h3 {
+  margin: 0 0 12px;
+  color: rgba(245, 241, 234, 0.78);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.workspace-control-form {
+  display: grid;
+  gap: 11px;
+}
+
+.workspace-control-field {
+  display: grid;
+  gap: 6px;
+}
+
+.workspace-control-field label {
+  color: rgba(245, 241, 234, 0.42);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.workspace-control-field input,
+.workspace-control-field select,
+.workspace-control-field textarea {
+  width: 100%;
+  border: 1px solid rgba(245, 241, 234, 0.1);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(245, 241, 234, 0.84);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 11px 12px;
+  outline: none;
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.22s;
+}
+
+.workspace-control-field textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.workspace-control-field input:focus,
+.workspace-control-field select:focus,
+.workspace-control-field textarea:focus {
+  border-color: rgba(233, 196, 138, 0.34);
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 22px rgba(233, 196, 138, 0.075);
+}
+
+.workspace-control-inline {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 10px;
+}
+
+.workspace-record-list {
+  display: grid;
+  gap: 10px;
+  max-height: 340px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.workspace-record-row {
+  border-top: 1px solid rgba(245, 241, 234, 0.065);
+  padding-top: 10px;
+}
+
+.workspace-record-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.workspace-record-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(245, 241, 234, 0.8);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.workspace-record-meta {
+  margin-top: 5px;
+  color: rgba(245, 241, 234, 0.38);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.workspace-record-body {
+  margin-top: 7px;
+  color: rgba(245, 241, 234, 0.58);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace-record-delete {
+  border: 1px solid rgba(229, 112, 112, 0.22);
+  border-radius: 999px;
+  background: rgba(229, 112, 112, 0.045);
+  color: rgba(255, 180, 170, 0.8);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.13em;
+  padding: 5px 7px;
+  text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.workspace-record-delete:hover,
+.workspace-record-delete:focus-visible {
+  background: rgba(229, 112, 112, 0.09);
+  border-color: rgba(229, 112, 112, 0.42);
+  color: rgba(255, 204, 198, 0.95);
+  outline: none;
+}
+
+.workspace-control-message {
+  min-height: 18px;
+  margin-top: 12px;
+  color: rgba(139, 224, 173, 0.72);
+  font-size: 12px;
+}
+
+.workspace-control-message.is-error {
+  color: rgba(229, 112, 112, 0.78);
+}
+
+.admin-task-message,
+.admin-client-message {
+  color: rgba(245, 241, 234, 0.52);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-task-price {
+  color: #e6d3a3;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(230, 211, 163, 0.12);
+}
+
+.admin-task-eta {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-status-pill {
+  flex: 0 0 auto;
+  border: 1px solid rgba(233, 196, 138, 0.22);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: rgba(245, 241, 234, 0.72);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-status-pill.payment-paid { color: var(--green); border-color: rgba(103, 214, 149, 0.24); }
+.admin-status-pill.payment-awaiting-payment { color: #f4d28a; }
+.admin-status-pill.payment-payment-failed { color: rgba(229, 112, 112, 0.78); border-color: rgba(229, 112, 112, 0.22); }
+.admin-status-pill.payment-refunded { color: rgba(245, 241, 234, 0.48); }
+
+.admin-lifecycle {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(58px, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+  padding: 12px 0 2px;
+  overflow-x: auto;
+}
+
+.admin-lifecycle::before {
+  position: absolute;
+  top: 17px;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(233, 196, 138, 0.06), rgba(233, 196, 138, 0.22), rgba(233, 196, 138, 0.06));
+  content: "";
+}
+
+.admin-lifecycle-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: rgba(245, 241, 234, 0.28);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.09em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-lifecycle-step::before {
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(233, 196, 138, 0.25);
+  border-radius: 50%;
+  background: #08090b;
+  content: "";
+}
+
+.admin-lifecycle-step.is-complete {
+  color: rgba(245, 241, 234, 0.52);
+}
+
+.admin-lifecycle-step.is-complete::before {
+  background: rgba(233, 196, 138, 0.62);
+  box-shadow: 0 0 12px rgba(233, 196, 138, 0.16);
+}
+
+.admin-lifecycle-step.is-current {
+  color: rgba(245, 241, 234, 0.82);
+}
+
+.admin-lifecycle-step.is-current::before {
+  background: var(--amber);
+  box-shadow: 0 0 16px rgba(233, 196, 138, 0.36);
+}
+
+.realtime-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(139, 224, 173, 0.82);
+}
+
+.realtime-indicator::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px rgba(139, 224, 173, 0.52);
+  animation: operatorDotPulse 2.2s ease-in-out infinite;
+  content: "";
+}
+
+.admin-status-pill.status-new { color: #e6d3a3; }
+.admin-status-pill.status-review-pending { color: #e6d3a3; }
+.admin-status-pill.status-quoted { color: #f4d28a; }
+.admin-status-pill.status-awaiting-payment { color: rgba(244, 210, 138, 0.78); }
+.admin-status-pill.status-verification-pending { color: rgba(200, 168, 224, 0.84); }
+.admin-status-pill.status-queued { color: rgba(141, 180, 216, 0.86); }
+.admin-status-pill.status-in-progress { color: rgba(151, 197, 255, 0.86); }
+.admin-status-pill.status-delivery-prep { color: rgba(151, 197, 255, 0.82); }
+.admin-status-pill.status-delivered { color: var(--green); }
+.admin-status-pill.status-completed { color: var(--green); }
+.admin-status-pill.status-revision-requested { color: rgba(244, 210, 138, 0.86); }
+.admin-status-pill.status-cancelled { color: rgba(245, 241, 234, 0.44); }
+.admin-status-pill.status-rejected { color: rgba(229, 112, 112, 0.72); border-color: rgba(229, 112, 112, 0.2); }
+.admin-status-pill.status-pending { color: #e6d3a3; }
+.admin-status-pill.status-active { color: var(--green); }
+.admin-status-pill.status-revoked { color: rgba(245, 241, 234, 0.44); }
+
+.admin-activity {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-activity-title {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.section-kicker {
+  margin: -8px 0 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.34);
+}
+
+@keyframes operatorPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(230, 211, 163, 0), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(230, 211, 163, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+}
+
+@keyframes operatorDotPulse {
+  0%, 100% {
+    opacity: 0.46;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes sectionPulse {
+  0% {
+    border-color: rgba(233, 196, 138, 0.1);
+    box-shadow: 0 0 0 rgba(233, 196, 138, 0);
+  }
+  42% {
+    border-color: rgba(233, 196, 138, 0.36);
+    box-shadow: 0 0 34px rgba(233, 196, 138, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  100% {
+    border-color: var(--line);
+    box-shadow:
+      0 30px 60px -18px rgba(0, 0, 0, 0.62),
+      inset 0 1px 0 rgba(245, 241, 234, 0.05);
+  }
+}
+
+@keyframes sectionFlow {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes groupPulse {
+  0%, 100% {
+    background: rgba(233, 196, 138, 0);
+    box-shadow: 0 0 0 rgba(233, 196, 138, 0);
+  }
+  42% {
+    background: rgba(233, 196, 138, 0.035);
+    box-shadow: 0 0 34px rgba(233, 196, 138, 0.1);
+  }
+}
+
+@keyframes taskEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes softRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    padding-inline: 18px;
+  }
+  body.is-admin .admin-shell {
+    width: min(100% - 36px, 1320px);
+    padding: 96px 0 38px;
+  }
+  .admin-topbar {
+    width: 100%;
+  }
+  .admin-topbar-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    width: min(100% - 36px, 1180px);
+  }
+  .admin-topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .admin-task-list,
+  .admin-client-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .operation-group-head,
+  .admin-client-section-head {
+    position: static;
+  }
+  .admin-payment-callout {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .revenue-center-head {
+    align-items: start;
+    flex-direction: column;
+  }
+  .revenue-center-note {
+    max-width: 100%;
+    text-align: left;
+  }
+  .operator-layer-head {
+    align-items: start;
+    flex-direction: column;
+  }
+  .operator-layer-note {
+    max-width: 100%;
+    text-align: left;
+  }
+  .operator-surface-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .workspace-control-grid,
+  .workspace-records-grid,
+  .workspace-control-inline {
+    grid-template-columns: 1fr;
+  }
+  .workspace-control-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .admin-task-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .admin-task-meta {
+    grid-template-columns: 1fr;
+  }
+  .admin-client-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .revenue-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .revenue-item {
+    grid-template-columns: 1fr auto;
+  }
+  .revenue-item > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ── Quote / Delivery Modal ─────────────────────────────── */
+.op-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 6, 8, 0.80);
+  backdrop-filter: blur(5px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+.op-modal-backdrop.is-open {
+  opacity: 1;
+  pointer-events: all;
+}
+.op-modal {
+  width: min(100%, 460px);
+  padding: 26px 26px 22px;
+  background: rgba(12, 13, 16, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-top-color: rgba(233, 196, 138, 0.22);
+  border-radius: 8px;
+  box-shadow:
+    0 40px 80px -20px rgba(0, 0, 0, 0.78),
+    0 0 50px rgba(233, 196, 138, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(10px) scale(0.99);
+  transition: transform 0.22s ease;
+}
+.op-modal-backdrop.is-open .op-modal {
+  transform: translateY(0) scale(1);
+}
+.op-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.op-modal-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.op-modal-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(245, 241, 234, 0.4);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.op-modal-close:hover { background: rgba(255, 255, 255, 0.07); color: var(--ink); }
+.op-modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.op-modal-field label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 241, 234, 0.36);
+  margin-bottom: 8px;
+}
+.op-modal-field .field-opt {
+  color: rgba(245, 241, 234, 0.2);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  margin-left: 5px;
+}
+.op-modal-field input,
+.op-modal-field textarea {
+  width: 100%;
+  background: rgba(245, 241, 234, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font: 14px var(--sans);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.22s, background 0.22s, box-shadow 0.22s;
+  resize: vertical;
+}
+.op-modal-field input::placeholder,
+.op-modal-field textarea::placeholder { color: rgba(245, 241, 234, 0.18); }
+.op-modal-field input:focus,
+.op-modal-field textarea:focus {
+  border-color: rgba(233, 196, 138, 0.42);
+  background: rgba(245, 241, 234, 0.04);
+  box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.07);
+}
+.op-modal-field input.is-required-error { border-color: var(--red); }
+.op-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+.op-modal-submit { flex: 1; }
+.op-modal-cancel {
+  border: none;
+  background: transparent;
+  color: rgba(245, 241, 234, 0.32);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.op-modal-cancel:hover { color: rgba(245, 241, 234, 0.58); }
+.op-modal-error-line {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 14px;
+  display: none;
+}
+.op-modal-error-line.is-shown { display: block; }
+</style>
+</head>
+<body>
+<div class="admin-bg"></div>
+<div class="admin-stars"></div>
+
+<main class="admin-shell">
+  <section class="admin-gate" id="adminGate">
+    <div class="admin-card">
+      <div class="admin-wordmark"><img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></div>
+      <h1>Admin access</h1>
+      <p>Private operator dashboard. Enter the admin key to continue.</p>
+
+      <form class="admin-form" id="adminForm" novalidate>
+        <input class="admin-input" id="adminKey" type="password" placeholder="Admin key" autocomplete="off" required>
+        <button class="admin-button" type="submit"><span>Unlock admin →</span></button>
+        <div class="admin-error" id="adminError">Could not verify admin key.</div>
+      </form>
+    </div>
+  </section>
+
+  <section class="admin-dashboard" id="adminDashboard">
+    <header class="admin-topbar">
+      <div class="admin-topbar-inner">
+        <div class="admin-topbar-left">
+          <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
+        </div>
+        <div class="admin-topbar-right">
+          <div class="admin-status"><span class="live-dot"></span>DONEOVERNIGHT | ADMIN</div>
+          <button class="admin-logout" id="adminLogout" type="button">Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <header class="admin-head">
+      <div class="eyebrow">Private operator headquarters</div>
+      <h1>Execution control for serious specialists.</h1>
+      <p>Manage clients, quotes, payments, deliveries, communication, and workflow status from one realtime operational layer.</p>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card" id="adminNewTasksStat" data-target-section="active-operations" tabindex="0">
+        <div class="stat-label">New tasks</div>
+        <div class="stat-value" id="adminNewTasksCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="awaiting-payment" tabindex="0">
+        <div class="stat-label">Awaiting payment</div>
+        <div class="stat-value" id="adminPendingQuotesCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="in-progress" tabindex="0">
+        <div class="stat-label">In progress</div>
+        <div class="stat-value" id="adminInProgressCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="in-progress" tabindex="0">
+        <div class="stat-label">Queued</div>
+        <div class="stat-value" id="adminQueuedCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="delivered" tabindex="0">
+        <div class="stat-label">Delivered</div>
+        <div class="stat-value" id="adminDeliveredCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="active-operations" tabindex="0">
+        <div class="stat-label">Avg response</div>
+        <div class="stat-value" id="adminAvgResponse">—</div>
+      </div>
+    </div>
+
+    <div class="revenue-center">
+      <div class="revenue-center-head">
+        <div>
+          <p class="revenue-center-eyebrow">Operational finance</p>
+          <h2 class="revenue-center-title">Operational Revenue Center</h2>
+        </div>
+        <p class="revenue-center-note">Revenue is tied to real tasks, payment states, and client movement.</p>
+      </div>
+      <div class="revenue-cards-grid">
+
+        <div class="revenue-card revenue-paid" id="paidRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+          <div class="revenue-card-inner">
+            <div class="stat-label">Paid revenue</div>
+            <div class="stat-value" id="adminPaidRevenue">€0</div>
+            <div class="revenue-card-sub" id="paidRevenueCount">0 transactions</div>
+          </div>
+          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+        </div>
+
+        <div class="revenue-card revenue-pending" id="pendingRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+          <div class="revenue-card-inner">
+            <div class="stat-label">Pending revenue</div>
+            <div class="stat-value" id="adminPendingRevenue">€0</div>
+            <div class="revenue-card-sub" id="pendingRevenueCount">0 awaiting</div>
+          </div>
+          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+        </div>
+
+        <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+          <div class="revenue-card-inner">
+            <div class="stat-label">Potential revenue</div>
+            <div class="stat-value" id="adminPotentialRevenue">€0</div>
+            <div class="revenue-card-sub" id="potentialRevenueCount">0 in pipeline</div>
+          </div>
+          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+        </div>
+
+        <div class="revenue-drawer" id="revenueDrawer" aria-hidden="true" aria-live="polite">
+          <div class="revenue-drawer-content" id="revenueDrawerContent"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <section class="operator-layer" aria-labelledby="operatorLayerTitle">
+      <div class="operator-layer-head">
+        <div>
+          <p class="operator-layer-eyebrow">Specialist operating system</p>
+          <h2 class="operator-layer-title" id="operatorLayerTitle">Centralized operations, modular by craft.</h2>
+        </div>
+        <p class="operator-layer-note">Built for independent operators who deliver visual, creative, strategic, and execution-heavy work without turning DONEOVERNIGHT into a generic marketplace.</p>
+      </div>
+
+      <div class="operator-surface-grid" aria-label="Operator infrastructure surfaces">
+        <article class="operator-surface-card is-live">
+          <div class="operator-surface-status">Live</div>
+          <h3>Clients + intake</h3>
+          <p>Approve new workspaces, keep pending clients visible, and route requests into the right operational flow.</p>
+        </article>
+        <article class="operator-surface-card is-live">
+          <div class="operator-surface-status">Live</div>
+          <h3>Quotes + payments</h3>
+          <p>Send operational quotes, monitor payment states, and keep revenue tied to real task movement.</p>
+        </article>
+        <article class="operator-surface-card">
+          <div class="operator-surface-status">Next layer</div>
+          <h3>Contracts + signatures</h3>
+          <p>Prepared for private agreements, licensing terms, approvals, and signature-ready delivery gates.</p>
+        </article>
+        <article class="operator-surface-card">
+          <div class="operator-surface-status">Next layer</div>
+          <h3>Deliveries + revisions</h3>
+          <p>Designed for asset drops, review cycles, final exports, follow-ups, and specialist delivery history.</p>
+        </article>
+      </div>
+
+      <div class="specialist-strip" aria-label="Specialist paths">
+        <span class="specialist-chip">Videographers</span>
+        <span class="specialist-chip">Editors</span>
+        <span class="specialist-chip">Brand designers</span>
+        <span class="specialist-chip">Visual systems</span>
+        <span class="specialist-chip">Automation operators</span>
+        <span class="specialist-chip">Creative specialists</span>
+      </div>
+    </section>
+
+    <div class="admin-grid">
+      <section class="admin-section" id="adminTasksSection">
+        <h2>Tasks</h2>
+        <div class="section-kicker"><span class="realtime-indicator">Realtime connected</span></div>
+        <div id="adminTasksList">
+          <div class="placeholder">Loading tasks...</div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="adminClientsSection">
+        <h2>Clients</h2>
+        <div class="section-kicker" id="adminClientsKicker">Not connected yet</div>
+        <div class="admin-client-tabs" aria-label="Client filter">
+          <button class="admin-client-tab is-active" type="button" data-client-filter="all">All</button>
+          <button class="admin-client-tab" type="button" data-client-filter="pending">Pending</button>
+          <button class="admin-client-tab" type="button" data-client-filter="active">Active</button>
+        </div>
+        <div id="adminClientsList">
+          <div class="placeholder">Loading clients&hellip;</div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="adminOperatorsSection">
+        <h2>Operators</h2>
+        <div class="section-kicker" id="adminOperatorsKicker">Not connected yet</div>
+        <div class="admin-client-tabs" aria-label="Operator filter">
+          <button class="admin-client-tab is-active" type="button" data-operator-filter="all">All</button>
+          <button class="admin-client-tab" type="button" data-operator-filter="pending">Pending</button>
+          <button class="admin-client-tab" type="button" data-operator-filter="active">Active</button>
+        </div>
+        <div id="adminOperatorsList">
+          <div class="placeholder">Loading operators&hellip;</div>
+        </div>
+      </section>
+
+      <section class="admin-section is-wide" id="workspaceControlSection">
+        <div class="workspace-control-head">
+          <div>
+            <h2>Workspace control</h2>
+            <p>Admin-only messages, quotes, and clearly marked test cleanup.</p>
+          </div>
+          <button class="admin-client-action" id="workspaceRecordsRefresh" type="button">Refresh</button>
+        </div>
+
+        <div class="workspace-control-grid">
+          <div class="workspace-control-panel">
+            <h3>Post workspace update</h3>
+            <form class="workspace-control-form" id="workspaceUpdateForm">
+              <div class="workspace-control-field">
+                <label for="workspaceMessageClient">Workspace</label>
+                <select id="workspaceMessageClient" required>
+                  <option value="">Select client</option>
+                </select>
+              </div>
+              <div class="workspace-control-field">
+                <label for="workspaceMessageText">Message</label>
+                <textarea id="workspaceMessageText" placeholder="Post a calm operational update to the workspace." required></textarea>
+              </div>
+              <button class="admin-client-action" type="submit">Post update</button>
+            </form>
+          </div>
+
+          <div class="workspace-control-panel">
+            <h3>Send quote to workspace</h3>
+            <form class="workspace-control-form" id="workspaceQuoteForm">
+              <div class="workspace-control-field">
+                <label for="workspaceQuoteClient">Workspace</label>
+                <select id="workspaceQuoteClient" required>
+                  <option value="">Select client</option>
+                </select>
+              </div>
+              <div class="workspace-control-field">
+                <label for="workspaceQuoteTitle">Title</label>
+                <input id="workspaceQuoteTitle" type="text" placeholder="Operational quote" required>
+              </div>
+              <div class="workspace-control-field">
+                <label for="workspaceQuoteScope">Scope summary</label>
+                <textarea id="workspaceQuoteScope" placeholder="Briefly describe what is included."></textarea>
+              </div>
+              <div class="workspace-control-inline">
+                <div class="workspace-control-field">
+                  <label for="workspaceQuoteAmount">Amount</label>
+                  <input id="workspaceQuoteAmount" type="number" min="0" step="0.01" placeholder="1500">
+                </div>
+                <div class="workspace-control-field">
+                  <label for="workspaceQuoteCurrency">Currency</label>
+                  <input id="workspaceQuoteCurrency" type="text" value="EUR" maxlength="8">
+                </div>
+              </div>
+              <div class="workspace-control-field">
+                <label for="workspaceQuoteNotes">Notes</label>
+                <textarea id="workspaceQuoteNotes" placeholder="Optional operator notes or payment instructions."></textarea>
+              </div>
+              <button class="admin-client-action" type="submit">Send quote</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="workspace-records-grid">
+          <div class="workspace-record-panel">
+            <div class="workspace-record-head">
+              <h3>Recent messages</h3>
+            </div>
+            <div class="workspace-record-list" id="workspaceMessagesList">
+              <div class="workspace-record-empty">Loading workspace messages...</div>
+            </div>
+          </div>
+          <div class="workspace-record-panel">
+            <div class="workspace-record-head">
+              <h3>Recent quotes</h3>
+            </div>
+            <div class="workspace-record-list" id="workspaceQuotesList">
+              <div class="workspace-record-empty">Loading workspace quotes...</div>
+            </div>
+          </div>
+        </div>
+        <div class="workspace-control-message" id="workspaceControlMessage" aria-live="polite"></div>
+      </section>
+
+      <section class="admin-section is-wide">
+        <h2>Activity</h2>
+        <div id="adminActivity">
+          <div class="placeholder">Recent operator activity will appear here.</div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+const ADMIN_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-auth';
+const ADMIN_CLIENTS_ENDPOINT = '/api/admin-clients';
+const ADMIN_CLIENTS_LEGACY_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-clients';
+const ADMIN_UPDATE_CLIENT_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-update-client';
+const ADMIN_OPERATORS_ENDPOINT = '/api/admin-workspace-records';
+const ADMIN_TASKS_ENDPOINT = '/api/admin-tasks';
+const ADMIN_TASKS_LEGACY_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
+const ADMIN_UPDATE_TASK_ENDPOINT = '/api/admin-update-task';
+const ADMIN_WORKSPACE_RECORDS_ENDPOINT = '/api/admin-workspace-records';
+const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
+const operatorSupabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const adminForm = document.getElementById('adminForm');
+const adminKey = document.getElementById('adminKey');
+const adminError = document.getElementById('adminError');
+const adminLogout = document.getElementById('adminLogout');
+const adminClientsKicker = document.getElementById('adminClientsKicker');
+const adminClientsList = document.getElementById('adminClientsList');
+const adminOperatorsKicker = document.getElementById('adminOperatorsKicker');
+const adminOperatorsList = document.getElementById('adminOperatorsList');
+const adminTasksList = document.getElementById('adminTasksList');
+const adminActivity = document.getElementById('adminActivity');
+const adminNewTasksStat = document.getElementById('adminNewTasksStat');
+const adminNewTasksCount = document.getElementById('adminNewTasksCount');
+const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
+const adminInProgressCount = document.getElementById('adminInProgressCount');
+const adminQueuedCount = document.getElementById('adminQueuedCount');
+const adminDeliveredCount = document.getElementById('adminDeliveredCount');
+const adminAvgResponse = document.getElementById('adminAvgResponse');
+const adminPaidRevenue = document.getElementById('adminPaidRevenue');
+const adminPendingRevenue = document.getElementById('adminPendingRevenue');
+const adminPotentialRevenue = document.getElementById('adminPotentialRevenue');
+const workspaceRecordsRefresh = document.getElementById('workspaceRecordsRefresh');
+const workspaceMessageClient = document.getElementById('workspaceMessageClient');
+const workspaceQuoteClient = document.getElementById('workspaceQuoteClient');
+const workspaceUpdateForm = document.getElementById('workspaceUpdateForm');
+const workspaceQuoteForm = document.getElementById('workspaceQuoteForm');
+const workspaceMessageText = document.getElementById('workspaceMessageText');
+const workspaceQuoteTitle = document.getElementById('workspaceQuoteTitle');
+const workspaceQuoteScope = document.getElementById('workspaceQuoteScope');
+const workspaceQuoteAmount = document.getElementById('workspaceQuoteAmount');
+const workspaceQuoteCurrency = document.getElementById('workspaceQuoteCurrency');
+const workspaceQuoteNotes = document.getElementById('workspaceQuoteNotes');
+const workspaceMessagesList = document.getElementById('workspaceMessagesList');
+const workspaceQuotesList = document.getElementById('workspaceQuotesList');
+const workspaceControlMessage = document.getElementById('workspaceControlMessage');
+let adminTasks = [];
+let adminClients = [];
+let adminOperators = [];
+let workspaceRecords = { messages: [], quotes: [] };
+let adminTaskPollingInterval = null;
+let adminTasksLoading = false;
+let adminClientsLoading = false;
+let adminOperatorsLoading = false;
+let adminTasksReloadQueued = false;
+let adminClientsReloadQueued = false;
+let adminOperatorsReloadQueued = false;
+let adminRealtimeStarted = false;
+let adminTaskRealtimeChannel = null;
+let adminClientRealtimeChannel = null;
+let adminOperatorRealtimeChannel = null;
+let adminClientFilter = 'all';
+let adminOperatorFilter = 'all';
+let activeMetricTarget = '';
+let activeRevenueDrawer = null;
+let adminTaskRenderSignature = '';
+let adminStatsSnapshot = {
+  totalTasks: 0,
+  pendingReviewTasks: 0,
+  activeClients: 0,
+  completedTasks: 0
+};
+
+function escapeHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function slugifyWorkspace(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getClientWorkspaceSlug(client = {}) {
+  return slugifyWorkspace(client.workspace_slug || client.slug || client.company || client.name || client.email || '');
+}
+
+function getClientDisplayName(client = {}) {
+  return client.name || client.company || client.email || 'Unnamed workspace';
+}
+
+function getTaskForClient(client = {}) {
+  const email = String(client.email || '').toLowerCase();
+  const slug = getClientWorkspaceSlug(client);
+  return (adminTasks || []).find((task) => {
+    const taskEmail = String(task.email || '').toLowerCase();
+    const taskSlug = slugifyWorkspace(task.company || task.name || task.email || '');
+    return (email && taskEmail === email) || (slug && taskSlug === slug);
+  }) || null;
+}
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function getClientStatusGroup(status) {
+  const normalized = normalizeStatus(status);
+  if (['pending', 'new', 'review_pending', 'pending_review', 'needs_approval', 'awaiting_approval', 'submitted', 'requested', 'intake'].includes(normalized)) {
+    return 'pending';
+  }
+  if (['active', 'approved'].includes(normalized)) return 'active';
+  return 'inactive';
+}
+
+function getOperatorStatusGroup(status) {
+  const normalized = normalizeStatus(status);
+  if (['active', 'approved'].includes(normalized)) return 'active';
+  if (['revoked', 'inactive', 'rejected', 'cancelled'].includes(normalized)) return 'inactive';
+  return 'pending';
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    review_pending: 'Review pending',
+    new: 'Quote pending',
+    quoted: 'Quote sent',
+    awaiting_payment: 'Awaiting payment',
+    verification_pending: 'Verification pending',
+    queued: 'Queued',
+    in_progress: 'In progress',
+    delivery_prep: 'Delivery prep',
+    delivered: 'Delivered',
+    completed: 'Completed',
+    revision_requested: 'Revision requested',
+    cancelled: 'Cancelled',
+    rejected: 'Not accepted'
+  };
+  return labels[normalizeStatus(status)] || 'Pending';
+}
+
+function getClientStatusLabel(status) {
+  const labels = {
+    pending: 'Pending',
+    new: 'Pending',
+    review_pending: 'Pending',
+    pending_review: 'Pending',
+    needs_approval: 'Needs approval',
+    awaiting_approval: 'Needs approval',
+    submitted: 'Pending',
+    requested: 'Pending',
+    intake: 'Pending',
+    active: 'Active',
+    approved: 'Active',
+    revoked: 'Revoked',
+    inactive: 'Inactive'
+  };
+  return labels[normalizeStatus(status)] || (getClientStatusGroup(status) === 'inactive' ? 'Inactive' : 'Pending');
+}
+
+function getOperatorStatusLabel(status) {
+  const labels = {
+    pending: 'Pending',
+    active: 'Active',
+    approved: 'Active',
+    revoked: 'Revoked',
+    inactive: 'Inactive',
+    rejected: 'Rejected'
+  };
+  return labels[normalizeStatus(status)] || (getOperatorStatusGroup(status) === 'inactive' ? 'Inactive' : 'Pending');
+}
+
+function getClientActions(status) {
+  const group = getClientStatusGroup(status);
+  const actions = {
+    pending: [
+      { type: 'approve', label: 'Approve', status: 'active' },
+      { type: 'reject', label: 'Reject', status: 'revoked' }
+    ],
+    active: [
+      { type: 'revoke', label: 'Revoke', status: 'revoked' }
+    ],
+    revoked: [
+      { type: 'reactivate', label: 'Re-activate', status: 'active' }
+    ]
+  };
+  return actions[group] || [];
+}
+
+function getOperatorActions(status) {
+  const group = getOperatorStatusGroup(status);
+  const actions = {
+    pending: [
+      { type: 'approve', label: 'Approve', status: 'active' },
+      { type: 'reject', label: 'Reject', status: 'rejected' }
+    ],
+    active: [
+      { type: 'revoke', label: 'Revoke', status: 'revoked' }
+    ],
+    inactive: [
+      { type: 'reactivate', label: 'Re-activate', status: 'active' }
+    ]
+  };
+  return actions[group] || [];
+}
+
+function getStatusClass(status) {
+  return `status-${normalizeStatus(status).replace(/_/g, '-') || 'pending'}`;
+}
+
+function getPaymentStatusLabel(status) {
+  const labels = {
+    not_required_yet: 'Not required yet',
+    awaiting_payment: 'Awaiting payment',
+    paid: 'Paid',
+    payment_failed: 'Payment failed',
+    refunded: 'Refunded'
+  };
+  return labels[normalizeStatus(status)] || 'Not required yet';
+}
+
+function getTaskActions(status) {
+  const actions = {
+    review_pending: [
+      { type: 'quote', label: 'Send quote' },
+      { type: 'move', label: 'Cancel', status: 'cancelled' }
+    ],
+    new: [
+      { type: 'quote', label: 'Send quote' },
+      { type: 'move', label: 'Cancel', status: 'cancelled' }
+    ],
+    quoted: [
+      { type: 'quote', label: 'Edit quote' },
+      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' }
+    ],
+    awaiting_payment: [
+      { type: 'move', label: 'Payment submitted', status: 'verification_pending' }
+    ],
+    verification_pending: [
+      { type: 'move', label: 'Queue task', status: 'queued' }
+    ],
+    queued: [
+      { type: 'move', label: 'Start work', status: 'in_progress' }
+    ],
+    in_progress: [
+      { type: 'move', label: 'Delivery prep', status: 'delivery_prep' }
+    ],
+    delivery_prep: [
+      { type: 'deliver', label: 'Deliver' }
+    ],
+    delivered: [
+      { type: 'complete', label: 'Complete' },
+      { type: 'revision', label: 'Revision requested' }
+    ],
+    revision_requested: [
+      { type: 'move', label: 'Resume work', status: 'in_progress' },
+      { type: 'move', label: 'Cancel', status: 'cancelled' }
+    ]
+  };
+  return actions[normalizeStatus(status)] || [];
+}
+
+function getTaskPriority(task) {
+  const deadline = String(task.deadline || '').trim().toLowerCase();
+  const description = String(task.task_description || '').toLowerCase();
+  const urgentPattern = /\b(asap|urgent|tonight|today)\b/;
+
+  if (deadline === 'tonight' || urgentPattern.test(description)) {
+    return { label: 'High', className: 'priority-high' };
+  }
+
+  if (deadline === 'tomorrow') {
+    return { label: 'Medium', className: 'priority-medium' };
+  }
+
+  return { label: 'Normal', className: 'priority-normal' };
+}
+
+function formatTaskDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function getTaskId(task) {
+  return task.task_id || task.taskId || task.id || 'Pending ID';
+}
+
+function getTaskTitle(task) {
+  return task.task_summary || task.task_description || 'Untitled task';
+}
+
+function isSaiUniversityBrandingTask(task) {
+  const signal = [
+    task.task_summary,
+    task.task_description,
+    task.company,
+    task.source,
+    task.raw_payload?.project_name
+  ].filter(Boolean).join(' ').toLowerCase();
+  return signal.includes('saiuniversity') && signal.includes('branding');
+}
+
+function parseMoney(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  const normalized = String(value).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+  const amount = Number.parseFloat(normalized);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function formatRevenue(value) {
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0
+  }).format(value || 0);
+}
+
+function isPaidRevenueTask(task) {
+  return normalizeStatus(task.payment_status) === 'paid' && parseMoney(task.quote_amount) > 0;
+}
+
+function isPendingRevenueTask(task) {
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const taskStatus = normalizeStatus(task.status);
+  return paymentStatus === 'awaiting_payment' || taskStatus === 'awaiting_payment';
+}
+
+function isPotentialRevenueTask(task) {
+  if (normalizeStatus(task.payment_status) === 'paid') return false;
+  const status = normalizeStatus(task.status);
+  return ['review_pending', 'new', 'quoted', 'verification_pending'].includes(status);
+}
+
+function getTaskDomId(task) {
+  return String(task.id || task.task_id || task.taskId || '').trim();
+}
+
+function getTaskRenderSignature(task) {
+  return [
+    task.id,
+    task.task_id,
+    task.task_summary,
+    task.task_description,
+    task.email,
+    task.name,
+    task.status,
+    task.payment_status,
+    task.quote_amount,
+    task.quote_note,
+    task.delivery_eta,
+    task.payment_link,
+    task.deadline,
+    task.source,
+    task.updated_at,
+    task.created_at
+  ].map((value) => String(value ?? '')).join('::');
+}
+
+function getLifecycleIndex(status) {
+  const stages = ['review_pending', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
+  const normalized = normalizeStatus(status) === 'new' ? 'review_pending' : normalizeStatus(status);
+  if (normalized === 'revision_requested') return stages.indexOf('in_progress');
+  const index = stages.indexOf(normalized);
+  return index >= 0 ? index : 0;
+}
+
+function renderLifecycle(status) {
+  const stages = [
+    ['review_pending', 'Review'],
+    ['quoted', 'Quote'],
+    ['awaiting_payment', 'Pay'],
+    ['verification_pending', 'Verify'],
+    ['queued', 'Queue'],
+    ['in_progress', 'Work'],
+    ['delivery_prep', 'Prep'],
+    ['delivered', 'Delivery'],
+    ['completed', 'Complete']
+  ];
+  const currentIndex = getLifecycleIndex(status);
+  const current = normalizeStatus(status) === 'new' ? 'review_pending' : normalizeStatus(status);
+  return `
+    <div class="admin-lifecycle" aria-label="Lifecycle">
+      ${stages.map(([key, label], index) => {
+        const state = index < currentIndex ? 'is-complete' : key === current ? 'is-current' : '';
+        return `<span class="admin-lifecycle-step ${state}">${label}</span>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function sortedTasks(tasks) {
+  return [...tasks].sort((a, b) => {
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
+function sortedClients(clients) {
+  return [...clients].sort((a, b) => {
+    const statusRank = { pending: 0, active: 1, inactive: 2 };
+    const aRank = statusRank[getClientStatusGroup(a.status)] ?? 3;
+    const bRank = statusRank[getClientStatusGroup(b.status)] ?? 3;
+    if (aRank !== bRank) return aRank - bRank;
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+}
+
+function sortedOperators(operators) {
+  return [...operators].sort((a, b) => {
+    const statusRank = { pending: 0, active: 1, inactive: 2 };
+    const aRank = statusRank[getOperatorStatusGroup(a.status)] ?? 3;
+    const bRank = statusRank[getOperatorStatusGroup(b.status)] ?? 3;
+    if (aRank !== bRank) return aRank - bRank;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+}
+
+function getRelativeTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+  if (seconds < 45) return 'Updated just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return formatTaskDate(value);
+}
+
+function getTaskActivityLabel(task) {
+  const status = normalizeStatus(task.status);
+  if (task.quoted_at) return `Quote generated ${getRelativeTime(task.quoted_at)}`;
+  if (status === 'review_pending' || status === 'new') return 'Operator reviewing';
+  if (status === 'in_progress') return 'Execution active';
+  if (status === 'queued') return 'Queued for execution';
+  if (task.updated_at) return getRelativeTime(task.updated_at);
+  return 'Realtime connected';
+}
+
+function updateStats(tasks = adminTasks, clients = adminClients) {
+  const reviewStatuses = ['new', 'review_pending'];
+  const newTasksCount = tasks.filter((task) => reviewStatuses.includes(normalizeStatus(task.status))).length;
+  const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment').length;
+  const queuedCount = tasks.filter((task) => normalizeStatus(task.status) === 'queued').length;
+  const activeClients = clients.filter((client) => getClientStatusGroup(client.status) === 'active').length;
+  const completedTasks = tasks.filter((task) => ['delivered', 'completed'].includes(normalizeStatus(task.status))).length;
+
+  const paidTasks = tasks.filter(isPaidRevenueTask);
+  const paidRevenue = paidTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
+
+  const pendingTasks = tasks.filter(isPendingRevenueTask);
+  const pendingRevenue = pendingTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
+
+  const potentialTasks = tasks.filter(isPotentialRevenueTask);
+  const potentialRevenue = potentialTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
+
+  adminStatsSnapshot = {
+    totalTasks: tasks.length,
+    pendingReviewTasks: newTasksCount,
+    activeClients,
+    completedTasks
+  };
+
+  adminNewTasksCount.textContent = newTasksCount;
+  adminNewTasksStat.classList.toggle('has-new-tasks', newTasksCount > 0);
+  adminPendingQuotesCount.textContent = awaitingPaymentCount;
+  adminInProgressCount.textContent = tasks.filter((task) => ['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
+  adminQueuedCount.textContent = queuedCount;
+  adminDeliveredCount.textContent = completedTasks;
+  const quotedWithTs = tasks.filter(t => t.quoted_at && t.created_at);
+  if (quotedWithTs.length) {
+    const avgMs = quotedWithTs.reduce((s, t) => s + (new Date(t.quoted_at) - new Date(t.created_at)), 0) / quotedWithTs.length;
+    adminAvgResponse.textContent = avgMs < 3_600_000
+      ? `${Math.round(avgMs / 60_000)}m`
+      : `${(avgMs / 3_600_000).toFixed(1)}h`;
+  } else {
+    adminAvgResponse.textContent = '—';
+  }
+  adminPaidRevenue.textContent = formatRevenue(paidRevenue);
+  adminPendingRevenue.textContent = formatRevenue(pendingRevenue);
+  adminPotentialRevenue.textContent = formatRevenue(potentialRevenue);
+  adminNewTasksStat.title = `${tasks.length} total tasks · ${activeClients} active clients`;
+
+  const paidCountEl = document.getElementById('paidRevenueCount');
+  const pendingCountEl = document.getElementById('pendingRevenueCount');
+  const potentialCountEl = document.getElementById('potentialRevenueCount');
+  if (paidCountEl) paidCountEl.textContent = `${paidTasks.length} transaction${paidTasks.length !== 1 ? 's' : ''}`;
+  if (pendingCountEl) pendingCountEl.textContent = `${pendingTasks.length} awaiting`;
+  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} in pipeline`;
+
+  if (activeRevenueDrawer) {
+    const drawerContent = document.getElementById('revenueDrawerContent');
+    if (drawerContent) {
+      if (activeRevenueDrawer === 'paid') drawerContent.innerHTML = renderPaidDrawerContent(tasks);
+      else if (activeRevenueDrawer === 'pending') drawerContent.innerHTML = renderPendingDrawerContent(tasks);
+      else if (activeRevenueDrawer === 'potential') drawerContent.innerHTML = renderPotentialDrawerContent(tasks);
+    }
+  }
+}
+
+function updateAdminStats(tasks) {
+  updateStats(tasks, adminClients);
+}
+
+function renderClients(clients) {
+  adminClientsKicker.hidden = true;
+  const counts = getClientGroups(clients);
+  document.querySelectorAll('.admin-client-tab').forEach((tab) => {
+    tab.classList.toggle('is-active', tab.dataset.clientFilter === adminClientFilter);
+    const label = tab.dataset.clientFilter === 'pending'
+      ? 'Pending'
+      : tab.dataset.clientFilter === 'active'
+        ? 'Active'
+        : 'All';
+    const count = tab.dataset.clientFilter === 'pending'
+      ? counts.pending.length
+      : tab.dataset.clientFilter === 'active'
+        ? counts.active.length
+        : clients.length;
+    tab.textContent = `${label} ${count}`;
+  });
+
+  if (!clients.length) {
+    adminClientsList.innerHTML = '<div class="placeholder">No clients yet.</div>';
+    return;
+  }
+
+  if (adminClientFilter !== 'all') {
+    const filteredClients = adminClientFilter === 'pending' ? counts.pending : counts.active;
+    const section = adminClientFilter === 'pending'
+      ? renderClientSection('Needs Approval', filteredClients, { urgent: true, empty: 'No clients need approval.' })
+      : renderClientSection('Active Clients', filteredClients, { empty: 'No active clients.' });
+    adminClientsList.innerHTML = `<div class="admin-client-list">${section}</div>`;
+    return;
+  }
+
+  adminClientsList.innerHTML = `
+    <div class="admin-client-list">
+      ${renderClientSection('Needs Approval', counts.pending, { urgent: true, empty: 'No clients need approval.' })}
+      ${renderClientSection('Active Clients', counts.active, { empty: 'No active clients.' })}
+      ${renderClientSection('Revoked / Inactive', counts.inactive, { muted: true, empty: 'No revoked clients.' })}
+    </div>
+  `;
+}
+
+function getClientGroups(clients) {
+  return {
+    pending: sortedClients(clients.filter((client) => getClientStatusGroup(client.status) === 'pending')),
+    active: sortedClients(clients.filter((client) => getClientStatusGroup(client.status) === 'active')),
+    inactive: sortedClients(clients.filter((client) => getClientStatusGroup(client.status) === 'inactive'))
+  };
+}
+
+function renderClientSection(title, clients, options = {}) {
+  const dotClass = options.urgent ? 'admin-client-section-dot admin-client-section-dot--urgent' : 'admin-client-section-dot';
+  const headClass = [
+    'admin-client-section-head',
+    options.urgent ? 'admin-client-section-head--urgent' : '',
+    options.muted ? 'is-muted' : ''
+  ].filter(Boolean).join(' ');
+  return `
+    <section class="admin-client-section ${options.muted ? 'is-muted' : ''}">
+      <div class="${headClass}">
+        <span class="${dotClass}"></span>
+        ${escapeHTML(title)}
+        <span class="admin-client-section-count">${clients.length}</span>
+      </div>
+      ${clients.length ? clients.map(renderClientRow).join('') : `<div class="placeholder">${escapeHTML(options.empty || 'No clients.')}</div>`}
+    </section>
+  `;
+}
+
+function renderClientRow(client) {
+  const createdAt = formatTaskDate(client.created_at);
+  const actions = client.email ? getClientActions(client.status) : [];
+  const group = getClientStatusGroup(client.status);
+  const actionMarkup = actions.length ? `
+    <div class="admin-client-actions">
+      ${actions.map((action) => `
+        <button
+          class="admin-client-action"
+          type="button"
+          data-client-action="${action.type}"
+          data-client-status="${action.status}"
+          data-client-email="${escapeHTML(client.email)}"
+        >${action.label}</button>
+      `).join('')}
+      <span class="admin-client-message" aria-live="polite"></span>
+    </div>
+  ` : '';
+  return `
+    <article class="admin-client-row ${group === 'pending' ? 'is-needs-approval' : ''} ${group === 'inactive' ? 'is-inactive-client' : ''}">
+      <div class="admin-client-top">
+        <div>
+          <h3 class="admin-client-name">${escapeHTML(client.name || 'Unnamed client')}</h3>
+          <div class="admin-client-email">${escapeHTML(client.email || 'No email')}</div>
+        </div>
+        <span class="admin-status-pill ${getStatusClass(client.status)}">${getClientStatusLabel(client.status)}</span>
+      </div>
+      ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
+      ${actionMarkup}
+    </article>
+  `;
+}
+
+function renderAdminClients(clients) {
+  renderClients(clients);
+}
+
+function renderOperators(operators) {
+  if (!adminOperatorsList) return;
+  adminOperatorsKicker.hidden = true;
+  const groups = getOperatorGroups(operators);
+  document.querySelectorAll('[data-operator-filter]').forEach((tab) => {
+    tab.classList.toggle('is-active', tab.dataset.operatorFilter === adminOperatorFilter);
+    const label = tab.dataset.operatorFilter === 'pending'
+      ? 'Pending'
+      : tab.dataset.operatorFilter === 'active'
+        ? 'Active'
+        : 'All';
+    const count = tab.dataset.operatorFilter === 'pending'
+      ? groups.pending.length
+      : tab.dataset.operatorFilter === 'active'
+        ? groups.active.length
+        : operators.length;
+    tab.textContent = `${label} ${count}`;
+  });
+
+  if (!operators.length) {
+    adminOperatorsList.innerHTML = '<div class="placeholder">No operator applications yet.</div>';
+    return;
+  }
+
+  if (adminOperatorFilter !== 'all') {
+    const filteredOperators = adminOperatorFilter === 'pending' ? groups.pending : groups.active;
+    const section = adminOperatorFilter === 'pending'
+      ? renderOperatorSection('Pending Operators', filteredOperators, { urgent: true, empty: 'No pending operator applications.' })
+      : renderOperatorSection('Active Operators', filteredOperators, { empty: 'No active operators.' });
+    adminOperatorsList.innerHTML = `<div class="admin-operator-list">${section}</div>`;
+    return;
+  }
+
+  adminOperatorsList.innerHTML = `
+    <div class="admin-operator-list">
+      ${renderOperatorSection('Pending Operators', groups.pending, { urgent: true, empty: 'No pending operator applications.' })}
+      ${renderOperatorSection('Active Operators', groups.active, { empty: 'No active operators.' })}
+      ${renderOperatorSection('Revoked / Inactive', groups.inactive, { muted: true, empty: 'No revoked operators.' })}
+    </div>
+  `;
+}
+
+function getOperatorGroups(operators) {
+  return {
+    pending: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'pending')),
+    active: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'active')),
+    inactive: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'inactive'))
+  };
+}
+
+function renderOperatorSection(title, operators, options = {}) {
+  const dotClass = options.urgent ? 'admin-client-section-dot admin-client-section-dot--urgent' : 'admin-client-section-dot';
+  const headClass = [
+    'admin-client-section-head',
+    options.urgent ? 'admin-client-section-head--urgent' : '',
+    options.muted ? 'is-muted' : ''
+  ].filter(Boolean).join(' ');
+  return `
+    <section class="admin-client-section ${options.muted ? 'is-muted' : ''}">
+      <div class="${headClass}">
+        <span class="${dotClass}"></span>
+        ${escapeHTML(title)}
+        <span class="admin-client-section-count">${operators.length}</span>
+      </div>
+      ${operators.length ? operators.map(renderOperatorRow).join('') : `<div class="placeholder">${escapeHTML(options.empty || 'No operators.')}</div>`}
+    </section>
+  `;
+}
+
+function renderOperatorField(label, value) {
+  const display = Array.isArray(value) ? value.filter(Boolean).join(', ') : value;
+  return `
+    <div class="admin-operator-detail">
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(display || '—')}</strong>
+    </div>
+  `;
+}
+
+function renderOperatorRow(operator) {
+  const createdAt = formatTaskDate(operator.created_at);
+  const actions = operator.email ? getOperatorActions(operator.status) : [];
+  const group = getOperatorStatusGroup(operator.status);
+  const actionMarkup = actions.length ? `
+    <div class="admin-client-actions">
+      ${actions.map((action) => `
+        <button
+          class="admin-client-action"
+          type="button"
+          data-operator-action="${action.type}"
+          data-operator-status="${action.status}"
+          data-operator-email="${escapeHTML(operator.email)}"
+        >${action.label}</button>
+      `).join('')}
+      <span class="admin-client-message" aria-live="polite"></span>
+    </div>
+  ` : '';
+
+  return `
+    <article class="admin-operator-row ${group === 'pending' ? 'is-needs-approval' : ''} ${group === 'inactive' ? 'is-inactive-operator' : ''}">
+      <div class="admin-client-top">
+        <div>
+          <h3 class="admin-client-name">${escapeHTML(operator.name || 'Unnamed operator')}</h3>
+          <div class="admin-client-email">${escapeHTML(operator.email || 'No email')}</div>
+        </div>
+        <span class="admin-status-pill ${getStatusClass(operator.status)}">${getOperatorStatusLabel(operator.status)}</span>
+      </div>
+      ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
+      <div class="admin-operator-detail-grid">
+        ${renderOperatorField('Role type', operator.role_type)}
+        ${renderOperatorField('Skills', operator.skills)}
+        ${renderOperatorField('Country', operator.country)}
+        ${renderOperatorField('Birthdate', operator.birthdate)}
+        ${renderOperatorField('Payout email', operator.payout_email)}
+        ${renderOperatorField('Tools', operator.tools)}
+        ${renderOperatorField('Timezone', operator.timezone)}
+        ${renderOperatorField('Availability', operator.availability)}
+        ${renderOperatorField('Portfolio', operator.portfolio)}
+        ${renderOperatorField('Signup', operator.signup_method || operator.source)}
+      </div>
+      ${operator.notes ? `<div class="admin-operator-notes">${escapeHTML(operator.notes)}</div>` : ''}
+      ${actionMarkup}
+    </article>
+  `;
+}
+
+function getWorkspaceSelectPayload(select) {
+  const option = select?.selectedOptions?.[0];
+  if (!option || !option.value) return null;
+  const client = (adminClients || []).find((item) => String(item.email || '') === option.value) || {};
+  const task = getTaskForClient(client);
+  return {
+    client,
+    task,
+    workspace_slug: option.dataset.workspaceSlug || getClientWorkspaceSlug(client),
+    email: option.dataset.email || client.email || '',
+    name: option.dataset.name || getClientDisplayName(client),
+    task_id: task?.task_id || task?.taskId || task?.id || ''
+  };
+}
+
+function renderWorkspaceSelectors() {
+  const selects = [workspaceMessageClient, workspaceQuoteClient].filter(Boolean);
+  if (!selects.length) return;
+
+  const clients = sortedClients(adminClients || []);
+  const options = clients.map((client) => {
+    const email = client.email || '';
+    const labelParts = [
+      getClientDisplayName(client),
+      email,
+      getClientStatusLabel(client.status)
+    ].filter(Boolean);
+    return `
+      <option
+        value="${escapeHTML(email)}"
+        data-email="${escapeHTML(email)}"
+        data-name="${escapeHTML(getClientDisplayName(client))}"
+        data-workspace-slug="${escapeHTML(getClientWorkspaceSlug(client))}"
+      >${escapeHTML(labelParts.join(' · '))}</option>
+    `;
+  }).join('');
+
+  selects.forEach((select) => {
+    const previousValue = select.value;
+    select.innerHTML = `<option value="">Select client</option>${options}`;
+    if (previousValue && Array.from(select.options).some((option) => option.value === previousValue)) {
+      select.value = previousValue;
+    }
+  });
+}
+
+function isClearlyMarkedTestRecord(record = {}) {
+  const text = [
+    record.message,
+    record.title,
+    record.notes,
+    record.scope_summary,
+    record.task_id,
+    record.metadata?.marker,
+    record.metadata?.purpose
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /\b(test|diagnostic|don diagnostic|don_verify|verification test|test verification)\b/.test(text);
+}
+
+function setWorkspaceControlMessage(message, isError = false) {
+  if (!workspaceControlMessage) return;
+  workspaceControlMessage.textContent = message || '';
+  workspaceControlMessage.classList.toggle('is-error', Boolean(isError));
+}
+
+async function adminWorkspaceRequest(payload) {
+  const response = await fetch(ADMIN_WORKSPACE_RECORDS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
+      ...payload
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success !== true) {
+    throw new Error(data?.error || 'Workspace admin request failed');
+  }
+  return data;
+}
+
+async function adminOperatorRequest(payload) {
+  const response = await fetch(ADMIN_OPERATORS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
+      ...payload
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success !== true) {
+    throw new Error(data?.error || 'Operator admin request failed');
+  }
+  return data;
+}
+
+async function loadWorkspaceRecords(options = {}) {
+  if (!workspaceMessagesList || !workspaceQuotesList) return;
+  if (!options.silent) {
+    workspaceMessagesList.innerHTML = '<div class="workspace-record-empty">Loading workspace messages...</div>';
+    workspaceQuotesList.innerHTML = '<div class="workspace-record-empty">Loading workspace quotes...</div>';
+  }
+
+  try {
+    const data = await adminWorkspaceRequest({ action: 'list' });
+    workspaceRecords = {
+      messages: Array.isArray(data.messages) ? data.messages : [],
+      quotes: Array.isArray(data.quotes) ? data.quotes : []
+    };
+    renderWorkspaceRecords();
+  } catch (error) {
+    if (!options.silent) {
+      workspaceMessagesList.innerHTML = '<div class="workspace-record-empty">Could not load workspace messages.</div>';
+      workspaceQuotesList.innerHTML = '<div class="workspace-record-empty">Could not load workspace quotes.</div>';
+    }
+  }
+}
+
+function renderWorkspaceRecords() {
+  if (workspaceMessagesList) {
+    workspaceMessagesList.innerHTML = workspaceRecords.messages.length
+      ? workspaceRecords.messages.map(renderWorkspaceMessageRecord).join('')
+      : '<div class="workspace-record-empty">No workspace messages yet.</div>';
+  }
+  if (workspaceQuotesList) {
+    workspaceQuotesList.innerHTML = workspaceRecords.quotes.length
+      ? workspaceRecords.quotes.map(renderWorkspaceQuoteRecord).join('')
+      : '<div class="workspace-record-empty">No workspace quotes yet.</div>';
+  }
+}
+
+function renderWorkspaceMessageRecord(record) {
+  const canDelete = isClearlyMarkedTestRecord(record);
+  return `
+    <article class="workspace-record-row">
+      <div class="workspace-record-title">
+        <span>${escapeHTML(record.message_type || 'workspace update')}</span>
+        ${canDelete ? `<button class="workspace-record-delete" type="button" data-record-type="message" data-record-id="${escapeHTML(record.id)}">Delete test</button>` : ''}
+      </div>
+      <div class="workspace-record-meta">${escapeHTML(record.workspace_slug || record.email || 'workspace')} · ${escapeHTML(formatTaskDate(record.created_at) || 'No date')}</div>
+      <div class="workspace-record-body">${escapeHTML(record.message || 'No message')}</div>
+    </article>
+  `;
+}
+
+function renderWorkspaceQuoteRecord(record) {
+  const amount = record.amount === null || record.amount === undefined ? 'No amount' : `${escapeHTML(record.currency || 'EUR')} ${escapeHTML(record.amount)}`;
+  const canDelete = isClearlyMarkedTestRecord(record);
+  return `
+    <article class="workspace-record-row">
+      <div class="workspace-record-title">
+        <span>${escapeHTML(record.title || 'Workspace quote')}</span>
+        ${canDelete ? `<button class="workspace-record-delete" type="button" data-record-type="quote" data-record-id="${escapeHTML(record.id)}">Delete test</button>` : ''}
+      </div>
+      <div class="workspace-record-meta">${escapeHTML(record.workspace_slug || record.email || 'workspace')} · ${escapeHTML(record.status || 'draft')} · ${amount}</div>
+      <div class="workspace-record-body">${escapeHTML(record.scope_summary || record.notes || 'No scope summary')}</div>
+    </article>
+  `;
+}
+
+function renderTasks(tasks) {
+  if (!tasks.length) {
+    adminTasksList.innerHTML = '<div class="placeholder">No tasks yet.</div>';
+    adminTaskRenderSignature = 'empty';
+    return;
+  }
+
+  const groups = [
+    {
+      title: 'Review / Quote',
+      slug: 'active-operations',
+      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.payment_status) !== 'awaiting_payment' && ['new', 'review_pending', 'quoted'].includes(normalizeStatus(task.status)))
+    },
+    {
+      title: 'Awaiting Payment',
+      slug: 'awaiting-payment',
+      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment')
+    },
+    {
+      title: 'In Progress',
+      slug: 'in-progress',
+      tasks: sortedTasks(tasks).filter((task) => ['verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
+    },
+    {
+      title: 'Delivered',
+      slug: 'delivered',
+      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.status) === 'delivered')
+    },
+    {
+      title: 'Completed Archive',
+      slug: 'completed-archive',
+      tasks: sortedTasks(tasks).filter((task) => ['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
+    }
+  ].filter((group) => group.tasks.length);
+
+  const renderTaskCard = (task) => {
+    const domId = getTaskDomId(task);
+    const renderSignature = getTaskRenderSignature(task);
+    const createdAt = formatTaskDate(task.created_at);
+    const deadline = task.deadline ? escapeHTML(task.deadline) : 'No deadline set';
+    const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Pending quote</span>';
+    const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
+    const quoteNote = task.quote_note ? `<div>${escapeHTML(task.quote_note)}</div>` : '';
+    const paymentStatus = getPaymentStatusLabel(task.payment_status);
+    const actions = task.id ? [...getTaskActions(task.status), { type: 'workspace-update', label: 'Post update' }] : [];
+    if (task.id && isSaiUniversityBrandingTask(task) && !task.delivery_link) {
+      actions.push({ type: 'send-branding', label: 'Send full branding link' });
+    }
+    const status = normalizeStatus(task.status);
+    const isNew = ['new', 'review_pending'].includes(status);
+    const isActive = ['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+    const isAwaitingPayment = normalizeStatus(task.payment_status) === 'awaiting_payment' || status === 'awaiting_payment';
+    const isDelivered = status === 'delivered';
+    const isComplete = ['completed', 'cancelled', 'rejected'].includes(status);
+    const priority = getTaskPriority(task);
+    const activityLabel = getTaskActivityLabel(task);
+    const paymentCallout = isAwaitingPayment ? `
+      <div class="admin-payment-callout">
+        <div>
+          <strong>Payment follow-up</strong>
+          <span>${escapeHTML(task.name || task.email || 'Client')} is awaiting payment before execution continues.</span>
+        </div>
+        ${task.payment_link
+          ? `<a class="admin-payment-link" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Open payment →</a>`
+          : '<span class="admin-payment-link" aria-disabled="true">Link pending</span>'}
+      </div>
+    ` : '';
+    const actionMarkup = actions.length ? `
+      <div class="admin-task-actions">
+        ${actions.map((action) => `
+          <button
+            class="admin-task-action"
+            type="button"
+            data-action="${action.type}"
+            ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
+            data-task-id="${escapeHTML(task.id)}"
+          >${action.label}</button>
+        `).join('')}
+        <span class="admin-task-message" aria-live="polite"></span>
+      </div>
+    ` : '';
+
+    return `
+      <article class="admin-task-row ${isNew ? 'is-new-task is-review-operation' : ''} ${isAwaitingPayment ? 'is-awaiting-payment-operation' : ''} ${isActive ? 'is-active-operation' : ''} ${isDelivered ? 'is-delivered-operation' : ''} ${isComplete ? 'is-complete-operation' : ''}" data-task-row-id="${escapeHTML(domId)}" data-render-signature="${escapeHTML(renderSignature)}">
+        <div class="admin-task-top">
+          <div>
+            <h3 class="admin-task-title">${escapeHTML(getTaskTitle(task))}</h3>
+            <div class="admin-task-identity">
+              <span class="admin-task-email">${escapeHTML(task.email || 'No email')}</span>
+              <span class="admin-task-id">${escapeHTML(getTaskId(task))}</span>
+            </div>
+            <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
+          </div>
+          <div class="admin-task-actions" style="margin-top:0">
+            <span class="admin-status-pill ${getStatusClass(task.status)}">${getStatusLabel(task.status)}</span>
+            <span class="admin-status-pill payment-${(normalizeStatus(task.payment_status) || 'not_required_yet').replace(/_/g, '-')}">${escapeHTML(paymentStatus)}</span>
+          </div>
+        </div>
+        <div class="admin-task-meta">
+          <div class="admin-task-metric"><span>Client</span><strong>${escapeHTML(task.name || task.email || 'Unknown')}</strong></div>
+          <div class="admin-task-metric"><span>Created</span><strong>${escapeHTML(createdAt || 'Pending')}</strong></div>
+          <div class="admin-task-metric"><span>Deadline</span><strong>${deadline}</strong></div>
+        </div>
+        <div class="admin-task-meta">
+          <div class="admin-task-metric"><span>Quote</span><strong>${quoteAmount}</strong></div>
+          <div class="admin-task-metric"><span>ETA</span><strong>${deliveryEta || 'Pending'}</strong></div>
+          <div class="admin-task-metric"><span>Source</span><strong>${escapeHTML(task.source || 'workspace')}</strong></div>
+        </div>
+        <div class="admin-task-activity">${escapeHTML(activityLabel)}</div>
+        ${renderLifecycle(task.status)}
+        ${(task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link) ? `
+          <div class="admin-task-detail">
+            <span class="admin-task-detail-label">Operational Quote</span>
+            <div>${quoteAmount}${deliveryEta ? ` · ${deliveryEta}` : ''}</div>
+            ${quoteNote}
+            ${task.payment_link ? `<div class="admin-task-eta">${escapeHTML(task.payment_link)}</div>` : ''}
+          </div>
+        ` : ''}
+        ${paymentCallout}
+        ${actionMarkup}
+      </article>
+    `;
+  };
+
+  const nextSignature = JSON.stringify(groups.map((group) => [
+    group.slug,
+    group.tasks.map((task) => `${getTaskDomId(task)}:${getTaskRenderSignature(task)}`)
+  ]));
+  if (nextSignature === adminTaskRenderSignature) return;
+
+  const renderFullTaskList = () => {
+    adminTasksList.innerHTML = `
+      <div class="admin-task-list">
+        ${groups.map((group) => `
+          <section class="operation-group" data-operation-section="${escapeHTML(group.slug)}">
+            <div class="operation-group-head">
+              <h3 class="operation-group-title">${escapeHTML(group.title)}</h3>
+              <span class="operation-group-count">${group.tasks.length}</span>
+            </div>
+            ${group.tasks.map(renderTaskCard).join('')}
+          </section>
+        `).join('')}
+      </div>
+    `;
+  };
+
+  let list = adminTasksList.querySelector('.admin-task-list');
+  if (!list) {
+    renderFullTaskList();
+    adminTaskRenderSignature = nextSignature;
+    return;
+  }
+
+  const activeTaskId = document.activeElement?.closest?.('.admin-task-row')?.dataset?.taskRowId || '';
+  const nextGroupSlugs = new Set(groups.map((group) => group.slug));
+  [...list.querySelectorAll('[data-operation-section]')].forEach((section) => {
+    if (!nextGroupSlugs.has(section.dataset.operationSection)) section.remove();
+  });
+
+  const nextTaskIds = new Set();
+  groups.forEach((group, groupIndex) => {
+    let section = [...list.querySelectorAll('[data-operation-section]')]
+      .find((element) => element.dataset.operationSection === group.slug);
+    if (!section) {
+      section = document.createElement('section');
+      section.className = 'operation-group';
+      section.dataset.operationSection = group.slug;
+      section.innerHTML = `
+        <div class="operation-group-head">
+          <h3 class="operation-group-title">${escapeHTML(group.title)}</h3>
+          <span class="operation-group-count">${group.tasks.length}</span>
+        </div>
+      `;
+      list.appendChild(section);
+    }
+
+    if (list.children[groupIndex] !== section) {
+      list.insertBefore(section, list.children[groupIndex] || null);
+    }
+    section.querySelector('.operation-group-title').textContent = group.title;
+    section.querySelector('.operation-group-count').textContent = group.tasks.length;
+
+    group.tasks.forEach((task, taskIndex) => {
+      const domId = getTaskDomId(task);
+      nextTaskIds.add(domId);
+      const template = document.createElement('template');
+      template.innerHTML = renderTaskCard(task).trim();
+      const nextCard = template.content.firstElementChild;
+      const existingCard = [...list.querySelectorAll('.admin-task-row')]
+        .find((row) => row.dataset.taskRowId === domId);
+
+      if (!existingCard) {
+        nextCard.classList.add('is-entering');
+        const rows = [...section.querySelectorAll('.admin-task-row')];
+        section.insertBefore(nextCard, rows[taskIndex] || null);
+        return;
+      }
+
+      let activeCard = existingCard;
+      if (existingCard.dataset.renderSignature !== nextCard.dataset.renderSignature) {
+        existingCard.replaceWith(nextCard);
+        activeCard = nextCard;
+      }
+
+      const rows = [...section.querySelectorAll('.admin-task-row')];
+      if (activeCard.parentElement !== section || rows[taskIndex] !== activeCard) {
+        section.insertBefore(activeCard, rows[taskIndex] || null);
+      }
+    });
+  });
+
+  [...list.querySelectorAll('.admin-task-row')].forEach((row) => {
+    if (!nextTaskIds.has(row.dataset.taskRowId)) {
+      row.classList.add('is-removing');
+      window.setTimeout(() => row.remove(), 220);
+    }
+  });
+
+  if (activeTaskId) {
+    const nextFocus = [...list.querySelectorAll('.admin-task-row')]
+      .find((row) => row.dataset.taskRowId === activeTaskId)
+      ?.querySelector('.admin-task-action:not(:disabled)');
+    if (nextFocus) nextFocus.focus({ preventScroll: true });
+  }
+
+  adminTaskRenderSignature = nextSignature;
+}
+
+function renderAdminTasks(tasks) {
+  renderTasks(tasks);
+}
+
+function focusOperationSection(target) {
+  if (!target) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  activeMetricTarget = target;
+  document.querySelectorAll('.stat-card').forEach((card) => {
+    card.classList.toggle('is-active', card.dataset.targetSection === target);
+  });
+
+  const section = [...document.querySelectorAll('[data-operation-section]')]
+    .find((element) => element.dataset.operationSection === target) || document.getElementById('adminTasksSection');
+  if (!section) return;
+  section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  section.classList.remove('is-highlighted');
+  void section.offsetWidth;
+  section.classList.add('is-highlighted');
+  window.setTimeout(() => section.classList.remove('is-highlighted'), 1700);
+}
+
+function renderAdminActivity(tasks) {
+  if (!tasks.length) {
+    adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+    return;
+  }
+
+  const latest = sortedTasks(tasks)[0];
+  const labels = {
+    new: 'New task awaiting quote',
+    review_pending: 'Task pending review',
+    quoted: 'Quote sent',
+    awaiting_payment: 'Awaiting payment',
+    verification_pending: 'Payment verification pending',
+    queued: 'Task queued',
+    in_progress: 'Task in progress',
+    delivery_prep: 'Delivery preparing',
+    delivered: 'Task delivered',
+    completed: 'Task completed',
+    revision_requested: 'Revision requested',
+    cancelled: 'Task cancelled',
+    rejected: 'Task rejected'
+  };
+  const status = normalizeStatus(latest.status);
+  const priority = getTaskPriority(latest);
+  const title = status === 'new' && priority.label === 'High'
+    ? 'High priority · New task awaiting quote'
+    : labels[status] || 'Task updated';
+  const createdAt = formatTaskDate(latest.created_at);
+  adminActivity.innerHTML = `
+    <div class="admin-activity">
+      <div class="admin-activity-title">${escapeHTML(title)}</div>
+      ${createdAt ? `<div class="admin-activity-time">${escapeHTML(createdAt)}</div>` : ''}
+    </div>
+  `;
+}
+
+function setAdminLoading() {
+  if (!adminTasks.length) adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
+}
+
+function setAdminClientsLoading() {
+  adminClientsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Loading clients&hellip;</div>';
+}
+
+function setAdminOperatorsLoading() {
+  if (!adminOperatorsKicker || !adminOperatorsList) return;
+  adminOperatorsKicker.hidden = false;
+  adminOperatorsList.innerHTML = '<div class="placeholder">Loading operators&hellip;</div>';
+}
+
+function setAdminError() {
+  adminTasksList.innerHTML = '<div class="placeholder">Could not load tasks.</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+}
+
+function setAdminClientsError() {
+  adminClientsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Could not load clients.</div>';
+}
+
+function setAdminOperatorsError() {
+  if (!adminOperatorsKicker || !adminOperatorsList) return;
+  adminOperatorsKicker.hidden = false;
+  adminOperatorsList.innerHTML = '<div class="placeholder">Could not load operators.</div>';
+}
+
+function resetAdminDashboard() {
+  adminTasks = [];
+  adminClients = [];
+  adminOperators = [];
+  adminTaskRenderSignature = '';
+  updateStats();
+  adminClientsKicker.hidden = false;
+  if (adminOperatorsKicker) adminOperatorsKicker.hidden = false;
+  adminClientsList.innerHTML = '<div class="placeholder">Loading clients&hellip;</div>';
+  if (adminOperatorsList) adminOperatorsList.innerHTML = '<div class="placeholder">Loading operators&hellip;</div>';
+  adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+}
+
+async function loadSupabaseRows(tableName) {
+  if (!operatorSupabase) throw new Error('Supabase client unavailable');
+  const { data, error } = await operatorSupabase
+    .from(tableName)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function loadAdminEndpointRows(endpoint, fieldName) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
+    })
+  });
+  if (!response.ok) throw new Error(`${fieldName} endpoint failed`);
+  const data = await response.json().catch(() => ({}));
+  if (data?.success !== true || !Array.isArray(data[fieldName])) throw new Error(`${fieldName} endpoint denied`);
+  return data[fieldName];
+}
+
+async function loadClients(options = {}) {
+  if (adminClientsLoading) {
+    adminClientsReloadQueued = true;
+    return;
+  }
+  adminClientsLoading = true;
+
+  if (!options.silent) {
+    setAdminClientsLoading();
+  }
+
+  try {
+    let clients;
+    try {
+      clients = await loadAdminEndpointRows(ADMIN_CLIENTS_ENDPOINT, 'clients');
+    } catch (adminEndpointError) {
+      try {
+        clients = await loadSupabaseRows('portal_requests');
+      } catch (supabaseError) {
+        clients = await loadAdminEndpointRows(ADMIN_CLIENTS_LEGACY_ENDPOINT, 'clients');
+      }
+    }
+
+    adminClients = sortedClients(clients);
+    renderClients(adminClients);
+    renderWorkspaceSelectors();
+    updateStats();
+  } catch (error) {
+    if (!options.silent || !adminClients.length) {
+      adminClients = [];
+      updateStats();
+      setAdminClientsError();
+    }
+  } finally {
+    adminClientsLoading = false;
+    if (adminClientsReloadQueued) {
+      adminClientsReloadQueued = false;
+      loadClients({ silent: true });
+    }
+  }
+}
+
+async function loadAdminClients(options = {}) {
+  return loadClients(options);
+}
+
+async function loadOperators(options = {}) {
+  if (!adminOperatorsList) return;
+  if (adminOperatorsLoading) {
+    adminOperatorsReloadQueued = true;
+    return;
+  }
+  adminOperatorsLoading = true;
+
+  if (!options.silent) {
+    setAdminOperatorsLoading();
+  }
+
+  try {
+    const data = await adminOperatorRequest({ action: 'list_operators' });
+    const operators = Array.isArray(data.operators) ? data.operators : [];
+    adminOperators = sortedOperators(operators);
+    renderOperators(adminOperators);
+  } catch (error) {
+    if (!options.silent || !adminOperators.length) {
+      adminOperators = [];
+      setAdminOperatorsError();
+    }
+  } finally {
+    adminOperatorsLoading = false;
+    if (adminOperatorsReloadQueued) {
+      adminOperatorsReloadQueued = false;
+      loadOperators({ silent: true });
+    }
+  }
+}
+
+async function loadAdminOperators(options = {}) {
+  return loadOperators(options);
+}
+
+async function loadTasks(options = {}) {
+  if (adminTasksLoading) {
+    adminTasksReloadQueued = true;
+    return;
+  }
+  adminTasksLoading = true;
+
+  if (!options.silent) {
+    setAdminLoading();
+  }
+
+  try {
+    let tasks;
+    try {
+      tasks = await loadAdminEndpointRows(ADMIN_TASKS_ENDPOINT, 'tasks');
+    } catch (adminEndpointError) {
+      try {
+        tasks = await loadSupabaseRows('task_requests');
+      } catch (supabaseError) {
+        tasks = await loadAdminEndpointRows(ADMIN_TASKS_LEGACY_ENDPOINT, 'tasks');
+      }
+    }
+
+    adminTasks = sortedTasks(tasks);
+    updateStats();
+    renderTasks(adminTasks);
+    renderAdminActivity(adminTasks);
+  } catch (error) {
+    if (!options.silent || !adminTasks.length) {
+      adminTasks = [];
+      updateStats();
+      setAdminError();
+    }
+  } finally {
+    adminTasksLoading = false;
+    if (adminTasksReloadQueued) {
+      adminTasksReloadQueued = false;
+      loadTasks({ silent: true });
+    }
+  }
+}
+
+async function loadAdminTasks(options = {}) {
+  return loadTasks(options);
+}
+
+function startAdminTaskPolling() {
+  if (adminTaskPollingInterval || !document.body.classList.contains('is-admin')) return;
+
+  adminTaskPollingInterval = setInterval(async () => {
+    if (!document.hasFocus()) return;
+    try {
+      await loadAdminTasks({ silent: true });
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  }, 30000);
+}
+
+function stopAdminTaskPolling() {
+  if (!adminTaskPollingInterval) return;
+  clearInterval(adminTaskPollingInterval);
+  adminTaskPollingInterval = null;
+}
+
+function extractUpdatedTask(data) {
+  if (!data || typeof data !== 'object') return null;
+  const candidates = [data.task, data.updated_task, data.updatedTask, data.data, data];
+  return candidates.find((candidate) => candidate && typeof candidate === 'object' && candidate.id) || null;
+}
+
+function getStageTimestampPatch(stage, now = new Date().toISOString()) {
+  const patches = {
+    quoted: { quoted_at: now },
+    verification_pending: { paid_at: now },
+    in_progress: { started_at: now },
+    delivered: { delivered_at: now },
+    completed: { completed_at: now }
+  };
+  return patches[normalizeStatus(stage)] || {};
+}
+
+function buildStagePayload(taskId, stage, extra = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: taskId,
+    status: stage,
+    updated_at: now,
+    ...getStageTimestampPatch(stage, now),
+    ...extra
+  };
+}
+
+async function moveTaskToStage(button, taskId, stage, extra = {}) {
+  return updateTask(button, buildStagePayload(taskId, stage, extra));
+}
+
+async function completeTask(button, taskId) {
+  return moveTaskToStage(button, taskId, 'completed');
+}
+
+async function requestRevision(button, taskId) {
+  return moveTaskToStage(button, taskId, 'revision_requested');
+}
+
+async function sendSaiUniversityBranding(button, taskId) {
+  const task = (adminTasks || []).find((item) => item.id === taskId);
+  const fullLink = `${window.location.origin}/SaiUniversity-Branding/`;
+  const clientName = task?.name || task?.email || 'client';
+  const message = `Hi ${clientName}, the full SaiUniversity Branding direction is ready inside your private workspace:\n\n${fullLink}`;
+  try {
+    await navigator.clipboard?.writeText(message);
+  } catch (error) {
+    // Clipboard access is best-effort; the release should still proceed.
+  }
+
+  await updateTask(button, {
+    id: taskId,
+    status: 'delivered',
+    delivery_link: '/SaiUniversity-Branding/',
+    delivery_note: 'SaiUniversity Branding ready. Full brand direction has been manually released.',
+    updated_at: new Date().toISOString(),
+    delivered_at: new Date().toISOString()
+  });
+
+  await postWorkspaceMessage({
+    task,
+    message: 'Full SaiUniversity branding direction released.',
+    message_type: 'delivery_update'
+  });
+}
+
+async function postWorkspaceMessage({ task, message, message_type = 'operator_note' }) {
+  if (!message) return null;
+  const workspaceSlug = slugifyWorkspace(task?.company || task?.name || task?.email || '');
+  const data = await adminWorkspaceRequest({
+    action: 'create_message',
+    workspace_slug: workspaceSlug,
+    task_id: task?.task_id || task?.taskId || task?.id || '',
+    email: task?.email || '',
+    message_type,
+    message
+  });
+  loadWorkspaceRecords({ silent: true });
+  return data;
+}
+
+async function createWorkspaceQuote(task, quote) {
+  const workspaceSlug = slugifyWorkspace(task?.company || task?.name || task?.email || '');
+  try {
+    const data = await adminWorkspaceRequest({
+      action: 'create_quote',
+      workspace_slug: workspaceSlug,
+      task_id: task?.task_id || task?.taskId || task?.id || '',
+      email: task?.email || '',
+      title: getTaskTitle(task),
+      scope_summary: quote.quote_note || getTaskTitle(task),
+      amount: String(quote.quote_amount || '').replace(/[^\d.]/g, ''),
+      currency: 'EUR',
+      status: 'sent',
+      notes: quote.delivery_eta ? `ETA: ${quote.delivery_eta}` : ''
+    });
+    loadWorkspaceRecords({ silent: true });
+    return data;
+  } catch (error) {
+    return null;
+  }
+}
+
+function renderAdminTaskState(tasks) {
+  adminTasks = sortedTasks(tasks);
+  updateStats();
+  renderTasks(adminTasks);
+  renderAdminActivity(adminTasks);
+}
+
+function startAdminRealtime() {
+  if (adminRealtimeStarted || !operatorSupabase) return;
+  adminRealtimeStarted = true;
+
+  const reloadTasksFromRealtime = async (payload, label) => {
+    console.log(label, payload.new || payload.old || payload);
+    await loadTasks({ silent: true });
+  };
+
+  const reloadClientsFromRealtime = async (payload, label) => {
+    console.log(label, payload.new || payload.old || payload);
+    await loadClients({ silent: true });
+  };
+
+  const reloadOperatorsFromRealtime = async (payload, label) => {
+    console.log(label, payload.new || payload.old || payload);
+    await loadOperators({ silent: true });
+  };
+
+  adminTaskRealtimeChannel = operatorSupabase
+    .channel('doneovernight-operator-task-requests')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_requests' }, (payload) => {
+      reloadTasksFromRealtime(payload, 'NEW TASK');
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'task_requests' }, (payload) => {
+      reloadTasksFromRealtime(payload, 'TASK UPDATED');
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'task_requests' }, (payload) => {
+      reloadTasksFromRealtime(payload, 'TASK UPDATED');
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('REALTIME CONNECTED', 'task_requests');
+    });
+
+  adminClientRealtimeChannel = operatorSupabase
+    .channel('doneovernight-operator-portal-requests')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_requests' }, (payload) => {
+      reloadClientsFromRealtime(payload, 'CLIENT UPDATED');
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_requests' }, (payload) => {
+      reloadClientsFromRealtime(payload, 'CLIENT UPDATED');
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'portal_requests' }, (payload) => {
+      reloadClientsFromRealtime(payload, 'CLIENT UPDATED');
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('REALTIME CONNECTED', 'portal_requests');
+    });
+
+  adminOperatorRealtimeChannel = operatorSupabase
+    .channel('doneovernight-admin-operator-intake')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'operators' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'OPERATOR UPDATED');
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'operators' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'OPERATOR UPDATED');
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'operator_profiles' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'OPERATOR UPDATED');
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'operator_profiles' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'OPERATOR UPDATED');
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'portal_requests', filter: 'source=eq.operator_apply' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'NEW OPERATOR');
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'portal_requests', filter: 'source=eq.operator_apply' }, (payload) => {
+      reloadOperatorsFromRealtime(payload, 'OPERATOR UPDATED');
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') console.log('REALTIME CONNECTED', 'operator_intake');
+    });
+}
+
+function stopAdminRealtime() {
+  if (!operatorSupabase) return;
+  if (adminTaskRealtimeChannel) operatorSupabase.removeChannel(adminTaskRealtimeChannel);
+  if (adminClientRealtimeChannel) operatorSupabase.removeChannel(adminClientRealtimeChannel);
+  if (adminOperatorRealtimeChannel) operatorSupabase.removeChannel(adminOperatorRealtimeChannel);
+  adminTaskRealtimeChannel = null;
+  adminClientRealtimeChannel = null;
+  adminOperatorRealtimeChannel = null;
+  adminRealtimeStarted = false;
+}
+
+async function updateClient(button, payload) {
+  const row = button.closest('.admin-client-row');
+  const actions = row?.querySelectorAll('.admin-client-action') || [];
+  const message = row?.querySelector('.admin-client-message');
+  const previousText = button.textContent;
+
+  actions.forEach((action) => { action.disabled = true; });
+  button.textContent = 'Processing...';
+  if (message) message.textContent = '';
+
+  try {
+    const response = await fetch(ADMIN_UPDATE_CLIENT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('Client update failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === false) throw new Error('Client update denied');
+    await loadClients();
+  } catch (error) {
+    actions.forEach((action) => { action.disabled = false; });
+    button.textContent = previousText;
+    if (message) message.textContent = 'Could not update client.';
+  }
+}
+
+async function updateTask(button, payload) {
+  const row = button.closest('.admin-task-row');
+  const message = row?.querySelector('.admin-task-message');
+  const previousText = button.textContent;
+
+  button.disabled = true;
+  button.textContent = 'Processing...';
+  if (message) message.textContent = '';
+
+  try {
+    const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
+      })
+    });
+    if (!response.ok) throw new Error('Task update failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success === false) throw new Error('Task update denied');
+    const updatedTask = extractUpdatedTask(data);
+    if (updatedTask) {
+      const nextTasks = adminTasks.map((task) => String(task.id) === String(updatedTask.id) ? { ...task, ...updatedTask } : task);
+      renderAdminTaskState(nextTasks);
+    }
+    await loadTasks();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    if (message) message.textContent = payload.status === 'rejected' ? 'Could not reject task.' : 'Could not update task.';
+  }
+}
+
+/* ── Operator quote / delivery modal ─────────────────────── */
+
+let _opModalResolve = null;
+let _opModalEl = null;
+
+function _getOpModal() {
+  if (_opModalEl) return _opModalEl;
+
+  // Create the modal DOM on first use
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <div class="op-modal-backdrop" id="opModalBackdrop" aria-hidden="true">
+      <div class="op-modal" role="dialog" aria-modal="true" aria-labelledby="opModalTitle">
+        <div class="op-modal-head">
+          <h2 class="op-modal-title" id="opModalTitle">Send Quote</h2>
+          <button class="op-modal-close" id="opModalClose" type="button" aria-label="Close">×</button>
+        </div>
+        <div class="op-modal-error-line" id="opModalError"></div>
+        <form id="opModalForm" novalidate>
+          <div class="op-modal-fields" id="opModalFields"></div>
+          <div class="op-modal-actions">
+            <button class="admin-button op-modal-submit" type="submit" id="opModalSubmit">Send</button>
+            <button class="op-modal-cancel" type="button" id="opModalCancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
+  document.body.appendChild(wrapper.firstElementChild);
+
+  const backdrop = document.getElementById('opModalBackdrop');
+  const form     = document.getElementById('opModalForm');
+  const errLine  = document.getElementById('opModalError');
+
+  function _closeModal(result) {
+    backdrop.classList.remove('is-open');
+    backdrop.setAttribute('aria-hidden', 'true');
+    form.reset();
+    errLine.classList.remove('is-shown');
+    if (_opModalResolve) { _opModalResolve(result); _opModalResolve = null; }
+  }
+
+  document.getElementById('opModalClose').addEventListener('click', () => _closeModal(null));
+  document.getElementById('opModalCancel').addEventListener('click', () => _closeModal(null));
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) _closeModal(null); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop.classList.contains('is-open')) _closeModal(null);
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errLine.classList.remove('is-shown');
+    const fields = document.getElementById('opModalFields');
+
+    function requireField(name, msg) {
+      const el = fields.querySelector(`[name="${name}"]`);
+      if (!el) return true;
+      if (!el.value.trim()) {
+        errLine.textContent = msg;
+        errLine.classList.add('is-shown');
+        el.classList.add('is-required-error');
+        el.focus();
+        return false;
+      }
+      el.classList.remove('is-required-error');
+      return true;
+    }
+
+    if (!requireField('quote_amount', 'Quote amount is required.')) return;
+    if (!requireField('delivery_eta', 'Delivery ETA is required.')) return;
+    if (!requireField('delivery_link', 'Delivery link is required.')) return;
+
+    const result = {};
+    new FormData(form).forEach((v, k) => { result[k] = String(v).trim(); });
+    _closeModal(result);
+  });
+
+  _opModalEl = backdrop;
+  return backdrop;
+}
+
+function _openOpModal(type, task) {
+  return new Promise((resolve) => {
+    _opModalResolve = resolve;
+    const backdrop = _getOpModal();
+    const fields   = document.getElementById('opModalFields');
+    const title    = document.getElementById('opModalTitle');
+    const submit   = document.getElementById('opModalSubmit');
+    const errLine  = document.getElementById('opModalError');
+    errLine.classList.remove('is-shown');
+
+    if (type === 'quote') {
+      title.textContent  = task?.quote_amount ? 'Edit Quote' : 'Send Quote';
+      submit.textContent = task?.quote_amount ? 'Update quote' : 'Send quote';
+      fields.innerHTML = `
+        <div class="op-modal-field">
+          <label for="omQAmt">Quote amount</label>
+          <input id="omQAmt" name="quote_amount" type="text" placeholder="€350" value="${escapeHTML(task?.quote_amount || '')}" autocomplete="off">
+        </div>
+        <div class="op-modal-field">
+          <label for="omQEta">Delivery ETA</label>
+          <input id="omQEta" name="delivery_eta" type="text" placeholder="Tomorrow 10:00" value="${escapeHTML(task?.delivery_eta || '')}" autocomplete="off">
+        </div>
+        <div class="op-modal-field">
+          <label for="omQNote">Note <span class="field-opt">optional</span></label>
+          <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
+        </div>
+        <div class="op-modal-field">
+          <label for="omQLink">Payment link <span class="field-opt">optional</span></label>
+          <input id="omQLink" name="payment_link" type="url" placeholder="https://stripe.com/…" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+        </div>`;
+    } else {
+      title.textContent  = 'Deliver';
+      submit.textContent = 'Mark delivered';
+      fields.innerHTML = `
+        <div class="op-modal-field">
+          <label for="omDLink">Delivery link</label>
+          <input id="omDLink" name="delivery_link" type="url" placeholder="https://drive.google.com/…" value="${escapeHTML(task?.delivery_link || '')}" autocomplete="off">
+        </div>
+        <div class="op-modal-field">
+          <label for="omDNote">Note <span class="field-opt">optional</span></label>
+          <textarea id="omDNote" name="delivery_note" rows="2" placeholder="All files included, fonts embedded…">${escapeHTML(task?.delivery_note || '')}</textarea>
+        </div>`;
+    }
+
+    backdrop.classList.add('is-open');
+    backdrop.removeAttribute('aria-hidden');
+    fields.querySelector('input, textarea')?.focus();
+  });
+}
+
+async function promptForQuote(task) {
+  return _openOpModal('quote', task);
+}
+
+async function promptForDelivery(task) {
+  return _openOpModal('delivery', task);
+}
+
+function showAdminDashboard() {
+  document.body.classList.add('is-admin');
+  loadClients();
+  loadOperators();
+  loadTasks();
+  loadWorkspaceRecords();
+  startAdminRealtime();
+  startAdminTaskPolling();
+}
+
+function showAdminLogin() {
+  document.body.classList.remove('is-admin');
+  stopAdminTaskPolling();
+  stopAdminRealtime();
+  resetAdminDashboard();
+  adminForm.reset();
+  adminError.classList.remove('is-shown');
+  setTimeout(() => adminKey.focus(), 100);
+}
+
+if (sessionStorage.getItem('doneovernight_admin') === 'true') {
+  if (sessionStorage.getItem('doneovernight_admin_key')) {
+    showAdminDashboard();
+  } else {
+    sessionStorage.removeItem('doneovernight_admin');
+    setTimeout(() => adminKey.focus(), 100);
+  }
+} else {
+  setTimeout(() => adminKey.focus(), 100);
+}
+
+adminLogout.addEventListener('click', () => {
+  sessionStorage.removeItem('doneovernight_admin');
+  sessionStorage.removeItem('doneovernight_admin_key');
+  showAdminLogin();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAdminTaskPolling();
+    return;
+  }
+
+  if (document.body.classList.contains('is-admin')) {
+    loadTasks({ silent: true });
+    loadClients({ silent: true });
+    loadOperators({ silent: true });
+    loadWorkspaceRecords({ silent: true });
+    startAdminRealtime();
+    startAdminTaskPolling();
+  }
+});
+
+adminClientsList.addEventListener('click', async (e) => {
+  const button = e.target.closest('.admin-client-action');
+  if (!button || button.disabled) return;
+
+  const email = button.dataset.clientEmail;
+  const status = button.dataset.clientStatus;
+  if (!email || !status) return;
+
+  await updateClient(button, {
+    email,
+    status
+  });
+});
+
+document.querySelectorAll('.admin-client-tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    if (!tab.dataset.clientFilter) return;
+    adminClientFilter = tab.dataset.clientFilter || 'all';
+    renderClients(adminClients);
+  });
+});
+
+document.querySelectorAll('[data-operator-filter]').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    adminOperatorFilter = tab.dataset.operatorFilter || 'all';
+    renderOperators(adminOperators);
+  });
+});
+
+adminOperatorsList?.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-operator-action]');
+  if (!button || button.disabled) return;
+
+  const email = button.dataset.operatorEmail;
+  const status = button.dataset.operatorStatus;
+  if (!email || !status) return;
+
+  const row = button.closest('.admin-operator-row');
+  const actions = row?.querySelectorAll('[data-operator-action]') || [];
+  const message = row?.querySelector('.admin-client-message');
+  const previousText = button.textContent;
+
+  actions.forEach((action) => { action.disabled = true; });
+  button.textContent = 'Processing...';
+  if (message) message.textContent = '';
+
+  try {
+    await adminOperatorRequest({
+      action: 'update_operator_status',
+      email,
+      status
+    });
+    await loadOperators({ silent: true });
+  } catch (error) {
+    actions.forEach((action) => { action.disabled = false; });
+    button.textContent = previousText;
+    if (message) message.textContent = 'Could not update operator.';
+  }
+});
+
+workspaceRecordsRefresh?.addEventListener('click', async () => {
+  const previousText = workspaceRecordsRefresh.textContent;
+  workspaceRecordsRefresh.disabled = true;
+  workspaceRecordsRefresh.textContent = 'Refreshing...';
+  setWorkspaceControlMessage('');
+  try {
+    await loadWorkspaceRecords();
+    setWorkspaceControlMessage('Workspace records refreshed.');
+  } catch (error) {
+    setWorkspaceControlMessage('Could not refresh workspace records.', true);
+  } finally {
+    window.setTimeout(() => {
+      workspaceRecordsRefresh.textContent = previousText;
+      workspaceRecordsRefresh.disabled = false;
+    }, 650);
+  }
+});
+
+workspaceUpdateForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submitButton = workspaceUpdateForm.querySelector('button[type="submit"]');
+  const payload = getWorkspaceSelectPayload(workspaceMessageClient);
+  const message = workspaceMessageText.value.trim();
+  if (!payload || !message) {
+    setWorkspaceControlMessage('Choose a workspace and add an update.', true);
+    return;
+  }
+
+  const previousText = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = 'Posting...';
+  setWorkspaceControlMessage('');
+  try {
+    await adminWorkspaceRequest({
+      action: 'create_message',
+      workspace_slug: payload.workspace_slug,
+      task_id: payload.task_id,
+      email: payload.email,
+      message_type: 'operator_note',
+      message
+    });
+    workspaceMessageText.value = '';
+    await loadWorkspaceRecords({ silent: true });
+    setWorkspaceControlMessage('Workspace update posted.');
+  } catch (error) {
+    setWorkspaceControlMessage(error.message || 'Could not post workspace update.', true);
+  } finally {
+    submitButton.textContent = previousText;
+    submitButton.disabled = false;
+  }
+});
+
+workspaceQuoteForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submitButton = workspaceQuoteForm.querySelector('button[type="submit"]');
+  const payload = getWorkspaceSelectPayload(workspaceQuoteClient);
+  const title = workspaceQuoteTitle.value.trim();
+  if (!payload || !title) {
+    setWorkspaceControlMessage('Choose a workspace and add a quote title.', true);
+    return;
+  }
+
+  const previousText = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = 'Sending...';
+  setWorkspaceControlMessage('');
+  try {
+    await adminWorkspaceRequest({
+      action: 'create_quote',
+      workspace_slug: payload.workspace_slug,
+      task_id: payload.task_id,
+      email: payload.email,
+      title,
+      scope_summary: workspaceQuoteScope.value.trim(),
+      amount: workspaceQuoteAmount.value.trim(),
+      currency: workspaceQuoteCurrency.value.trim() || 'EUR',
+      status: 'sent',
+      notes: workspaceQuoteNotes.value.trim()
+    });
+    workspaceQuoteTitle.value = '';
+    workspaceQuoteScope.value = '';
+    workspaceQuoteAmount.value = '';
+    workspaceQuoteCurrency.value = 'EUR';
+    workspaceQuoteNotes.value = '';
+    await loadWorkspaceRecords({ silent: true });
+    setWorkspaceControlMessage('Quote sent to workspace.');
+  } catch (error) {
+    setWorkspaceControlMessage(error.message || 'Could not send workspace quote.', true);
+  } finally {
+    submitButton.textContent = previousText;
+    submitButton.disabled = false;
+  }
+});
+
+[workspaceMessagesList, workspaceQuotesList].filter(Boolean).forEach((list) => {
+  list.addEventListener('click', async (event) => {
+    const button = event.target.closest('.workspace-record-delete');
+    if (!button || button.disabled) return;
+    const previousText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Deleting...';
+    setWorkspaceControlMessage('');
+    try {
+      await adminWorkspaceRequest({
+        action: 'delete',
+        type: button.dataset.recordType,
+        id: button.dataset.recordId
+      });
+      await loadWorkspaceRecords({ silent: true });
+      setWorkspaceControlMessage('Test record deleted.');
+    } catch (error) {
+      button.textContent = previousText;
+      button.disabled = false;
+      setWorkspaceControlMessage(error.message || 'Could not delete test record.', true);
+    }
+  });
+});
+
+document.querySelectorAll('.stat-card[data-target-section]').forEach((card) => {
+  const activate = () => focusOperationSection(card.dataset.targetSection);
+  card.addEventListener('click', activate);
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      activate();
+    }
+  });
+});
+
+adminTasksList.addEventListener('click', async (e) => {
+  const button = e.target.closest('.admin-task-action');
+  if (!button || button.disabled) return;
+
+  const taskId = button.dataset.taskId;
+  if (!taskId) return;
+
+  if (button.dataset.action === 'quote') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const quote = await promptForQuote(task);
+    if (!quote) return;
+
+    await updateTask(button, {
+      id: taskId,
+      status: 'quoted',
+      quote_amount: quote.quote_amount,
+      delivery_eta: quote.delivery_eta,
+      quote_note: quote.quote_note,
+      payment_link: quote.payment_link,
+      payment_status: quote.payment_link ? 'awaiting_payment' : 'not_required_yet',
+      updated_at: new Date().toISOString(),
+      quoted_at: new Date().toISOString()
+    });
+    await createWorkspaceQuote(task, quote);
+    await postWorkspaceMessage({
+      task,
+      message: 'Operational quote sent for review.',
+      message_type: 'approval_request'
+    }).catch(() => {});
+  }
+
+  if (button.dataset.action === 'deliver') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const delivery = await promptForDelivery(task);
+    if (!delivery) return;
+
+    await updateTask(button, {
+      id: taskId,
+      status: 'delivered',
+      delivery_link: delivery.delivery_link,
+      delivery_note: delivery.delivery_note,
+      updated_at: new Date().toISOString(),
+      delivered_at: new Date().toISOString()
+    });
+  }
+
+  if (button.dataset.action === 'move') {
+    await moveTaskToStage(button, taskId, button.dataset.status);
+  }
+
+  if (button.dataset.action === 'complete') {
+    await completeTask(button, taskId);
+  }
+
+  if (button.dataset.action === 'revision') {
+    await requestRevision(button, taskId);
+  }
+
+  if (button.dataset.action === 'send-branding') {
+    await sendSaiUniversityBranding(button, taskId);
+  }
+
+  if (button.dataset.action === 'workspace-update') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const message = window.prompt('Workspace update');
+    if (!message || !message.trim()) return;
+    const previousText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Posting...';
+    try {
+      await postWorkspaceMessage({ task, message: message.trim(), message_type: 'operator_note' });
+      button.textContent = 'Posted';
+      window.setTimeout(() => { button.textContent = previousText; button.disabled = false; }, 900);
+    } catch (error) {
+      button.textContent = 'Could not post';
+      window.setTimeout(() => { button.textContent = previousText; button.disabled = false; }, 1200);
+    }
+  }
+});
+
+/* ── Revenue Drawer ─────────────────────────────────────── */
+
+function getBlockingReason(status) {
+  const reasons = {
+    review_pending: 'Review in progress',
+    new: 'Review in progress',
+    quoted: 'Awaiting confirmation',
+    awaiting_payment: 'Awaiting payment',
+    verification_pending: 'Verification pending'
+  };
+  return reasons[normalizeStatus(status)] || 'Pending review';
+}
+
+function renderPaidDrawerContent(tasks) {
+  const paidTasks = tasks.filter(isPaidRevenueTask);
+  if (!paidTasks.length) return '<div class="revenue-empty">No paid transactions yet.</div>';
+  const total = paidTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
+  return `
+    <div class="revenue-drawer-head">
+      <span class="revenue-drawer-title">Paid revenue breakdown</span>
+      <span class="revenue-drawer-total" style="color:var(--green)">${formatRevenue(total)}</span>
+    </div>
+    ${paidTasks.map((t) => `
+      <div class="revenue-item">
+        <div>
+          <div class="revenue-item-name">${escapeHTML(t.name || t.email || 'Unknown')}</div>
+          ${t.email ? `<div class="revenue-item-email">${escapeHTML(t.email)}</div>` : ''}
+          <div class="revenue-item-task">${escapeHTML(getTaskTitle(t))}<span class="revenue-item-id">${escapeHTML(getTaskId(t))}</span></div>
+        </div>
+        <div>
+          <div class="revenue-item-stage">Task status<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
+          <div class="revenue-item-date">Paid ${escapeHTML(formatTaskDate(t.paid_at || t.updated_at || t.created_at) || 'recently')}</div>
+        </div>
+        <div class="revenue-item-meta">
+          <span class="revenue-item-amount revenue-paid-amount">${escapeHTML(String(t.quote_amount))}</span>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderPendingDrawerContent(tasks) {
+  const pendingTasks = tasks.filter(isPendingRevenueTask);
+  if (!pendingTasks.length) return '<div class="revenue-empty">No pending payments.</div>';
+  const total = pendingTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
+  return `
+    <div class="revenue-drawer-head">
+      <span class="revenue-drawer-title">Awaiting payment</span>
+      <span class="revenue-drawer-total" style="color:#f4d28a">${formatRevenue(total)}</span>
+    </div>
+    ${pendingTasks.map((t) => `
+      <div class="revenue-item">
+        <div>
+          <div class="revenue-item-name">${escapeHTML(t.name || t.email || 'Unknown')}</div>
+          ${t.email ? `<div class="revenue-item-email">${escapeHTML(t.email)}</div>` : ''}
+          <div class="revenue-item-task">${escapeHTML(getTaskTitle(t))}<span class="revenue-item-id">${escapeHTML(getTaskId(t))}</span></div>
+        </div>
+        <div>
+          <div class="revenue-item-stage">Payment<strong>${escapeHTML(getPaymentStatusLabel(t.payment_status))}</strong></div>
+          <div class="revenue-item-stage">Quote<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
+          ${t.delivery_eta ? `<div class="revenue-item-date">ETA: ${escapeHTML(t.delivery_eta)}</div>` : ''}
+          <div class="revenue-item-blocker">Follow-up required</div>
+        </div>
+        <div class="revenue-item-meta">
+          <span class="revenue-item-amount revenue-pending-amount">${t.quote_amount ? escapeHTML(String(t.quote_amount)) : 'TBD'}</span>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderPotentialDrawerContent(tasks) {
+  const potentialTasks = tasks.filter(isPotentialRevenueTask);
+  if (!potentialTasks.length) return '<div class="revenue-empty">No pipeline tasks.</div>';
+  const total = potentialTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
+  return `
+    <div class="revenue-drawer-head">
+      <span class="revenue-drawer-title">Pipeline breakdown</span>
+      <span class="revenue-drawer-total" style="color:#e6d3a3">${formatRevenue(total)}</span>
+    </div>
+    ${potentialTasks.map((t) => `
+      <div class="revenue-item">
+        <div>
+          <div class="revenue-item-name">${escapeHTML(t.name || t.email || 'Unknown')}</div>
+          ${t.email ? `<div class="revenue-item-email">${escapeHTML(t.email)}</div>` : ''}
+          <div class="revenue-item-task">${escapeHTML(getTaskTitle(t))}<span class="revenue-item-id">${escapeHTML(getTaskId(t))}</span></div>
+        </div>
+        <div>
+          <div class="revenue-item-stage">Current stage<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
+          <div class="revenue-item-blocker">${escapeHTML(getBlockingReason(t.status))}</div>
+        </div>
+        <div class="revenue-item-meta">
+          ${t.quote_amount
+            ? `<span class="revenue-item-amount revenue-potential-amount">${escapeHTML(String(t.quote_amount))}</span>`
+            : `<span class="revenue-item-amount" style="color:rgba(245,241,234,.28)">No quote</span>`}
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function openRevenueDrawer(type) {
+  const drawer = document.getElementById('revenueDrawer');
+  const drawerContent = document.getElementById('revenueDrawerContent');
+  const paidCard = document.getElementById('paidRevenueCard');
+  const pendingCard = document.getElementById('pendingRevenueCard');
+  const potentialCard = document.getElementById('potentialRevenueCard');
+  if (!drawer || !drawerContent) return;
+
+  if (activeRevenueDrawer === type) {
+    closeRevenueDrawer();
+    return;
+  }
+
+  activeRevenueDrawer = type;
+  [paidCard, pendingCard, potentialCard].forEach((c) => { if (c) c.classList.remove('is-open'); c?.setAttribute('aria-expanded', 'false'); });
+
+  let html = '';
+  if (type === 'paid')      { paidCard?.classList.add('is-open');      paidCard?.setAttribute('aria-expanded', 'true');      html = renderPaidDrawerContent(adminTasks); }
+  else if (type === 'pending')   { pendingCard?.classList.add('is-open');   pendingCard?.setAttribute('aria-expanded', 'true');   html = renderPendingDrawerContent(adminTasks); }
+  else if (type === 'potential') { potentialCard?.classList.add('is-open'); potentialCard?.setAttribute('aria-expanded', 'true'); html = renderPotentialDrawerContent(adminTasks); }
+
+  drawerContent.innerHTML = html;
+  drawer.classList.remove('is-paid', 'is-pending', 'is-potential');
+  drawer.classList.add('is-open', `is-${type}`);
+  drawer.setAttribute('aria-hidden', 'false');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  drawer.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+function closeRevenueDrawer() {
+  const drawer = document.getElementById('revenueDrawer');
+  activeRevenueDrawer = null;
+  if (drawer) { drawer.classList.remove('is-open', 'is-paid', 'is-pending', 'is-potential'); drawer.setAttribute('aria-hidden', 'true'); }
+  ['paidRevenueCard', 'pendingRevenueCard', 'potentialRevenueCard'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('is-open'); el.setAttribute('aria-expanded', 'false'); }
+  });
+}
+
+document.getElementById('paidRevenueCard')?.addEventListener('click', () => openRevenueDrawer('paid'));
+document.getElementById('pendingRevenueCard')?.addEventListener('click', () => openRevenueDrawer('pending'));
+document.getElementById('potentialRevenueCard')?.addEventListener('click', () => openRevenueDrawer('potential'));
+
+['paidRevenueCard', 'pendingRevenueCard', 'potentialRevenueCard'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById(id).click(); }
+  });
+});
+
+/* ── End Revenue Drawer ─────────────────────────────────── */
+
+adminForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  adminError.classList.remove('is-shown');
+
+  const key = adminKey.value.trim();
+  const submit = adminForm.querySelector('.admin-button');
+  if (!key) {
+    adminError.textContent = 'Enter admin key.';
+    adminError.classList.add('is-shown');
+    adminKey.focus();
+    return;
+  }
+
+  const previousText = submit.innerHTML;
+  submit.disabled = true;
+  submit.innerHTML = '<span>Checking...</span>';
+
+  try {
+    const response = await fetch(ADMIN_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ admin_key: key })
+    });
+    if (!response.ok) throw new Error('Admin auth failed');
+    const data = await response.json().catch(() => ({}));
+    if (data?.success !== true) throw new Error('Admin auth denied');
+    sessionStorage.setItem('doneovernight_admin', 'true');
+    sessionStorage.setItem('doneovernight_admin_key', key);
+    showAdminDashboard();
+  } catch (error) {
+    adminError.textContent = 'Could not verify admin key.';
+    adminError.classList.add('is-shown');
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = previousText;
+  }
+});
+</script>
+<script src="/lang/runtime.js" defer></script>
+</body>
+</html>
