@@ -204,6 +204,14 @@
       box-shadow: 0 0 14px rgba(139, 224, 173, 0.46);
       content: "";
     }
+    .service-line {
+      display: block;
+      margin-top: 5px;
+      color: rgba(233, 196, 138, 0.78);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
     .trust {
       max-width: 56ch;
       margin-top: 28px;
@@ -223,9 +231,9 @@
     }
     .contact-strip a { color: rgba(245, 241, 234, 0.76); }
     .contact-strip .social-handle {
-      color: rgba(245, 241, 234, 0.86);
-      font-size: 0.82rem;
-      letter-spacing: 0.1em;
+      color: rgba(245, 241, 234, 0.94);
+      font-size: 0.94rem;
+      letter-spacing: 0.11em;
     }
     .form-card {
       position: relative;
@@ -401,6 +409,41 @@
       line-height: 1.12;
       letter-spacing: -0.015em;
     }
+    .recent {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+      gap: clamp(20px, 4vw, 54px);
+      align-items: start;
+      margin-top: clamp(18px, 3.2vw, 32px);
+      padding-top: clamp(18px, 3vw, 28px);
+      border-top: 1px solid rgba(245, 241, 234, 0.065);
+    }
+    .recent-kicker {
+      color: rgba(245, 241, 234, 0.44);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.19em;
+      text-transform: uppercase;
+    }
+    .recent-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      list-style: none;
+    }
+    .recent-list li {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(245, 241, 234, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.024);
+      color: rgba(245, 241, 234, 0.6);
+      font-size: 0.78rem;
+      line-height: 1;
+    }
     @media (max-width: 860px) {
       .page { padding: 18px; }
       .header { padding-bottom: 18px; }
@@ -411,6 +454,7 @@
       .actions .btn { flex: 1 1 180px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
+      .recent { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
       .header { align-items: flex-start; }
@@ -421,6 +465,8 @@
       .status-block { max-width: none; }
       .how-list { grid-template-columns: 1fr; }
       .how-step { min-height: 98px; }
+      .recent-list { display: grid; grid-template-columns: 1fr 1fr; }
+      .recent-list li { justify-content: center; text-align: center; }
     }
   </style>
 </head>
@@ -435,7 +481,7 @@
 
     <section class="shell" aria-labelledby="startTitle">
       <div class="hero">
-        <p class="eyebrow">QR intake route</p>
+        <p class="eyebrow">Founder access</p>
         <h1 id="startTitle">Start before midnight. Wake up to progress.</h1>
         <p class="subhead">Websites, automations, brand systems, funnels, and operational fixes executed overnight.</p>
         <div class="actions">
@@ -446,6 +492,7 @@
           <strong>Operators online</strong>
           <span>Average response: &lt; 60 minutes</span>
           <span>Average turnaround: &lt; 24 hours</span>
+          <span class="service-line">Websites • Automations • Systems • Operations</span>
         </div>
         <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
         <div class="contact-strip" aria-label="DONEOVERNIGHT contact">
@@ -458,7 +505,7 @@
         <div class="form-inner">
           <div class="form-head">
             <h2>Submit tonight.</h2>
-            <span class="live">Studio online</span>
+            <span class="live">Operators online</span>
           </div>
 
           <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
@@ -509,6 +556,15 @@
           <div class="how-step"><span>03</span><strong>You receive a quote or next step</strong></div>
           <div class="how-step"><span>04</span><strong>Execution starts after approval</strong></div>
         </div>
+      </div>
+      <div class="recent" aria-label="Example request types">
+        <p class="recent-kicker">Recent requests</p>
+        <ul class="recent-list">
+          <li>Landing page fix</li>
+          <li>CRM automation</li>
+          <li>Brand refresh</li>
+          <li>Booking flow</li>
+        </ul>
       </div>
     </section>
   </main>
