@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start a Task | DONEOVERNIGHT</title>
+  <meta name="description" content="Start a task with DONEOVERNIGHT. Websites, automations, brand systems, funnels, and operational fixes executed overnight.">
+  <link rel="canonical" href="https://start.doneovernight.com/">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { min-height: 100%; background: #050608; color-scheme: dark; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(ellipse 820px 560px at 18% 8%, rgba(233, 196, 138, 0.075), transparent 64%),
+        radial-gradient(ellipse 760px 520px at 86% 90%, rgba(120, 100, 180, 0.055), transparent 68%),
+        #050608;
+      color: #f5f1ea;
+      font-family: Manrope, system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+    body::before,
+    body::after {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+    }
+    body::before {
+      z-index: 0;
+      opacity: 0.38;
+      background-image:
+        radial-gradient(1px 1px at 15% 18%, #fff, transparent),
+        radial-gradient(0.9px 0.9px at 36% 14%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 70% 20%, #fff, transparent),
+        radial-gradient(1.1px 1.1px at 88% 48%, #fff, transparent),
+        radial-gradient(0.9px 0.9px at 18% 76%, #ffeed0, transparent),
+        radial-gradient(1px 1px at 58% 84%, #fff, transparent);
+    }
+    body::after {
+      z-index: 1;
+      opacity: 0.055;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea { font: inherit; }
+    :root {
+      --ink: #f5f1ea;
+      --muted: rgba(245, 241, 234, 0.62);
+      --faint: rgba(245, 241, 234, 0.38);
+      --line: rgba(245, 241, 234, 0.105);
+      --line-strong: rgba(233, 196, 138, 0.28);
+      --amber: #e9c48a;
+      --green: #8be0ad;
+      --danger: #e19b8f;
+      --serif: "Instrument Serif", Georgia, serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    .page {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      padding: clamp(18px, 3vw, 34px);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding-bottom: 22px;
+      border-bottom: 1px solid rgba(245, 241, 234, 0.075);
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      width: clamp(146px, 15vw, 168px);
+      line-height: 0;
+    }
+    .logo img { display: block; width: 100%; height: auto; }
+    .qr-origin {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .qr-origin::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--amber);
+      box-shadow: 0 0 18px rgba(233, 196, 138, 0.55);
+      content: "";
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.82fr);
+      gap: clamp(30px, 6vw, 86px);
+      align-items: center;
+      width: min(1180px, 100%);
+      min-height: calc(100vh - 98px);
+      margin: 0 auto;
+      padding: clamp(36px, 6vh, 78px) 0 28px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 17px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      width: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(233, 196, 138, 0.9), transparent);
+      content: "";
+    }
+    h1 {
+      max-width: 12ch;
+      font-family: var(--serif);
+      font-size: clamp(3rem, 7.6vw, 6.7rem);
+      font-weight: 400;
+      line-height: 0.96;
+      letter-spacing: -0.032em;
+      text-wrap: balance;
+    }
+    .subhead {
+      max-width: 42ch;
+      margin-top: clamp(20px, 2.6vw, 28px);
+      color: var(--muted);
+      font-size: clamp(1rem, 1.4vw, 1.2rem);
+      line-height: 1.62;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: clamp(26px, 3.4vw, 40px);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 20px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: rgba(245, 241, 234, 0.86);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+    }
+    .btn:hover, .btn:focus-visible { transform: translateY(-1px); border-color: var(--line-strong); outline: 0; }
+    .btn-primary { border-color: var(--amber); background: var(--amber); color: #050608; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.032); }
+    .trust {
+      max-width: 56ch;
+      margin-top: 28px;
+      color: rgba(245, 241, 234, 0.48);
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+    .contact-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-top: 22px;
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+    }
+    .contact-strip a { color: rgba(245, 241, 234, 0.76); }
+    .form-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(245, 241, 234, 0.09);
+      border-radius: 6px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+        rgba(8, 9, 12, 0.78);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(28px);
+    }
+    .form-card::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 22% 0%, rgba(233, 196, 138, 0.12), transparent 24rem),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent 30%);
+      content: "";
+    }
+    .form-inner { position: relative; padding: clamp(20px, 3.2vw, 30px); }
+    .form-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .form-head h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      margin-top: 6px;
+      color: rgba(139, 224, 173, 0.9);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .live::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(139, 224, 173, 0.46);
+      content: "";
+    }
+    form { display: grid; gap: 12px; }
+    .field { display: grid; gap: 8px; }
+    .field label {
+      color: rgba(245, 241, 234, 0.66);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid rgba(245, 241, 234, 0.09);
+      border-radius: 4px;
+      outline: 0;
+      background: rgba(255, 255, 255, 0.032);
+      color: rgba(245, 241, 234, 0.9);
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+    input { height: 46px; padding: 0 14px; }
+    textarea { min-height: 132px; resize: vertical; padding: 14px; line-height: 1.55; }
+    input::placeholder, textarea::placeholder { color: rgba(245, 241, 234, 0.34); }
+    input:focus, textarea:focus {
+      border-color: rgba(233, 196, 138, 0.4);
+      background: rgba(233, 196, 138, 0.04);
+      box-shadow: 0 0 0 3px rgba(233, 196, 138, 0.08), 0 0 26px rgba(233, 196, 138, 0.12);
+    }
+    .field.is-invalid input, .field.is-invalid textarea {
+      border-color: rgba(225, 155, 143, 0.68);
+      box-shadow: 0 0 0 4px rgba(225, 155, 143, 0.08), 0 0 22px rgba(225, 155, 143, 0.12);
+    }
+    .submit {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      margin-top: 4px;
+      border: 1px solid var(--amber);
+      border-radius: 999px;
+      background: var(--amber);
+      color: #050608;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .submit:disabled { cursor: wait; opacity: 0.72; }
+    .message {
+      display: none;
+      padding: 11px 12px;
+      border: 1px solid rgba(233, 196, 138, 0.16);
+      border-radius: 4px;
+      background: rgba(233, 196, 138, 0.055);
+      color: var(--amber);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+    .message.is-visible { display: block; }
+    .message.is-success { border-color: rgba(139, 224, 173, 0.18); background: rgba(139, 224, 173, 0.055); color: rgba(139, 224, 173, 0.94); }
+    .fine {
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+    @media (max-width: 860px) {
+      .page { padding: 18px; }
+      .header { padding-bottom: 18px; }
+      .qr-origin { font-size: 0.6rem; letter-spacing: 0.12em; }
+      .shell { grid-template-columns: 1fr; min-height: auto; padding: 42px 0 24px; }
+      h1 { max-width: 11ch; }
+      .grid { grid-template-columns: 1fr; }
+      .actions .btn { flex: 1 1 180px; }
+    }
+    @media (max-width: 520px) {
+      .header { align-items: flex-start; }
+      .qr-origin { justify-content: flex-end; max-width: 130px; text-align: right; white-space: normal; line-height: 1.45; }
+      .form-head { display: grid; }
+      .live { margin-top: 0; }
+      .contact-strip { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <a class="logo" href="/" aria-label="DONEOVERNIGHT home">
+        <img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
+      </a>
+      <div class="qr-origin">Business card scan</div>
+    </header>
+
+    <section class="shell" aria-labelledby="startTitle">
+      <div class="hero">
+        <p class="eyebrow">QR intake route</p>
+        <h1 id="startTitle">Start before midnight. Wake up to progress.</h1>
+        <p class="subhead">Websites, automations, brand systems, funnels, and operational fixes executed overnight.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#task-intake">Start a task</a>
+          <a class="btn btn-secondary" href="mailto:ask@doneovernight.com?subject=Question%20for%20DONEOVERNIGHT">Ask a question</a>
+        </div>
+        <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
+        <div class="contact-strip" aria-label="DONEOVERNIGHT contact">
+          <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+          <a href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener">@doneovernight</a>
+        </div>
+      </div>
+
+      <aside class="form-card" id="task-intake" aria-label="Start a task">
+        <div class="form-inner">
+          <div class="form-head">
+            <h2>Send the brief.</h2>
+            <span class="live">Studio online</span>
+          </div>
+
+          <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
+            <input type="hidden" name="source" value="business_card_qr">
+            <input type="hidden" name="intakeVersion" value="start_page_v1">
+            <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
+
+            <div class="grid">
+              <div class="field" data-field="name">
+                <label for="startName">Name</label>
+                <input id="startName" name="name" type="text" autocomplete="name" required placeholder="Your name">
+              </div>
+              <div class="field" data-field="email">
+                <label for="startEmail">Email</label>
+                <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="you@email.com">
+              </div>
+            </div>
+
+            <div class="field" data-field="task_description">
+              <label for="startTask">What do you need done?</label>
+              <textarea id="startTask" name="task_description" required placeholder="e.g. Fix my landing page funnel before tomorrow morning, connect the signup automation, and tighten the copy."></textarea>
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label for="startDeadline">Deadline / urgency</label>
+                <input id="startDeadline" name="deadline" type="text" autocomplete="off" placeholder="Tonight, 48h, flexible">
+              </div>
+              <div class="field">
+                <label for="startBudget">Budget</label>
+                <input id="startBudget" name="budget" type="text" inputmode="text" autocomplete="off" placeholder="Optional">
+              </div>
+            </div>
+
+            <button class="submit" id="startSubmit" type="submit">Start a task</button>
+            <p class="fine">No payment required to submit. We review first, then reply with scope, quote, and timing.</p>
+          </form>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const form = document.querySelector("#startTaskForm");
+      const message = document.querySelector("#startTaskMessage");
+      const submit = document.querySelector("#startSubmit");
+      if (!form || !message || !submit) return;
+
+      const requiredFields = [
+        document.querySelector("#startName"),
+        document.querySelector("#startEmail"),
+        document.querySelector("#startTask")
+      ];
+
+      function read(selector) {
+        return document.querySelector(selector)?.value.trim() || "";
+      }
+
+      function setMessage(text, success = false) {
+        message.textContent = text;
+        message.classList.toggle("is-visible", Boolean(text));
+        message.classList.toggle("is-success", success);
+      }
+
+      function clearInvalid() {
+        form.querySelectorAll(".field.is-invalid").forEach((field) => field.classList.remove("is-invalid"));
+      }
+
+      function validate() {
+        clearInvalid();
+        const missing = requiredFields.filter((input) => !input?.value.trim());
+        if (missing.length) {
+          missing.forEach((input) => input?.closest(".field")?.classList.add("is-invalid"));
+          missing[0]?.focus({ preventScroll: true });
+          setMessage("Add your name, email, and task so we can review it.");
+          return false;
+        }
+        const email = document.querySelector("#startEmail");
+        if (email && !email.checkValidity()) {
+          email.closest(".field")?.classList.add("is-invalid");
+          email.focus({ preventScroll: true });
+          setMessage("Enter a valid email so we can get back to you.");
+          return false;
+        }
+        return true;
+      }
+
+      function payload() {
+        return {
+          name: read("#startName"),
+          email: read("#startEmail"),
+          task_description: read("#startTask"),
+          deadline: read("#startDeadline"),
+          budget: read("#startBudget"),
+          source: "business_card_qr",
+          intakeVersion: "start_page_v1"
+        };
+      }
+
+      form.addEventListener("input", (event) => {
+        event.target?.closest(".field")?.classList.remove("is-invalid");
+        if (message.textContent) setMessage("");
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!validate()) return;
+
+        submit.disabled = true;
+        submit.textContent = "Sending";
+        setMessage("Routing your task to the review layer.", true);
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload())
+          });
+          const data = await response.json();
+          if (!response.ok || !data?.success) throw new Error(data?.code || "TASK_SUBMIT_FAILED");
+          form.reset();
+          setMessage("Task received. We'll review it and get back to you shortly.", true);
+          submit.textContent = "Task received";
+        } catch (error) {
+          submit.disabled = false;
+          submit.textContent = "Start a task";
+          setMessage("We could not confirm receipt. Please email ask@doneovernight.com directly.");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
