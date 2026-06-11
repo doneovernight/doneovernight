@@ -173,6 +173,37 @@
     .btn:hover, .btn:focus-visible { transform: translateY(-1px); border-color: var(--line-strong); outline: 0; }
     .btn-primary { border-color: var(--amber); background: var(--amber); color: #050608; }
     .btn-secondary { background: rgba(255, 255, 255, 0.032); }
+    .status-block {
+      display: grid;
+      gap: 7px;
+      max-width: 360px;
+      margin-top: 26px;
+      padding: 15px 0 0;
+      border-top: 1px solid rgba(245, 241, 234, 0.09);
+      color: rgba(245, 241, 234, 0.54);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      line-height: 1.5;
+    }
+    .status-block strong {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(245, 241, 234, 0.82);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .status-block strong::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(139, 224, 173, 0.46);
+      content: "";
+    }
     .trust {
       max-width: 56ch;
       margin-top: 28px;
@@ -191,6 +222,11 @@
       letter-spacing: 0.08em;
     }
     .contact-strip a { color: rgba(245, 241, 234, 0.76); }
+    .contact-strip .social-handle {
+      color: rgba(245, 241, 234, 0.86);
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+    }
     .form-card {
       position: relative;
       overflow: hidden;
@@ -314,6 +350,57 @@
       line-height: 1.5;
       text-align: center;
     }
+    .how {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 0 0 clamp(34px, 6vw, 76px);
+    }
+    .how-inner {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+      gap: clamp(20px, 4vw, 54px);
+      align-items: start;
+      border-top: 1px solid rgba(245, 241, 234, 0.08);
+      padding-top: clamp(24px, 4vw, 38px);
+    }
+    .how-kicker {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .how-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      border: 1px solid rgba(245, 241, 234, 0.08);
+      background: rgba(245, 241, 234, 0.08);
+    }
+    .how-step {
+      min-height: 122px;
+      padding: 18px;
+      background: rgba(8, 9, 12, 0.76);
+    }
+    .how-step span {
+      display: block;
+      margin-bottom: 22px;
+      color: rgba(233, 196, 138, 0.78);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+    }
+    .how-step strong {
+      display: block;
+      color: rgba(245, 241, 234, 0.84);
+      font-family: var(--serif);
+      font-size: clamp(1.05rem, 1.45vw, 1.28rem);
+      font-weight: 400;
+      line-height: 1.12;
+      letter-spacing: -0.015em;
+    }
     @media (max-width: 860px) {
       .page { padding: 18px; }
       .header { padding-bottom: 18px; }
@@ -322,6 +409,8 @@
       h1 { max-width: 11ch; }
       .grid { grid-template-columns: 1fr; }
       .actions .btn { flex: 1 1 180px; }
+      .how-inner { grid-template-columns: 1fr; }
+      .how-list { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 520px) {
       .header { align-items: flex-start; }
@@ -329,6 +418,9 @@
       .form-head { display: grid; }
       .live { margin-top: 0; }
       .contact-strip { display: grid; }
+      .status-block { max-width: none; }
+      .how-list { grid-template-columns: 1fr; }
+      .how-step { min-height: 98px; }
     }
   </style>
 </head>
@@ -338,7 +430,7 @@
       <a class="logo" href="/" aria-label="DONEOVERNIGHT home">
         <img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
       </a>
-      <div class="qr-origin">Business card scan</div>
+      <div class="qr-origin">Private access</div>
     </header>
 
     <section class="shell" aria-labelledby="startTitle">
@@ -348,19 +440,24 @@
         <p class="subhead">Websites, automations, brand systems, funnels, and operational fixes executed overnight.</p>
         <div class="actions">
           <a class="btn btn-primary" href="#task-intake">Start a task</a>
-          <a class="btn btn-secondary" href="mailto:ask@doneovernight.com?subject=Question%20for%20DONEOVERNIGHT">Ask a question</a>
+          <a class="btn btn-secondary" href="#how-it-works">How it works</a>
+        </div>
+        <div class="status-block" aria-label="DONEOVERNIGHT status">
+          <strong>Operators online</strong>
+          <span>Average response: &lt; 60 minutes</span>
+          <span>Average turnaround: &lt; 24 hours</span>
         </div>
         <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
         <div class="contact-strip" aria-label="DONEOVERNIGHT contact">
           <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
-          <a href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener">@doneovernight</a>
+          <a class="social-handle" href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener">@doneovernight</a>
         </div>
       </div>
 
       <aside class="form-card" id="task-intake" aria-label="Start a task">
         <div class="form-inner">
           <div class="form-head">
-            <h2>Send the brief.</h2>
+            <h2>Submit tonight.</h2>
             <span class="live">Studio online</span>
           </div>
 
@@ -401,6 +498,18 @@
           </form>
         </div>
       </aside>
+    </section>
+
+    <section class="how" id="how-it-works" aria-labelledby="howTitle">
+      <div class="how-inner">
+        <p class="how-kicker" id="howTitle">How it works</p>
+        <div class="how-list" aria-label="How DONEOVERNIGHT intake works">
+          <div class="how-step"><span>01</span><strong>Send the brief</strong></div>
+          <div class="how-step"><span>02</span><strong>We review scope and timing</strong></div>
+          <div class="how-step"><span>03</span><strong>You receive a quote or next step</strong></div>
+          <div class="how-step"><span>04</span><strong>Execution starts after approval</strong></div>
+        </div>
+      </div>
     </section>
   </main>
 
