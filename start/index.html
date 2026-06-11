@@ -81,6 +81,31 @@
       min-height: 100vh;
       padding: clamp(18px, 3vw, 34px);
     }
+    .splash {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      background: #020304;
+      pointer-events: none;
+      animation: splashOut 1.18s ease forwards;
+    }
+    .splash img {
+      width: min(54vw, 260px);
+      opacity: 0.78;
+      filter: brightness(0.62) contrast(1.12);
+      animation: splashMark 1.05s ease forwards;
+    }
+    @keyframes splashOut {
+      0%, 70% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+    @keyframes splashMark {
+      0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+      28%, 76% { opacity: 0.78; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-4px) scale(1.01); }
+    }
     .header {
       display: flex;
       align-items: center;
@@ -169,22 +194,39 @@
       margin-top: clamp(26px, 3.4vw, 40px);
     }
     .btn {
+      position: relative;
+      overflow: hidden;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       min-height: 48px;
+      gap: 9px;
       padding: 0 20px;
       border: 1px solid var(--line);
       border-radius: 999px;
       color: rgba(245, 241, 234, 0.86);
       font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.1em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+      transition: border-color 300ms ease, background 300ms ease, color 300ms ease, transform 220ms ease, box-shadow 300ms ease;
     }
     .btn:hover, .btn:focus-visible { transform: translateY(-1px); border-color: var(--line-strong); outline: 0; }
-    .btn-primary { border-color: var(--amber); background: var(--amber); color: #050608; }
+    .btn-primary {
+      border-color: rgba(233, 196, 138, 0.45);
+      background: rgba(233, 196, 138, 0.08);
+      color: #f4d28a;
+      box-shadow: 0 0 22px rgba(233, 196, 138, 0.16), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .btn-primary:hover,
+    .btn-primary:focus-visible {
+      border-color: rgba(233, 196, 138, 0.75);
+      background: rgba(233, 196, 138, 0.13);
+      color: #ffe3ad;
+      box-shadow: 0 0 30px rgba(233, 196, 138, 0.34), 0 0 80px rgba(233, 196, 138, 0.12), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
     .btn-secondary { background: rgba(255, 255, 255, 0.032); }
     .status-block {
       display: grid;
@@ -231,22 +273,6 @@
       color: rgba(245, 241, 234, 0.48);
       font-size: 0.86rem;
       line-height: 1.6;
-    }
-    .contact-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 18px;
-      margin-top: 22px;
-      color: var(--faint);
-      font-family: var(--mono);
-      font-size: 0.74rem;
-      letter-spacing: 0.08em;
-    }
-    .contact-strip a { color: rgba(245, 241, 234, 0.76); }
-    .contact-strip .social-handle {
-      color: rgba(245, 241, 234, 0.94);
-      font-size: 0.94rem;
-      letter-spacing: 0.11em;
     }
     .form-card {
       position: relative;
@@ -335,6 +361,31 @@
       border-color: rgba(225, 155, 143, 0.68);
       box-shadow: 0 0 0 4px rgba(225, 155, 143, 0.08), 0 0 22px rgba(225, 155, 143, 0.12);
     }
+    .deadline-chips {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .deadline-chip {
+      min-height: 42px;
+      border: 1px solid rgba(245, 241, 234, 0.09);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.028);
+      color: rgba(245, 241, 234, 0.68);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+    .deadline-chip[aria-pressed="true"] {
+      border-color: rgba(233, 196, 138, 0.52);
+      background: rgba(233, 196, 138, 0.085);
+      color: rgba(255, 227, 173, 0.92);
+      box-shadow: 0 0 20px rgba(233, 196, 138, 0.12);
+    }
     .submit {
       position: relative;
       display: inline-flex;
@@ -342,16 +393,29 @@
       justify-content: center;
       min-height: 52px;
       margin-top: 4px;
-      border: 1px solid var(--amber);
+      border: 1px solid rgba(233, 196, 138, 0.45);
       border-radius: 999px;
-      background: var(--amber);
-      color: #050608;
+      background: rgba(233, 196, 138, 0.08);
+      color: #f4d28a;
       cursor: pointer;
-      font-size: 0.78rem;
-      font-weight: 900;
-      letter-spacing: 0.12em;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+      box-shadow: 0 0 22px rgba(233, 196, 138, 0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.25s ease;
     }
+    .submit:hover,
+    .submit:focus-visible {
+      border-color: rgba(233, 196, 138, 0.78);
+      outline: 0;
+      background: rgba(233, 196, 138, 0.14);
+      color: #ffe3ad;
+      box-shadow: 0 0 34px rgba(233, 196, 138, 0.34), 0 0 90px rgba(233, 196, 138, 0.14), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .submit:active { transform: scale(0.98); }
     .submit:disabled { cursor: wait; opacity: 0.72; }
     .message {
       display: none;
@@ -364,26 +428,56 @@
       line-height: 1.45;
     }
     .message.is-visible { display: block; }
-    .message.is-success { border-color: rgba(139, 224, 173, 0.18); background: rgba(139, 224, 173, 0.055); color: rgba(139, 224, 173, 0.94); }
+    .message.is-success {
+      border-color: rgba(139, 224, 173, 0.22);
+      background: linear-gradient(135deg, rgba(139, 224, 173, 0.078), rgba(139, 224, 173, 0.034));
+      color: rgba(139, 224, 173, 0.94);
+      box-shadow: 0 0 28px rgba(139, 224, 173, 0.055);
+    }
+    .message-title,
+    .message-detail,
+    .message-reference {
+      display: block;
+    }
+    .message-title {
+      color: inherit;
+      font-weight: 700;
+    }
+    .message-detail {
+      margin-top: 5px;
+      color: rgba(245, 241, 234, 0.68);
+      font-size: 0.78rem;
+    }
+    .message-reference {
+      margin-top: 9px;
+      color: rgba(139, 224, 173, 0.9);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
     .fine {
       color: rgba(245, 241, 234, 0.42);
       font-size: 0.78rem;
       line-height: 1.5;
       text-align: center;
     }
-    .how {
+    .activity,
+    .how,
+    .footer {
       width: min(1180px, 100%);
       margin: 0 auto;
-      padding: 0 0 clamp(34px, 6vw, 76px);
     }
-    .how-inner {
+    .activity {
       display: grid;
       grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
       gap: clamp(20px, 4vw, 54px);
       align-items: start;
-      border-top: 1px solid rgba(245, 241, 234, 0.08);
-      padding-top: clamp(24px, 4vw, 38px);
+      padding: clamp(20px, 3vw, 34px) 0;
+      border-top: 1px solid rgba(245, 241, 234, 0.075);
     }
+    .activity-kicker,
     .how-kicker {
       color: var(--amber);
       font-family: var(--mono);
@@ -392,21 +486,71 @@
       letter-spacing: 0.2em;
       text-transform: uppercase;
     }
+    .activity-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      list-style: none;
+    }
+    .activity-list li {
+      position: relative;
+      min-height: 42px;
+      padding: 12px 14px 12px 30px;
+      border: 1px solid rgba(245, 241, 234, 0.075);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.022);
+      color: rgba(245, 241, 234, 0.66);
+      font-size: 0.82rem;
+    }
+    .activity-list li::before {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(139, 224, 173, 0.34);
+      transform: translateY(-50%);
+      animation: livePulse 2.8s ease-in-out infinite;
+      content: "";
+    }
+    .activity-note {
+      grid-column: 2;
+      margin-top: -4px;
+      color: rgba(245, 241, 234, 0.36);
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 0.48; box-shadow: 0 0 10px rgba(139, 224, 173, 0.22); }
+      50% { opacity: 1; box-shadow: 0 0 18px rgba(139, 224, 173, 0.42); }
+    }
+    .how { padding: clamp(10px, 2vw, 22px) 0 clamp(28px, 4.5vw, 54px); }
+    .how-inner {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+      gap: clamp(20px, 4vw, 54px);
+      align-items: start;
+      border-top: 1px solid rgba(245, 241, 234, 0.08);
+      padding-top: clamp(24px, 4vw, 38px);
+    }
     .how-list {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1px;
-      border: 1px solid rgba(245, 241, 234, 0.08);
-      background: rgba(245, 241, 234, 0.08);
+      gap: 12px;
     }
     .how-step {
-      min-height: 122px;
-      padding: 18px;
-      background: rgba(8, 9, 12, 0.76);
+      min-height: 86px;
+      padding: 0 0 0 14px;
+      border-left: 1px solid rgba(233, 196, 138, 0.26);
+      background: transparent;
     }
     .how-step span {
       display: block;
-      margin-bottom: 22px;
+      margin-bottom: 8px;
       color: rgba(233, 196, 138, 0.78);
       font-family: var(--mono);
       font-size: 0.66rem;
@@ -422,68 +566,102 @@
       line-height: 1.12;
       letter-spacing: -0.015em;
     }
-    .recent {
-      display: grid;
-      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
-      gap: clamp(20px, 4vw, 54px);
-      align-items: start;
-      margin-top: clamp(18px, 3.2vw, 32px);
-      padding-top: clamp(18px, 3vw, 28px);
-      border-top: 1px solid rgba(245, 241, 234, 0.065);
+    .how-step small {
+      display: block;
+      margin-top: 7px;
+      color: rgba(245, 241, 234, 0.46);
+      font-size: 0.76rem;
+      line-height: 1.45;
     }
-    .recent-kicker {
-      color: rgba(245, 241, 234, 0.44);
-      font-family: var(--mono);
-      font-size: 0.66rem;
-      font-weight: 700;
-      letter-spacing: 0.19em;
-      text-transform: uppercase;
-    }
-    .recent-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      list-style: none;
-    }
-    .recent-list li {
+    .footer {
       display: inline-flex;
       align-items: center;
-      min-height: 34px;
-      padding: 0 12px;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 0 8px;
+    }
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
       border: 1px solid rgba(245, 241, 234, 0.08);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.024);
-      color: rgba(245, 241, 234, 0.6);
-      font-size: 0.78rem;
-      line-height: 1;
+      color: rgba(245, 241, 234, 0.56);
+      background: rgba(255, 255, 255, 0.02);
+      transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+    .footer-link:hover,
+    .footer-link:focus-visible {
+      border-color: rgba(233, 196, 138, 0.34);
+      color: rgba(233, 196, 138, 0.84);
+      background: rgba(233, 196, 138, 0.045);
+      outline: 0;
+    }
+    .footer-link svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     @media (max-width: 860px) {
       .page { padding: 18px; }
       .header { padding-bottom: 18px; }
       .qr-origin { font-size: 0.6rem; letter-spacing: 0.12em; }
-      .shell { grid-template-columns: 1fr; min-height: auto; padding: 42px 0 24px; }
+      .shell { grid-template-columns: 1fr; min-height: auto; padding: 34px 0 22px; gap: 24px; }
       h1 { max-width: 11ch; }
       .grid { grid-template-columns: 1fr; }
       .actions .btn { flex: 1 1 180px; }
+      .activity { grid-template-columns: 1fr; }
+      .activity-list { grid-template-columns: 1fr 1fr 1fr; }
+      .activity-note { grid-column: auto; margin-top: -10px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
-      .recent { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
+      .page { padding: 14px; }
       .header { align-items: flex-start; }
+      .logo { width: 142px; }
       .qr-origin { justify-content: flex-end; max-width: 130px; text-align: right; white-space: normal; line-height: 1.45; }
+      .eyebrow { margin-bottom: 12px; }
+      h1 { font-size: clamp(2.68rem, 15vw, 4.15rem); }
+      .subhead { margin-top: 16px; font-size: 0.98rem; line-height: 1.5; }
+      .actions { margin-top: 22px; }
+      .status-block { margin-top: 20px; padding-top: 12px; max-width: none; gap: 5px; }
+      .trust { margin-top: 18px; font-size: 0.8rem; }
+      .form-inner { padding: 18px; }
       .form-head { display: grid; }
       .live { margin-top: 0; }
-      .contact-strip { display: grid; }
-      .status-block { max-width: none; }
+      form { gap: 10px; }
+      input { height: 44px; }
+      textarea { min-height: 108px; }
+      .deadline-chips { grid-template-columns: 1fr 1fr; }
+      .activity { padding: 16px 0 24px; }
+      .activity-list { grid-template-columns: 1fr; gap: 7px; }
+      .activity-list li { min-height: 38px; padding-top: 10px; padding-bottom: 10px; }
       .how-list { grid-template-columns: 1fr; }
-      .how-step { min-height: 98px; }
-      .recent-list { display: grid; grid-template-columns: 1fr 1fr; }
-      .recent-list li { justify-content: center; text-align: center; }
+      .how-step { min-height: auto; padding-bottom: 2px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .splash { display: none; }
+      .activity-list li::before { animation: none; }
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="splash" aria-hidden="true">
+    <img src="/brand/doneovernight-white.png" alt="">
+  </div>
   <main class="page">
     <header class="header">
       <a class="logo" href="/" aria-label="DONEOVERNIGHT home">
@@ -502,23 +680,19 @@
           <a class="btn btn-secondary" href="#how-it-works">How it works</a>
         </div>
         <div class="status-block" aria-label="DONEOVERNIGHT status">
-          <strong>Operators online</strong>
+          <strong>Overnight active</strong>
           <span>Average response: &lt; 60 minutes</span>
           <span>Average turnaround: &lt; 24 hours</span>
           <span class="service-line">Websites • Automations • Systems • Operations</span>
         </div>
         <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
-        <div class="contact-strip" aria-label="DONEOVERNIGHT contact">
-          <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
-          <a class="social-handle" href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener">@doneovernight</a>
-        </div>
       </div>
 
       <aside class="form-card" id="task-intake" aria-label="Start a task">
         <div class="form-inner">
           <div class="form-head">
             <h2>Submit tonight.</h2>
-            <span class="live">Operators online</span>
+            <span class="live">Overnight active</span>
           </div>
 
           <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
@@ -545,7 +719,13 @@
             <div class="grid">
               <div class="field">
                 <label for="startDeadline">Deadline / urgency</label>
-                <input id="startDeadline" name="deadline" type="text" autocomplete="off" placeholder="Tonight, 48h, flexible">
+                <input id="startDeadline" name="deadline" type="hidden" value="Tonight">
+                <div class="deadline-chips" role="group" aria-label="Deadline or urgency">
+                  <button class="deadline-chip" type="button" data-deadline="Tonight" aria-pressed="true">Tonight</button>
+                  <button class="deadline-chip" type="button" data-deadline="48h" aria-pressed="false">48h</button>
+                  <button class="deadline-chip" type="button" data-deadline="This week" aria-pressed="false">This week</button>
+                  <button class="deadline-chip" type="button" data-deadline="Flexible" aria-pressed="false">Flexible</button>
+                </div>
               </div>
               <div class="field">
                 <label for="startBudget">Budget</label>
@@ -560,26 +740,43 @@
       </aside>
     </section>
 
+    <section class="activity" aria-label="Live activity examples">
+      <p class="activity-kicker">Live activity</p>
+      <ul class="activity-list">
+        <li>Landing page fix</li>
+        <li>CRM automation</li>
+        <li>Booking flow</li>
+      </ul>
+      <p class="activity-note">Example request types</p>
+    </section>
+
     <section class="how" id="how-it-works" aria-labelledby="howTitle">
       <div class="how-inner">
         <p class="how-kicker" id="howTitle">How it works</p>
         <div class="how-list" aria-label="How DONEOVERNIGHT intake works">
-          <div class="how-step"><span>01</span><strong>Send the brief</strong></div>
-          <div class="how-step"><span>02</span><strong>We review scope and timing</strong></div>
-          <div class="how-step"><span>03</span><strong>You receive a quote or next step</strong></div>
-          <div class="how-step"><span>04</span><strong>Execution starts after approval</strong></div>
+          <div class="how-step"><span>01</span><strong>Send</strong><small>Drop the brief.</small></div>
+          <div class="how-step"><span>02</span><strong>Review</strong><small>Scope and timing.</small></div>
+          <div class="how-step"><span>03</span><strong>Quote</strong><small>Clear next step.</small></div>
+          <div class="how-step"><span>04</span><strong>Execute</strong><small>Starts after approval.</small></div>
         </div>
       </div>
-      <div class="recent" aria-label="Example request types">
-        <p class="recent-kicker">Recent requests</p>
-        <ul class="recent-list">
-          <li>Landing page fix</li>
-          <li>CRM automation</li>
-          <li>Brand refresh</li>
-          <li>Booking flow</li>
-        </ul>
-      </div>
     </section>
+
+    <footer class="footer" aria-label="DONEOVERNIGHT links">
+      <a class="footer-link" href="https://instagram.com/doneovernight" target="_blank" rel="noopener" aria-label="DONEOVERNIGHT on Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="4" width="16" height="16" rx="5"></rect>
+          <circle cx="12" cy="12" r="3.5"></circle>
+          <path d="M16.8 7.2h.01"></path>
+        </svg>
+      </a>
+      <a class="footer-link" href="mailto:ask@doneovernight.com" aria-label="Email DONEOVERNIGHT">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6h16v12H4z"></path>
+          <path d="m4 7 8 6 8-6"></path>
+        </svg>
+      </a>
+    </footer>
   </main>
 
   <script>
@@ -587,6 +784,8 @@
       const form = document.querySelector("#startTaskForm");
       const message = document.querySelector("#startTaskMessage");
       const submit = document.querySelector("#startSubmit");
+      const deadlineInput = document.querySelector("#startDeadline");
+      const deadlineChips = Array.from(document.querySelectorAll(".deadline-chip"));
       if (!form || !message || !submit) return;
 
       const requiredFields = [
@@ -599,10 +798,37 @@
         return document.querySelector(selector)?.value.trim() || "";
       }
 
-      function setMessage(text, success = false) {
-        message.textContent = text;
-        message.classList.toggle("is-visible", Boolean(text));
+      function setMessage(text, success = false, detail = "", reference = "", confirmation = "") {
+        message.textContent = "";
+        message.classList.toggle("is-visible", Boolean(text || detail || reference || confirmation));
         message.classList.toggle("is-success", success);
+        if (!text && !detail && !reference && !confirmation) return;
+
+        const title = document.createElement(success ? "strong" : "span");
+        title.className = "message-title";
+        title.textContent = text;
+        message.append(title);
+
+        if (reference) {
+          const referenceLine = document.createElement("span");
+          referenceLine.className = "message-reference";
+          referenceLine.textContent = reference;
+          message.append(referenceLine);
+        }
+
+        if (detail) {
+          const detailLine = document.createElement("span");
+          detailLine.className = "message-detail";
+          detailLine.textContent = detail;
+          message.append(detailLine);
+        }
+
+        if (confirmation) {
+          const confirmationLine = document.createElement("span");
+          confirmationLine.className = "message-detail";
+          confirmationLine.textContent = confirmation;
+          message.append(confirmationLine);
+        }
       }
 
       function clearInvalid() {
@@ -640,9 +866,37 @@
         };
       }
 
+      function setDeadline(value) {
+        if (deadlineInput) deadlineInput.value = value;
+        deadlineChips.forEach((chip) => {
+          const selected = chip.dataset.deadline === value;
+          chip.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+      }
+
+      async function readSubmitResponse(response) {
+        const text = await response.text();
+        const preview = text.slice(0, 300);
+        if (!text) return { data: null, preview };
+
+        try {
+          return { data: JSON.parse(text), preview };
+        } catch (error) {
+          return { data: null, preview };
+        }
+      }
+
+      function taskReference(data) {
+        return data?.taskId || data?.task?.taskId || data?.persistedTask?.task_id || "";
+      }
+
       form.addEventListener("input", (event) => {
         event.target?.closest(".field")?.classList.remove("is-invalid");
         if (message.textContent) setMessage("");
+      });
+
+      deadlineChips.forEach((chip) => {
+        chip.addEventListener("click", () => setDeadline(chip.dataset.deadline || "Tonight"));
       });
 
       form.addEventListener("submit", async (event) => {
@@ -662,12 +916,32 @@
             },
             body: JSON.stringify(payload())
           });
-          const data = await response.json();
-          if (!response.ok || !data?.success) throw new Error(data?.code || "TASK_SUBMIT_FAILED");
+          const { data, preview } = await readSubmitResponse(response);
+          if (!response.ok || !data?.success) {
+            const submitError = new Error(data?.code || data?.error || `HTTP_${response.status}`);
+            submitError.status = response.status;
+            submitError.code = data?.code || null;
+            submitError.responsePreview = preview;
+            throw submitError;
+          }
+
+          const reference = taskReference(data);
           form.reset();
-          setMessage("Task received. We'll review it and get back to you shortly.", true);
+          setMessage(
+            "✓ Task received",
+            true,
+            "We’ll review your request and reply shortly.",
+            reference ? `Reference ID: ${reference}` : "",
+            "A confirmation email has been sent to your inbox."
+          );
           submit.textContent = "Task received";
         } catch (error) {
+          console.warn("DONEOVERNIGHT start intake failed", {
+            message: error?.message || "Unknown submit error",
+            code: error?.code || null,
+            status: error?.status || null,
+            responsePreview: error?.responsePreview || null
+          });
           submit.disabled = false;
           submit.textContent = "Start a task";
           setMessage("We could not confirm receipt. Please email ask@doneovernight.com directly.");

@@ -12,7 +12,14 @@ function send(res, statusCode, payload) {
 
 async function notifyOperations(task) {
   const webhookUrl = process.env.TASK_SUBMIT_WEBHOOK_URL;
-  if (!webhookUrl) return;
+  if (!webhookUrl) {
+    return {
+      configured: false,
+      delivered: false,
+      reason: "TASK_SUBMIT_WEBHOOK_URL_NOT_CONFIGURED"
+    };
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
   const preferredLanguage =
@@ -28,9 +35,13 @@ async function notifyOperations(task) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        event: "task_submitted",
+        notification_type: "task_intake",
         id: task.taskId,
         task_id: task.taskId,
         taskId: task.taskId,
+        task_reference: task.taskId,
+        reference_id: task.taskId,
         operational_id: task.taskId,
         created_at: task.createdAt,
         createdAt: task.createdAt,
@@ -38,6 +49,7 @@ async function notifyOperations(task) {
         clientName: task.name,
         client_name: task.name,
         email: task.email,
+        client_email: task.email,
         company: task.company,
         deadline: task.deadline,
         priority: task.priority,
@@ -59,6 +71,12 @@ async function notifyOperations(task) {
         queue_state: task.queueState,
         queueState: task.queueState,
         review_window_estimate: task.reviewWindowEstimate,
+        confirmation_email_to: task.email,
+        confirmation_email_name: task.name,
+        confirmation_email_required: true,
+        confirmation_email_template: "task_received",
+        confirmation_email_subject: "Task received | DONEOVERNIGHT",
+        confirmation_email_preview: "Task received. We'll review it and reply shortly.",
         raw_payload: task.rawPayload
       })
     });
@@ -66,6 +84,12 @@ async function notifyOperations(task) {
     if (!response.ok) {
       throw new Error(`Task submit webhook failed: ${response.status}`);
     }
+
+    return {
+      configured: true,
+      delivered: true,
+      status: response.status
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -120,10 +144,20 @@ module.exports = async function handler(req, res) {
     // portal linking, operator assignment, and realtime client status updates.
     const persistedTask = await saveTask(task);
 
+    let notification = {
+      configured: false,
+      delivered: false
+    };
+
     try {
-      await notifyOperations(task);
+      notification = await notifyOperations(task);
     } catch (notificationError) {
       console.warn(`Task notification warning: ${notificationError.message}`);
+      notification = {
+        configured: true,
+        delivered: false,
+        error: "TASK_NOTIFICATION_FAILED"
+      };
     }
 
     return send(res, 200, {
@@ -131,7 +165,8 @@ module.exports = async function handler(req, res) {
       taskId,
       redirectTo: `/task/submitted?id=${encodeURIComponent(taskId)}`,
       task,
-      persistedTask
+      persistedTask,
+      notification
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {
