@@ -658,7 +658,6 @@
     }
     .activity,
     .how,
-    .dispatch,
     .footer {
       width: min(1180px, 100%);
       margin: 0 auto;
@@ -767,14 +766,73 @@
       font-size: 0.76rem;
       line-height: 1.45;
     }
-    .dispatch {
-      padding: clamp(34px, 6vw, 86px) 0 clamp(46px, 7vw, 94px);
-      border-top: 1px solid rgba(245, 241, 234, 0.055);
+    .dispatch-sheet {
+      position: fixed;
+      right: max(16px, env(safe-area-inset-right, 0px));
+      bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      left: max(16px, env(safe-area-inset-left, 0px));
+      z-index: 12;
+      display: grid;
+      justify-items: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(calc(100% + 28px));
+      transition: opacity 520ms ease, transform 720ms cubic-bezier(0.22, 0.68, 0.26, 1), visibility 0ms linear 720ms;
+      visibility: hidden;
+    }
+    .dispatch-sheet.is-visible {
+      pointer-events: auto;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 520ms ease, transform 720ms cubic-bezier(0.22, 0.68, 0.26, 1);
+      visibility: visible;
+    }
+    .dispatch-panel {
+      position: relative;
+      overflow: hidden;
+      width: min(560px, 100%);
+      max-height: min(82svh, 720px);
+      padding: clamp(22px, 3.4vw, 34px);
+      border: 1px solid rgba(245, 241, 234, 0.095);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.022)),
+        rgba(5, 6, 8, 0.9);
+      box-shadow: 0 28px 92px rgba(0, 0, 0, 0.58);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       text-align: center;
     }
-    .dispatch-inner {
-      width: min(620px, 100%);
-      margin: 0 auto;
+    .dispatch-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(245, 241, 234, 0.075);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.018);
+      color: rgba(245, 241, 234, 0.46);
+      cursor: pointer;
+      transition: border-color 180ms ease, color 180ms ease, background 180ms ease;
+    }
+    .dispatch-close:hover,
+    .dispatch-close:focus-visible {
+      border-color: rgba(233, 196, 138, 0.28);
+      color: rgba(233, 196, 138, 0.78);
+      background: rgba(233, 196, 138, 0.045);
+      outline: 0;
+    }
+    .dispatch-close svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
     }
     .dispatch-kicker {
       color: rgba(233, 196, 138, 0.66);
@@ -786,48 +844,48 @@
     }
     .dispatch-lines {
       display: grid;
-      gap: 6px;
-      margin-top: clamp(24px, 4vw, 38px);
+      gap: 5px;
+      margin-top: clamp(20px, 3vw, 30px);
       color: rgba(245, 241, 234, 0.72);
       font-family: var(--serif);
-      font-size: clamp(1.42rem, 3.4vw, 2.32rem);
+      font-size: clamp(1.28rem, 2.4vw, 1.85rem);
       font-weight: 400;
       line-height: 1.12;
       letter-spacing: -0.012em;
     }
     .dispatch-copy {
-      max-width: 42ch;
-      margin: clamp(26px, 4.5vw, 42px) auto 0;
+      max-width: 38ch;
+      margin: clamp(22px, 3vw, 32px) auto 0;
       color: rgba(245, 241, 234, 0.5);
-      font-size: clamp(0.94rem, 1.15vw, 1.06rem);
+      font-size: clamp(0.88rem, 1.05vw, 0.98rem);
       line-height: 1.78;
     }
     .dispatch-copy span {
       display: block;
     }
     .dispatch-promise {
-      margin-top: clamp(22px, 4vw, 34px);
+      margin-top: clamp(18px, 2.8vw, 28px);
       color: rgba(245, 241, 234, 0.54);
       font-family: var(--mono);
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-weight: 700;
       letter-spacing: 0.14em;
       line-height: 1.9;
       text-transform: uppercase;
     }
     .dispatch-note {
-      max-width: 43ch;
-      margin: clamp(18px, 3vw, 26px) auto 0;
+      max-width: 38ch;
+      margin: clamp(14px, 2.4vw, 22px) auto 0;
       color: rgba(245, 241, 234, 0.42);
-      font-size: 0.9rem;
+      font-size: 0.84rem;
       line-height: 1.72;
     }
     .dispatch-form {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 10px;
-      width: min(520px, 100%);
-      margin: clamp(28px, 4vw, 42px) auto 0;
+      width: min(500px, 100%);
+      margin: clamp(22px, 3vw, 32px) auto 0;
     }
     .dispatch-form input {
       height: 50px;
@@ -865,6 +923,9 @@
       color: rgba(245, 241, 234, 0.4);
       font-size: 0.78rem;
       line-height: 1.5;
+    }
+    .dispatch-message.is-success {
+      color: rgba(139, 224, 173, 0.82);
     }
     .footer {
       display: flex;
@@ -906,7 +967,6 @@
       .header,
       .activity,
       .how,
-      .dispatch,
       .footer {
         width: min(1240px, 100%);
       }
@@ -988,7 +1048,6 @@
       .header,
       .activity,
       .how,
-      .dispatch,
       .footer {
         width: min(1320px, 100%);
       }
@@ -1106,7 +1165,6 @@
       .header,
       .activity,
       .how,
-      .dispatch,
       .footer {
         width: min(1440px, 100%);
       }
@@ -1132,6 +1190,8 @@
       .activity-note { grid-column: auto; margin-top: -10px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
+      .dispatch-sheet { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+      .dispatch-panel { width: min(520px, 100%); }
       .dispatch-form { grid-template-columns: 1fr; }
       .dispatch-submit { width: 100%; }
     }
@@ -1186,10 +1246,14 @@
       .activity-list li { min-height: 38px; padding-top: 10px; padding-bottom: 10px; }
       .how-list { grid-template-columns: 1fr; }
       .how-step { min-height: auto; padding-bottom: 2px; }
-      .dispatch { padding: 30px 0 48px; }
-      .dispatch-inner { width: min(332px, 100%); }
-      .dispatch-lines { font-size: clamp(1.34rem, 7vw, 1.76rem); }
+      .dispatch-panel {
+        max-height: min(82svh, 660px);
+        padding: 24px 16px 18px;
+        overflow-y: auto;
+      }
+      .dispatch-lines { font-size: clamp(1.16rem, 6.2vw, 1.45rem); }
       .dispatch-copy { font-size: 0.9rem; }
+      .dispatch-note { font-size: 0.82rem; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -1200,6 +1264,7 @@
       .atmosphere::before { animation: none; }
       .activity-list li::before { animation: none; }
       .form-card { transition: none; }
+      .dispatch-sheet { transition: none; }
       .btn,
       .deadline-chip,
       input,
@@ -1323,31 +1388,6 @@
       </div>
     </section>
 
-    <section class="dispatch" aria-labelledby="dispatchTitle">
-      <div class="dispatch-inner">
-        <p class="dispatch-kicker" id="dispatchTitle">Unfinished work?</p>
-        <div class="dispatch-lines" aria-label="Work still waiting">
-          <span>Still postponing that website update?</span>
-          <span>Still doing repetitive admin work?</span>
-          <span>Still planning to automate onboarding?</span>
-        </div>
-        <p class="dispatch-copy">
-          <span>We occasionally share systems,</span>
-          <span>automations,</span>
-          <span>launch support,</span>
-          <span>and operational fixes.</span>
-        </p>
-        <p class="dispatch-promise">No newsletter.<br>No spam.</p>
-        <p class="dispatch-note">Just useful ideas for work that still needs to get done.</p>
-        <form class="dispatch-form" id="dispatchForm">
-          <label class="sr-only" for="dispatchEmail">Email</label>
-          <input id="dispatchEmail" name="email" type="email" autocomplete="email" placeholder="Email" required>
-          <button class="dispatch-submit" type="submit">Receive the Dispatch</button>
-        </form>
-        <p class="dispatch-message" id="dispatchMessage" aria-live="polite"></p>
-      </div>
-    </section>
-
     <footer class="footer" aria-label="DONEOVERNIGHT links">
       <a class="footer-link" href="https://instagram.com/doneovernight" target="_blank" rel="noopener" aria-label="DONEOVERNIGHT on Instagram">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1372,6 +1412,37 @@
       </a>
     </footer>
   </main>
+
+  <aside class="dispatch-sheet" id="dispatchSheet" aria-labelledby="dispatchTitle" aria-hidden="true">
+    <div class="dispatch-panel" role="dialog" aria-modal="false">
+      <button class="dispatch-close" id="dispatchClose" type="button" aria-label="Close Dispatch invitation">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4 4l8 8"></path>
+          <path d="M12 4l-8 8"></path>
+        </svg>
+      </button>
+      <p class="dispatch-kicker" id="dispatchTitle">Unfinished work?</p>
+      <div class="dispatch-lines" aria-label="Work still waiting">
+        <span>Still postponing that website update?</span>
+        <span>Still doing repetitive admin work?</span>
+        <span>Still planning to automate onboarding?</span>
+      </div>
+      <p class="dispatch-copy">
+        <span>We occasionally share systems,</span>
+        <span>automations,</span>
+        <span>launch support,</span>
+        <span>and operational fixes.</span>
+      </p>
+      <p class="dispatch-promise">No newsletter.<br>No spam.</p>
+      <p class="dispatch-note">Just useful ideas for work that still needs to get done.</p>
+      <form class="dispatch-form" id="dispatchForm">
+        <label class="sr-only" for="dispatchEmail">Email</label>
+        <input id="dispatchEmail" name="email" type="email" autocomplete="email" placeholder="Email" required>
+        <button class="dispatch-submit" type="submit">Receive the Dispatch</button>
+      </form>
+      <p class="dispatch-message" id="dispatchMessage" aria-live="polite"></p>
+    </div>
+  </aside>
 
   <script>
     (() => {
@@ -1601,19 +1672,77 @@
       const form = document.querySelector("#dispatchForm");
       const email = document.querySelector("#dispatchEmail");
       const message = document.querySelector("#dispatchMessage");
-      if (!form || !email || !message) return;
+      const sheet = document.querySelector("#dispatchSheet");
+      const close = document.querySelector("#dispatchClose");
+      const sessionKey = "doneovernight_dispatch_invitation_seen";
+      if (!form || !email || !message || !sheet || !close) return;
+
+      let hasShown = false;
+
+      function markSeen() {
+        try {
+          window.sessionStorage.setItem(sessionKey, "true");
+        } catch (error) {
+          hasShown = true;
+        }
+      }
+
+      function wasSeen() {
+        try {
+          return window.sessionStorage.getItem(sessionKey) === "true";
+        } catch (error) {
+          return hasShown;
+        }
+      }
+
+      function showDispatch() {
+        if (wasSeen() || sheet.classList.contains("is-visible")) return;
+        hasShown = true;
+        markSeen();
+        sheet.classList.add("is-visible");
+        sheet.setAttribute("aria-hidden", "false");
+      }
+
+      function hideDispatch() {
+        hasShown = true;
+        markSeen();
+        sheet.classList.remove("is-visible");
+        sheet.setAttribute("aria-hidden", "true");
+      }
+
+      function scrollProgress() {
+        const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollable <= 0) return 0;
+        return window.scrollY / scrollable;
+      }
+
+      function checkScrollTrigger() {
+        if (scrollProgress() >= 0.6) showDispatch();
+      }
+
+      const delay = 25000 + Math.floor(Math.random() * 10000);
+      window.setTimeout(showDispatch, delay);
+      window.addEventListener("scroll", checkScrollTrigger, { passive: true });
+      close.addEventListener("click", hideDispatch);
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && sheet.classList.contains("is-visible")) hideDispatch();
+      });
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         if (!email.checkValidity()) {
           email.focus({ preventScroll: true });
+          message.classList.remove("is-success");
           message.textContent = "Enter an email and we’ll prepare your Dispatch request.";
           return;
         }
 
         const subject = encodeURIComponent("DONEOVERNIGHT Dispatch");
         const body = encodeURIComponent(`Please add ${email.value.trim()} to DONEOVERNIGHT Dispatch.`);
-        message.textContent = "Opening a private note to DONEOVERNIGHT.";
+        hasShown = true;
+        markSeen();
+        message.classList.add("is-success");
+        message.textContent = "Dispatch request prepared. Send the email to join.";
         window.location.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;
       });
     })();
