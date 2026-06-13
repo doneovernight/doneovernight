@@ -126,6 +126,14 @@
     }
     a { color: inherit; text-decoration: none; }
     button, input, textarea { font: inherit; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
     :root {
       --ink: #f5f1ea;
       --muted: rgba(245, 241, 234, 0.62);
@@ -650,6 +658,7 @@
     }
     .activity,
     .how,
+    .dispatch,
     .footer {
       width: min(1180px, 100%);
       margin: 0 auto;
@@ -758,6 +767,105 @@
       font-size: 0.76rem;
       line-height: 1.45;
     }
+    .dispatch {
+      padding: clamp(34px, 6vw, 86px) 0 clamp(46px, 7vw, 94px);
+      border-top: 1px solid rgba(245, 241, 234, 0.055);
+      text-align: center;
+    }
+    .dispatch-inner {
+      width: min(620px, 100%);
+      margin: 0 auto;
+    }
+    .dispatch-kicker {
+      color: rgba(233, 196, 138, 0.66);
+      font-family: var(--mono);
+      font-size: 0.69rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .dispatch-lines {
+      display: grid;
+      gap: 6px;
+      margin-top: clamp(24px, 4vw, 38px);
+      color: rgba(245, 241, 234, 0.72);
+      font-family: var(--serif);
+      font-size: clamp(1.42rem, 3.4vw, 2.32rem);
+      font-weight: 400;
+      line-height: 1.12;
+      letter-spacing: -0.012em;
+    }
+    .dispatch-copy {
+      max-width: 42ch;
+      margin: clamp(26px, 4.5vw, 42px) auto 0;
+      color: rgba(245, 241, 234, 0.5);
+      font-size: clamp(0.94rem, 1.15vw, 1.06rem);
+      line-height: 1.78;
+    }
+    .dispatch-copy span {
+      display: block;
+    }
+    .dispatch-promise {
+      margin-top: clamp(22px, 4vw, 34px);
+      color: rgba(245, 241, 234, 0.54);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      line-height: 1.9;
+      text-transform: uppercase;
+    }
+    .dispatch-note {
+      max-width: 43ch;
+      margin: clamp(18px, 3vw, 26px) auto 0;
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.9rem;
+      line-height: 1.72;
+    }
+    .dispatch-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      width: min(520px, 100%);
+      margin: clamp(28px, 4vw, 42px) auto 0;
+    }
+    .dispatch-form input {
+      height: 50px;
+      border-color: rgba(245, 241, 234, 0.085);
+      background: rgba(255, 255, 255, 0.024);
+    }
+    .dispatch-submit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      padding: 0 22px;
+      border: 1px solid rgba(233, 196, 138, 0.34);
+      border-radius: 999px;
+      background: rgba(233, 196, 138, 0.065);
+      color: rgba(244, 210, 138, 0.92);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: border-color 220ms ease, background 220ms ease, color 220ms ease;
+      white-space: nowrap;
+    }
+    .dispatch-submit:hover,
+    .dispatch-submit:focus-visible {
+      border-color: rgba(233, 196, 138, 0.6);
+      background: rgba(233, 196, 138, 0.105);
+      color: #ffe3ad;
+      outline: 0;
+    }
+    .dispatch-message {
+      min-height: 1.4em;
+      margin-top: 12px;
+      color: rgba(245, 241, 234, 0.4);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
     .footer {
       display: flex;
       align-items: center;
@@ -798,6 +906,7 @@
       .header,
       .activity,
       .how,
+      .dispatch,
       .footer {
         width: min(1240px, 100%);
       }
@@ -879,6 +988,7 @@
       .header,
       .activity,
       .how,
+      .dispatch,
       .footer {
         width: min(1320px, 100%);
       }
@@ -996,6 +1106,7 @@
       .header,
       .activity,
       .how,
+      .dispatch,
       .footer {
         width: min(1440px, 100%);
       }
@@ -1021,6 +1132,8 @@
       .activity-note { grid-column: auto; margin-top: -10px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
+      .dispatch-form { grid-template-columns: 1fr; }
+      .dispatch-submit { width: 100%; }
     }
     @media (min-width: 700px) and (max-width: 860px) {
       .shell {
@@ -1073,6 +1186,10 @@
       .activity-list li { min-height: 38px; padding-top: 10px; padding-bottom: 10px; }
       .how-list { grid-template-columns: 1fr; }
       .how-step { min-height: auto; padding-bottom: 2px; }
+      .dispatch { padding: 30px 0 48px; }
+      .dispatch-inner { width: min(332px, 100%); }
+      .dispatch-lines { font-size: clamp(1.34rem, 7vw, 1.76rem); }
+      .dispatch-copy { font-size: 0.9rem; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -1203,6 +1320,31 @@
           <div class="how-step"><span>03</span><strong>Quote</strong><small>Clear next step.</small></div>
           <div class="how-step"><span>04</span><strong>Execute</strong><small>Starts after approval.</small></div>
         </div>
+      </div>
+    </section>
+
+    <section class="dispatch" aria-labelledby="dispatchTitle">
+      <div class="dispatch-inner">
+        <p class="dispatch-kicker" id="dispatchTitle">Unfinished work?</p>
+        <div class="dispatch-lines" aria-label="Work still waiting">
+          <span>Still postponing that website update?</span>
+          <span>Still doing repetitive admin work?</span>
+          <span>Still planning to automate onboarding?</span>
+        </div>
+        <p class="dispatch-copy">
+          <span>We occasionally share systems,</span>
+          <span>automations,</span>
+          <span>launch support,</span>
+          <span>and operational fixes.</span>
+        </p>
+        <p class="dispatch-promise">No newsletter.<br>No spam.</p>
+        <p class="dispatch-note">Just useful ideas for work that still needs to get done.</p>
+        <form class="dispatch-form" id="dispatchForm">
+          <label class="sr-only" for="dispatchEmail">Email</label>
+          <input id="dispatchEmail" name="email" type="email" autocomplete="email" placeholder="Email" required>
+          <button class="dispatch-submit" type="submit">Receive the Dispatch</button>
+        </form>
+        <p class="dispatch-message" id="dispatchMessage" aria-live="polite"></p>
       </div>
     </section>
 
@@ -1452,6 +1594,27 @@
           submit.textContent = submitIdleText;
           setMessage("We could not confirm receipt. Please email ask@doneovernight.com directly.");
         }
+      });
+    })();
+
+    (() => {
+      const form = document.querySelector("#dispatchForm");
+      const email = document.querySelector("#dispatchEmail");
+      const message = document.querySelector("#dispatchMessage");
+      if (!form || !email || !message) return;
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!email.checkValidity()) {
+          email.focus({ preventScroll: true });
+          message.textContent = "Enter an email and we’ll prepare your Dispatch request.";
+          return;
+        }
+
+        const subject = encodeURIComponent("DONEOVERNIGHT Dispatch");
+        const body = encodeURIComponent(`Please add ${email.value.trim()} to DONEOVERNIGHT Dispatch.`);
+        message.textContent = "Opening a private note to DONEOVERNIGHT.";
+        window.location.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;
       });
     })();
   </script>
