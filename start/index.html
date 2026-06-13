@@ -832,7 +832,7 @@
         <h1 id="startTitle">Start before midnight. Wake up to progress.</h1>
         <p class="subhead">Websites, automations, brand systems, funnels, and operational fixes executed overnight.</p>
         <div class="actions">
-          <button class="btn btn-primary" id="revealIntake" type="button" aria-controls="task-intake" aria-expanded="false">Start</button>
+          <button class="btn btn-primary" id="revealIntake" type="button" aria-controls="task-intake" aria-expanded="false">START</button>
           <a class="btn btn-secondary" href="#how-it-works">How it works</a>
         </div>
         <div class="trust-panel" aria-label="DONEOVERNIGHT status">
@@ -1043,17 +1043,41 @@
         });
       }
 
+      function setIntakeState(open) {
+        if (!formCard) return;
+        formCard.classList.toggle("is-revealed", open);
+        formCard.setAttribute("aria-hidden", open ? "false" : "true");
+        if (open) {
+          formCard.removeAttribute("inert");
+        } else {
+          formCard.setAttribute("inert", "");
+        }
+        revealButton?.setAttribute("aria-expanded", open ? "true" : "false");
+        if (revealButton) revealButton.textContent = open ? "CLOSE" : "START";
+      }
+
       function revealIntake({ focus = false, scroll = true } = {}) {
         if (!formCard) return;
-        formCard.classList.add("is-revealed");
-        formCard.setAttribute("aria-hidden", "false");
-        formCard.removeAttribute("inert");
-        revealButton?.setAttribute("aria-expanded", "true");
+        setIntakeState(true);
         if (scroll) {
           window.setTimeout(() => formCard.scrollIntoView({ behavior: "smooth", block: "start" }), 90);
         }
         if (focus) {
           window.setTimeout(() => document.querySelector("#startName")?.focus({ preventScroll: true }), 520);
+        }
+      }
+
+      function collapseIntake() {
+        setIntakeState(false);
+        revealButton?.focus({ preventScroll: true });
+        window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }), 90);
+      }
+
+      function toggleIntake() {
+        if (formCard?.classList.contains("is-revealed")) {
+          collapseIntake();
+        } else {
+          revealIntake({ focus: true });
         }
       }
 
@@ -1089,7 +1113,7 @@
         chip.addEventListener("click", () => setDeadline(chip.dataset.deadline || "Tonight"));
       });
 
-      revealButton?.addEventListener("click", () => revealIntake({ focus: true }));
+      revealButton?.addEventListener("click", toggleIntake);
 
       if (window.location.hash === "#task-intake") {
         revealIntake({ focus: false, scroll: false });
