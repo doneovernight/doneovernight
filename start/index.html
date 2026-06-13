@@ -23,6 +23,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const qrSignals = ["source", "utm_source", "ref", "qr"].map((key) => params.get(key)?.toLowerCase());
+      if (qrSignals.some((value) => value === "business_card_qr" || value === "qr" || value === "card")) {
+        document.documentElement.classList.add("is-qr-visitor");
+      }
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { min-height: 100%; background: #050608; color-scheme: dark; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
@@ -197,6 +206,30 @@
       transform-origin: 100% 50%;
       animation: splashMeteor 0.92s ease-out 1.68s forwards;
     }
+    .splash-thanks {
+      position: absolute;
+      z-index: 3;
+      top: calc(50% + 46px);
+      left: 50%;
+      color: rgba(245, 241, 234, 0.58);
+      font-family: var(--serif);
+      font-size: clamp(1.04rem, 2.2vw, 1.28rem);
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      opacity: 0;
+      transform: translate(-50%, 6px);
+      white-space: nowrap;
+    }
+    .is-qr-visitor .splash {
+      animation-duration: 3.65s;
+    }
+    .is-qr-visitor .splash img {
+      animation: splashMarkQr 2.48s cubic-bezier(0.32, 0, 0.18, 1) forwards;
+    }
+    .is-qr-visitor .splash-thanks {
+      animation: splashThanks 1.08s ease 2.18s forwards;
+    }
     @keyframes splashOut {
       0%, 88% { opacity: 1; }
       100% { opacity: 0; visibility: hidden; }
@@ -205,6 +238,16 @@
       0% { opacity: 0; transform: translateY(6px) scale(0.98); }
       18%, 72% { opacity: 0.78; transform: translateY(0) scale(1); }
       100% { opacity: 0; transform: translateY(-2px) scale(1.004); }
+    }
+    @keyframes splashMarkQr {
+      0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+      18%, 62% { opacity: 0.78; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-2px) scale(1.004); }
+    }
+    @keyframes splashThanks {
+      0% { opacity: 0; transform: translate(-50%, 7px); }
+      28%, 70% { opacity: 0.58; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -2px); }
     }
     @keyframes splashStar {
       0%, 100% { opacity: 0; transform: scale(0.86); }
@@ -339,7 +382,7 @@
       justify-items: center;
       width: min(460px, 100%);
       margin: clamp(64px, 7.4vw, 92px) auto 0;
-      padding: 28px clamp(18px, 3vw, 28px);
+      padding: 30px clamp(18px, 3vw, 28px);
       border-top: 1px solid rgba(245, 241, 234, 0.07);
       border-bottom: 1px solid rgba(245, 241, 234, 0.07);
       text-align: center;
@@ -347,7 +390,7 @@
     .status-block {
       display: grid;
       justify-items: center;
-      gap: 9px;
+      gap: 10px;
       width: 100%;
       color: rgba(245, 241, 234, 0.48);
       font-size: 0.78rem;
@@ -363,7 +406,7 @@
       font-family: var(--mono);
       font-size: 0.63rem;
       font-weight: 700;
-      letter-spacing: 0.145em;
+      letter-spacing: 0.13em;
       line-height: 1;
       text-transform: uppercase;
     }
@@ -382,7 +425,7 @@
       justify-content: center;
       gap: 0.9em;
       width: 100%;
-      margin-top: 11px;
+      margin-top: 13px;
       color: rgba(233, 196, 138, 0.58);
       font-family: var(--mono);
       font-size: 0.62rem;
@@ -393,7 +436,7 @@
     .service-line span { white-space: nowrap; }
     .trust {
       max-width: 40ch;
-      margin: 22px auto 0;
+      margin: 24px auto 0;
       color: rgba(245, 241, 234, 0.42);
       font-size: 0.76rem;
       line-height: 1.62;
@@ -716,11 +759,12 @@
       line-height: 1.45;
     }
     .footer {
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
       padding: 0 0 8px;
+      text-align: center;
     }
     .footer-link {
       display: inline-flex;
@@ -791,6 +835,45 @@
       .how-list {
         gap: clamp(22px, 3vw, 44px);
       }
+      .how-inner {
+        display: block;
+      }
+      .how-kicker {
+        display: block;
+        margin-bottom: clamp(26px, 4vw, 42px);
+        text-align: center;
+      }
+      .how-list {
+        position: relative;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .how-list::before {
+        position: absolute;
+        top: 16px;
+        right: 0;
+        left: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(245, 241, 234, 0.1), transparent);
+        content: "";
+      }
+      .how-step {
+        position: relative;
+        padding: 40px 0 0;
+        border-left: 0;
+        text-align: center;
+      }
+      .how-step::before {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(233, 196, 138, 0.48);
+        box-shadow: 0 0 14px rgba(233, 196, 138, 0.14);
+        transform: translateX(-50%);
+        content: "";
+      }
     }
     @media (min-width: 1120px) {
       .header,
@@ -802,41 +885,41 @@
       .shell {
         width: min(1060px, 100%);
         min-height: calc(100svh - 104px);
-        padding: clamp(90px, 11vh, 132px) 0 clamp(104px, 13vh, 162px);
+        padding: clamp(104px, 12vh, 146px) 0 clamp(112px, 13vh, 168px);
       }
       .hero {
         display: block;
-        width: min(920px, 100%);
+        width: min(860px, 100%);
         min-height: auto;
         margin: 0 auto;
         text-align: center;
       }
       .eyebrow {
-        margin-bottom: clamp(34px, 4.6vh, 54px);
+        margin-bottom: clamp(38px, 4.8vh, 58px);
       }
       h1 {
-        max-width: 13.6ch;
+        max-width: 12.9ch;
         margin: 0 auto;
-        font-size: clamp(3.55rem, 5vw, 5.75rem);
-        line-height: 1.06;
+        font-size: clamp(3.1rem, 4.35vw, 4.98rem);
+        line-height: 1.1;
       }
       .subhead {
-        max-width: 46ch;
-        margin: clamp(38px, 5vh, 58px) auto 0;
+        max-width: 44ch;
+        margin: clamp(42px, 5.4vh, 64px) auto 0;
         font-size: clamp(0.94rem, 1.05vw, 1.08rem);
         line-height: 1.88;
       }
       .actions {
         justify-content: center;
-        margin-top: clamp(52px, 7vh, 82px);
+        margin-top: clamp(56px, 7.2vh, 88px);
       }
       .btn {
         min-height: 54px;
       }
       .trust-panel {
         width: min(620px, 100%);
-        margin-top: clamp(280px, 42vh, 420px);
-        padding-block: 32px;
+        margin-top: clamp(300px, 44vh, 450px);
+        padding-block: 36px;
       }
       .form-card {
         width: min(680px, 100%);
@@ -855,21 +938,57 @@
         padding-top: 17px;
       }
       .how {
-        padding-top: clamp(24px, 4vw, 54px);
+        padding-top: clamp(30px, 4.4vw, 62px);
       }
       .how-inner {
-        grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
-        gap: clamp(56px, 7vw, 118px);
-        padding-top: clamp(42px, 5vw, 68px);
+        display: block;
+        padding-top: clamp(46px, 5vw, 76px);
+      }
+      .how-kicker {
+        display: block;
+        margin-bottom: clamp(34px, 4vw, 54px);
+        text-align: center;
       }
       .how-list {
-        gap: clamp(32px, 4vw, 68px);
+        position: relative;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: clamp(34px, 4vw, 76px);
+      }
+      .how-list::before {
+        position: absolute;
+        top: 18px;
+        right: 0;
+        left: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(245, 241, 234, 0.12), transparent);
+        content: "";
       }
       .how-step {
-        min-height: 96px;
-        padding-left: 22px;
+        position: relative;
+        min-height: 104px;
+        padding: 44px 0 0;
+        border-left: 0;
+        text-align: center;
+      }
+      .how-step::before {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(233, 196, 138, 0.52);
+        box-shadow: 0 0 16px rgba(233, 196, 138, 0.16);
+        transform: translateX(-50%);
+        content: "";
+      }
+      .how-step span {
+        margin-bottom: 11px;
+        font-size: 0.62rem;
+        letter-spacing: 0.14em;
       }
       .footer {
+        width: 100%;
         padding-bottom: 14px;
       }
     }
@@ -884,10 +1003,10 @@
         width: min(1120px, 100%);
       }
       .hero {
-        width: min(980px, 100%);
+        width: min(900px, 100%);
       }
       .trust-panel {
-        margin-top: clamp(320px, 42vh, 460px);
+        margin-top: clamp(340px, 45vh, 500px);
       }
     }
     @media (max-width: 860px) {
@@ -916,6 +1035,16 @@
       }
       .trust-panel {
         margin-top: clamp(76px, 8vh, 104px);
+      }
+      .how-inner {
+        display: block;
+      }
+      .how-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .how-step {
+        min-height: 86px;
+        padding-top: 38px;
       }
     }
     @media (max-width: 520px) {
@@ -949,6 +1078,7 @@
       html { scroll-behavior: auto; }
       .splash { animation: splashOutReduced 1.3s ease forwards; }
       .splash img { animation: splashMarkReduced 1.05s ease forwards; }
+      .splash-thanks { display: none; }
       .splash-sky { display: none; }
       .atmosphere::before { animation: none; }
       .activity-list li::before { animation: none; }
@@ -972,6 +1102,7 @@
       <span class="splash-meteor"></span>
     </span>
     <img src="/brand/doneovernight-white.png" alt="">
+    <span class="splash-thanks">Thank you for scanning.</span>
   </div>
   <div class="atmosphere" aria-hidden="true"></div>
   <main class="page">
