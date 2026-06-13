@@ -351,54 +351,69 @@
       box-shadow: 0 0 30px rgba(233, 196, 138, 0.34), 0 0 80px rgba(233, 196, 138, 0.12), inset 0 1px 0 rgba(255,255,255,0.12);
     }
     .btn-secondary { background: rgba(255, 255, 255, 0.032); }
+    .trust-panel {
+      display: grid;
+      justify-items: center;
+      width: min(460px, 100%);
+      margin: clamp(64px, 7.4vw, 92px) auto 0;
+      padding: 28px clamp(18px, 3vw, 28px);
+      border-top: 1px solid rgba(245, 241, 234, 0.07);
+      border-bottom: 1px solid rgba(245, 241, 234, 0.07);
+      text-align: center;
+    }
     .status-block {
       display: grid;
       justify-items: center;
-      gap: 10px;
-      width: min(388px, 100%);
-      margin: clamp(64px, 7.4vw, 92px) auto 0;
-      padding: 28px clamp(18px, 3vw, 28px) 0;
-      border-top: 1px solid rgba(245, 241, 234, 0.07);
+      gap: 9px;
+      width: 100%;
       color: rgba(245, 241, 234, 0.48);
       font-size: 0.78rem;
-      line-height: 1.7;
+      line-height: 1.62;
       text-align: center;
     }
     .status-block strong {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 7px;
       color: rgba(245, 241, 234, 0.74);
       font-family: var(--mono);
       font-size: 0.63rem;
       font-weight: 700;
-      letter-spacing: 0.18em;
+      letter-spacing: 0.145em;
+      line-height: 1;
       text-transform: uppercase;
     }
     .status-block strong::before {
-      width: 7px;
-      height: 7px;
+      flex: 0 0 auto;
+      width: 6px;
+      height: 6px;
       border-radius: 999px;
       background: var(--green);
       box-shadow: 0 0 12px rgba(139, 224, 173, 0.28);
       content: "";
     }
     .service-line {
-      display: block;
-      margin-top: 5px;
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: 0.9em;
+      width: 100%;
+      margin-top: 11px;
       color: rgba(233, 196, 138, 0.58);
       font-family: var(--mono);
       font-size: 0.62rem;
-      letter-spacing: 0.14em;
+      line-height: 1.72;
+      letter-spacing: 0.105em;
       text-transform: uppercase;
     }
+    .service-line span { white-space: nowrap; }
     .trust {
-      max-width: 46ch;
-      margin: 28px auto 0;
+      max-width: 40ch;
+      margin: 22px auto 0;
       color: rgba(245, 241, 234, 0.42);
-      font-size: 0.78rem;
-      line-height: 1.68;
+      font-size: 0.76rem;
+      line-height: 1.62;
       text-align: center;
     }
     .form-card {
@@ -776,8 +791,11 @@
       .subhead { max-width: 31ch; margin-top: 26px; font-size: 0.86rem; line-height: 1.78; }
       .actions { margin-top: 42px; }
       .actions .btn { flex: 1 1 142px; min-height: 46px; }
-      .status-block { margin-top: 56px; padding: 24px 12px 0; width: min(318px, 100%); gap: 9px; }
-      .trust { margin-top: 24px; font-size: 0.74rem; }
+      .trust-panel { margin-top: 56px; padding: 24px 12px; width: min(318px, 100%); }
+      .status-block { gap: 8px; font-size: 0.74rem; line-height: 1.58; }
+      .status-block strong { font-size: 0.6rem; letter-spacing: 0.13em; }
+      .service-line { display: grid; justify-items: center; gap: 4px; margin-top: 10px; font-size: 0.59rem; line-height: 1.72; letter-spacing: 0.09em; }
+      .trust { margin-top: 20px; font-size: 0.72rem; line-height: 1.6; }
       .form-inner { padding: 18px; }
       .form-head { display: grid; }
       .live { margin-top: 0; }
@@ -837,13 +855,15 @@
           <button class="btn btn-primary" id="revealIntake" type="button" aria-controls="task-intake" aria-expanded="false">Start</button>
           <a class="btn btn-secondary" href="#how-it-works">How it works</a>
         </div>
-        <div class="status-block" aria-label="DONEOVERNIGHT status">
-          <strong>Overnight active</strong>
-          <span>A private intake reviewed by a human operator.</span>
-          <span>Response usually within 60 minutes.</span>
-          <span class="service-line">Websites • Automations • Systems • Operations</span>
+        <div class="trust-panel" aria-label="DONEOVERNIGHT status">
+          <div class="status-block">
+            <strong>Overnight active</strong>
+            <span>A private intake reviewed by a human operator.</span>
+            <span>Response usually within 60 minutes.</span>
+            <span class="service-line"><span>Websites • Automations</span><span>Systems • Operations</span></span>
+          </div>
+          <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
         </div>
-        <p class="trust">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
       </div>
 
       <aside class="form-card" id="task-intake" aria-label="Start a task" aria-hidden="true" inert>
