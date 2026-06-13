@@ -138,24 +138,89 @@
       z-index: 20;
       display: grid;
       place-items: center;
-      background: #020304;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 540px 220px at 50% 36%, rgba(233, 196, 138, 0.026), transparent 70%),
+        #020304;
       pointer-events: none;
-      animation: splashOut 1.78s cubic-bezier(0.32, 0, 0.18, 1) forwards;
+      animation: splashOut 2.9s cubic-bezier(0.32, 0, 0.18, 1) forwards;
     }
     .splash img {
+      position: relative;
+      z-index: 2;
       width: min(54vw, 260px);
       opacity: 0.78;
       filter: brightness(0.62) contrast(1.12);
-      animation: splashMark 1.2s cubic-bezier(0.32, 0, 0.18, 1) forwards;
+      animation: splashMark 2.62s cubic-bezier(0.32, 0, 0.18, 1) forwards;
+    }
+    .splash-sky {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .splash-star,
+    .splash-meteor {
+      position: absolute;
+      display: block;
+      pointer-events: none;
+    }
+    .splash-star {
+      width: 1.5px;
+      height: 1.5px;
+      border-radius: 999px;
+      background: rgba(255, 246, 226, 0.86);
+      box-shadow: 0 0 8px rgba(233, 196, 138, 0.16);
+      opacity: 0;
+      animation: splashStar 1.9s ease forwards;
+    }
+    .splash-star:nth-child(1) { top: 28%; left: 24%; animation-delay: 0.42s; }
+    .splash-star:nth-child(2) { top: 19%; left: 68%; width: 1.2px; height: 1.2px; animation-delay: 0.78s; }
+    .splash-star:nth-child(3) { top: 62%; left: 78%; width: 1.35px; height: 1.35px; animation-delay: 1.04s; }
+    .splash-star:nth-child(4) { top: 70%; left: 31%; width: 1.1px; height: 1.1px; animation-delay: 1.28s; }
+    .splash-meteor {
+      top: 30%;
+      left: 74%;
+      width: 92px;
+      height: 7px;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 100% 50%, rgba(255, 247, 226, 0.9) 0 1.5px, rgba(246, 224, 185, 0.32) 2.2px, transparent 4px),
+        linear-gradient(90deg, transparent 0%, rgba(244, 221, 178, 0.02) 18%, rgba(244, 221, 178, 0.13) 64%, rgba(255, 245, 221, 0.42) 100%);
+      clip-path: polygon(0 43%, 74% 47%, 100% 50%, 74% 55%, 0 62%);
+      filter: blur(0.2px);
+      opacity: 0;
+      transform: rotate(-16deg) translate3d(0, 0, 0) scaleX(0.8);
+      transform-origin: 100% 50%;
+      animation: splashMeteor 0.92s ease-out 1.68s forwards;
     }
     @keyframes splashOut {
-      0%, 80% { opacity: 1; }
+      0%, 88% { opacity: 1; }
       100% { opacity: 0; visibility: hidden; }
     }
     @keyframes splashMark {
       0% { opacity: 0; transform: translateY(6px) scale(0.98); }
-      24%, 54% { opacity: 0.78; transform: translateY(0) scale(1); }
+      18%, 72% { opacity: 0.78; transform: translateY(0) scale(1); }
       100% { opacity: 0; transform: translateY(-2px) scale(1.004); }
+    }
+    @keyframes splashStar {
+      0%, 100% { opacity: 0; transform: scale(0.86); }
+      38%, 68% { opacity: 0.42; transform: scale(1); }
+    }
+    @keyframes splashMeteor {
+      0% { opacity: 0; transform: rotate(-16deg) translate3d(0, 0, 0) scaleX(0.72); }
+      24% { opacity: 0.28; }
+      56% { opacity: 0.34; transform: rotate(-15deg) translate3d(-14vw, 3.6vh, 0) scaleX(1); }
+      100% { opacity: 0; transform: rotate(-14deg) translate3d(-28vw, 7.2vh, 0) scaleX(0.58); }
+    }
+    @keyframes splashOutReduced {
+      0%, 78% { opacity: 1; }
+      100% { opacity: 0; visibility: hidden; }
+    }
+    @keyframes splashMarkReduced {
+      0% { opacity: 0; transform: translateY(4px); }
+      26%, 66% { opacity: 0.74; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(0); }
     }
     .header {
       display: flex;
@@ -728,20 +793,30 @@
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .splash { display: none; }
+      .splash { animation: splashOutReduced 1.3s ease forwards; }
+      .splash img { animation: splashMarkReduced 1.05s ease forwards; }
+      .splash-sky { display: none; }
       .atmosphere::before { animation: none; }
       .activity-list li::before { animation: none; }
       .form-card { transition: none; }
-      *, *::before, *::after {
-        animation-duration: 0.001ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
-      }
+      .btn,
+      .deadline-chip,
+      input,
+      textarea,
+      .submit,
+      .footer-link { transition: none; }
     }
   </style>
 </head>
 <body>
   <div class="splash" aria-hidden="true">
+    <span class="splash-sky" aria-hidden="true">
+      <span class="splash-star"></span>
+      <span class="splash-star"></span>
+      <span class="splash-star"></span>
+      <span class="splash-star"></span>
+      <span class="splash-meteor"></span>
+    </span>
     <img src="/brand/doneovernight-white.png" alt="">
   </div>
   <div class="atmosphere" aria-hidden="true"></div>
