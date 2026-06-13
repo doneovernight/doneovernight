@@ -64,7 +64,7 @@
     }
     .atmosphere {
       position: fixed;
-      inset: 0;
+      inset: calc(env(safe-area-inset-top, 0px) * -1) 0 calc(env(safe-area-inset-bottom, 0px) * -1);
       z-index: 1;
       overflow: hidden;
       pointer-events: none;
@@ -89,13 +89,19 @@
     }
     .atmosphere::after {
       position: absolute;
-      top: calc(env(safe-area-inset-top, 0px) * -1);
-      left: 0;
-      right: 0;
-      height: max(240px, calc(env(safe-area-inset-top, 0px) + 220px));
+      inset: 0;
       background:
         radial-gradient(ellipse 560px 180px at 50% 0%, rgba(233, 196, 138, 0.04), transparent 72%),
-        linear-gradient(180deg, #000 0, rgba(1, 2, 3, 0.98) 34%, rgba(5, 6, 8, 0.66) 68%, rgba(5, 6, 8, 0));
+        linear-gradient(180deg, #000 0, rgba(1, 2, 3, 0.98) 34%, rgba(5, 6, 8, 0.66) 68%, rgba(5, 6, 8, 0)),
+        radial-gradient(ellipse 620px 170px at 50% 100%, rgba(233, 196, 138, 0.028), transparent 72%),
+        linear-gradient(0deg, #000 0, rgba(2, 3, 4, 0.96) 28%, rgba(5, 6, 8, 0.58) 62%, rgba(5, 6, 8, 0));
+      background-position: top center, top center, bottom center, bottom center;
+      background-repeat: no-repeat;
+      background-size:
+        100% max(250px, calc(env(safe-area-inset-top, 0px) + 230px)),
+        100% max(250px, calc(env(safe-area-inset-top, 0px) + 230px)),
+        100% max(240px, calc(env(safe-area-inset-bottom, 0px) + 220px)),
+        100% max(240px, calc(env(safe-area-inset-bottom, 0px) + 220px));
       opacity: 0.92;
       content: "";
     }
