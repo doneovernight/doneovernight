@@ -6,6 +6,11 @@
   let dictionary = null;
   let observer = null;
   let applying = false;
+  const originalTextNodes = new WeakMap();
+  const translatedTextNodes = new Set();
+  const originalElementState = new WeakMap();
+  const changedElements = new Set();
+  let originalTitle = null;
 
   function normalizeLang(value) {
     const normalized = String(value || "").toLowerCase().split("-")[0];
@@ -36,11 +41,26 @@
   async function loadDictionary(lang) {
     const safeLang = normalizeLang(lang);
     try {
-      const response = await fetch(`/lang/${safeLang}.json`, { cache: "force-cache" });
+      const response = await fetch(`/lang/${safeLang}.json`, { cache: "no-cache" });
       if (!response.ok) throw new Error("Language unavailable");
       return await response.json();
     } catch (error) {
       return { language: { code: DEFAULT_LANG }, ui: {}, vocabulary: {}, phraseMap: {} };
+    }
+  }
+
+  function rememberElement(element, field, attr) {
+    if (!element) return;
+    let state = originalElementState.get(element);
+    if (!state) {
+      state = { attrs: {} };
+      originalElementState.set(element, state);
+      changedElements.add(element);
+    }
+    if (field === "html" && state.html === undefined) state.html = element.innerHTML;
+    if (field === "text" && state.text === undefined) state.text = element.textContent;
+    if (field === "attr" && attr && state.attrs[attr] === undefined) {
+      state.attrs[attr] = element.getAttribute(attr);
     }
   }
 
@@ -372,6 +392,7 @@
   function setText(selector, value, root = document) {
     if (!selector || value === undefined || value === null) return;
     root.querySelectorAll(selector).forEach((element) => {
+      rememberElement(element, "text");
       element.textContent = value;
     });
   }
@@ -379,6 +400,7 @@
   function setHtml(selector, value, root = document) {
     if (!selector || value === undefined || value === null) return;
     root.querySelectorAll(selector).forEach((element) => {
+      rememberElement(element, "html");
       element.innerHTML = value;
     });
   }
@@ -386,12 +408,14 @@
   function setAttr(selector, attr, value, root = document) {
     if (!selector || !attr || value === undefined || value === null) return;
     root.querySelectorAll(selector).forEach((element) => {
+      rememberElement(element, "attr", attr);
       element.setAttribute(attr, value);
     });
   }
 
   function syncDocumentChrome() {
     if (!dictionary || activeLang === DEFAULT_LANG) return;
+    if (originalTitle === null) originalTitle = document.title;
     const page = dictionary.pages?.[pageKey()];
     if (page?.title) {
       document.title = page.title;
@@ -402,6 +426,7 @@
 
     document.querySelectorAll('meta[name="description"], meta[property="og:title"], meta[property="og:description"]').forEach((meta) => {
       const original = meta.getAttribute("content");
+      rememberElement(meta, "attr", "content");
       const translated = page?.description && meta.getAttribute("name") === "description"
         ? page.description
         : translateLoose(original);
@@ -453,6 +478,57 @@
     document.body.appendChild(strip);
   }
 
+  function removeAssistanceLayer() {
+    document.querySelectorAll(".don-assist-strip").forEach((element) => element.remove());
+  }
+
+  function stopObserver() {
+    if (!observer) return;
+    observer.disconnect();
+    observer = null;
+  }
+
+  function restoreOriginals() {
+    stopObserver();
+    applying = true;
+    try {
+      Array.from(changedElements).reverse().forEach((element) => {
+        if (!element.isConnected) return;
+        const state = originalElementState.get(element);
+        if (!state) return;
+        if (state.html !== undefined) {
+          element.innerHTML = state.html;
+        } else if (state.text !== undefined) {
+          element.textContent = state.text;
+        }
+        Object.entries(state.attrs || {}).forEach(([attr, value]) => {
+          if (value === null) element.removeAttribute(attr);
+          else element.setAttribute(attr, value);
+        });
+      });
+
+      translatedTextNodes.forEach((node) => {
+        if (node.parentElement && originalTextNodes.has(node)) {
+          node.nodeValue = originalTextNodes.get(node);
+        }
+      });
+      removeAssistanceLayer();
+      if (originalTitle !== null) document.title = originalTitle;
+    } finally {
+      applying = false;
+    }
+  }
+
+  function syncSwitcherState() {
+    document.querySelectorAll(".don-lang-switcher").forEach((switcher) => {
+      switcher.setAttribute("aria-label", dictionary?.ui?.switchLabel || "Language");
+      switcher.querySelectorAll("[data-don-lang]").forEach((button) => {
+        button.classList.toggle("is-active", button.dataset.donLang === activeLang);
+        button.setAttribute("aria-pressed", button.dataset.donLang === activeLang ? "true" : "false");
+      });
+    });
+  }
+
   function applyTranslations(root = document.body) {
     if (!root || !dictionary || applying || activeLang === DEFAULT_LANG) return;
     applying = true;
@@ -472,7 +548,13 @@
       while (walker.nextNode()) nodes.push(walker.currentNode);
       nodes.forEach((node) => {
         const translated = translateLoose(node.nodeValue);
-        if (translated !== node.nodeValue) node.nodeValue = translated;
+        if (translated !== node.nodeValue) {
+          if (!originalTextNodes.has(node)) {
+            originalTextNodes.set(node, node.nodeValue);
+            translatedTextNodes.add(node);
+          }
+          node.nodeValue = translated;
+        }
       });
 
       document.querySelectorAll("[placeholder], [aria-label], [title]").forEach((element) => {
@@ -480,7 +562,10 @@
           if (!element.hasAttribute(attr)) return;
           const original = element.getAttribute(attr);
           const translated = translateLoose(original);
-          if (translated !== original) element.setAttribute(attr, translated);
+          if (translated !== original) {
+            rememberElement(element, "attr", attr);
+            element.setAttribute(attr, translated);
+          }
         });
       });
 
@@ -522,10 +607,10 @@
     document.body.appendChild(switcher);
     switcher.querySelectorAll("button").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.donLang === activeLang);
-      button.addEventListener("click", () => {
+      button.setAttribute("aria-pressed", button.dataset.donLang === activeLang ? "true" : "false");
+      button.addEventListener("click", async () => {
         const nextLang = normalizeLang(button.dataset.donLang);
-        setStoredLang(nextLang);
-        window.location.reload();
+        await setLanguage(nextLang);
       });
     });
   }
@@ -548,10 +633,39 @@
     document.body.appendChild(modal);
     modal.querySelectorAll("[data-don-modal-lang]").forEach((button) => {
       button.addEventListener("click", () => {
-        setStoredLang(normalizeLang(button.dataset.donModalLang));
-        window.location.reload();
+        setLanguage(normalizeLang(button.dataset.donModalLang));
+        modal.remove();
       });
     });
+  }
+
+  async function setLanguage(lang) {
+    const nextLang = normalizeLang(lang);
+    if (nextLang === activeLang) return;
+
+    setStoredLang(nextLang);
+    stopObserver();
+
+    if (nextLang === DEFAULT_LANG) {
+      activeLang = DEFAULT_LANG;
+      dictionary = await loadDictionary(DEFAULT_LANG);
+      document.documentElement.lang = DEFAULT_LANG;
+      restoreOriginals();
+      syncLanguageInputs();
+      syncSwitcherState();
+      return;
+    }
+
+    restoreOriginals();
+    activeLang = nextLang;
+    dictionary = await loadDictionary(activeLang);
+    document.documentElement.lang = activeLang;
+    syncDocumentChrome();
+    applyPageLocalization();
+    applyTranslations();
+    renderAssistanceLayer();
+    startObserver();
+    syncSwitcherState();
   }
 
   async function init() {
@@ -563,7 +677,8 @@
       get: () => activeLang,
       t: translateLoose,
       dictionary: () => dictionary,
-      apply: () => applyTranslations()
+      apply: () => applyTranslations(),
+      set: setLanguage
     };
     ensureStyles();
     renderSwitcher();
