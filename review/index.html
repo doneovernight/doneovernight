@@ -261,6 +261,104 @@
       display: inline-flex;
     }
 
+    .workspace-unlock {
+      width: 100%;
+      margin: calc(clamp(42px, 8vh, 78px) * -0.55) 0 clamp(42px, 8vh, 78px);
+      padding: clamp(22px, 4vw, 38px);
+      border: 1px solid rgba(233,196,138,0.16);
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(233,196,138,0.06), rgba(255,255,255,0.024)),
+        rgba(10, 11, 13, 0.62);
+      box-shadow: 0 26px 82px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .workspace-unlock[hidden] {
+      display: none;
+    }
+
+    .workspace-title {
+      max-width: 14ch;
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(2.3rem, 7vw, 4.6rem);
+      font-weight: 400;
+      line-height: 0.96;
+      letter-spacing: -0.038em;
+      text-wrap: balance;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.48fr);
+      gap: clamp(28px, 5vw, 54px);
+      align-items: end;
+      margin-top: 22px;
+    }
+
+    .workspace-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .workspace-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(248,244,236,0.72);
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .workspace-list li::before {
+      flex: 0 0 auto;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(147,227,174,0.42);
+      content: "";
+    }
+
+    .workspace-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .workspace-cta {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 18px;
+      border: 1px solid rgba(233,196,138,0.38);
+      border-radius: 999px;
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .workspace-status {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
     .footer {
       display: flex;
       justify-content: space-between;
@@ -292,6 +390,16 @@
       .receipt {
         margin-top: 48px;
         padding: 24px 18px;
+      }
+
+      .workspace-unlock {
+        margin-top: -24px;
+        padding: 24px 18px;
+      }
+
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        align-items: start;
       }
 
       .timeline {
@@ -357,6 +465,27 @@
       <a class="quote-cta" data-quote-cta href="#">Review quote</a>
     </section>
 
+    <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span>Execution queue synchronized</span></p>
+      <h2 class="workspace-title" id="workspace-title">Workspace unlock is in motion.</h2>
+      <p class="copy">The operational queue has accepted the approval signal. Workspace access is preparing now.</p>
+
+      <div class="workspace-grid">
+        <ul class="workspace-list" aria-label="Workspace access includes">
+          <li>Live updates</li>
+          <li>Quote approvals</li>
+          <li>Delivery tracking</li>
+          <li>Revision flow</li>
+          <li>Realtime communication</li>
+        </ul>
+
+        <div class="workspace-actions">
+          <a class="workspace-cta" href="/workspace">Activate Workspace</a>
+          <span class="workspace-status">Workspace unlocking</span>
+        </div>
+      </div>
+    </section>
+
     <footer class="footer">
       <span class="reference">Reference: <span data-reference>DON-...</span></span>
       <span>Reply to the email if you want to add context.</span>
@@ -381,6 +510,12 @@
       };
       const requested = safe(params.get("state")).toLowerCase();
       const state = stateAliases[requested] || "review";
+      const workspaceStates = new Set([
+        "execution_approved",
+        "approved",
+        "workspace_unlocking",
+        "workspace_active"
+      ]);
       const reference = safe(params.get("task_id") || params.get("id") || params.get("reference"), 80);
       const quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
       const quoteUrl = (() => {
@@ -421,6 +556,10 @@
         const cta = document.querySelector("[data-quote-cta]");
         cta.href = quoteUrl;
         cta.classList.add("is-visible");
+      }
+
+      if (workspaceStates.has(requested)) {
+        document.querySelector("[data-workspace-unlock]")?.removeAttribute("hidden");
       }
     })();
   </script>
