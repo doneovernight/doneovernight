@@ -348,6 +348,25 @@
       letter-spacing: 0.14em;
       text-decoration: none;
       text-transform: uppercase;
+      transition: border-color 180ms ease, color 180ms ease, opacity 180ms ease, transform 180ms ease;
+    }
+
+    .workspace-cta.is-locked {
+      border-color: rgba(248,244,236,0.14);
+      color: rgba(248,244,236,0.48);
+      cursor: pointer;
+      opacity: 0.84;
+    }
+
+    .workspace-cta.is-locked:hover,
+    .workspace-cta.is-locked:focus-visible {
+      border-color: rgba(233,196,138,0.26);
+      color: rgba(248,244,236,0.66);
+      outline: 0;
+    }
+
+    .workspace-cta.is-shaking {
+      animation: workspaceShake 360ms ease;
     }
 
     .workspace-status {
@@ -357,6 +376,17 @@
       font-weight: 600;
       letter-spacing: 0.14em;
       text-transform: uppercase;
+    }
+
+    .workspace-message {
+      max-width: 34ch;
+      color: rgba(248,244,236,0.54);
+      font-size: 0.85rem;
+      line-height: 1.55;
+    }
+
+    .workspace-message[hidden] {
+      display: none;
     }
 
     .footer {
@@ -380,6 +410,14 @@
     @keyframes pulse {
       0%, 100% { opacity: 0.62; transform: scale(0.92); }
       50% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes workspaceShake {
+      0%, 100% { transform: translateX(0); }
+      22% { transform: translateX(-5px); }
+      44% { transform: translateX(5px); }
+      66% { transform: translateX(-3px); }
+      82% { transform: translateX(3px); }
     }
 
     @media (max-width: 640px) {
@@ -466,9 +504,9 @@
     </section>
 
     <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
-      <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span>Execution queue synchronized</span></p>
-      <h2 class="workspace-title" id="workspace-title">Workspace unlock is in motion.</h2>
-      <p class="copy">The operational queue has accepted the approval signal. Workspace access is preparing now.</p>
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span>Workspace access</span></p>
+      <h2 class="workspace-title" id="workspace-title">Workspace access</h2>
+      <p class="copy">Workspace access becomes available once review and approval are complete.</p>
 
       <div class="workspace-grid">
         <ul class="workspace-list" aria-label="Workspace access includes">
@@ -480,8 +518,9 @@
         </ul>
 
         <div class="workspace-actions">
-          <a class="workspace-cta" href="/workspace">Activate Workspace</a>
-          <span class="workspace-status">Workspace unlocking</span>
+          <a class="workspace-cta" data-workspace-cta href="/workspace">Workspace Pending</a>
+          <span class="workspace-status" data-workspace-status>Workspace pending</span>
+          <span class="workspace-message" data-workspace-message hidden>Workspace access becomes available after operator approval.</span>
         </div>
       </div>
     </section>
@@ -510,7 +549,15 @@
       };
       const requested = safe(params.get("state")).toLowerCase();
       const state = stateAliases[requested] || "review";
-      const workspaceStates = new Set([
+      const lockedWorkspaceStates = new Set([
+        "request_received",
+        "under_review",
+        "review_active",
+        "quote_preparation",
+        "quote_preparing",
+        "quote_ready"
+      ]);
+      const activeWorkspaceStates = new Set([
         "execution_approved",
         "approved",
         "workspace_unlocking",
@@ -558,9 +605,43 @@
         cta.classList.add("is-visible");
       }
 
-      if (workspaceStates.has(requested)) {
-        document.querySelector("[data-workspace-unlock]")?.removeAttribute("hidden");
+      function configureWorkspaceAccess() {
+        const workspace = document.querySelector("[data-workspace-unlock]");
+        const cta = document.querySelector("[data-workspace-cta]");
+        const status = document.querySelector("[data-workspace-status]");
+        const message = document.querySelector("[data-workspace-message]");
+        const isActive = activeWorkspaceStates.has(requested);
+        const isLocked = lockedWorkspaceStates.has(requested) || !requested || state === "review" || state === "quote" || state === "quote_ready";
+
+        if (!workspace || (!isActive && !isLocked)) return;
+
+        workspace.removeAttribute("hidden");
+
+        if (isActive) {
+          cta.textContent = "Activate Workspace";
+          cta.classList.remove("is-locked");
+          cta.href = "/workspace";
+          status.textContent = requested === "workspace_active" ? "Workspace active" : "Workspace unlocking";
+          message.hidden = true;
+          return;
+        }
+
+        cta.textContent = "Workspace Pending";
+        cta.classList.add("is-locked");
+        cta.href = "/workspace";
+        status.textContent = "Workspace pending";
+
+        cta.addEventListener("click", (event) => {
+          event.preventDefault();
+          message.textContent = "Workspace access becomes available after operator approval.";
+          message.hidden = false;
+          cta.classList.remove("is-shaking");
+          window.requestAnimationFrame(() => cta.classList.add("is-shaking"));
+        });
+        cta.addEventListener("animationend", () => cta.classList.remove("is-shaking"));
       }
+
+      configureWorkspaceAccess();
     })();
   </script>
 </body>
