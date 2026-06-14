@@ -1153,6 +1153,15 @@
       box-shadow: 0 0 34px rgba(233,196,138,0.12), inset 0 0 0 1px rgba(233,196,138,0.08);
     }
 
+    .secondary-cta.is-locked {
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+
+    .secondary-cta.is-shaking {
+      animation: lockedShake 420ms ease;
+    }
+
     .secondary-cta:hover {
       transform: translateY(-1px);
       border-color: rgba(233,196,138,0.42);
@@ -1168,6 +1177,24 @@
       letter-spacing: 0.06em;
       text-align: right;
       text-transform: uppercase;
+    }
+
+    .lock-message {
+      max-width: 30ch;
+      min-height: 1.4em;
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1.5;
+      letter-spacing: 0.06em;
+      text-align: right;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 220ms ease;
+    }
+
+    .lock-message.is-visible {
+      opacity: 1;
     }
 
     .footer {
@@ -1208,6 +1235,14 @@
     @keyframes softTap {
       0%, 100% { transform: scale(1); }
       45% { transform: scale(0.975); }
+    }
+
+    @keyframes lockedShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-3px); }
+      40% { transform: translateX(3px); }
+      60% { transform: translateX(-2px); }
+      80% { transform: translateX(2px); }
     }
 
     @keyframes approvalBreath {
@@ -1253,6 +1288,10 @@
       }
 
       .action-note {
+        text-align: left;
+      }
+
+      .lock-message {
         text-align: left;
       }
     }
@@ -1453,7 +1492,7 @@
         </div>
         <div class="snapshot-list">
           <div class="snapshot-row"><span>Client</span><span data-review-field="client">Pending verification</span></div>
-          <div class="snapshot-row"><span>Request</span><span data-review-field="request">Runtime intake</span></div>
+          <div class="snapshot-row"><span>Request</span><span data-review-field="request">Request received</span></div>
           <div class="snapshot-row"><span>Submitted</span><span data-review-field="submitted">Received</span></div>
           <div class="snapshot-row"><span>Deadline</span><span data-review-field="deadline">Under review</span></div>
           <div class="snapshot-row"><span>Your indicated budget</span><span data-review-field="budget">Not indicated</span></div>
@@ -1544,19 +1583,17 @@
       <div class="pref-copy">
         <p class="eyebrow">Notifications</p>
         <h2>Get notified when your quote is ready</h2>
-        <p>Choose the channel you want DONEOVERNIGHT to prioritize once review clears. Preferences are visual-only for this review state.</p>
+        <p>Email updates are sent to the address used for the request. SMS and WhatsApp become available after a phone number is added.</p>
       </div>
       <div class="pref-options">
-        <label class="pref-check"><input type="checkbox" name="notify_email" data-pref="email"><span class="box" aria-hidden="true"></span>Email</label>
-        <label class="pref-check"><input type="checkbox" name="notify_sms" data-pref="sms"><span class="box" aria-hidden="true"></span>SMS</label>
-        <label class="pref-check"><input type="checkbox" name="notify_whatsapp" data-pref="whatsapp"><span class="box" aria-hidden="true"></span>WhatsApp</label>
+        <label class="pref-check is-selected"><input type="checkbox" name="notify_email" checked disabled><span class="box" aria-hidden="true"></span>Email updates active</label>
       </div>
     </section>
 
     <section class="workspace-tease glass" aria-label="Private workspace preview">
       <div>
         <p class="eyebrow state-fade" data-runtime-label="workspaceKicker">Workspace closed</p>
-        <h2 class="state-fade" data-runtime-label="workspaceTitle">Private workspace access becomes available after review approval.</h2>
+        <h2 class="state-fade" data-runtime-label="workspaceTitle">Workspace access opens after quote approval.</h2>
         <p class="state-fade" data-runtime-label="workspaceText">Workspace access stays closed until a quote is approved.</p>
         <ul class="workspace-list">
           <li>Live updates</li>
@@ -1568,7 +1605,8 @@
       </div>
       <div class="workspace-action">
         <a class="secondary-cta" href="/" aria-label="Workspace opens after quote approval" data-workspace-cta>Workspace closed</a>
-        <span class="action-note state-fade" data-runtime-label="actionNote">Activation opens after review approval</span>
+        <span class="action-note state-fade" data-runtime-label="actionNote">Workspace opens after quote approval</span>
+        <span class="lock-message" data-workspace-lock-message aria-live="polite"></span>
       </div>
     </section>
 
@@ -1594,7 +1632,7 @@
         request: safe(storedTask.taskSummary || params.get("request") || params.get("task") || params.get("task_summary")),
         submitted: safe(params.get("submitted") || params.get("created_at")),
         deadline: safe(storedTask.deadline || params.get("deadline")),
-        budget: safe(storedTask.clientBudget || params.get("budget") || params.get("client_budget")),
+        budget: safe(storedTask.clientBudget) || (params.get("budget_present") === "true" ? "Budget received" : ""),
         priority: safe(params.get("priority")),
         source: safe(storedTask.source || params.get("source"))
       };
@@ -1613,8 +1651,6 @@
         requestContextNode.classList.add("is-visible");
       }
 
-      const stateDuration = 5200;
-      const preferenceKey = "doneovernight.review.preferences";
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const runtimeLabels = Array.from(document.querySelectorAll("[data-runtime-label]"));
       const reviewSteps = Array.from(document.querySelectorAll("[data-review-step]"));
@@ -1622,18 +1658,12 @@
       const signalPills = Array.from(document.querySelectorAll("[data-runtime-signal]"));
       const feedItems = Array.from(document.querySelectorAll("[data-runtime-feed]"));
       const workspaceCta = document.querySelector("[data-workspace-cta]");
+      const workspaceLockMessage = document.querySelector("[data-workspace-lock-message]");
       const quoteLayer = document.querySelector("[data-quote-layer]");
       const approvalCta = document.querySelector("[data-approval-cta]");
       const approvalNote = document.querySelector("[data-approval-note]");
       const assignmentLabels = Array.from(document.querySelectorAll("[data-assignment-label]"));
       const assignmentSignals = Array.from(document.querySelectorAll("[data-assignment-signal]"));
-      const operatorHandle = safe(params.get("operator") || params.get("operator_handle") || params.get("handle"))
-        .replace(/^@+/, "")
-        .replace(/[^a-z0-9_-]/gi, "")
-        .slice(0, 36);
-      const operatorPublic = operatorHandle ? `@${operatorHandle}` : "";
-      const operatorSpecialization = safe(params.get("specialization") || params.get("speciality") || "Automation Systems");
-
       const states = [
         {
           key: "review_active",
@@ -1641,14 +1671,14 @@
           eyebrow: "Request received",
           heroText: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step.",
           reviewWindow: "Request received",
-          timelineState: "Current state: Request received",
+          timelineState: "Current state: Under Review",
           workspaceKicker: "Workspace closed",
           workspaceTitle: "Workspace access opens only after quote approval.",
           workspaceText: "DONEOVERNIGHT will review the request first. Quote preparation, approval, execution, and delivery only appear when each step is actually ready.",
           actionNote: "Closed until quote approval",
-          activeReviewStep: 0,
-          activeTimelineStep: 0,
-          liveSignals: [0],
+          activeReviewStep: 1,
+          activeTimelineStep: 1,
+          liveSignals: [0, 1],
           feed: ["Request received", "Scope is being reviewed", "Quote preparation pending"],
           cards: [
             ["Request received", "Private intake recorded"],
@@ -1726,8 +1756,8 @@
           heroText: "Quote preparation is active. DONEOVERNIGHT is preparing scope, timing, and the next step for approval.",
           reviewWindow: "Quote prep active",
           timelineState: "Current state: Quote Preparation",
-          workspaceKicker: "Workspace standby",
-          workspaceTitle: "Workspace activation waits for quote approval.",
+          workspaceKicker: "Workspace closed",
+          workspaceTitle: "Workspace access opens after quote approval.",
           workspaceText: "Workspace access stays closed until quote approval.",
           actionNote: "Approval signal pending",
           activeReviewStep: 2,
@@ -1758,7 +1788,7 @@
           workspaceTitle: "Workspace access opens after quote approval.",
           workspaceText: "Review the quote and approve the next step when you are ready.",
           actionNote: "Approval required before unlock",
-          activeReviewStep: 3,
+          activeReviewStep: 2,
           activeTimelineStep: 3,
           liveSignals: [0, 1, 2],
           feed: ["Quote ready", "Approval required", "Workspace closed"],
@@ -1786,7 +1816,7 @@
           workspaceTitle: "Approve the quote to open the workspace.",
           workspaceText: "Execution and workspace access remain closed until approval.",
           actionNote: "Approval opens workspace access",
-          activeReviewStep: 3,
+          activeReviewStep: 2,
           activeTimelineStep: 3,
           liveSignals: [0, 1, 2],
           feed: ["Quote ready", "Approval required", "Workspace closed"],
@@ -1811,9 +1841,9 @@
           reviewWindow: "Execution",
           timelineState: "Current state: Execution Approved",
           workspaceKicker: "Execution",
-          workspaceTitle: "Workspace access is preparing.",
-          workspaceText: "The approved request is ready for execution and delivery tracking.",
-          actionNote: "Workspace access preparing",
+          workspaceTitle: "Your private workspace is available.",
+          workspaceText: "Open the workspace to follow execution and delivery tracking.",
+          actionNote: "Workspace available",
           activeReviewStep: 3,
           activeTimelineStep: 4,
           liveSignals: [0, 1, 2],
@@ -1828,8 +1858,8 @@
           approvalText: "Approved",
           approvalNote: "Workspace access may open after approval.",
           approvalMode: "approved",
-          ctaText: "Workspace preparing",
-          ctaReady: false
+          ctaText: "Open workspace",
+          ctaReady: true
         },
         {
           key: "workspace_unlocked",
@@ -1843,7 +1873,7 @@
           workspaceText: "Open the workspace to follow updates and delivery tracking.",
           actionNote: "Workspace available",
           activeReviewStep: 3,
-          activeTimelineStep: 4,
+          activeTimelineStep: 5,
           liveSignals: [0, 1, 2],
           feed: ["Workspace available", "Execution active", "Delivery tracking"],
           cards: [
@@ -1855,6 +1885,34 @@
           quoteVisible: true,
           approvalText: "Open Workspace",
           approvalNote: "Private execution workspace is available.",
+          approvalMode: "open",
+          ctaText: "Open workspace",
+          ctaReady: true
+        },
+        {
+          key: "delivered",
+          topSignal: "Delivered",
+          eyebrow: "Delivery",
+          heroText: "Delivery is complete. Your workspace is available for delivery notes and follow-up.",
+          reviewWindow: "Delivered",
+          timelineState: "Current state: Delivered",
+          workspaceKicker: "Workspace available",
+          workspaceTitle: "Your private workspace is available.",
+          workspaceText: "Open the workspace to review delivery notes and follow-up.",
+          actionNote: "Workspace available",
+          activeReviewStep: 4,
+          activeTimelineStep: 6,
+          liveSignals: [0, 1, 2],
+          feed: ["Delivered", "Workspace available", "Follow-up ready"],
+          cards: [
+            ["Request received", "Private intake recorded"],
+            ["Quote approved", "Approval confirmed"],
+            ["Execution", "Completed"],
+            ["Delivery", "Completed"]
+          ],
+          quoteVisible: false,
+          approvalText: "Open Workspace",
+          approvalNote: "Delivery is complete.",
           approvalMode: "open",
           ctaText: "Open workspace",
           ctaReady: true
@@ -1884,7 +1942,7 @@
         const queue = ["quote_preparing", "quote_ready", "awaiting_approval", "execution_approved", "workspace_unlocked"].includes(stateKey)
           ? "Quote preparation"
           : "Not ready yet";
-        const workspaceState = ["execution_approved", "workspace_unlocked"].includes(stateKey)
+        const workspaceState = ["execution_approved", "workspace_unlocked", "delivered"].includes(stateKey)
           ? "Available after approval"
           : "Closed until approval";
         const assignments = {
@@ -1951,6 +2009,14 @@
             signal: "Workspace available",
             signals: ["Workspace available", "Execution active", "Delivery tracking"],
             live: [0, 1, 2]
+          },
+          delivered: {
+            kicker: "Delivery",
+            role: "Delivery is complete. Your workspace is available for delivery notes and follow-up.",
+            queue: "Delivered",
+            signal: "Workspace available",
+            signals: ["Delivered", "Workspace available", "Follow-up ready"],
+            live: [0, 1, 2]
           }
         };
 
@@ -2006,11 +2072,12 @@
           if (state.feed[itemIndex]) setText(item, state.feed[itemIndex]);
         });
 
-        const workspaceApproved = params.get("quote_approved") === "1" || state.key === "workspace_unlocked";
+        const workspaceApproved = params.get("quote_approved") === "1" || ["workspace_unlocked", "delivered"].includes(state.key);
 
         if (workspaceCta) {
           setText(workspaceCta, state.ctaText);
           workspaceCta.classList.toggle("is-ready", state.ctaReady && workspaceApproved);
+          workspaceCta.classList.toggle("is-locked", !(state.ctaReady && workspaceApproved));
           workspaceCta.setAttribute("href", state.ctaReady && workspaceApproved ? "https://portal.doneovernight.com" : "#");
           workspaceCta.setAttribute("aria-label", state.ctaReady && workspaceApproved ? "Open workspace" : "Workspace opens after quote approval");
         }
@@ -2036,9 +2103,12 @@
         request_received: "review_active",
         under_review: "operator_assigned",
         quote_preparation: "quote_preparing",
+        quote_preparing: "quote_preparing",
         approval: "awaiting_approval",
+        approved: "execution_approved",
         execution: "execution_approved",
-        delivery: "workspace_unlocked"
+        delivery: "workspace_unlocked",
+        delivered: "delivered"
       };
       const requestedStateRaw = safe(params.get("state"));
       const requestedState = stateAliases[requestedStateRaw] || requestedStateRaw;
@@ -2065,30 +2135,16 @@
         }, prefersReducedMotion ? 700 : 1800);
       });
 
-      const storedPrefs = (() => {
-        try {
-          return JSON.parse(localStorage.getItem(preferenceKey) || "{}");
-        } catch (error) {
-          return {};
+      workspaceCta?.addEventListener("click", (event) => {
+        if (workspaceCta.classList.contains("is-ready")) return;
+        event.preventDefault();
+        workspaceCta.classList.remove("is-shaking");
+        void workspaceCta.offsetWidth;
+        workspaceCta.classList.add("is-shaking");
+        if (workspaceLockMessage) {
+          workspaceLockMessage.textContent = "Workspace opens after quote approval.";
+          workspaceLockMessage.classList.add("is-visible");
         }
-      })();
-
-      document.querySelectorAll("[data-pref]").forEach((input) => {
-        const label = input.closest(".pref-check");
-        const key = input.dataset.pref;
-        input.checked = storedPrefs[key] === true;
-        label?.classList.toggle("is-selected", input.checked);
-
-        input.addEventListener("change", () => {
-          storedPrefs[key] = input.checked;
-          label?.classList.toggle("is-selected", input.checked);
-          label?.classList.remove("is-touched");
-          void label?.offsetWidth;
-          label?.classList.add("is-touched");
-          try {
-            localStorage.setItem(preferenceKey, JSON.stringify(storedPrefs));
-          } catch (error) {}
-        });
       });
     })();
   </script>

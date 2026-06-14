@@ -12,6 +12,9 @@ function buildClientReviewUrl(task) {
   reviewUrl.searchParams.set("state", "request_received");
   if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
   if (task?.createdAt) reviewUrl.searchParams.set("submitted", task.createdAt);
+  if (task?.clientBudget || task?.rawPayload?.client_budget || task?.rawPayload?.budget) {
+    reviewUrl.searchParams.set("budget_present", "true");
+  }
   return reviewUrl.toString();
 }
 
@@ -70,6 +73,11 @@ async function notifyOperations(task) {
         client_budget: clientBudget,
         clientBudget,
         client_submitted_budget: clientBudget,
+        estimatedBudget: clientBudget,
+        project_budget: clientBudget,
+        internal_suggested_price: null,
+        suggested_price: null,
+        internal_estimate: null,
         priority: task.priority,
         source: task.source,
         intakeVersion: task.intakeVersion,
@@ -169,6 +177,8 @@ function buildClientConfirmationEmailPayload(task) {
     reference_id: reference,
     source: task.source,
     intake_version: task.intakeVersion,
+    client_budget: task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget || "",
+    budget_present: Boolean(task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget),
     task_summary: task.taskSummary,
     review_url: reviewUrl,
     client_review_url: reviewUrl,
