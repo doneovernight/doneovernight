@@ -1,5 +1,6 @@
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const { dispatchWebhook, getWebhookUrls } = require("../lib/ops");
+const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 
@@ -200,6 +201,11 @@ async function sendClientConfirmationEmail(task) {
   });
 }
 
+function isDispatchSubscribeRequest(req) {
+  return String(req.url || "").includes("dispatch_subscribe=1") ||
+    String(req.url || "").includes("/api/dispatch-subscribe");
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -232,6 +238,11 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isDispatchSubscribeRequest(req)) {
+      const result = await subscribeToDispatch(input);
+      return send(res, result.statusCode, result.payload);
+    }
+
     const errors = validateTaskInput(input);
     if (errors.length) {
       return send(res, 400, {
