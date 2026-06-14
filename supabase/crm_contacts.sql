@@ -16,3 +16,6 @@ create table if not exists public.crm_contacts (
 
 create index if not exists crm_contacts_email_idx on public.crm_contacts (email);
 create index if not exists crm_contacts_dispatch_subscribed_idx on public.crm_contacts (dispatch_subscribed);
+
+grant usage on schema public to service_role;
+grant select, insert, update on public.crm_contacts to service_role;
