@@ -399,9 +399,10 @@ body.is-admin .admin-dashboard { display: block; }
 .stat-value {
   margin-top: 8px;
   font-family: var(--serif);
-  font-size: 32px;
+  font-size: clamp(24px, 2.4vw, 32px);
   line-height: 1;
   color: var(--amber);
+  overflow-wrap: anywhere;
 }
 
 .stat-card.revenue-paid .stat-value {
@@ -945,6 +946,141 @@ body.is-admin .admin-dashboard { display: block; }
 
 .admin-section.is-highlighted {
   animation: sectionPulse 1.55s ease both;
+}
+
+.admin-os-layout {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 92px;
+  z-index: 10;
+  border: 1px solid rgba(245, 241, 234, 0.08);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.022);
+  box-shadow:
+    0 24px 46px -28px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(245, 241, 234, 0.045);
+  padding: 14px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.admin-sidebar-label {
+  margin: 2px 0 12px;
+  color: rgba(233, 196, 138, 0.64);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.admin-sidebar-nav {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-sidebar-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: rgba(245, 241, 234, 0.48);
+  font-size: 12px;
+  padding: 0 10px;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.admin-sidebar-nav a:hover,
+.admin-sidebar-nav a:focus-visible,
+.admin-sidebar-nav a.is-active {
+  border-color: rgba(233, 196, 138, 0.22);
+  background: rgba(233, 196, 138, 0.055);
+  color: #f4d28a;
+  outline: none;
+}
+
+.admin-main {
+  min-width: 0;
+}
+
+.admin-os-section {
+  scroll-margin-top: 96px;
+}
+
+.admin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-status-item,
+.admin-dispatch-row,
+.admin-review-row {
+  border: 1px solid rgba(245, 241, 234, 0.075);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(245, 241, 234, 0.032), rgba(245, 241, 234, 0.012)),
+    rgba(5, 6, 8, 0.3);
+  padding: 14px;
+}
+
+.admin-status-item span,
+.admin-dispatch-row span,
+.admin-review-row span {
+  display: block;
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-status-item strong,
+.admin-dispatch-row strong,
+.admin-review-row strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: rgba(245, 241, 234, 0.78);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-status-item p,
+.admin-dispatch-row p,
+.admin-review-row p {
+  margin: 8px 0 0;
+  color: rgba(245, 241, 234, 0.42);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-dispatch-list,
+.admin-review-list {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  max-height: min(620px, calc(100vh - 220px));
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.admin-dispatch-row,
+.admin-review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, 0.38fr) minmax(132px, 0.38fr);
+  gap: 12px;
+  align-items: start;
 }
 
 .placeholder {
@@ -1939,8 +2075,32 @@ body.is-admin .admin-dashboard { display: block; }
     width: 100%;
     justify-content: space-between;
   }
+  .admin-os-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .admin-sidebar {
+    position: sticky;
+    top: 92px;
+    overflow-x: auto;
+    padding: 10px;
+  }
+  .admin-sidebar-label {
+    margin-bottom: 8px;
+  }
+  .admin-sidebar-nav {
+    display: flex;
+    gap: 6px;
+    min-width: max-content;
+  }
+  .admin-sidebar-nav a {
+    white-space: nowrap;
+  }
   .admin-task-list,
-  .admin-client-list {
+  .admin-client-list,
+  .admin-operator-list,
+  .admin-dispatch-list,
+  .admin-review-list {
     max-height: none;
     overflow: visible;
   }
@@ -1972,6 +2132,10 @@ body.is-admin .admin-dashboard { display: block; }
     grid-template-columns: 1fr;
   }
   .admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-dispatch-row,
+  .admin-review-row {
     grid-template-columns: 1fr;
   }
   .workspace-control-grid,
@@ -2185,38 +2349,67 @@ body.is-admin .admin-dashboard { display: block; }
       </div>
     </header>
 
+    <div class="admin-os-layout">
+      <aside class="admin-sidebar" aria-label="Admin OS navigation">
+        <div class="admin-sidebar-label">Admin OS</div>
+        <nav class="admin-sidebar-nav">
+          <a class="is-active" href="#adminOverviewSection" data-admin-nav="overview">Overview</a>
+          <a href="#adminTasksSection" data-admin-nav="asks">Asks</a>
+          <a href="#adminClientsSection" data-admin-nav="clients">Clients</a>
+          <a href="#adminDispatchSection" data-admin-nav="dispatch">Dispatch</a>
+          <a href="#adminReviewsSection" data-admin-nav="reviews">Reviews</a>
+          <a href="#workspaceControlSection" data-admin-nav="workspaces">Workspaces</a>
+          <a href="#adminHeartbeatSection" data-admin-nav="heartbeat">Heartbeat</a>
+          <a href="#adminOperatorsSection" data-admin-nav="operators">Operators</a>
+          <a href="#adminSettingsSection" data-admin-nav="settings">Settings</a>
+        </nav>
+      </aside>
+
+      <div class="admin-main">
+        <section class="admin-os-section" id="adminOverviewSection" data-admin-section="overview">
+
     <header class="admin-head">
       <div class="eyebrow">Private operator headquarters</div>
-      <h1>Execution control for serious specialists.</h1>
-      <p>Manage clients, quotes, payments, deliveries, communication, and workflow status from one realtime operational layer.</p>
+      <h1>Admin OS for overnight execution.</h1>
+      <p>One operational surface for asks, clients, reviews, workspaces, Dispatch, operators, and system readiness.</p>
     </header>
 
     <div class="stats-grid">
       <div class="stat-card" id="adminNewTasksStat" data-target-section="active-operations" tabindex="0">
-        <div class="stat-label">New tasks</div>
+        <div class="stat-label">New asks</div>
         <div class="stat-value" id="adminNewTasksCount">0</div>
       </div>
+      <div class="stat-card" data-target-section="active-operations" tabindex="0">
+        <div class="stat-label">Pending review</div>
+        <div class="stat-value" id="adminPendingReviewCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="active-operations" tabindex="0">
+        <div class="stat-label">Quote needed</div>
+        <div class="stat-value" id="adminQuoteNeededCount">0</div>
+      </div>
       <div class="stat-card" data-target-section="awaiting-payment" tabindex="0">
-        <div class="stat-label">Awaiting payment</div>
+        <div class="stat-label">Payment pending</div>
         <div class="stat-value" id="adminPendingQuotesCount">0</div>
       </div>
       <div class="stat-card" data-target-section="in-progress" tabindex="0">
-        <div class="stat-label">In progress</div>
+        <div class="stat-label">Workspace ready</div>
         <div class="stat-value" id="adminInProgressCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="in-progress" tabindex="0">
-        <div class="stat-label">Queued</div>
-        <div class="stat-value" id="adminQueuedCount">0</div>
+      <div class="stat-card" data-target-section="adminDispatchSection" tabindex="0">
+        <div class="stat-label">Dispatch signups</div>
+        <div class="stat-value" id="adminDispatchCount">Unavailable</div>
       </div>
-      <div class="stat-card" data-target-section="delivered" tabindex="0">
-        <div class="stat-label">Delivered</div>
-        <div class="stat-value" id="adminDeliveredCount">0</div>
+      <div class="stat-card" data-target-section="adminHeartbeatSection" tabindex="0">
+        <div class="stat-label">System health</div>
+        <div class="stat-value" id="adminSystemHealth">Unavailable</div>
       </div>
-      <div class="stat-card" data-target-section="active-operations" tabindex="0">
-        <div class="stat-label">Avg response</div>
-        <div class="stat-value" id="adminAvgResponse">—</div>
+      <div class="stat-card" data-target-section="adminHeartbeatSection" tabindex="0">
+        <div class="stat-label">Heartbeat status</div>
+        <div class="stat-value" id="adminHeartbeatStatus">Unavailable</div>
       </div>
     </div>
+
+        </section>
 
     <div class="revenue-center">
       <div class="revenue-center-head">
@@ -2305,15 +2498,15 @@ body.is-admin .admin-dashboard { display: block; }
     </section>
 
     <div class="admin-grid">
-      <section class="admin-section" id="adminTasksSection">
-        <h2>Tasks</h2>
+      <section class="admin-section is-wide" id="adminTasksSection" data-admin-section="asks">
+        <h2>Asks</h2>
         <div class="section-kicker"><span class="realtime-indicator">Realtime connected</span></div>
         <div id="adminTasksList">
           <div class="placeholder">Loading tasks...</div>
         </div>
       </section>
 
-      <section class="admin-section" id="adminClientsSection">
+      <section class="admin-section" id="adminClientsSection" data-admin-section="clients">
         <h2>Clients</h2>
         <div class="section-kicker" id="adminClientsKicker">Not connected yet</div>
         <div class="admin-client-tabs" aria-label="Client filter">
@@ -2326,7 +2519,23 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <section class="admin-section" id="adminOperatorsSection">
+      <section class="admin-section" id="adminDispatchSection" data-admin-section="dispatch">
+        <h2>Dispatch</h2>
+        <div class="section-kicker" id="adminDispatchKicker">Loading Dispatch contacts...</div>
+        <div id="adminDispatchList">
+          <div class="placeholder">Loading Dispatch signups...</div>
+        </div>
+      </section>
+
+      <section class="admin-section is-wide" id="adminReviewsSection" data-admin-section="reviews">
+        <h2>Reviews</h2>
+        <div class="section-kicker">Client-facing review states</div>
+        <div id="adminReviewsList">
+          <div class="placeholder">Review states will populate from asks.</div>
+        </div>
+      </section>
+
+      <section class="admin-section" id="adminOperatorsSection" data-admin-section="operators">
         <h2>Operators</h2>
         <div class="section-kicker" id="adminOperatorsKicker">Not connected yet</div>
         <div class="admin-client-tabs" aria-label="Operator filter">
@@ -2339,13 +2548,17 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <section class="admin-section is-wide" id="workspaceControlSection">
+      <section class="admin-section is-wide" id="workspaceControlSection" data-admin-section="workspaces">
         <div class="workspace-control-head">
           <div>
-            <h2>Workspace control</h2>
-            <p>Admin-only messages, quotes, and clearly marked test cleanup.</p>
+            <h2>Workspaces</h2>
+            <p>Workspace access stays locked until quote/payment is confirmed. Manage updates, quotes, and linked review state here.</p>
           </div>
           <button class="admin-client-action" id="workspaceRecordsRefresh" type="button">Refresh</button>
+        </div>
+
+        <div id="adminWorkspaceReadinessList" class="admin-review-list">
+          <div class="placeholder">Workspace readiness will populate from asks.</div>
         </div>
 
         <div class="workspace-control-grid">
@@ -2423,12 +2636,30 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="workspace-control-message" id="workspaceControlMessage" aria-live="polite"></div>
       </section>
 
+      <section class="admin-section is-wide" id="adminHeartbeatSection" data-admin-section="heartbeat">
+        <h2>Heartbeat</h2>
+        <div class="section-kicker">Phase 1 surface only</div>
+        <div id="adminHeartbeatList" class="admin-status-grid">
+          <div class="placeholder">Loading system status...</div>
+        </div>
+      </section>
+
+      <section class="admin-section is-wide" id="adminSettingsSection" data-admin-section="settings">
+        <h2>Settings</h2>
+        <div class="section-kicker">Authentication and environment</div>
+        <div id="adminSettingsList" class="admin-status-grid">
+          <div class="placeholder">Loading settings...</div>
+        </div>
+      </section>
+
       <section class="admin-section is-wide">
         <h2>Activity</h2>
         <div id="adminActivity">
           <div class="placeholder">Recent operator activity will appear here.</div>
         </div>
       </section>
+    </div>
+      </div>
     </div>
   </section>
 </main>
@@ -2456,14 +2687,22 @@ const adminClientsList = document.getElementById('adminClientsList');
 const adminOperatorsKicker = document.getElementById('adminOperatorsKicker');
 const adminOperatorsList = document.getElementById('adminOperatorsList');
 const adminTasksList = document.getElementById('adminTasksList');
+const adminDispatchKicker = document.getElementById('adminDispatchKicker');
+const adminDispatchList = document.getElementById('adminDispatchList');
+const adminReviewsList = document.getElementById('adminReviewsList');
+const adminWorkspaceReadinessList = document.getElementById('adminWorkspaceReadinessList');
+const adminHeartbeatList = document.getElementById('adminHeartbeatList');
+const adminSettingsList = document.getElementById('adminSettingsList');
 const adminActivity = document.getElementById('adminActivity');
 const adminNewTasksStat = document.getElementById('adminNewTasksStat');
 const adminNewTasksCount = document.getElementById('adminNewTasksCount');
+const adminPendingReviewCount = document.getElementById('adminPendingReviewCount');
+const adminQuoteNeededCount = document.getElementById('adminQuoteNeededCount');
 const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
 const adminInProgressCount = document.getElementById('adminInProgressCount');
-const adminQueuedCount = document.getElementById('adminQueuedCount');
-const adminDeliveredCount = document.getElementById('adminDeliveredCount');
-const adminAvgResponse = document.getElementById('adminAvgResponse');
+const adminDispatchCount = document.getElementById('adminDispatchCount');
+const adminSystemHealth = document.getElementById('adminSystemHealth');
+const adminHeartbeatStatus = document.getElementById('adminHeartbeatStatus');
 const adminPaidRevenue = document.getElementById('adminPaidRevenue');
 const adminPendingRevenue = document.getElementById('adminPendingRevenue');
 const adminPotentialRevenue = document.getElementById('adminPotentialRevenue');
@@ -2484,6 +2723,9 @@ const workspaceControlMessage = document.getElementById('workspaceControlMessage
 let adminTasks = [];
 let adminClients = [];
 let adminOperators = [];
+let adminDispatchContacts = [];
+let adminDispatchConnection = null;
+let adminSystemStatus = null;
 let workspaceRecords = { messages: [], quotes: [] };
 let adminTaskPollingInterval = null;
 let adminTasksLoading = false;
@@ -2895,8 +3137,10 @@ function getTaskActivityLabel(task) {
 function updateStats(tasks = adminTasks, clients = adminClients) {
   const reviewStatuses = ['new', 'review_pending'];
   const newTasksCount = tasks.filter((task) => reviewStatuses.includes(normalizeStatus(task.status))).length;
+  const pendingReviewCount = newTasksCount;
+  const quoteNeededCount = tasks.filter((task) => ['new', 'review_pending', 'quote_preparation'].includes(normalizeStatus(task.status)) && !task.quote_amount).length;
   const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment').length;
-  const queuedCount = tasks.filter((task) => normalizeStatus(task.status) === 'queued').length;
+  const workspaceReadyCount = tasks.filter((task) => ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status))).length;
   const activeClients = clients.filter((client) => getClientStatusGroup(client.status) === 'active').length;
   const completedTasks = tasks.filter((task) => ['delivered', 'completed'].includes(normalizeStatus(task.status))).length;
 
@@ -2918,19 +3162,13 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
 
   adminNewTasksCount.textContent = newTasksCount;
   adminNewTasksStat.classList.toggle('has-new-tasks', newTasksCount > 0);
+  adminPendingReviewCount.textContent = pendingReviewCount;
+  adminQuoteNeededCount.textContent = quoteNeededCount;
   adminPendingQuotesCount.textContent = awaitingPaymentCount;
-  adminInProgressCount.textContent = tasks.filter((task) => ['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
-  adminQueuedCount.textContent = queuedCount;
-  adminDeliveredCount.textContent = completedTasks;
-  const quotedWithTs = tasks.filter(t => t.quoted_at && t.created_at);
-  if (quotedWithTs.length) {
-    const avgMs = quotedWithTs.reduce((s, t) => s + (new Date(t.quoted_at) - new Date(t.created_at)), 0) / quotedWithTs.length;
-    adminAvgResponse.textContent = avgMs < 3_600_000
-      ? `${Math.round(avgMs / 60_000)}m`
-      : `${(avgMs / 3_600_000).toFixed(1)}h`;
-  } else {
-    adminAvgResponse.textContent = '—';
-  }
+  adminInProgressCount.textContent = workspaceReadyCount;
+  adminDispatchCount.textContent = adminDispatchConnection?.connected ? String(adminDispatchContacts.length) : 'Unavailable';
+  adminSystemHealth.textContent = adminSystemStatus?.integrations?.supabase ? 'Connected' : 'Unavailable';
+  adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Connected' : 'Not connected';
   adminPaidRevenue.textContent = formatRevenue(paidRevenue);
   adminPendingRevenue.textContent = formatRevenue(pendingRevenue);
   adminPotentialRevenue.textContent = formatRevenue(potentialRevenue);
@@ -2955,6 +3193,279 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
 
 function updateAdminStats(tasks) {
   updateStats(tasks, adminClients);
+}
+
+function setSidebarActive(sectionId) {
+  const map = {
+    adminOverviewSection: 'overview',
+    adminTasksSection: 'asks',
+    adminClientsSection: 'clients',
+    adminDispatchSection: 'dispatch',
+    adminReviewsSection: 'reviews',
+    workspaceControlSection: 'workspaces',
+    adminHeartbeatSection: 'heartbeat',
+    adminOperatorsSection: 'operators',
+    adminSettingsSection: 'settings'
+  };
+  const key = map[sectionId];
+  if (!key) return;
+  document.querySelectorAll('[data-admin-nav]').forEach((item) => {
+    item.classList.toggle('is-active', item.dataset.adminNav === key);
+  });
+}
+
+function renderDispatchContacts(contacts = [], connection = {}) {
+  if (!adminDispatchList) return;
+  adminDispatchConnection = connection || {};
+  const connected = connection.connected === true;
+  if (adminDispatchKicker) {
+    adminDispatchKicker.textContent = connected
+      ? `crm_contacts ${contacts.length ? 'connected' : 'connected · no signups yet'}`
+      : `crm_contacts unavailable${connection.reason ? ` · ${connection.reason}` : ''}`;
+  }
+  adminDispatchCount.textContent = connected ? String(contacts.length) : 'Unavailable';
+  if (!connected) {
+    adminDispatchList.innerHTML = '<div class="placeholder">crm_contacts is unavailable for this admin session.</div>';
+    return;
+  }
+  if (!contacts.length) {
+    adminDispatchList.innerHTML = '<div class="placeholder">No Dispatch signups yet.</div>';
+    return;
+  }
+  adminDispatchList.innerHTML = `
+    <div class="admin-dispatch-list">
+      ${contacts.map((contact) => `
+        <article class="admin-dispatch-row">
+          <div>
+            <span>Email</span>
+            <strong>${escapeHTML(contact.email || 'No email')}</strong>
+            <p>${escapeHTML(contact.page_hostname || 'No hostname')}</p>
+          </div>
+          <div>
+            <span>Source</span>
+            <strong>${escapeHTML(contact.source || contact.last_source || 'dispatch')}</strong>
+            <p>${escapeHTML(contact.segment || 'No segment')}</p>
+          </div>
+          <div>
+            <span>Subscribed</span>
+            <strong>${escapeHTML(formatTaskDate(contact.dispatch_subscribed_at || contact.created_at) || 'No date')}</strong>
+            <p>${contact.marketing_consent ? 'Marketing consent recorded' : 'Consent unavailable'}</p>
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  `;
+}
+
+function getReviewState(task = {}) {
+  const rawState = normalizeStatus(task.review_state || task.raw_payload?.review_state || task.raw_payload?.state);
+  const allowed = new Set([
+    'request_received',
+    'under_review',
+    'quote_preparation',
+    'quote_ready',
+    'quote_sent',
+    'awaiting_payment',
+    'payment_pending',
+    'quote_paid',
+    'workspace_active',
+    'execution_active',
+    'delivered'
+  ]);
+  if (allowed.has(rawState)) return rawState;
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  if (status === 'new') return 'request_received';
+  if (status === 'review_pending') return 'under_review';
+  if (status === 'quoted') return task.quote_amount ? 'quote_ready' : 'quote_preparation';
+  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting_payment';
+  if (paymentStatus === 'paid') return 'quote_paid';
+  if (status === 'workspace_active') return 'workspace_active';
+  if (['queued', 'in_progress', 'delivery_prep'].includes(status)) return 'execution_active';
+  if (status === 'delivered') return 'delivered';
+  return status || 'request_received';
+}
+
+function renderReviews(tasks = adminTasks) {
+  if (!adminReviewsList) return;
+  const reviewTasks = sortedTasks(tasks)
+    .filter((task) => !['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
+    .slice(0, 80);
+  if (!reviewTasks.length) {
+    adminReviewsList.innerHTML = '<div class="placeholder">No active review states yet.</div>';
+    return;
+  }
+  adminReviewsList.innerHTML = `
+    <div class="admin-review-list">
+      ${reviewTasks.map((task) => {
+        const state = getReviewState(task);
+        return `
+          <article class="admin-review-row">
+            <div>
+              <span>Review state</span>
+              <strong>${escapeHTML(state.replace(/_/g, ' '))}</strong>
+              <p>${escapeHTML(getTaskId(task))} · ${escapeHTML(task.name || task.email || 'Unknown client')}</p>
+            </div>
+            <div>
+              <span>Quote/payment</span>
+              <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Quote pending'}</strong>
+              <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</p>
+            </div>
+            <div>
+              <span>Review link</span>
+              <strong>${escapeHTML(task.task_id || task.id || 'No task id')}</strong>
+              <p><a href="https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}" target="_blank" rel="noopener noreferrer">Open review</a></p>
+            </div>
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function getWorkspaceStatus(task = {}) {
+  const status = normalizeStatus(task.workspace_status || task.raw_payload?.workspace_status || task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  if (status === 'workspace_active' || status === 'execution_active') return status;
+  if (paymentStatus === 'paid') return 'ready to unlock';
+  if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || normalizeStatus(task.status) === 'awaiting_payment') return 'locked · payment pending';
+  if (task.quote_amount || normalizeStatus(task.status) === 'quoted') return 'locked · quote pending';
+  return 'locked · review active';
+}
+
+function renderWorkspaceReadiness(tasks = adminTasks) {
+  if (!adminWorkspaceReadinessList) return;
+  const workspaceTasks = sortedTasks(tasks)
+    .filter((task) => !['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
+    .slice(0, 50);
+  if (!workspaceTasks.length) {
+    adminWorkspaceReadinessList.innerHTML = '<div class="placeholder">No workspace-linked asks yet.</div>';
+    return;
+  }
+  adminWorkspaceReadinessList.innerHTML = `
+    ${workspaceTasks.map((task) => {
+      const state = getReviewState(task);
+      const workspaceStatus = getWorkspaceStatus(task);
+      return `
+        <article class="admin-review-row">
+          <div>
+            <span>Task</span>
+            <strong>${escapeHTML(getTaskId(task))}</strong>
+            <p>${escapeHTML(task.name || task.email || 'Unknown client')}</p>
+          </div>
+          <div>
+            <span>Workspace status</span>
+            <strong>${escapeHTML(workspaceStatus)}</strong>
+            <p>Review: ${escapeHTML(state.replace(/_/g, ' '))}</p>
+          </div>
+          <div>
+            <span>Quote/payment</span>
+            <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Quote pending'}</strong>
+            <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</p>
+          </div>
+        </article>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderStatusPanels(status = adminSystemStatus) {
+  if (!status) return;
+  const integrations = status.integrations || {};
+  adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
+  adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Connected' : 'Not connected';
+  if (adminHeartbeatList) {
+    adminHeartbeatList.innerHTML = [
+      ['Last heartbeat', 'Unavailable', 'Heartbeat Phase 2 is not connected yet.'],
+      ['Telegram status', integrations.telegram ? 'Configured' : 'Not connected', 'Detected from server-side notification configuration.'],
+      ['Analytics status', integrations.analytics ? 'Connected' : 'Not connected', 'No analytics health feed is connected to Admin OS yet.'],
+      ['Speed Insights', integrations.speedInsights ? 'Connected' : 'Not connected', 'Speed Insights status is a placeholder in Phase 1.'],
+      ['Supabase', integrations.supabase ? 'Connected' : 'Not connected', 'Service-role backed admin APIs are configured server-side.']
+    ].map(([label, value, note]) => `
+      <div class="admin-status-item">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+        <p>${escapeHTML(note)}</p>
+      </div>
+    `).join('');
+  }
+  if (adminSettingsList) {
+    adminSettingsList.innerHTML = [
+      ['Admin auth method', status.auth?.method || 'n8n admin key', 'Current admin access uses a shared key verified by n8n.'],
+      ['Shared key warning', status.auth?.sharedKey ? 'Active' : 'Unavailable', 'Shared keys are operationally simple but should be rotated carefully.'],
+      ['Password reset', status.auth?.resetFlow ? 'Available' : 'Not available', 'No built-in admin password reset exists in the current flow.'],
+      ['Future auth', 'Supabase Auth + roles', 'Recommended future migration for individual operator/admin accountability.']
+    ].map(([label, value, note]) => `
+      <div class="admin-status-item">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+        <p>${escapeHTML(note)}</p>
+      </div>
+    `).join('');
+  }
+}
+
+async function loadDispatchContacts() {
+  if (!adminDispatchList) return;
+  try {
+    const data = await adminWorkspaceRequest({ action: 'list_dispatch' });
+    adminDispatchContacts = Array.isArray(data.contacts) ? data.contacts : [];
+    renderDispatchContacts(adminDispatchContacts, data.connection || {});
+    updateStats();
+  } catch (error) {
+    adminDispatchContacts = [];
+    renderDispatchContacts([], { connected: false, reason: 'admin request failed' });
+  }
+}
+
+async function loadSystemStatus() {
+  try {
+    const data = await adminWorkspaceRequest({ action: 'system_status' });
+    adminSystemStatus = data.status || null;
+    renderStatusPanels(adminSystemStatus);
+    updateStats();
+  } catch (error) {
+    adminSystemStatus = null;
+    if (adminHeartbeatList) adminHeartbeatList.innerHTML = '<div class="placeholder">System status unavailable.</div>';
+    if (adminSettingsList) adminSettingsList.innerHTML = '<div class="placeholder">Settings status unavailable.</div>';
+  }
+}
+
+function loadAdminOsPanels() {
+  renderReviews();
+  renderWorkspaceReadiness();
+  loadDispatchContacts();
+  loadSystemStatus();
+}
+
+document.querySelectorAll('[data-admin-nav]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const id = link.getAttribute('href')?.replace('#', '');
+    if (id) setSidebarActive(id);
+  });
+});
+
+if ('IntersectionObserver' in window) {
+  const observedSections = [
+    'adminOverviewSection',
+    'adminTasksSection',
+    'adminClientsSection',
+    'adminDispatchSection',
+    'adminReviewsSection',
+    'workspaceControlSection',
+    'adminHeartbeatSection',
+    'adminOperatorsSection',
+    'adminSettingsSection'
+  ]
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
+  const sidebarObserver = new IntersectionObserver((entries) => {
+    const active = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (active?.target?.id) setSidebarActive(active.target.id);
+  }, { rootMargin: '-120px 0px -55% 0px', threshold: [0.1, 0.25, 0.5] });
+  observedSections.forEach((section) => sidebarObserver.observe(section));
 }
 
 function renderClients(clients) {
@@ -3025,8 +3536,25 @@ function renderClientSection(title, clients, options = {}) {
   `;
 }
 
+function getClientTaskMatches(client = {}) {
+  const email = String(client.email || '').trim().toLowerCase();
+  const name = String(client.name || '').trim().toLowerCase();
+  if (!email && !name) return [];
+  return (adminTasks || []).filter((task) => {
+    const taskEmail = String(task.email || task.client_email || '').trim().toLowerCase();
+    const taskName = String(task.name || task.client || '').trim().toLowerCase();
+    return (email && taskEmail === email) || (name && taskName === name);
+  });
+}
+
 function renderClientRow(client) {
   const createdAt = formatTaskDate(client.created_at);
+  const matchingTasks = getClientTaskMatches(client);
+  const lastActivityAt = matchingTasks
+    .map((task) => task.updated_at || task.created_at)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || client.updated_at || client.created_at;
+  const source = client.source || client.last_source || matchingTasks[0]?.source || 'Unavailable';
   const actions = client.email ? getClientActions(client.status) : [];
   const group = getClientStatusGroup(client.status);
   const actionMarkup = actions.length ? `
@@ -3052,7 +3580,9 @@ function renderClientRow(client) {
         </div>
         <span class="admin-status-pill ${getStatusClass(client.status)}">${getClientStatusLabel(client.status)}</span>
       </div>
-      ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
+      <div class="admin-client-meta">
+        Source: ${escapeHTML(source)} · Asks: ${matchingTasks.length} · Last activity: ${escapeHTML(formatTaskDate(lastActivityAt) || createdAt || 'Unavailable')}
+      </div>
       ${actionMarkup}
     </article>
   `;
@@ -3395,7 +3925,15 @@ function renderTasks(tasks) {
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
     const quoteNote = task.quote_note ? `<div>${escapeHTML(task.quote_note)}</div>` : '';
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
-    const actions = task.id ? [...getTaskActions(task.status), { type: 'workspace-update', label: 'Post update' }] : [];
+    const workspaceIsActive = ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
+    const actions = task.id
+      ? [
+          { type: 'open-review', label: 'Open review' },
+          ...getTaskActions(task.status),
+          { type: 'workspace-update', label: 'Post update' },
+          ...(workspaceIsActive ? [{ type: 'open-workspace', label: 'Open workspace' }] : [])
+        ]
+      : [];
     if (task.id && isSaiUniversityBrandingTask(task) && !task.delivery_link) {
       actions.push({ type: 'send-branding', label: 'Send full branding link' });
     }
@@ -3591,8 +4129,10 @@ function focusOperationSection(target) {
     card.classList.toggle('is-active', card.dataset.targetSection === target);
   });
 
-  const section = [...document.querySelectorAll('[data-operation-section]')]
-    .find((element) => element.dataset.operationSection === target) || document.getElementById('adminTasksSection');
+  const section = document.getElementById(target)
+    || [...document.querySelectorAll('[data-operation-section]')]
+      .find((element) => element.dataset.operationSection === target)
+    || document.getElementById('adminTasksSection');
   if (!section) return;
   section.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
   section.classList.remove('is-highlighted');
@@ -3813,6 +4353,9 @@ async function loadTasks(options = {}) {
     adminTasks = sortedTasks(tasks);
     updateStats();
     renderTasks(adminTasks);
+    renderReviews(adminTasks);
+    renderWorkspaceReadiness(adminTasks);
+    if (adminClients.length) renderClients(adminClients);
     renderAdminActivity(adminTasks);
   } catch (error) {
     if (!options.silent || !adminTasks.length) {
@@ -3960,6 +4503,9 @@ function renderAdminTaskState(tasks) {
   adminTasks = sortedTasks(tasks);
   updateStats();
   renderTasks(adminTasks);
+  renderReviews(adminTasks);
+  renderWorkspaceReadiness(adminTasks);
+  if (adminClients.length) renderClients(adminClients);
   renderAdminActivity(adminTasks);
 }
 
@@ -4253,6 +4799,7 @@ function showAdminDashboard() {
   loadOperators();
   loadTasks();
   loadWorkspaceRecords();
+  loadAdminOsPanels();
   startAdminRealtime();
   startAdminTaskPolling();
 }
@@ -4518,6 +5065,21 @@ adminTasksList.addEventListener('click', async (e) => {
       message: 'Operational quote sent for review.',
       message_type: 'approval_request'
     }).catch(() => {});
+  }
+
+  if (button.dataset.action === 'open-review') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const state = getReviewState(task);
+    const reviewTaskId = task?.task_id || task?.taskId || task?.id || '';
+    window.open(`https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(reviewTaskId)}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (button.dataset.action === 'open-workspace') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const workspaceSlug = slugifyWorkspace(task?.company || task?.name || task?.email || '');
+    window.open(`https://portal.doneovernight.com/workspace/${encodeURIComponent(workspaceSlug)}`, '_blank', 'noopener,noreferrer');
+    return;
   }
 
   if (button.dataset.action === 'deliver') {

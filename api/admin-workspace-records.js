@@ -55,6 +55,55 @@ async function listWorkspaceRecords() {
   };
 }
 
+async function listDispatchContacts() {
+  const path = [
+    "crm_contacts?dispatch_subscribed=eq.true",
+    "select=id,email,source,last_source,page_hostname,segment,marketing_consent,marketing_consent_at,dispatch_subscribed,dispatch_subscribed_at,created_at,updated_at",
+    "order=dispatch_subscribed_at.desc",
+    "limit=200"
+  ].join("&");
+
+  try {
+    const rows = await supabaseFetch(path);
+    const contacts = Array.isArray(rows) ? rows : [];
+    return {
+      contacts,
+      connection: {
+        table: "crm_contacts",
+        connected: true,
+        status: contacts.length ? "connected" : "connected_empty"
+      }
+    };
+  } catch (error) {
+    return {
+      contacts: [],
+      connection: {
+        table: "crm_contacts",
+        connected: false,
+        status: "unavailable",
+        reason: error.statusCode ? `Supabase ${error.statusCode}` : "query_failed"
+      }
+    };
+  }
+}
+
+function getAdminSystemStatus() {
+  return {
+    auth: {
+      method: "n8n admin key",
+      sharedKey: true,
+      resetFlow: false
+    },
+    integrations: {
+      supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+      telegram: Boolean(process.env.OPERATOR_APPLY_TELEGRAM_WEBHOOK_URL || process.env.TASK_SUBMIT_WEBHOOK_URL),
+      analytics: false,
+      speedInsights: false,
+      heartbeat: false
+    }
+  };
+}
+
 async function safeSupabaseRows(path) {
   try {
     const rows = await supabaseFetch(path);
@@ -654,6 +703,15 @@ module.exports = async function handler(req, res) {
     if (action === "list_operators") {
       const operators = await listOperators();
       return send(res, 200, { success: true, operators });
+    }
+
+    if (action === "list_dispatch") {
+      const result = await listDispatchContacts();
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "system_status") {
+      return send(res, 200, { success: true, status: getAdminSystemStatus() });
     }
 
     if (action === "update_operator_status") {
