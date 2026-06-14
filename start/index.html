@@ -966,6 +966,9 @@
     .dispatch-message.is-success {
       color: rgba(139, 224, 173, 0.82);
     }
+    .dispatch-message.is-error {
+      color: rgba(255, 138, 138, 0.86);
+    }
     .footer {
       display: flex;
       align-items: center;
@@ -1793,27 +1796,79 @@
         if (event.key === "Escape" && sheet.classList.contains("is-visible")) hideDispatch();
       });
 
-      form.addEventListener("submit", (event) => {
+      function setDispatchMessage(text, state = "") {
+        message.classList.remove("is-success", "is-error");
+        if (state) message.classList.add(state);
+        message.textContent = text;
+      }
+
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!email.checkValidity()) {
           email.focus({ preventScroll: true });
-          message.classList.remove("is-success");
-          message.textContent = "Enter an email and we’ll prepare your Dispatch request.";
+          setDispatchMessage("Enter an email and we’ll prepare your Dispatch request.", "is-error");
           return;
         }
 
-        const subject = encodeURIComponent("DONEOVERNIGHT Dispatch");
-        const body = encodeURIComponent(`Please add ${email.value.trim()} to DONEOVERNIGHT Dispatch.`);
+        const submit = form.querySelector(".dispatch-submit");
+        const previousText = submit?.textContent || "Receive the Dispatch";
         hasShown = true;
         markSeen();
         window.trackEvent?.("Dispatch Intent", {
           source: "business_card_qr",
           category: "dispatch",
-          method: "mailto"
+          method: "api"
         });
-        message.classList.add("is-success");
-        message.textContent = "Dispatch request prepared. Send the email to join.";
-        window.location.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;
+
+        if (submit) {
+          submit.disabled = true;
+          submit.textContent = "Sending...";
+        }
+        setDispatchMessage("Saving your Dispatch request.");
+
+        try {
+          const now = new Date().toISOString();
+          const response = await fetch("/api/dispatch-subscribe", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              email: email.value.trim(),
+              source: "dispatch_popup",
+              page_hostname: window.location.hostname,
+              consent: true,
+              marketing_consent_at: now,
+              segment: "start"
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.success) {
+            throw new Error(data.code || "DISPATCH_SUBSCRIBE_FAILED");
+          }
+
+          window.trackEvent?.("Dispatch Submitted", {
+            source: "business_card_qr",
+            category: "dispatch",
+            page: "start"
+          });
+          setDispatchMessage("You’re on the Dispatch. No newsletter. No spam. Just useful ideas when there’s something worth sending.", "is-success");
+          form.reset();
+        } catch (error) {
+          window.trackEvent?.("Dispatch Failed", {
+            source: "business_card_qr",
+            category: "dispatch",
+            page: "start",
+            reason: error.message || "failed"
+          });
+          setDispatchMessage("Couldn’t save this yet. Try again or email ask@doneovernight.com.", "is-error");
+        } finally {
+          if (submit) {
+            submit.disabled = false;
+            submit.textContent = previousText;
+          }
+        }
       });
     })();
   </script>
