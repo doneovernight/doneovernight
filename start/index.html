@@ -24,11 +24,44 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
+    window.plausible = window.plausible || function() {
+      (window.plausible.q = window.plausible.q || []).push(arguments);
+    };
+    window.trackEvent = window.trackEvent || function(name, props) {
+      try {
+        if (!name || typeof window.plausible !== "function") return;
+        const safeProps = {};
+        Object.entries(props || {}).forEach(([key, value]) => {
+          if (value === undefined || value === null) return;
+          const safeKey = String(key).replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 40);
+          const safeValue = String(value).replace(/[\r\n\t]/g, " ").slice(0, 80);
+          if (!safeKey || /@/.test(safeValue)) return;
+          safeProps[safeKey] = safeValue;
+        });
+        window.plausible(name, Object.keys(safeProps).length ? { props: safeProps } : undefined);
+      } catch (error) {}
+    };
+  </script>
+  <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
+  <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
       const qrSignals = ["source", "utm_source", "ref", "qr"].map((key) => params.get(key)?.toLowerCase());
-      if (qrSignals.some((value) => value === "business_card_qr" || value === "qr" || value === "card")) {
+      const isQrVisitor = qrSignals.some((value) =>
+        value === "business_card_qr" ||
+        value === "qr" ||
+        value === "card" ||
+        value === "1" ||
+        value === "business-card" ||
+        value === "business_card"
+      );
+      if (isQrVisitor) {
         document.documentElement.classList.add("is-qr-visitor");
+        window.trackEvent?.("QR Visitor", {
+          source: "business_card_qr",
+          category: "qr",
+          page: "start"
+        });
       }
     })();
   </script>
@@ -1555,9 +1588,17 @@
         if (revealButton) revealButton.textContent = open ? "CLOSE" : "START";
       }
 
-      function revealIntake({ focus = false, scroll = true } = {}) {
+      function revealIntake({ focus = false, scroll = true, trigger = "start_button" } = {}) {
         if (!formCard) return;
+        const wasOpen = formCard.classList.contains("is-revealed");
         setIntakeState(true);
+        if (!wasOpen) {
+          window.trackEvent?.("Start Opened", {
+            source: "business_card_qr",
+            category: "start_intake",
+            trigger
+          });
+        }
         if (scroll) {
           window.setTimeout(() => formCard.scrollIntoView({ behavior: "smooth", block: "start" }), 90);
         }
@@ -1567,7 +1608,15 @@
       }
 
       function collapseIntake() {
+        const wasOpen = formCard?.classList.contains("is-revealed");
         setIntakeState(false);
+        if (wasOpen) {
+          window.trackEvent?.("Start Closed", {
+            source: "business_card_qr",
+            category: "start_intake",
+            trigger: "close_button"
+          });
+        }
         revealButton?.focus({ preventScroll: true });
         window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "smooth" }), 90);
       }
@@ -1615,7 +1664,7 @@
       revealButton?.addEventListener("click", toggleIntake);
 
       if (window.location.hash === "#task-intake") {
-        revealIntake({ focus: false, scroll: false });
+        revealIntake({ focus: false, scroll: false, trigger: "hash" });
       }
 
       form.addEventListener("submit", async (event) => {
@@ -1645,6 +1694,11 @@
           }
 
           const reference = taskReference(data);
+          window.trackEvent?.("Start Task Submitted", {
+            source: "business_card_qr",
+            category: "task",
+            page: "start"
+          });
           form.reset();
           setMessage(
             "Task received.",
@@ -1695,12 +1749,17 @@
         }
       }
 
-      function showDispatch() {
+      function showDispatch(trigger = "timer") {
         if (wasSeen() || sheet.classList.contains("is-visible")) return;
         hasShown = true;
         markSeen();
         sheet.classList.add("is-visible");
         sheet.setAttribute("aria-hidden", "false");
+        window.trackEvent?.("Dispatch Shown", {
+          source: "business_card_qr",
+          category: "dispatch",
+          trigger
+        });
       }
 
       function hideDispatch() {
@@ -1717,11 +1776,11 @@
       }
 
       function checkScrollTrigger() {
-        if (scrollProgress() >= 0.6) showDispatch();
+        if (scrollProgress() >= 0.6) showDispatch("scroll");
       }
 
       const delay = 25000 + Math.floor(Math.random() * 10000);
-      window.setTimeout(showDispatch, delay);
+      window.setTimeout(() => showDispatch("timer"), delay);
       window.addEventListener("scroll", checkScrollTrigger, { passive: true });
       close.addEventListener("click", hideDispatch);
       window.addEventListener("keydown", (event) => {
@@ -1741,6 +1800,11 @@
         const body = encodeURIComponent(`Please add ${email.value.trim()} to DONEOVERNIGHT Dispatch.`);
         hasShown = true;
         markSeen();
+        window.trackEvent?.("Dispatch Intent", {
+          source: "business_card_qr",
+          category: "dispatch",
+          method: "mailto"
+        });
         message.classList.add("is-success");
         message.textContent = "Dispatch request prepared. Send the email to join.";
         window.location.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;

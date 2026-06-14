@@ -19,6 +19,26 @@
   <meta name="twitter:title" content="Task Intake | DONEOVERNIGHT">
   <meta name="twitter:description" content="Submit a focused DONEOVERNIGHT task for overnight execution support, from launch fixes and automations to client-ready deliverables.">
   <meta name="twitter:image" content="https://doneovernight.com/brand/doneovernight-neutral.png">
+  <script>
+    window.plausible = window.plausible || function() {
+      (window.plausible.q = window.plausible.q || []).push(arguments);
+    };
+    window.trackEvent = window.trackEvent || function(name, props) {
+      try {
+        if (!name || typeof window.plausible !== "function") return;
+        const safeProps = {};
+        Object.entries(props || {}).forEach(([key, value]) => {
+          if (value === undefined || value === null) return;
+          const safeKey = String(key).replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 40);
+          const safeValue = String(value).replace(/[\r\n\t]/g, " ").slice(0, 80);
+          if (!safeKey || /@/.test(safeValue)) return;
+          safeProps[safeKey] = safeValue;
+        });
+        window.plausible(name, Object.keys(safeProps).length ? { props: safeProps } : undefined);
+      } catch (error) {}
+    };
+  </script>
+  <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
   <link rel="icon" type="image/png" href="../favicon.png">
   <style>
     :root {
@@ -161,6 +181,12 @@
       width: clamp(142px, 15vw, 164px);
       height: auto;
       object-fit: contain;
+    }
+
+    .task-logo img {
+      display: block;
+      width: 100%;
+      height: auto;
     }
 
     .task-status {
@@ -1604,7 +1630,7 @@
 <body>
   <main class="task-page">
     <header class="task-header" aria-label="DONEOVERNIGHT task intake">
-      <a href="../" aria-label="DONEOVERNIGHT home">
+      <a class="task-logo" href="../" aria-label="DONEOVERNIGHT home">
         <img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
       </a>
       <div class="task-status" aria-label="Studio online">
@@ -1953,6 +1979,11 @@
           const data = await response.json();
           if (!response.ok) throw new Error(data?.code || "Task intake failed");
           if (!data?.success) throw new Error("Task intake failed");
+          window.trackEvent?.("Task Submitted", {
+            source: "task_intake",
+            category: "task",
+            page: "task"
+          });
           const reviewUrl = buildReviewUrl(data, payload);
           sessionStorage.setItem("doneovernight:lastTask", JSON.stringify({
             taskId: data.taskId,

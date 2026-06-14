@@ -19,6 +19,26 @@
 <meta name="twitter:title" content="DONEOVERNIGHT — Submit before bed. Wake up to results.">
 <meta name="twitter:description" content="An overnight execution service for websites, automations, brand systems, funnels, and operational fixes.">
 <meta name="twitter:image" content="https://doneovernight.com/brand/doneovernight-neutral.png">
+<script>
+window.plausible = window.plausible || function() {
+  (window.plausible.q = window.plausible.q || []).push(arguments);
+};
+window.trackEvent = window.trackEvent || function(name, props) {
+  try {
+    if (!name || typeof window.plausible !== "function") return;
+    const safeProps = {};
+    Object.entries(props || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      const safeKey = String(key).replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 40);
+      const safeValue = String(value).replace(/[\r\n\t]/g, " ").slice(0, 80);
+      if (!safeKey || /@/.test(safeValue)) return;
+      safeProps[safeKey] = safeValue;
+    });
+    window.plausible(name, Object.keys(safeProps).length ? { props: safeProps } : undefined);
+  } catch (error) {}
+};
+</script>
+<script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -4526,6 +4546,11 @@ if (window.location.hash === '#cta') {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) throw new Error(data?.code || 'Task intake request failed');
+      window.trackEvent?.('Task Submitted', {
+        source: 'homepage_cta',
+        category: 'task',
+        page: 'home'
+      });
       renderConfirmation();
       form.querySelector('.intake-confirmation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
