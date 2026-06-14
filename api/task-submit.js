@@ -13,9 +13,6 @@ function buildClientReviewUrl(task) {
   reviewUrl.searchParams.set("state", "request_received");
   if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
   if (task?.createdAt) reviewUrl.searchParams.set("submitted", task.createdAt);
-  if (task?.clientBudget || task?.rawPayload?.client_budget || task?.rawPayload?.budget) {
-    reviewUrl.searchParams.set("budget_present", "true");
-  }
   return reviewUrl.toString();
 }
 
@@ -42,7 +39,15 @@ async function notifyOperations(task) {
     task.preferredLanguage ||
     task.rawPayload?.preferred_language ||
     "en";
-  const clientBudget = task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget || "";
+  const clientBudget =
+    task.clientBudget ||
+    task.rawPayload?.client_budget ||
+    task.rawPayload?.clientBudget ||
+    task.rawPayload?.budget ||
+    task.rawPayload?.project_budget ||
+    task.rawPayload?.estimatedBudget ||
+    "";
+  const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
 
   try {
@@ -74,11 +79,27 @@ async function notifyOperations(task) {
         client_budget: clientBudget,
         clientBudget,
         client_submitted_budget: clientBudget,
+        submitted_budget: clientBudget,
+        user_submitted_budget: clientBudget,
+        customer_budget: clientBudget,
         estimatedBudget: clientBudget,
+        estimated_budget: clientBudget,
         project_budget: clientBudget,
-        internal_suggested_price: null,
-        suggested_price: null,
-        internal_estimate: null,
+        projectBudget: clientBudget,
+        internal_suggested_price: suggestedPrice || null,
+        suggested_price: suggestedPrice || null,
+        internal_estimate: suggestedPrice || null,
+        client: {
+          name: task.name,
+          email: task.email,
+          budget: clientBudget,
+          client_budget: clientBudget,
+          deadline: task.deadline
+        },
+        operator: {
+          client_budget: clientBudget,
+          suggested_price: suggestedPrice || null
+        },
         priority: task.priority,
         source: task.source,
         intakeVersion: task.intakeVersion,

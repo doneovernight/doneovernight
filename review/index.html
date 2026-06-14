@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Review Active | DONEOVERNIGHT</title>
-  <meta name="description" content="Track the DONEOVERNIGHT review status for your submitted request.">
+  <title>Request Under Review | DONEOVERNIGHT</title>
+  <meta name="description" content="DONEOVERNIGHT request receipt and review status.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://portal.doneovernight.com/review">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -14,18 +14,13 @@
   <style>
     :root {
       --bg: #040506;
-      --panel: rgba(12, 13, 15, 0.74);
-      --panel-strong: rgba(18, 18, 20, 0.84);
+      --panel: rgba(14, 15, 17, 0.72);
       --ink: rgba(248, 244, 236, 0.94);
-      --ink-dim: rgba(248, 244, 236, 0.62);
-      --ink-faint: rgba(248, 244, 236, 0.38);
-      --line: rgba(248, 244, 236, 0.105);
-      --line-strong: rgba(233, 196, 138, 0.24);
+      --ink-dim: rgba(248, 244, 236, 0.64);
+      --ink-faint: rgba(248, 244, 236, 0.42);
+      --line: rgba(248, 244, 236, 0.11);
       --gold: #e9c48a;
-      --gold-soft: rgba(233, 196, 138, 0.18);
       --green: #93e3ae;
-      --green-soft: rgba(147, 227, 174, 0.16);
-      --shadow: 0 32px 110px rgba(0, 0, 0, 0.52);
       --sans: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --serif: "Instrument Serif", Georgia, serif;
       --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -46,105 +41,79 @@
       margin: 0;
       overflow-x: hidden;
       background:
-        radial-gradient(ellipse 900px 680px at 50% -6%, rgba(233, 196, 138, 0.11), transparent 62%),
-        radial-gradient(ellipse 620px 440px at 7% 34%, rgba(82, 78, 126, 0.16), transparent 66%),
-        radial-gradient(ellipse 820px 560px at 92% 80%, rgba(233, 196, 138, 0.07), transparent 70%),
+        radial-gradient(ellipse 820px 540px at 50% -12%, rgba(233, 196, 138, 0.12), transparent 66%),
+        radial-gradient(ellipse 620px 420px at 10% 82%, rgba(147, 227, 174, 0.07), transparent 70%),
         #040506;
       color: var(--ink);
       font-family: var(--sans);
     }
 
-    body::before,
-    body::after {
+    body::before {
       position: fixed;
       inset: 0;
       z-index: 0;
       pointer-events: none;
+      opacity: 0.32;
+      background-image:
+        radial-gradient(1px 1px at 13% 18%, rgba(255,255,255,0.82), transparent),
+        radial-gradient(1px 1px at 37% 11%, rgba(255,238,208,0.78), transparent),
+        radial-gradient(1px 1px at 62% 25%, rgba(255,255,255,0.72), transparent),
+        radial-gradient(1px 1px at 84% 14%, rgba(255,255,255,0.76), transparent),
+        radial-gradient(1px 1px at 76% 74%, rgba(255,238,208,0.68), transparent);
       content: "";
     }
 
-    body::before {
-      opacity: 0.34;
-      background-image:
-        radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.9), transparent),
-        radial-gradient(0.8px 0.8px at 36% 11%, rgba(255,238,208,0.9), transparent),
-        radial-gradient(1px 1px at 58% 24%, rgba(255,255,255,0.8), transparent),
-        radial-gradient(1.1px 1.1px at 84% 13%, rgba(255,255,255,0.9), transparent),
-        radial-gradient(0.9px 0.9px at 18% 56%, rgba(255,238,208,0.8), transparent),
-        radial-gradient(1px 1px at 76% 54%, rgba(255,255,255,0.72), transparent),
-        radial-gradient(0.8px 0.8px at 67% 82%, rgba(255,255,255,0.78), transparent);
-    }
-
-    body::after {
-      opacity: 0.24;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.024), transparent 28%),
-        linear-gradient(90deg, transparent, rgba(233,196,138,0.06), transparent);
-      background-size: 100% 100%, 240% 100%;
-      background-position: center, -120% 0;
-      mix-blend-mode: soft-light;
-      animation: signalDrift 32s ease-in-out infinite;
-    }
-
-    a { color: inherit; text-decoration: none; }
-    button, input { font: inherit; }
+    a { color: inherit; }
 
     .page {
       position: relative;
       z-index: 1;
-      width: min(1160px, calc(100% - 36px));
+      display: grid;
+      align-content: space-between;
+      width: min(860px, calc(100% - 36px));
       min-height: 100vh;
       margin: 0 auto;
-      padding: clamp(20px, 3vw, 34px) 0 clamp(36px, 6vw, 74px);
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 6px 0 26px;
+      padding: clamp(22px, 4vw, 42px) 0 clamp(28px, 5vw, 54px);
     }
 
     .brand {
       display: inline-flex;
-      align-items: center;
-      min-width: 0;
+      width: fit-content;
       line-height: 0;
     }
 
     .brand img {
-      width: clamp(158px, 26vw, 218px);
+      width: clamp(168px, 34vw, 226px);
       max-width: 100%;
       height: auto;
-      filter: drop-shadow(0 12px 28px rgba(0,0,0,0.45));
+      filter: drop-shadow(0 14px 30px rgba(0,0,0,0.44));
     }
 
-    .top-signal {
+    .receipt {
+      width: 100%;
+      margin: clamp(54px, 12vh, 118px) 0 clamp(42px, 8vh, 78px);
+      padding: clamp(24px, 5vw, 44px);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.024)),
+        var(--panel);
+      box-shadow: 0 34px 110px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+    }
+
+    .eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      min-height: 34px;
-      padding: 0 12px;
-      border: 1px solid rgba(147,227,174,0.18);
-      border-radius: 999px;
-      background: rgba(147,227,174,0.055);
-      color: rgba(147,227,174,0.9);
+      margin: 0 0 18px;
+      color: var(--gold);
       font-family: var(--mono);
       font-size: 10px;
       font-weight: 600;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .state-fade {
-      transition: opacity 420ms ease, transform 420ms ease, color 420ms ease;
-    }
-
-    .state-fade.is-shifting {
-      opacity: 0.46;
-      transform: translateY(2px);
     }
 
     .dot {
@@ -152,122 +121,43 @@
       height: 7px;
       border-radius: 999px;
       background: var(--green);
-      box-shadow: 0 0 18px rgba(147,227,174,0.65);
-      animation: livePulse 2.4s ease-in-out infinite;
-      flex: 0 0 auto;
-    }
-
-    .hero {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.8fr);
-      gap: clamp(28px, 6vw, 82px);
-      align-items: center;
-      min-height: clamp(560px, 72vh, 760px);
-      padding: clamp(28px, 5vw, 58px) 0 clamp(32px, 6vw, 72px);
-    }
-
-    .hero::before {
-      position: absolute;
-      inset: 5% 8% auto auto;
-      width: min(56vw, 640px);
-      height: min(56vw, 640px);
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(233,196,138,0.09), transparent 64%);
-      filter: blur(10px);
-      content: "";
-      pointer-events: none;
-    }
-
-    .hero-copy,
-    .review-card {
-      position: relative;
-      z-index: 1;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 11px;
-      margin: 0 0 18px;
-      color: var(--gold);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.19em;
-      text-transform: uppercase;
-    }
-
-    .eyebrow .dot {
-      width: 8px;
-      height: 8px;
+      box-shadow: 0 0 18px rgba(147, 227, 174, 0.62);
+      animation: pulse 2.6s ease-in-out infinite;
     }
 
     h1 {
-      max-width: 11ch;
+      max-width: 12ch;
       margin: 0;
       font-family: var(--serif);
-      font-size: clamp(3.2rem, 9vw, 7.8rem);
+      font-size: clamp(3.2rem, 11vw, 7.4rem);
       font-weight: 400;
-      line-height: 0.91;
+      line-height: 0.93;
       letter-spacing: -0.045em;
       text-wrap: balance;
     }
 
-    .hero-text {
-      max-width: 590px;
-      margin: 26px 0 0;
+    .copy {
+      max-width: 620px;
+      margin: 24px 0 0;
       color: var(--ink-dim);
-      font-size: clamp(1rem, 1.6vw, 1.22rem);
-      font-weight: 400;
+      font-size: clamp(1rem, 1.8vw, 1.18rem);
       line-height: 1.7;
     }
 
-    .reviewing-context {
-      display: none;
-      max-width: 620px;
-      margin: 20px 0 0;
-      border-left: 1px solid rgba(233,196,138,0.34);
-      padding: 2px 0 2px 16px;
-      color: rgba(248,244,236,0.72);
-      font-size: clamp(0.95rem, 1.25vw, 1.08rem);
-      line-height: 1.55;
-    }
-
-    .reviewing-context.is-visible {
-      display: block;
-      animation: softRise 480ms ease both;
-    }
-
-    .reviewing-context span:first-child {
-      display: block;
-      margin-bottom: 6px;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-    }
-
-    .reviewing-context strong {
-      color: rgba(248,244,236,0.9);
-      font-weight: 600;
-    }
-
-    .system-row {
+    .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 32px;
+      margin-top: 30px;
     }
 
-    .signal-pill {
+    .chip {
       display: inline-flex;
       align-items: center;
       gap: 9px;
       min-height: 38px;
       padding: 0 13px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(248,244,236,0.12);
       border-radius: 999px;
       background: rgba(255,255,255,0.035);
       color: rgba(248,244,236,0.66);
@@ -275,1055 +165,150 @@
       font-size: 10px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      transition: border-color 420ms ease, background 420ms ease, color 420ms ease, box-shadow 420ms ease;
     }
 
-    .signal-pill::before {
+    .chip::before {
       width: 5px;
       height: 5px;
       border-radius: 999px;
       background: var(--gold);
-      box-shadow: 0 0 14px rgba(233,196,138,0.42);
+      box-shadow: 0 0 14px rgba(233,196,138,0.4);
       content: "";
-      transition: background 420ms ease, box-shadow 420ms ease;
     }
 
-    .signal-pill.is-live {
-      border-color: rgba(147,227,174,0.22);
+    .chip.is-complete {
+      border-color: rgba(147,227,174,0.18);
       background: rgba(147,227,174,0.055);
-      color: rgba(248,244,236,0.8);
     }
 
-    .signal-pill.is-live::before {
+    .chip.is-complete::before {
       background: var(--green);
-      box-shadow: 0 0 16px rgba(147,227,174,0.52);
-      animation: livePulse 2.7s ease-in-out infinite;
+      box-shadow: 0 0 16px rgba(147,227,174,0.48);
     }
 
-    .glass {
-      border: 1px solid var(--line);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025)),
-        var(--panel);
-      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08);
-      backdrop-filter: blur(22px);
-      -webkit-backdrop-filter: blur(22px);
-    }
-
-    .review-card {
-      padding: clamp(22px, 4vw, 34px);
-      border-radius: 26px;
-      overflow: hidden;
-    }
-
-    .review-card::before {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 360px 220px at 74% 0%, rgba(233,196,138,0.14), transparent 68%),
-        linear-gradient(120deg, transparent, rgba(233,196,138,0.045), transparent);
-      opacity: 0.9;
-      content: "";
-      pointer-events: none;
-    }
-
-    .card-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    .card-title {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 28px;
-    }
-
-    .card-title h2,
-    .section-title h2 {
-      margin: 0;
-      font-family: var(--serif);
-      font-size: clamp(1.85rem, 3vw, 2.45rem);
-      font-weight: 400;
-      letter-spacing: -0.026em;
-      line-height: 1.05;
-    }
-
-    .review-window {
-      flex: 0 0 auto;
-      color: var(--gold);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .status-stack {
-      display: grid;
-      gap: 12px;
-    }
-
-    .review-step {
-      position: relative;
-      display: grid;
-      grid-template-columns: 28px minmax(0, 1fr);
-      gap: 13px;
-      align-items: center;
-      min-height: 58px;
-      padding: 13px 14px;
-      border: 1px solid rgba(255,255,255,0.075);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.035);
-      color: var(--ink-dim);
-      transition: border-color 480ms ease, background 480ms ease, color 480ms ease, box-shadow 480ms ease, opacity 480ms ease;
-    }
-
-    .review-step.is-complete {
-      color: rgba(248,244,236,0.78);
-      border-color: rgba(147,227,174,0.13);
-      background: rgba(147,227,174,0.045);
-    }
-
-    .review-step.is-active {
-      color: var(--ink);
-      border-color: rgba(233,196,138,0.24);
+    .chip.is-active {
+      border-color: rgba(233,196,138,0.28);
       background: rgba(233,196,138,0.07);
-      box-shadow: inset 0 0 0 1px rgba(233,196,138,0.045), 0 18px 46px rgba(0,0,0,0.24);
-      animation: quietFloat 4.8s ease-in-out infinite;
+      color: var(--ink);
     }
 
-    .review-step.is-standby {
-      opacity: 0.72;
-    }
-
-    .step-mark {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 999px;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 12px;
-      transition: border-color 480ms ease, background 480ms ease, color 480ms ease, box-shadow 480ms ease;
-    }
-
-    .is-complete .step-mark {
-      border-color: rgba(147,227,174,0.28);
-      color: var(--green);
-      background: rgba(147,227,174,0.07);
-    }
-
-    .is-active .step-mark {
-      border-color: rgba(233,196,138,0.42);
-      color: var(--gold);
-      box-shadow: 0 0 22px rgba(233,196,138,0.19);
-    }
-
-    .step-copy strong {
-      display: block;
-      color: inherit;
-      font-size: 0.92rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .step-copy span {
-      display: block;
-      margin-top: 3px;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 0.8fr 1.2fr;
-      gap: 18px;
-      align-items: start;
-      margin-top: -8px;
-    }
-
-    .panel {
-      position: relative;
-      padding: clamp(20px, 3vw, 28px);
-      border-radius: 24px;
-    }
-
-    .section-title {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .section-kicker {
-      margin: 5px 0 0;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-    }
-
-    .snapshot-list {
-      display: grid;
-      gap: 1px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.075);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.04);
-    }
-
-    .snapshot-row {
-      display: grid;
-      grid-template-columns: 108px minmax(0, 1fr);
-      gap: 14px;
-      min-height: 54px;
-      align-items: center;
-      padding: 14px;
-      background: rgba(0,0,0,0.16);
-    }
-
-    .snapshot-row span:first-child {
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.11em;
-      text-transform: uppercase;
-    }
-
-    .snapshot-row span:last-child {
-      min-width: 0;
-      overflow-wrap: anywhere;
-      color: rgba(248,244,236,0.79);
-      font-size: 0.92rem;
-      line-height: 1.35;
+    .chip.is-active::before {
+      animation: pulse 2.4s ease-in-out infinite;
     }
 
     .timeline {
       display: grid;
-      grid-template-columns: repeat(6, minmax(96px, 1fr));
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      scrollbar-width: none;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 28px;
     }
 
-    .timeline::-webkit-scrollbar {
-      display: none;
-    }
-
-    .timeline-item {
-      position: relative;
-      min-height: 126px;
-      padding: 13px 11px;
-      border: 1px solid rgba(255,255,255,0.075);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.033);
-      color: var(--ink-faint);
-      overflow: hidden;
+    .step {
       min-width: 0;
-      transition: border-color 480ms ease, background 480ms ease, color 480ms ease, box-shadow 480ms ease, opacity 480ms ease;
+      min-height: 104px;
+      padding: 15px;
+      border: 1px solid rgba(248,244,236,0.1);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.18);
+      color: var(--ink-faint);
     }
 
-    .timeline-item.is-complete {
-      color: rgba(248,244,236,0.58);
-      border-color: rgba(147,227,174,0.14);
-      background: rgba(147,227,174,0.035);
+    .step.is-complete {
+      border-color: rgba(147,227,174,0.16);
+      color: rgba(248,244,236,0.62);
     }
 
-    .timeline-item.is-active {
+    .step.is-active {
       border-color: rgba(233,196,138,0.28);
-      background: rgba(233,196,138,0.07);
+      background: rgba(233,196,138,0.065);
       color: var(--ink);
-      box-shadow: inset 0 0 0 1px rgba(233,196,138,0.035), 0 16px 42px rgba(0,0,0,0.22);
+      box-shadow: inset 0 0 0 1px rgba(233,196,138,0.035), 0 18px 44px rgba(0,0,0,0.24);
     }
 
-    .timeline-item.is-active::after {
-      position: absolute;
-      inset: auto 10px 9px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(233,196,138,0.85), transparent);
-      content: "";
-      animation: lineScan 2.8s ease-in-out infinite;
-    }
-
-    .timeline-index {
+    .step-index {
       display: block;
       margin-bottom: 28px;
       color: var(--gold);
       font-family: var(--mono);
       font-size: 10px;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.14em;
     }
 
-    .timeline-label {
+    .step-label {
       display: block;
-      color: inherit;
-      font-size: 0.86rem;
-      font-weight: 600;
-      line-height: 1.25;
-      overflow-wrap: break-word;
-    }
-
-    .runtime-feed {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 18px;
-    }
-
-    .runtime-feed span {
-      min-width: 0;
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.075);
-      border-radius: 16px;
-      background: rgba(0,0,0,0.14);
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      line-height: 1.45;
-      text-transform: uppercase;
-      transition: border-color 420ms ease, background 420ms ease, color 420ms ease, box-shadow 420ms ease;
-    }
-
-    .runtime-feed span.is-live {
-      border-color: rgba(233,196,138,0.18);
-      background: rgba(233,196,138,0.045);
-      color: rgba(248,244,236,0.66);
-      box-shadow: inset 0 0 0 1px rgba(233,196,138,0.025);
-    }
-
-    .assignment-layer {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(0, 0.88fr) minmax(280px, 0.48fr);
-      gap: clamp(18px, 4vw, 38px);
-      align-items: stretch;
-      margin-top: 18px;
-      padding: clamp(24px, 5vw, 40px);
-      border-radius: 30px;
-      overflow: hidden;
-    }
-
-    .assignment-layer::before {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 560px 260px at 12% 0%, rgba(147,227,174,0.08), transparent 68%),
-        radial-gradient(ellipse 460px 240px at 88% 18%, rgba(233,196,138,0.11), transparent 70%),
-        linear-gradient(118deg, rgba(255,255,255,0.022), transparent 48%, rgba(233,196,138,0.035));
-      content: "";
-      pointer-events: none;
-    }
-
-    .assignment-primary,
-    .assignment-status-panel {
-      position: relative;
-      z-index: 1;
-      min-width: 0;
-    }
-
-    .assignment-primary {
-      display: grid;
-      align-content: space-between;
-      gap: 28px;
-      min-height: 260px;
-    }
-
-    .assignment-kicker {
-      margin-bottom: 12px;
-    }
-
-    .assignment-name {
-      margin: 0;
-      font-family: var(--serif);
-      font-size: clamp(2.5rem, 5.6vw, 5.4rem);
-      font-weight: 400;
-      line-height: 0.92;
-      letter-spacing: -0.045em;
-      overflow-wrap: anywhere;
-    }
-
-    .assignment-role {
-      max-width: 54ch;
-      margin: 18px 0 0;
-      color: var(--ink-dim);
-      font-size: clamp(0.98rem, 1.5vw, 1.14rem);
-      line-height: 1.62;
-    }
-
-    .assignment-signal-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .assignment-signal {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      min-height: 36px;
-      padding: 0 12px;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 999px;
-      background: rgba(0,0,0,0.16);
-      color: rgba(248,244,236,0.58);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: border-color 420ms ease, background 420ms ease, color 420ms ease, box-shadow 420ms ease;
-    }
-
-    .assignment-signal::before {
-      width: 5px;
-      height: 5px;
-      border-radius: 999px;
-      background: var(--gold);
-      box-shadow: 0 0 14px rgba(233,196,138,0.34);
-      content: "";
-      flex: 0 0 auto;
-    }
-
-    .assignment-signal.is-live {
-      border-color: rgba(147,227,174,0.2);
-      background: rgba(147,227,174,0.055);
-      color: rgba(248,244,236,0.74);
-    }
-
-    .assignment-signal.is-live::before {
-      background: var(--green);
-      box-shadow: 0 0 16px rgba(147,227,174,0.48);
-      animation: livePulse 2.8s ease-in-out infinite;
-    }
-
-    .assignment-status-panel {
-      display: grid;
-      gap: 10px;
-      padding: clamp(18px, 3vw, 24px);
-      border: 1px solid rgba(233,196,138,0.15);
-      border-radius: 24px;
-      background:
-        radial-gradient(ellipse 260px 180px at 50% 0%, rgba(233,196,138,0.08), transparent 68%),
-        rgba(0,0,0,0.18);
-    }
-
-    .assignment-row {
-      display: grid;
-      grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
-      gap: 12px;
-      align-items: center;
-      min-height: 48px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-    }
-
-    .assignment-row:last-child {
-      padding-bottom: 0;
-      border-bottom: 0;
-    }
-
-    .assignment-row span:first-child {
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .assignment-row span:last-child {
-      min-width: 0;
-      color: rgba(248,244,236,0.78);
       font-size: 0.95rem;
       font-weight: 600;
-      line-height: 1.3;
-      text-align: right;
-      overflow-wrap: anywhere;
+      line-height: 1.2;
     }
 
-    .quote-layer {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(280px, 0.48fr);
-      gap: clamp(18px, 4vw, 42px);
-      align-items: stretch;
-      margin-top: 18px;
-      padding: clamp(24px, 5vw, 42px);
-      border-radius: 30px;
-      overflow: hidden;
-      opacity: 0;
-      max-height: 0;
-      transform: translateY(18px);
-      pointer-events: none;
-      transition: opacity 620ms ease, transform 620ms ease, max-height 620ms ease, border-color 620ms ease, box-shadow 620ms ease;
-    }
-
-    .quote-layer.is-visible {
-      opacity: 1;
-      max-height: 900px;
-      transform: translateY(0);
-      pointer-events: auto;
-      border-color: rgba(233,196,138,0.23);
-      box-shadow: 0 34px 120px rgba(0,0,0,0.56), 0 0 70px rgba(233,196,138,0.07), inset 0 1px 0 rgba(255,255,255,0.08);
-    }
-
-    .quote-layer::before {
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 520px 260px at 80% 10%, rgba(233,196,138,0.16), transparent 70%),
-        linear-gradient(115deg, rgba(233,196,138,0.035), transparent 44%, rgba(147,227,174,0.035));
-      opacity: 0.86;
-      content: "";
-      pointer-events: none;
-    }
-
-    .quote-main,
-    .quote-action-panel {
-      position: relative;
-      z-index: 1;
-    }
-
-    .quote-main {
-      display: grid;
-      gap: 22px;
-    }
-
-    .quote-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      align-items: flex-start;
-    }
-
-    .quote-head h2 {
-      margin: 0;
-      font-family: var(--serif);
-      font-size: clamp(2.3rem, 5.2vw, 4.35rem);
-      font-weight: 400;
-      line-height: 0.94;
-      letter-spacing: -0.04em;
-    }
-
-    .quote-amount {
-      color: var(--gold);
-      font-family: var(--serif);
-      font-size: clamp(2.6rem, 6vw, 5rem);
-      line-height: 0.9;
-      letter-spacing: -0.04em;
-      text-shadow: 0 0 34px rgba(233,196,138,0.12);
-      white-space: nowrap;
-    }
-
-    .quote-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .quote-metric {
-      min-width: 0;
-      min-height: 82px;
-      padding: 15px;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 18px;
-      background: rgba(0,0,0,0.18);
-    }
-
-    .quote-metric span {
-      display: block;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .quote-metric strong {
-      display: block;
-      margin-top: 12px;
-      color: rgba(248,244,236,0.88);
-      font-size: 1rem;
-      font-weight: 600;
-      line-height: 1.25;
-    }
-
-    .included-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px 14px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .included-list li {
-      display: flex;
-      gap: 9px;
-      align-items: center;
-      min-width: 0;
-      color: rgba(248,244,236,0.72);
-      font-size: 0.94rem;
-      line-height: 1.35;
-    }
-
-    .included-list li::before {
-      width: 5px;
-      height: 5px;
+    .quote-cta {
+      display: none;
+      width: fit-content;
+      margin-top: 24px;
+      padding: 13px 18px;
+      border: 1px solid rgba(233,196,138,0.38);
       border-radius: 999px;
-      background: var(--gold);
-      box-shadow: 0 0 14px rgba(233,196,138,0.38);
-      content: "";
-      flex: 0 0 auto;
-    }
-
-    .quote-action-panel {
-      display: grid;
-      align-content: space-between;
-      gap: 18px;
-      min-height: 100%;
-      padding: clamp(18px, 3vw, 24px);
-      border: 1px solid rgba(233,196,138,0.16);
-      border-radius: 24px;
-      background:
-        radial-gradient(ellipse 260px 180px at 50% 0%, rgba(233,196,138,0.1), transparent 68%),
-        rgba(0,0,0,0.18);
-    }
-
-    .quote-meta {
-      display: grid;
-      gap: 10px;
-    }
-
-    .quote-meta span {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      min-height: 38px;
-      padding: 0 0 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .quote-meta strong {
-      color: rgba(248,244,236,0.76);
-      font-weight: 500;
-      text-align: right;
-    }
-
-    .approval-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 54px;
-      padding: 0 18px;
-      border: 1px solid rgba(233,196,138,0.48);
-      border-radius: 999px;
-      background:
-        radial-gradient(circle at 50% 0%, rgba(233,196,138,0.28), transparent 66%),
-        rgba(233,196,138,0.12);
       color: var(--gold);
       font-family: var(--mono);
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.14em;
-      text-transform: uppercase;
-      box-shadow: 0 0 34px rgba(233,196,138,0.13), inset 0 0 0 1px rgba(233,196,138,0.08);
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 300ms ease, border-color 300ms ease, background 300ms ease, color 300ms ease;
-      animation: approvalBreath 4.4s ease-in-out infinite;
-    }
-
-    .approval-cta:hover {
-      transform: translateY(-1px);
-      border-color: rgba(233,196,138,0.66);
-      box-shadow: 0 0 46px rgba(233,196,138,0.18), inset 0 0 0 1px rgba(233,196,138,0.1);
-    }
-
-    .approval-cta.is-approved {
-      border-color: rgba(147,227,174,0.42);
-      background:
-        radial-gradient(circle at 50% 0%, rgba(147,227,174,0.2), transparent 66%),
-        rgba(147,227,174,0.09);
-      color: var(--green);
-      box-shadow: 0 0 42px rgba(147,227,174,0.11), inset 0 0 0 1px rgba(147,227,174,0.07);
-      animation: none;
-    }
-
-    .approval-cta:disabled {
-      cursor: default;
-    }
-
-    .approval-note {
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.1em;
-      line-height: 1.55;
-      text-align: center;
+      text-decoration: none;
       text-transform: uppercase;
     }
 
-    .preferences {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
-      align-items: center;
-      margin-top: 18px;
-      border-color: rgba(233,196,138,0.17);
-      background:
-        radial-gradient(ellipse 500px 220px at 100% 0%, rgba(233,196,138,0.11), transparent 68%),
-        rgba(255,255,255,0.035);
-    }
-
-    .pref-copy p {
-      max-width: 46ch;
-      margin: 8px 0 0;
-      color: var(--ink-dim);
-      font-size: 0.95rem;
-      line-height: 1.55;
-    }
-
-    .pref-options {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    .pref-check {
-      position: relative;
+    .quote-cta.is-visible {
       display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      min-height: 42px;
-      padding: 0 13px;
-      border: 1px solid rgba(255,255,255,0.105);
-      border-radius: 999px;
-      background: rgba(0,0,0,0.2);
-      color: rgba(248,244,236,0.76);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.11em;
-      text-transform: uppercase;
-      cursor: pointer;
-      user-select: none;
-      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-    }
-
-    .pref-check input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .box {
-      width: 15px;
-      height: 15px;
-      border: 1px solid rgba(248,244,236,0.3);
-      border-radius: 5px;
-      background: rgba(255,255,255,0.03);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
-    }
-
-    .pref-check:has(input:checked) {
-      border-color: rgba(233,196,138,0.34);
-      color: var(--gold);
-      background: rgba(233,196,138,0.075);
-    }
-
-    .pref-check.is-selected {
-      border-color: rgba(233,196,138,0.34);
-      color: var(--gold);
-      background: rgba(233,196,138,0.075);
-      box-shadow: 0 0 24px rgba(233,196,138,0.08);
-    }
-
-    .pref-check.is-touched {
-      animation: softTap 360ms ease;
-    }
-
-    button.pref-check {
-      border-radius: 999px;
-    }
-
-    .preference-request {
-      display: none;
-      grid-column: 1 / -1;
-      gap: 12px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .preference-request.is-visible {
-      display: grid;
-    }
-
-    .preference-request label {
-      display: grid;
-      gap: 8px;
-      color: rgba(248,244,236,0.78);
-      font-size: 0.92rem;
-      line-height: 1.45;
-    }
-
-    .preference-request input {
-      width: 100%;
-      min-height: 46px;
-      padding: 0 14px;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 14px;
-      outline: 0;
-      background: rgba(0,0,0,0.22);
-      color: var(--ink);
-      font: inherit;
-    }
-
-    .preference-request input:focus {
-      border-color: rgba(233,196,138,0.44);
-      box-shadow: 0 0 0 3px rgba(233,196,138,0.08);
-    }
-
-    .preference-submit {
-      justify-self: start;
-      min-height: 44px;
-      padding: 0 16px;
-      border: 1px solid rgba(233,196,138,0.34);
-      border-radius: 999px;
-      background: rgba(233,196,138,0.08);
-      color: var(--gold);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      cursor: pointer;
-    }
-
-    .preference-message {
-      min-height: 1.4em;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      line-height: 1.55;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .preference-message.is-success {
-      color: var(--green);
-    }
-
-    .preference-message.is-error {
-      color: #f2a8a8;
-    }
-
-    .pref-check:has(input:checked) .box {
-      border-color: rgba(233,196,138,0.58);
-      background:
-        linear-gradient(135deg, rgba(233,196,138,0.82), rgba(233,196,138,0.28));
-      box-shadow: 0 0 18px rgba(233,196,138,0.2);
-    }
-
-    .pref-check.is-selected .box {
-      border-color: rgba(233,196,138,0.58);
-      background:
-        linear-gradient(135deg, rgba(233,196,138,0.82), rgba(233,196,138,0.28));
-      box-shadow: 0 0 18px rgba(233,196,138,0.2);
-    }
-
-    .workspace-tease {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(250px, 0.45fr);
-      gap: clamp(18px, 4vw, 44px);
-      align-items: end;
-      margin-top: 18px;
-      padding: clamp(26px, 5vw, 42px);
-      border-radius: 28px;
-    }
-
-    .workspace-tease p {
-      max-width: 62ch;
-      margin: 12px 0 0;
-      color: var(--ink-dim);
-      font-size: 1rem;
-      line-height: 1.65;
-    }
-
-    .workspace-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px;
-      margin-top: 24px;
-      padding: 0;
-      list-style: none;
-    }
-
-    .workspace-list li {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      min-width: 0;
-      color: rgba(248,244,236,0.72);
-      font-size: 0.92rem;
-      line-height: 1.35;
-    }
-
-    .workspace-list li::before {
-      width: 5px;
-      height: 5px;
-      border-radius: 999px;
-      background: var(--gold);
-      box-shadow: 0 0 14px rgba(233,196,138,0.34);
-      content: "";
-      flex: 0 0 auto;
-    }
-
-    .workspace-action {
-      display: grid;
-      justify-items: end;
-      gap: 12px;
-    }
-
-    .secondary-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      padding: 0 18px;
-      border: 1px solid rgba(233,196,138,0.22);
-      border-radius: 999px;
-      background: rgba(233,196,138,0.045);
-      color: rgba(248,244,236,0.82);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.13em;
-      text-transform: uppercase;
-      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
-    }
-
-    .secondary-cta.is-ready {
-      border-color: rgba(233,196,138,0.52);
-      background:
-        radial-gradient(circle at 50% 0%, rgba(233,196,138,0.2), transparent 62%),
-        rgba(233,196,138,0.11);
-      color: var(--gold);
-      box-shadow: 0 0 34px rgba(233,196,138,0.12), inset 0 0 0 1px rgba(233,196,138,0.08);
-    }
-
-    .secondary-cta.is-locked {
-      cursor: not-allowed;
-      opacity: 0.72;
-    }
-
-    .secondary-cta.is-shaking {
-      animation: lockedShake 420ms ease;
-    }
-
-    .secondary-cta:hover {
-      transform: translateY(-1px);
-      border-color: rgba(233,196,138,0.42);
-      background: rgba(233,196,138,0.075);
-    }
-
-    .action-note {
-      max-width: 30ch;
-      color: var(--ink-faint);
-      font-family: var(--mono);
-      font-size: 10px;
-      line-height: 1.5;
-      letter-spacing: 0.06em;
-      text-align: right;
-      text-transform: uppercase;
-    }
-
-    .lock-message {
-      max-width: 30ch;
-      min-height: 1.4em;
-      color: var(--gold);
-      font-family: var(--mono);
-      font-size: 10px;
-      line-height: 1.5;
-      letter-spacing: 0.06em;
-      text-align: right;
-      text-transform: uppercase;
-      opacity: 0;
-      transition: opacity 220ms ease;
-    }
-
-    .lock-message.is-visible {
-      opacity: 1;
     }
 
     .footer {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      margin-top: clamp(28px, 5vw, 56px);
-      padding-top: 22px;
-      border-top: 1px solid rgba(255,255,255,0.07);
+      gap: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(248,244,236,0.08);
       color: var(--ink-faint);
       font-family: var(--mono);
       font-size: 10px;
-      letter-spacing: 0.12em;
+      line-height: 1.6;
+      letter-spacing: 0.09em;
       text-transform: uppercase;
     }
 
-    @keyframes livePulse {
-      0%, 100% { opacity: 0.72; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.35); }
+    .reference {
+      color: rgba(248,244,236,0.72);
     }
 
-    @keyframes signalDrift {
-      0%, 100% { background-position: center, -120% 0; }
-      50% { background-position: center, 120% 0; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.62; transform: scale(0.92); }
+      50% { opacity: 1; transform: scale(1); }
     }
 
-    @keyframes quietFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-2px); }
-    }
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 28px, 860px);
+      }
 
-    @keyframes lineScan {
-      0%, 100% { opacity: 0.18; transform: translateX(-18%); }
-      50% { opacity: 0.72; transform: translateX(18%); }
-    }
+      .receipt {
+        margin-top: 48px;
+        padding: 24px 18px;
+      }
 
-    @keyframes softTap {
-      0%, 100% { transform: scale(1); }
-      45% { transform: scale(0.975); }
-    }
+      .timeline {
+        grid-template-columns: 1fr;
+      }
 
-    @keyframes lockedShake {
-      0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-3px); }
-      40% { transform: translateX(3px); }
-      60% { transform: translateX(-2px); }
-      80% { transform: translateX(2px); }
-    }
+      .step {
+        min-height: 82px;
+      }
 
-    @keyframes approvalBreath {
-      0%, 100% { box-shadow: 0 0 28px rgba(233,196,138,0.11), inset 0 0 0 1px rgba(233,196,138,0.08); }
-      50% { box-shadow: 0 0 48px rgba(233,196,138,0.19), inset 0 0 0 1px rgba(233,196,138,0.12); }
+      .step-index {
+        margin-bottom: 18px;
+      }
+
+      .footer {
+        display: grid;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1333,999 +318,111 @@
         scroll-behavior: auto !important;
       }
     }
-
-    @media (max-width: 920px) {
-      .hero,
-      .grid,
-      .assignment-layer,
-      .preferences,
-      .quote-layer,
-      .workspace-tease {
-        grid-template-columns: 1fr;
-      }
-
-      .hero {
-        min-height: auto;
-        padding-top: 34px;
-      }
-
-      .review-card {
-        width: min(620px, 100%);
-      }
-
-      .timeline {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .pref-options,
-      .workspace-action {
-        justify-content: flex-start;
-        justify-items: start;
-      }
-
-      .action-note {
-        text-align: left;
-      }
-
-      .lock-message {
-        text-align: left;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .page {
-        width: min(100% - 28px, 1160px);
-        padding-top: 14px;
-      }
-
-      .topbar {
-        align-items: flex-start;
-        padding-bottom: 20px;
-      }
-
-      .brand img {
-        width: min(54vw, 188px);
-      }
-
-      .top-signal {
-        min-height: 30px;
-        padding: 0 10px;
-        font-size: 9px;
-        letter-spacing: 0.12em;
-      }
-
-      h1 {
-        max-width: 9.5ch;
-        font-size: clamp(3.02rem, 17vw, 4.6rem);
-      }
-
-      .hero-text {
-        margin-top: 20px;
-        font-size: 0.98rem;
-      }
-
-      .system-row {
-        margin-top: 24px;
-      }
-
-      .signal-pill {
-        min-height: 34px;
-        font-size: 9px;
-        letter-spacing: 0.06em;
-      }
-
-      .review-card,
-      .assignment-layer,
-      .quote-layer,
-      .panel,
-      .workspace-tease {
-        border-radius: 22px;
-      }
-
-      .card-title,
-      .section-title {
-        display: grid;
-        gap: 8px;
-      }
-
-      .review-window,
-      .section-kicker {
-        white-space: normal;
-      }
-
-      .snapshot-row {
-        grid-template-columns: 92px minmax(0, 1fr);
-        gap: 10px;
-        min-height: 50px;
-        padding: 13px;
-      }
-
-      .timeline {
-        grid-template-columns: 1fr;
-      }
-
-      .runtime-feed {
-        grid-template-columns: 1fr;
-      }
-
-      .timeline-item {
-        min-height: 76px;
-        display: grid;
-        grid-template-columns: 44px 1fr;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .timeline-index {
-        margin: 0;
-      }
-
-      .pref-options {
-        display: grid;
-        grid-template-columns: 1fr;
-      }
-
-      .quote-head {
-        display: grid;
-        gap: 10px;
-      }
-
-      .quote-amount {
-        font-size: clamp(3.1rem, 16vw, 4.8rem);
-      }
-
-      .quote-grid,
-      .included-list {
-        grid-template-columns: 1fr;
-      }
-
-      .assignment-primary {
-        min-height: auto;
-      }
-
-      .assignment-row {
-        grid-template-columns: 1fr;
-        gap: 5px;
-      }
-
-      .assignment-row span:last-child {
-        text-align: left;
-      }
-
-      .pref-check {
-        width: 100%;
-        justify-content: flex-start;
-      }
-
-      .workspace-list {
-        grid-template-columns: 1fr;
-      }
-
-      .footer {
-        display: grid;
-        gap: 8px;
-      }
-    }
   </style>
 </head>
 <body>
   <main class="page">
-    <header class="topbar" aria-label="Review header">
-      <a class="brand" href="/" aria-label="DONEOVERNIGHT portal">
+    <header>
+      <a class="brand" href="https://doneovernight.com" aria-label="DONEOVERNIGHT">
         <img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
       </a>
-      <div class="top-signal"><span class="dot" aria-hidden="true"></span><span class="state-fade" data-runtime-label="topSignal">Review active</span></div>
     </header>
 
-    <section class="hero" aria-labelledby="review-title">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span class="state-fade" data-runtime-label="eyebrow">Review active</span></p>
-        <h1 id="review-title">Request under review.</h1>
-        <p class="hero-text state-fade" data-runtime-label="heroText">Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step.</p>
-        <p class="reviewing-context" data-review-request-context><span>Current request</span><strong></strong></p>
-        <div class="system-row" aria-label="System signals">
-          <span class="signal-pill is-live" data-runtime-signal="0">Request received</span>
-          <span class="signal-pill" data-runtime-signal="1">Review active</span>
-          <span class="signal-pill" data-runtime-signal="2">Review window: &lt; 60 min</span>
+    <section class="receipt" aria-labelledby="review-title">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span data-state-label>Request received</span></p>
+      <h1 id="review-title">Request under review.</h1>
+      <p class="copy" data-state-copy>Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step.</p>
+
+      <div class="chips" aria-label="Request status">
+        <span class="chip is-complete" data-chip="received">Request received</span>
+        <span class="chip is-active" data-chip="review">Under review</span>
+        <span class="chip" data-chip="quote">Quote pending</span>
+      </div>
+
+      <div class="timeline" aria-label="Review timeline">
+        <div class="step is-complete" data-step="received">
+          <span class="step-index">01</span>
+          <span class="step-label">Received</span>
+        </div>
+        <div class="step is-active" data-step="review">
+          <span class="step-index">02</span>
+          <span class="step-label">Review</span>
+        </div>
+        <div class="step" data-step="quote">
+          <span class="step-index">03</span>
+          <span class="step-label">Quote</span>
         </div>
       </div>
 
-      <aside class="review-card glass" aria-label="Live review status">
-        <div class="card-inner">
-          <div class="card-title">
-            <h2>Review status</h2>
-            <span class="review-window state-fade" data-runtime-label="reviewWindow">Request received</span>
-          </div>
-          <div class="status-stack">
-            <div class="review-step is-active" data-review-step="0">
-              <span class="step-mark">✓</span>
-              <span class="step-copy"><strong data-step-title>Request received</strong><span data-step-meta>Private intake recorded</span></span>
-            </div>
-            <div class="review-step is-standby" data-review-step="1">
-              <span class="step-mark">●</span>
-              <span class="step-copy"><strong data-step-title>Under review</strong><span data-step-meta>Scope is being reviewed</span></span>
-            </div>
-            <div class="review-step is-standby" data-review-step="2">
-              <span class="step-mark">○</span>
-              <span class="step-copy"><strong data-step-title>Quote preparation</strong><span data-step-meta>Pending scope confirmation</span></span>
-            </div>
-            <div class="review-step is-standby" data-review-step="3">
-              <span class="step-mark">○</span>
-              <span class="step-copy"><strong data-step-title>Approval</strong><span data-step-meta>Opens when quote is ready</span></span>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </section>
-
-    <section class="grid" aria-label="Review details">
-      <article class="panel glass">
-        <div class="section-title">
-          <div>
-            <h2>Request snapshot</h2>
-            <p class="section-kicker">Private intake reference</p>
-          </div>
-        </div>
-        <div class="snapshot-list">
-          <div class="snapshot-row"><span>Client</span><span data-review-field="client">Pending verification</span></div>
-          <div class="snapshot-row"><span>Request</span><span data-review-field="request">Request received</span></div>
-          <div class="snapshot-row"><span>Submitted</span><span data-review-field="submitted">Received</span></div>
-          <div class="snapshot-row"><span>Deadline</span><span data-review-field="deadline">Under review</span></div>
-          <div class="snapshot-row"><span>Your indicated budget</span><span data-review-field="budget">Not indicated</span></div>
-          <div class="snapshot-row"><span>Priority</span><span data-review-field="priority">Evaluating</span></div>
-          <div class="snapshot-row"><span>Source</span><span data-review-field="source">Secure intake</span></div>
-        </div>
-      </article>
-
-      <article class="panel glass">
-        <div class="section-title">
-          <div>
-            <h2>Review timeline</h2>
-            <p class="section-kicker state-fade" data-runtime-label="timelineState">Current state: Under Review</p>
-          </div>
-        </div>
-        <div class="timeline" aria-label="Review timeline">
-          <div class="timeline-item is-active" data-timeline-step="0"><span class="timeline-index">01</span><span class="timeline-label">Submitted</span></div>
-          <div class="timeline-item" data-timeline-step="1"><span class="timeline-index">02</span><span class="timeline-label">Under Review</span></div>
-          <div class="timeline-item" data-timeline-step="2"><span class="timeline-index">03</span><span class="timeline-label">Quote Preparation</span></div>
-          <div class="timeline-item" data-timeline-step="3"><span class="timeline-index">04</span><span class="timeline-label">Approval</span></div>
-          <div class="timeline-item" data-timeline-step="4"><span class="timeline-index">05</span><span class="timeline-label">Execution</span></div>
-          <div class="timeline-item" data-timeline-step="5"><span class="timeline-index">06</span><span class="timeline-label">Delivery</span></div>
-        </div>
-        <div class="runtime-feed" aria-label="Runtime signals">
-          <span class="is-live" data-runtime-feed="0">Request received</span>
-          <span data-runtime-feed="1">Scope is being reviewed</span>
-          <span data-runtime-feed="2">Quote preparation pending</span>
-        </div>
-      </article>
-    </section>
-
-    <section class="assignment-layer glass" aria-label="Review summary" data-assignment-layer>
-      <div class="assignment-primary">
-        <div>
-          <p class="eyebrow assignment-kicker state-fade" data-assignment-label="kicker">Review in progress</p>
-          <h2 class="assignment-name state-fade" data-assignment-label="name">DONEOVERNIGHT</h2>
-          <p class="assignment-role state-fade" data-assignment-label="role">Your request is being reviewed before any quote, approval, execution, or workspace access opens.</p>
-        </div>
-        <div class="assignment-signal-strip" aria-label="Assignment signals">
-          <span class="assignment-signal is-live" data-assignment-signal="0">Scope is being reviewed</span>
-          <span class="assignment-signal" data-assignment-signal="1">Timing under review</span>
-          <span class="assignment-signal" data-assignment-signal="2">Quote not ready yet</span>
-        </div>
-      </div>
-      <aside class="assignment-status-panel" aria-label="Assignment details">
-        <div class="assignment-row"><span>Scope</span><span class="state-fade" data-assignment-label="category">Scope is being reviewed</span></div>
-        <div class="assignment-row"><span>Quote</span><span class="state-fade" data-assignment-label="queue">Not ready yet</span></div>
-        <div class="assignment-row"><span>Workspace</span><span class="state-fade" data-assignment-label="signal">Closed until approval</span></div>
-        <div class="assignment-row"><span>Status</span><span class="state-fade" data-assignment-label="layer">Under review</span></div>
-      </aside>
-    </section>
-
-    <section class="quote-layer glass" aria-label="Quote" data-quote-layer>
-      <div class="quote-main">
-        <div class="quote-head">
-          <div>
-            <p class="eyebrow">Quote</p>
-            <h2>Quote ready</h2>
-          </div>
-          <div class="quote-amount">Ready</div>
-        </div>
-        <div class="quote-grid" aria-label="Quote details">
-          <div class="quote-metric"><span>Timing</span><strong>Included in quote</strong></div>
-          <div class="quote-metric"><span>Scope</span><strong>Confirmed by operations</strong></div>
-        </div>
-        <ul class="included-list" aria-label="Quote included scope">
-          <li>confirmed scope</li>
-          <li>timing</li>
-          <li>next step</li>
-          <li>approval path</li>
-        </ul>
-      </div>
-      <aside class="quote-action-panel" aria-label="Quote approval">
-        <div class="quote-meta">
-          <span>Scope <strong>Confirmed</strong></span>
-          <span>Quote <strong>Ready</strong></span>
-          <span>Approval <strong>Required</strong></span>
-          <span>Workspace <strong>Closed</strong></span>
-        </div>
-        <div>
-          <button class="approval-cta" type="button" data-approval-cta>Review quote</button>
-          <p class="approval-note state-fade" data-approval-note>Workspace access opens only after quote approval.</p>
-        </div>
-      </aside>
-    </section>
-
-    <section class="preferences panel glass" aria-label="Notification preferences">
-      <div class="pref-copy">
-        <p class="eyebrow">Notifications</p>
-        <h2>Get notified when your quote is ready</h2>
-        <p>Email updates are sent to the address used for the request. SMS and WhatsApp become available after a phone number is added.</p>
-      </div>
-      <div class="pref-options">
-        <label class="pref-check is-selected"><input type="checkbox" name="notify_email" checked disabled><span class="box" aria-hidden="true"></span>Email updates</label>
-        <button class="pref-check" type="button" data-notification-channel="whatsapp"><span class="box" aria-hidden="true"></span>WhatsApp</button>
-        <button class="pref-check" type="button" data-notification-channel="sms"><span class="box" aria-hidden="true"></span>SMS</button>
-        <form class="preference-request" data-preference-form aria-live="polite">
-          <label for="preferencePhone" data-preference-label>Add your phone number for WhatsApp updates.</label>
-          <input id="preferencePhone" name="phone_number" type="tel" inputmode="tel" autocomplete="tel" placeholder="+31 6 12345678">
-          <button class="preference-submit" type="submit" data-preference-submit>Request WhatsApp updates</button>
-          <p class="preference-message" data-preference-message></p>
-        </form>
-      </div>
-    </section>
-
-    <section class="workspace-tease glass" aria-label="Private workspace preview">
-      <div>
-        <p class="eyebrow state-fade" data-runtime-label="workspaceKicker">Workspace closed</p>
-        <h2 class="state-fade" data-runtime-label="workspaceTitle">Workspace access opens after quote approval.</h2>
-        <p class="state-fade" data-runtime-label="workspaceText">Workspace access stays closed until a quote is approved.</p>
-        <ul class="workspace-list">
-          <li>Live updates</li>
-          <li>Quote approvals</li>
-          <li>Delivery tracking</li>
-          <li>Revision flow</li>
-          <li>Realtime communication</li>
-        </ul>
-      </div>
-      <div class="workspace-action">
-        <a class="secondary-cta" href="/" aria-label="Workspace opens after quote approval" data-workspace-cta>Workspace closed</a>
-        <span class="action-note state-fade" data-runtime-label="actionNote">Workspace opens after quote approval</span>
-        <span class="lock-message" data-workspace-lock-message aria-live="polite"></span>
-      </div>
+      <a class="quote-cta" data-quote-cta href="#">Review quote</a>
     </section>
 
     <footer class="footer">
-      <span>DONEOVERNIGHT review</span>
-      <span>Private intake status</span>
+      <span class="reference">Reference: <span data-reference>DON-...</span></span>
+      <span>Reply to the email if you want to add context.</span>
     </footer>
   </main>
 
   <script>
     (() => {
       const params = new URLSearchParams(window.location.search);
-      const safe = (value) => String(value || "").trim().slice(0, 120);
-      const storedTask = (() => {
+      const safe = (value, limit = 140) => String(value || "").trim().slice(0, limit);
+      const stateAliases = {
+        request_received: "review",
+        review_active: "review",
+        under_review: "review",
+        operator_assigned: "review",
+        complexity_verified: "review",
+        quote_preparation: "quote",
+        quote_preparing: "quote",
+        quote_ready: "quote_ready",
+        awaiting_approval: "quote_ready",
+        approval: "quote_ready"
+      };
+      const requested = safe(params.get("state")).toLowerCase();
+      const state = stateAliases[requested] || "review";
+      const reference = safe(params.get("task_id") || params.get("id") || params.get("reference"), 80);
+      const quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
+      const quoteUrl = (() => {
         try {
-          return JSON.parse(sessionStorage.getItem("doneovernight:lastTask") || "null") || {};
+          const url = new URL(quoteUrlRaw);
+          return ["https:", "http:"].includes(url.protocol) ? url.toString() : "";
         } catch (error) {
-          return {};
+          return "";
         }
       })();
-      const fields = {
-        client: safe(storedTask.name || params.get("client") || params.get("name")),
-        request: safe(storedTask.taskSummary || params.get("request") || params.get("task") || params.get("task_summary")),
-        submitted: safe(params.get("submitted") || params.get("created_at")),
-        deadline: safe(storedTask.deadline || params.get("deadline")),
-        budget: safe(storedTask.clientBudget) || (params.get("budget_present") === "true" ? "Budget received" : ""),
-        priority: safe(params.get("priority")),
-        source: safe(storedTask.source || params.get("source"))
-      };
 
-      Object.entries(fields).forEach(([key, value]) => {
-        if (!value) return;
-        const target = document.querySelector(`[data-review-field="${key}"]`);
-        if (target) target.textContent = value;
-      });
-
-      const requestContext = fields.request;
-      const requestContextNode = document.querySelector("[data-review-request-context]");
-      const requestContextText = requestContextNode?.querySelector("strong");
-      if (requestContext && requestContextNode && requestContextText) {
-        requestContextText.textContent = requestContext;
-        requestContextNode.classList.add("is-visible");
+      if (reference) {
+        document.querySelector("[data-reference]").textContent = reference;
       }
 
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const runtimeLabels = Array.from(document.querySelectorAll("[data-runtime-label]"));
-      const reviewSteps = Array.from(document.querySelectorAll("[data-review-step]"));
-      const timelineSteps = Array.from(document.querySelectorAll("[data-timeline-step]"));
-      const signalPills = Array.from(document.querySelectorAll("[data-runtime-signal]"));
-      const feedItems = Array.from(document.querySelectorAll("[data-runtime-feed]"));
-      const workspaceCta = document.querySelector("[data-workspace-cta]");
-      const workspaceLockMessage = document.querySelector("[data-workspace-lock-message]");
-      const quoteLayer = document.querySelector("[data-quote-layer]");
-      const approvalCta = document.querySelector("[data-approval-cta]");
-      const approvalNote = document.querySelector("[data-approval-note]");
-      const assignmentLabels = Array.from(document.querySelectorAll("[data-assignment-label]"));
-      const assignmentSignals = Array.from(document.querySelectorAll("[data-assignment-signal]"));
-      const notificationButtons = Array.from(document.querySelectorAll("[data-notification-channel]"));
-      const preferenceForm = document.querySelector("[data-preference-form]");
-      const preferencePhone = document.querySelector("#preferencePhone");
-      const preferenceLabel = document.querySelector("[data-preference-label]");
-      const preferenceSubmit = document.querySelector("[data-preference-submit]");
-      const preferenceMessage = document.querySelector("[data-preference-message]");
-      let selectedNotificationChannel = "whatsapp";
-      const states = [
-        {
-          key: "review_active",
-          topSignal: "Request received",
-          eyebrow: "Request received",
-          heroText: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step.",
-          reviewWindow: "Request received",
-          timelineState: "Current state: Under Review",
-          workspaceKicker: "Workspace closed",
-          workspaceTitle: "Workspace access opens only after quote approval.",
-          workspaceText: "DONEOVERNIGHT will review the request first. Quote preparation, approval, execution, and delivery only appear when each step is actually ready.",
-          actionNote: "Closed until quote approval",
-          activeReviewStep: 1,
-          activeTimelineStep: 1,
-          liveSignals: [0, 1],
-          feed: ["Request received", "Scope is being reviewed", "Quote preparation pending"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Under review", "Scope is being reviewed"],
-            ["Quote preparation", "Pending scope confirmation"],
-            ["Approval", "Opens when quote is ready"]
-          ],
-          quoteVisible: false,
-          approvalText: "Quote pending",
-          approvalNote: "Approval opens after a quote is prepared.",
-          approvalMode: "standby",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "operator_assigned",
-          topSignal: "Under review",
-          eyebrow: "Under review",
-          heroText: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the next step.",
-          reviewWindow: "Under review",
-          timelineState: "Current state: Under Review",
-          workspaceKicker: "Workspace closed",
-          workspaceTitle: "Workspace access opens only after quote approval.",
-          workspaceText: "DONEOVERNIGHT is reviewing the request before any workspace access opens.",
-          actionNote: "Closed until quote approval",
-          activeReviewStep: 1,
-          activeTimelineStep: 1,
-          liveSignals: [0, 1],
-          feed: ["Request received", "Scope is being reviewed", "Quote preparation pending"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Under review", "Scope is being reviewed"],
-            ["Quote preparation", "Pending scope confirmation"],
-            ["Approval", "Opens when quote is ready"]
-          ],
-          quoteVisible: false,
-          approvalText: "Quote pending",
-          approvalNote: "Approval opens after a quote is prepared.",
-          approvalMode: "standby",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "complexity_verified",
-          topSignal: "Under review",
-          eyebrow: "Scope review",
-          heroText: "Scope is being reviewed. A quote is not ready until DONEOVERNIGHT confirms the scope and timing.",
-          reviewWindow: "Scope review",
-          timelineState: "Current state: Under Review",
-          workspaceKicker: "Workspace closed",
-          workspaceTitle: "Workspace access opens only after quote approval.",
-          workspaceText: "The request is still moving through review.",
-          actionNote: "Quote preparation pending",
-          activeReviewStep: 1,
-          activeTimelineStep: 1,
-          liveSignals: [0, 1, 2],
-          feed: ["Scope is being reviewed", "Timing under review", "Quote preparation pending"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Under review", "Scope is being reviewed"],
-            ["Quote preparation", "Pending scope confirmation"],
-            ["Approval", "Opens when quote is ready"]
-          ],
-          quoteVisible: false,
-          approvalText: "Quote pending",
-          approvalNote: "Approval opens after a quote is prepared.",
-          approvalMode: "standby",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "quote_preparing",
-          topSignal: "Quote preparing",
-          eyebrow: "Quote preparation active",
-          heroText: "Quote preparation is active. DONEOVERNIGHT is preparing scope, timing, and the next step for approval.",
-          reviewWindow: "Quote prep active",
-          timelineState: "Current state: Quote Preparation",
-          workspaceKicker: "Workspace closed",
-          workspaceTitle: "Workspace access opens after quote approval.",
-          workspaceText: "Workspace access stays closed until quote approval.",
-          actionNote: "Approval signal pending",
-          activeReviewStep: 2,
-          activeTimelineStep: 2,
-          liveSignals: [0, 1, 2],
-          feed: ["Quote preparation active", "Scope being shaped", "Approval pending"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Under review", "Scope is being reviewed"],
-            ["Quote preparation active", "Scope and timing forming"],
-            ["Approval", "Opens when quote is ready"]
-          ],
-          quoteVisible: false,
-          approvalText: "Quote pending",
-          approvalNote: "Approval opens after a quote is prepared.",
-          approvalMode: "standby",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "quote_ready",
-          topSignal: "Quote ready",
-          eyebrow: "Quote ready",
-          heroText: "Your quote is ready for review. Workspace access still requires quote approval.",
-          reviewWindow: "Approval ready",
-          timelineState: "Current state: Approval",
-          workspaceKicker: "Approval layer ready",
-          workspaceTitle: "Workspace access opens after quote approval.",
-          workspaceText: "Review the quote and approve the next step when you are ready.",
-          actionNote: "Approval required before unlock",
-          activeReviewStep: 2,
-          activeTimelineStep: 3,
-          liveSignals: [0, 1, 2],
-          feed: ["Quote ready", "Approval required", "Workspace closed"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Scope confirmed", "Review complete"],
-            ["Quote ready", "Approval required"],
-            ["Workspace", "Closed until approval"]
-          ],
-          quoteVisible: true,
-          approvalText: "Review quote",
-          approvalNote: "Workspace access opens only after quote approval.",
-          approvalMode: "approve",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "awaiting_approval",
-          topSignal: "Awaiting approval",
-          eyebrow: "Approval",
-          heroText: "The quote is ready. Approval is required before execution or workspace access opens.",
-          reviewWindow: "Awaiting approval",
-          timelineState: "Current state: Awaiting Approval",
-          workspaceKicker: "Approval",
-          workspaceTitle: "Approve the quote to open the workspace.",
-          workspaceText: "Execution and workspace access remain closed until approval.",
-          actionNote: "Approval opens workspace access",
-          activeReviewStep: 2,
-          activeTimelineStep: 3,
-          liveSignals: [0, 1, 2],
-          feed: ["Quote ready", "Approval required", "Workspace closed"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Scope confirmed", "Review complete"],
-            ["Quote ready", "Approval required"],
-            ["Workspace", "Closed until approval"]
-          ],
-          quoteVisible: true,
-          approvalText: "Review quote",
-          approvalNote: "Approval opens the next step.",
-          approvalMode: "approve",
-          ctaText: "Workspace closed",
-          ctaReady: false
-        },
-        {
-          key: "execution_approved",
-          topSignal: "Execution approved",
-          eyebrow: "Execution approved",
-          heroText: "Approval is confirmed. Execution can begin and workspace access may open.",
-          reviewWindow: "Execution",
-          timelineState: "Current state: Execution Approved",
-          workspaceKicker: "Execution",
-          workspaceTitle: "Your private workspace is available.",
-          workspaceText: "Open the workspace to follow execution and delivery tracking.",
-          actionNote: "Workspace available",
-          activeReviewStep: 3,
-          activeTimelineStep: 4,
-          liveSignals: [0, 1, 2],
-          feed: ["Quote approved", "Execution ready", "Workspace preparing"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Quote approved", "Approval confirmed"],
-            ["Execution", "Ready to begin"],
-            ["Workspace", "Preparing access"]
-          ],
-          quoteVisible: true,
-          approvalText: "Approved",
-          approvalNote: "Workspace access may open after approval.",
-          approvalMode: "approved",
-          ctaText: "Open workspace",
-          ctaReady: true
-        },
-        {
-          key: "workspace_unlocked",
-          topSignal: "Workspace unlocked",
-          eyebrow: "Workspace access available",
-          heroText: "Your private workspace is available for updates and delivery tracking.",
-          reviewWindow: "Access unlocked",
-          timelineState: "Current state: Workspace Available",
-          workspaceKicker: "Workspace unlocked",
-          workspaceTitle: "Your private workspace is available.",
-          workspaceText: "Open the workspace to follow updates and delivery tracking.",
-          actionNote: "Workspace available",
-          activeReviewStep: 3,
-          activeTimelineStep: 5,
-          liveSignals: [0, 1, 2],
-          feed: ["Workspace available", "Execution active", "Delivery tracking"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Quote approved", "Approval confirmed"],
-            ["Execution", "Active"],
-            ["Delivery", "Tracking available"]
-          ],
-          quoteVisible: true,
-          approvalText: "Open Workspace",
-          approvalNote: "Private execution workspace is available.",
-          approvalMode: "open",
-          ctaText: "Open workspace",
-          ctaReady: true
-        },
-        {
-          key: "delivered",
-          topSignal: "Delivered",
-          eyebrow: "Delivery",
-          heroText: "Delivery is complete. Your workspace is available for delivery notes and follow-up.",
-          reviewWindow: "Delivered",
-          timelineState: "Current state: Delivered",
-          workspaceKicker: "Workspace available",
-          workspaceTitle: "Your private workspace is available.",
-          workspaceText: "Open the workspace to review delivery notes and follow-up.",
-          actionNote: "Workspace available",
-          activeReviewStep: 4,
-          activeTimelineStep: 6,
-          liveSignals: [0, 1, 2],
-          feed: ["Delivered", "Workspace available", "Follow-up ready"],
-          cards: [
-            ["Request received", "Private intake recorded"],
-            ["Quote approved", "Approval confirmed"],
-            ["Execution", "Completed"],
-            ["Delivery", "Completed"]
-          ],
-          quoteVisible: false,
-          approvalText: "Open Workspace",
-          approvalNote: "Delivery is complete.",
-          approvalMode: "open",
-          ctaText: "Open workspace",
-          ctaReady: true
-        }
-      ];
-
-      function setText(target, value) {
-        if (!target || target.textContent === value) return;
-        target.classList.add("is-shifting");
-        window.setTimeout(() => {
-          target.textContent = value;
-          target.classList.remove("is-shifting");
-        }, prefersReducedMotion ? 0 : 180);
-      }
-
-      function setStepState(items, activeIndex) {
-        items.forEach((item, index) => {
-          item.classList.toggle("is-complete", index < activeIndex);
-          item.classList.toggle("is-active", index === activeIndex);
-          item.classList.toggle("is-standby", index > activeIndex);
+      function setStep(name, status) {
+        const chip = document.querySelector(`[data-chip="${name}"]`);
+        const step = document.querySelector(`[data-step="${name}"]`);
+        [chip, step].forEach((element) => {
+          if (!element) return;
+          element.classList.toggle("is-complete", status === "complete");
+          element.classList.toggle("is-active", status === "active");
         });
       }
 
-      function getAssignmentState(stateKey) {
-        const scopeConfirmed = params.get("scope_confirmed") === "1" || params.get("scope") === "confirmed";
-        const category = scopeConfirmed ? "Scope confirmed" : "Scope is being reviewed";
-        const queue = ["quote_preparing", "quote_ready", "awaiting_approval", "execution_approved", "workspace_unlocked"].includes(stateKey)
-          ? "Quote preparation"
-          : "Not ready yet";
-        const workspaceState = ["execution_approved", "workspace_unlocked", "delivered"].includes(stateKey)
-          ? "Available after approval"
-          : "Closed until approval";
-        const assignments = {
-          review_active: {
-            kicker: "Review in progress",
-            role: "Your request is being reviewed before any quote, approval, execution, or workspace access opens.",
-            queue,
-            signal: workspaceState,
-            signals: [category, "Timing under review", "Quote not ready yet"],
-            live: [0]
-          },
-          operator_assigned: {
-            kicker: "Under review",
-            role: "DONEOVERNIGHT is reviewing scope and timing before preparing a quote.",
-            queue,
-            signal: workspaceState,
-            signals: [category, "Timing under review", "Quote not ready yet"],
-            live: [0, 1]
-          },
-          complexity_verified: {
-            kicker: "Under review",
-            role: "Scope has moved through review. Quote preparation may begin after operations confirms fit.",
-            queue,
-            signal: workspaceState,
-            signals: [category, "Timing under review", "Quote preparation pending"],
-            live: [0, 1, 2]
-          },
-          quote_preparing: {
-            kicker: "Quote preparation",
-            role: "DONEOVERNIGHT is preparing scope, timing, and the next step for approval.",
-            queue: "Preparing",
-            signal: workspaceState,
-            signals: [category, "Quote preparation active", "Workspace closed"],
-            live: [0, 1, 2]
-          },
-          quote_ready: {
-            kicker: "Quote ready",
-            role: "A quote is ready for review. Workspace access remains closed until approval.",
-            queue: "Quote ready",
-            signal: workspaceState,
-            signals: ["Scope confirmed", "Quote ready", "Approval required"],
-            live: [0, 1, 2]
-          },
-          awaiting_approval: {
-            kicker: "Approval",
-            role: "The quote is waiting for approval. Execution and workspace access remain closed until approval.",
-            queue: "Awaiting approval",
-            signal: workspaceState,
-            signals: ["Quote ready", "Approval required", "Workspace closed"],
-            live: [0, 1, 2]
-          },
-          execution_approved: {
-            kicker: "Execution",
-            role: "Approval is confirmed. Execution can begin and workspace access may open.",
-            queue: "Execution",
-            signal: workspaceState,
-            signals: ["Quote approved", "Execution ready", "Workspace available"],
-            live: [0, 1, 2]
-          },
-          workspace_unlocked: {
-            kicker: "Delivery",
-            role: "Your private workspace is available for updates, approval context, and delivery tracking.",
-            queue: "Delivery",
-            signal: "Workspace available",
-            signals: ["Workspace available", "Execution active", "Delivery tracking"],
-            live: [0, 1, 2]
-          },
-          delivered: {
-            kicker: "Delivery",
-            role: "Delivery is complete. Your workspace is available for delivery notes and follow-up.",
-            queue: "Delivered",
-            signal: "Workspace available",
-            signals: ["Delivered", "Workspace available", "Follow-up ready"],
-            live: [0, 1, 2]
-          }
-        };
-
-        return {
-          name: "DONEOVERNIGHT",
-          category,
-          layer: stateKey === "review_active" ? "Under review" : "Status active",
-          ...(assignments[stateKey] || assignments.review_active)
-        };
+      if (state === "quote" || state === "quote_ready") {
+        document.querySelector("[data-state-label]").textContent = state === "quote_ready" ? "Quote ready" : "Quote pending";
+        document.querySelector("[data-state-copy]").textContent = state === "quote_ready"
+          ? "Your request has been reviewed. The quote is ready for the next step."
+          : "Your request has been reviewed. DONEOVERNIGHT is preparing the quote and next step.";
+        setStep("received", "complete");
+        setStep("review", "complete");
+        setStep("quote", "active");
+        document.querySelector("[data-chip='quote']").textContent = state === "quote_ready" ? "Quote ready" : "Quote pending";
       }
 
-      function applyAssignment(stateKey) {
-        const assignment = getAssignmentState(stateKey);
-        assignmentLabels.forEach((target) => {
-          const key = target.dataset.assignmentLabel;
-          if (assignment[key]) setText(target, assignment[key]);
-        });
-
-        assignmentSignals.forEach((signal, index) => {
-          if (assignment.signals[index]) setText(signal, assignment.signals[index]);
-          signal.classList.toggle("is-live", assignment.live.includes(index));
-        });
+      if (state === "quote_ready" && quoteUrl) {
+        const cta = document.querySelector("[data-quote-cta]");
+        cta.href = quoteUrl;
+        cta.classList.add("is-visible");
       }
-
-      function applyState(index) {
-        const state = states[index];
-        document.body.dataset.reviewState = state.key;
-        runtimeLabels.forEach((target) => {
-          const key = target.dataset.runtimeLabel;
-          if (state[key]) setText(target, state[key]);
-        });
-
-        setStepState(reviewSteps, state.activeReviewStep);
-        setStepState(timelineSteps, state.activeTimelineStep);
-        applyAssignment(state.key);
-
-        reviewSteps.forEach((step, stepIndex) => {
-          const card = state.cards?.[stepIndex];
-          if (!card) return;
-          const title = step.querySelector("[data-step-title]");
-          const meta = step.querySelector("[data-step-meta]");
-          setText(title, card[0]);
-          setText(meta, card[1]);
-        });
-
-        signalPills.forEach((pill, pillIndex) => {
-          pill.classList.toggle("is-live", state.liveSignals.includes(pillIndex));
-          if (state.feed[pillIndex]) setText(pill, state.feed[pillIndex]);
-        });
-
-        feedItems.forEach((item, itemIndex) => {
-          item.classList.toggle("is-live", itemIndex <= Math.min(index, 2));
-          if (state.feed[itemIndex]) setText(item, state.feed[itemIndex]);
-        });
-
-        const workspaceApproved = params.get("quote_approved") === "1" || ["workspace_unlocked", "delivered"].includes(state.key);
-
-        if (workspaceCta) {
-          setText(workspaceCta, state.ctaText);
-          workspaceCta.classList.toggle("is-ready", state.ctaReady && workspaceApproved);
-          workspaceCta.classList.toggle("is-locked", !(state.ctaReady && workspaceApproved));
-          workspaceCta.setAttribute("href", state.ctaReady && workspaceApproved ? "https://portal.doneovernight.com" : "#");
-          workspaceCta.setAttribute("aria-label", state.ctaReady && workspaceApproved ? "Open workspace" : "Workspace opens after quote approval");
-        }
-
-        if (quoteLayer) {
-          const quoteReleased = params.get("quote_ready") === "1" || params.get("scope_confirmed") === "1";
-          quoteLayer.classList.toggle("is-visible", state.quoteVisible === true && quoteReleased);
-        }
-
-        if (approvalCta) {
-          setText(approvalCta, state.approvalText);
-          approvalCta.classList.toggle("is-approved", state.approvalMode === "approved" || state.approvalMode === "open");
-          approvalCta.dataset.approvalMode = state.approvalMode;
-          approvalCta.disabled = state.approvalMode === "approved";
-        }
-
-        if (approvalNote) {
-          setText(approvalNote, state.approvalNote);
-        }
-      }
-
-      const stateAliases = {
-        request_received: "review_active",
-        under_review: "operator_assigned",
-        quote_preparation: "quote_preparing",
-        quote_preparing: "quote_preparing",
-        approval: "awaiting_approval",
-        approved: "execution_approved",
-        execution: "execution_approved",
-        delivery: "workspace_unlocked",
-        delivered: "delivered"
-      };
-      const requestedStateRaw = safe(params.get("state"));
-      const requestedState = stateAliases[requestedStateRaw] || requestedStateRaw;
-      const requestedIndex = states.findIndex((state) => state.key === requestedState);
-      let currentState = requestedIndex >= 0 ? requestedIndex : 0;
-      applyState(currentState);
-
-      approvalCta?.addEventListener("click", () => {
-        const activeState = states[currentState];
-        if (activeState?.key === "workspace_unlocked" && (params.get("quote_approved") === "1" || approvalCta.dataset.approvalMode === "open")) {
-          window.location.href = "https://portal.doneovernight.com";
-          return;
-        }
-
-        if (params.get("quote_ready") !== "1" && params.get("scope_confirmed") !== "1") return;
-        if (!["quote_ready", "awaiting_approval"].includes(activeState?.key)) return;
-        const approvedIndex = states.findIndex((state) => state.key === "execution_approved");
-        const unlockedIndex = states.findIndex((state) => state.key === "workspace_unlocked");
-        currentState = approvedIndex;
-        applyState(currentState);
-        window.setTimeout(() => {
-          currentState = unlockedIndex;
-          applyState(currentState);
-        }, prefersReducedMotion ? 700 : 1800);
-      });
-
-      workspaceCta?.addEventListener("click", (event) => {
-        if (workspaceCta.classList.contains("is-ready")) return;
-        event.preventDefault();
-        workspaceCta.classList.remove("is-shaking");
-        void workspaceCta.offsetWidth;
-        workspaceCta.classList.add("is-shaking");
-        if (workspaceLockMessage) {
-          workspaceLockMessage.textContent = "Workspace opens after quote approval.";
-          workspaceLockMessage.classList.add("is-visible");
-        }
-      });
-
-      function setPreferenceMessage(text, type = "") {
-        if (!preferenceMessage) return;
-        preferenceMessage.textContent = text;
-        preferenceMessage.classList.toggle("is-success", type === "success");
-        preferenceMessage.classList.toggle("is-error", type === "error");
-      }
-
-      function selectNotificationChannel(channel) {
-        selectedNotificationChannel = channel;
-        const channelLabel = channel === "sms" ? "SMS" : "WhatsApp";
-        notificationButtons.forEach((button) => {
-          button.classList.toggle("is-selected", button.dataset.notificationChannel === channel);
-        });
-        if (preferenceLabel) {
-          preferenceLabel.textContent = `Add your phone number for ${channelLabel} updates.`;
-        }
-        if (preferenceSubmit) {
-          preferenceSubmit.textContent = `Request ${channelLabel} updates`;
-        }
-        preferenceForm?.classList.add("is-visible");
-        setPreferenceMessage(`${channelLabel} updates are handled after review confirmation.`);
-        window.setTimeout(() => preferencePhone?.focus({ preventScroll: true }), 80);
-      }
-
-      notificationButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          const channel = button.dataset.notificationChannel === "sms" ? "sms" : "whatsapp";
-          selectNotificationChannel(channel);
-        });
-      });
-
-      preferenceForm?.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const phoneNumber = safe(preferencePhone?.value || "");
-        const digits = phoneNumber.replace(/\D/g, "");
-        const channelLabel = selectedNotificationChannel === "sms" ? "SMS" : "WhatsApp";
-        if (digits.length < 6) {
-          setPreferenceMessage("Add a valid phone number.", "error");
-          preferencePhone?.focus({ preventScroll: true });
-          return;
-        }
-
-        if (preferenceSubmit) {
-          preferenceSubmit.disabled = true;
-          preferenceSubmit.textContent = "Sending";
-        }
-        setPreferenceMessage("Sending preference request.");
-
-        try {
-          const response = await fetch("/api/task-submit", {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              action: "notification_preference",
-              task_id: safe(params.get("task_id") || storedTask.taskId),
-              preferred_channel: selectedNotificationChannel,
-              phone_number: phoneNumber,
-              page: "review",
-              source: "review_notification_preferences",
-              review_state: document.body.dataset.reviewState || safe(params.get("state")),
-              submitted_at: new Date().toISOString(),
-              email: safe(storedTask.email)
-            })
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok || !data?.success) {
-            throw new Error(data?.code || "NOTIFICATION_PREFERENCE_FAILED");
-          }
-
-          notificationButtons.forEach((button) => button.classList.remove("is-selected"));
-          const activeButton = notificationButtons.find((button) => button.dataset.notificationChannel === selectedNotificationChannel);
-          activeButton?.classList.add("is-selected");
-          setPreferenceMessage(`Preference received. Operations will use this channel when updates are available. ${channelLabel} updates are handled after review confirmation.`, "success");
-        } catch (error) {
-          console.warn("Notification preference request failed", error?.message || error);
-          setPreferenceMessage("Couldn’t save this yet. Try again or email ask@doneovernight.com.", "error");
-        } finally {
-          if (preferenceSubmit) {
-            preferenceSubmit.disabled = false;
-            preferenceSubmit.textContent = `Request ${channelLabel} updates`;
-          }
-        }
-      });
     })();
   </script>
-<script src="/lang/runtime.js" defer></script>
 </body>
 </html>
