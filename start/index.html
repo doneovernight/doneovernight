@@ -963,6 +963,9 @@
       font-size: 0.78rem;
       line-height: 1.5;
     }
+    .dispatch-message span {
+      display: block;
+    }
     .dispatch-message.is-success {
       color: rgba(139, 224, 173, 0.82);
     }
@@ -1796,10 +1799,21 @@
         if (event.key === "Escape" && sheet.classList.contains("is-visible")) hideDispatch();
       });
 
-      function setDispatchMessage(text, state = "") {
+      function setDispatchMessage(text, state = "", detail = "") {
         message.classList.remove("is-success", "is-error");
         if (state) message.classList.add(state);
-        message.textContent = text;
+        message.textContent = "";
+        if (!text && !detail) return;
+
+        const title = document.createElement("span");
+        title.textContent = text;
+        message.append(title);
+
+        if (detail) {
+          const detailLine = document.createElement("span");
+          detailLine.textContent = detail;
+          message.append(detailLine);
+        }
       }
 
       form.addEventListener("submit", async (event) => {
@@ -1826,6 +1840,7 @@
         }
         setDispatchMessage("Saving your Dispatch request.");
 
+        let saved = false;
         try {
           const now = new Date().toISOString();
           const response = await fetch("/api/dispatch-subscribe", {
@@ -1853,9 +1868,22 @@
             category: "dispatch",
             page: "start"
           });
-          setDispatchMessage("You’re on the Dispatch. No newsletter. No spam. Just useful ideas when there’s something worth sending.", "is-success");
+          saved = true;
+          email.disabled = true;
+          if (submit) {
+            submit.disabled = true;
+            submit.textContent = "Confirmed";
+          }
+          setDispatchMessage(
+            "You’re on the Dispatch.",
+            "is-success",
+            "No newsletter. No spam. Just useful ideas when there’s something worth sending."
+          );
           form.reset();
         } catch (error) {
+          console.warn("DONEOVERNIGHT Dispatch subscribe failed", {
+            message: error?.message || "Unknown dispatch subscribe error"
+          });
           window.trackEvent?.("Dispatch Failed", {
             source: "business_card_qr",
             category: "dispatch",
@@ -1864,7 +1892,7 @@
           });
           setDispatchMessage("Couldn’t save this yet. Try again or email ask@doneovernight.com.", "is-error");
         } finally {
-          if (submit) {
+          if (!saved && submit) {
             submit.disabled = false;
             submit.textContent = previousText;
           }
