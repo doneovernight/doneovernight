@@ -1059,6 +1059,82 @@
       animation: softTap 360ms ease;
     }
 
+    button.pref-check {
+      border-radius: 999px;
+    }
+
+    .preference-request {
+      display: none;
+      grid-column: 1 / -1;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .preference-request.is-visible {
+      display: grid;
+    }
+
+    .preference-request label {
+      display: grid;
+      gap: 8px;
+      color: rgba(248,244,236,0.78);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .preference-request input {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      outline: 0;
+      background: rgba(0,0,0,0.22);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .preference-request input:focus {
+      border-color: rgba(233,196,138,0.44);
+      box-shadow: 0 0 0 3px rgba(233,196,138,0.08);
+    }
+
+    .preference-submit {
+      justify-self: start;
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid rgba(233,196,138,0.34);
+      border-radius: 999px;
+      background: rgba(233,196,138,0.08);
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .preference-message {
+      min-height: 1.4em;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1.55;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .preference-message.is-success {
+      color: var(--green);
+    }
+
+    .preference-message.is-error {
+      color: #f2a8a8;
+    }
+
     .pref-check:has(input:checked) .box {
       border-color: rgba(233,196,138,0.58);
       background:
@@ -1586,7 +1662,15 @@
         <p>Email updates are sent to the address used for the request. SMS and WhatsApp become available after a phone number is added.</p>
       </div>
       <div class="pref-options">
-        <label class="pref-check is-selected"><input type="checkbox" name="notify_email" checked disabled><span class="box" aria-hidden="true"></span>Email updates active</label>
+        <label class="pref-check is-selected"><input type="checkbox" name="notify_email" checked disabled><span class="box" aria-hidden="true"></span>Email updates</label>
+        <button class="pref-check" type="button" data-notification-channel="whatsapp"><span class="box" aria-hidden="true"></span>WhatsApp</button>
+        <button class="pref-check" type="button" data-notification-channel="sms"><span class="box" aria-hidden="true"></span>SMS</button>
+        <form class="preference-request" data-preference-form aria-live="polite">
+          <label for="preferencePhone" data-preference-label>Add your phone number for WhatsApp updates.</label>
+          <input id="preferencePhone" name="phone_number" type="tel" inputmode="tel" autocomplete="tel" placeholder="+31 6 12345678">
+          <button class="preference-submit" type="submit" data-preference-submit>Request WhatsApp updates</button>
+          <p class="preference-message" data-preference-message></p>
+        </form>
       </div>
     </section>
 
@@ -1664,6 +1748,13 @@
       const approvalNote = document.querySelector("[data-approval-note]");
       const assignmentLabels = Array.from(document.querySelectorAll("[data-assignment-label]"));
       const assignmentSignals = Array.from(document.querySelectorAll("[data-assignment-signal]"));
+      const notificationButtons = Array.from(document.querySelectorAll("[data-notification-channel]"));
+      const preferenceForm = document.querySelector("[data-preference-form]");
+      const preferencePhone = document.querySelector("#preferencePhone");
+      const preferenceLabel = document.querySelector("[data-preference-label]");
+      const preferenceSubmit = document.querySelector("[data-preference-submit]");
+      const preferenceMessage = document.querySelector("[data-preference-message]");
+      let selectedNotificationChannel = "whatsapp";
       const states = [
         {
           key: "review_active",
@@ -2144,6 +2235,93 @@
         if (workspaceLockMessage) {
           workspaceLockMessage.textContent = "Workspace opens after quote approval.";
           workspaceLockMessage.classList.add("is-visible");
+        }
+      });
+
+      function setPreferenceMessage(text, type = "") {
+        if (!preferenceMessage) return;
+        preferenceMessage.textContent = text;
+        preferenceMessage.classList.toggle("is-success", type === "success");
+        preferenceMessage.classList.toggle("is-error", type === "error");
+      }
+
+      function selectNotificationChannel(channel) {
+        selectedNotificationChannel = channel;
+        const channelLabel = channel === "sms" ? "SMS" : "WhatsApp";
+        notificationButtons.forEach((button) => {
+          button.classList.toggle("is-selected", button.dataset.notificationChannel === channel);
+        });
+        if (preferenceLabel) {
+          preferenceLabel.textContent = `Add your phone number for ${channelLabel} updates.`;
+        }
+        if (preferenceSubmit) {
+          preferenceSubmit.textContent = `Request ${channelLabel} updates`;
+        }
+        preferenceForm?.classList.add("is-visible");
+        setPreferenceMessage(`${channelLabel} updates are handled after review confirmation.`);
+        window.setTimeout(() => preferencePhone?.focus({ preventScroll: true }), 80);
+      }
+
+      notificationButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const channel = button.dataset.notificationChannel === "sms" ? "sms" : "whatsapp";
+          selectNotificationChannel(channel);
+        });
+      });
+
+      preferenceForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const phoneNumber = safe(preferencePhone?.value || "");
+        const digits = phoneNumber.replace(/\D/g, "");
+        const channelLabel = selectedNotificationChannel === "sms" ? "SMS" : "WhatsApp";
+        if (digits.length < 6) {
+          setPreferenceMessage("Add a valid phone number.", "error");
+          preferencePhone?.focus({ preventScroll: true });
+          return;
+        }
+
+        if (preferenceSubmit) {
+          preferenceSubmit.disabled = true;
+          preferenceSubmit.textContent = "Sending";
+        }
+        setPreferenceMessage("Sending preference request.");
+
+        try {
+          const response = await fetch("/api/task-submit", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              action: "notification_preference",
+              task_id: safe(params.get("task_id") || storedTask.taskId),
+              preferred_channel: selectedNotificationChannel,
+              phone_number: phoneNumber,
+              page: "review",
+              source: "review_notification_preferences",
+              review_state: document.body.dataset.reviewState || safe(params.get("state")),
+              submitted_at: new Date().toISOString(),
+              email: safe(storedTask.email)
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data?.success) {
+            throw new Error(data?.code || "NOTIFICATION_PREFERENCE_FAILED");
+          }
+
+          notificationButtons.forEach((button) => button.classList.remove("is-selected"));
+          const activeButton = notificationButtons.find((button) => button.dataset.notificationChannel === selectedNotificationChannel);
+          activeButton?.classList.add("is-selected");
+          setPreferenceMessage(`Preference received. Operations will use this channel when updates are available. ${channelLabel} updates are handled after review confirmation.`, "success");
+        } catch (error) {
+          console.warn("Notification preference request failed", error?.message || error);
+          setPreferenceMessage("Couldn’t save this yet. Try again or email ask@doneovernight.com.", "error");
+        } finally {
+          if (preferenceSubmit) {
+            preferenceSubmit.disabled = false;
+            preferenceSubmit.textContent = `Request ${channelLabel} updates`;
+          }
         }
       });
     })();

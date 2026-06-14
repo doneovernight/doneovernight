@@ -1,6 +1,7 @@
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const { dispatchWebhook, getWebhookUrls } = require("../lib/ops");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
+const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 
@@ -276,6 +277,11 @@ module.exports = async function handler(req, res) {
     const input = await parseBody(req);
     if (isDispatchSubscribeRequest(req)) {
       const result = await subscribeToDispatch(input);
+      return send(res, result.statusCode, result.payload);
+    }
+
+    if (input.action === "notification_preference") {
+      const result = await handleNotificationPreference(input);
       return send(res, result.statusCode, result.payload);
     }
 
