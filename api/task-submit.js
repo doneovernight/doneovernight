@@ -1,6 +1,7 @@
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const { dispatchWebhook, getWebhookUrls } = require("../lib/ops");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
+const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -172,6 +173,14 @@ function buildClientConfirmationEmailPayload(task) {
 }
 
 async function sendClientConfirmationEmail(task) {
+  const resendResult = await sendTaskConfirmationEmailViaResend(task, {
+    timeoutMs: CLIENT_EMAIL_TIMEOUT_MS
+  });
+
+  if (resendResult.configured || resendResult.reason !== "not_configured") {
+    return resendResult;
+  }
+
   const payload = buildClientConfirmationEmailPayload(task);
   const result = await dispatchWebhook({
     tag: "[TASK_CONFIRMATION_EMAIL]",
@@ -186,6 +195,7 @@ async function sendClientConfirmationEmail(task) {
     sent,
     delivered: sent,
     reason: sent ? "sent" : (result.attempted ? "failed" : "not_configured"),
+    provider: result.attempted ? "webhook" : "none",
     status: result
   };
 }
@@ -259,7 +269,8 @@ module.exports = async function handler(req, res) {
       configured: false,
       sent: false,
       delivered: false,
-      reason: "not_configured"
+      reason: "not_configured",
+      provider: "none"
     };
 
     try {
@@ -271,6 +282,7 @@ module.exports = async function handler(req, res) {
         sent: false,
         delivered: false,
         reason: "failed",
+        provider: process.env.RESEND_API_KEY && process.env.TASK_CONFIRMATION_FROM ? "resend" : "none",
         error: "TASK_CONFIRMATION_EMAIL_FAILED"
       };
     }

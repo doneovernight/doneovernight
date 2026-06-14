@@ -4557,11 +4557,15 @@ if (window.location.hash === '#cta') {
     submitBtn.innerHTML = isSending ? 'Sending…' : submitIdleHtml;
   }
 
-  function renderConfirmation() {
+  function renderConfirmation(data) {
+    const emailLine = (data?.clientEmail?.sent || data?.clientEmail?.delivered)
+      ? '<p>A confirmation email has been sent to your inbox.</p>'
+      : '';
     form.innerHTML = `
       <div class="intake-confirmation">
         <h4>Task received.</h4>
         <p>We’ll review it and send a quote within 60 minutes.</p>
+        ${emailLine}
         <div class="status-line"><span class="live-dot"></span>Studio is live · pending review</div>
       </div>
     `;
@@ -4628,7 +4632,7 @@ if (window.location.hash === '#cta') {
         category: 'task',
         page: 'home'
       });
-      renderConfirmation();
+      renderConfirmation(data);
       form.querySelector('.intake-confirmation')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
       setSending(false);
