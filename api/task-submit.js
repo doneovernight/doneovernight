@@ -8,6 +8,10 @@ const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confir
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
 
+function clean(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function buildClientReviewUrl(task) {
   const reviewUrl = new URL("https://portal.doneovernight.com/review");
   reviewUrl.searchParams.set("state", "request_received");
@@ -21,6 +25,43 @@ function send(res, statusCode, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+function resolveClientBudget(task = {}) {
+  const rawPayload = task.rawPayload || task.raw_payload || {};
+  const body = rawPayload.body || task.body || {};
+  const candidates = [
+    task.clientBudget,
+    task.client_budget,
+    task.budget,
+    task.project_budget,
+    task.projectBudget,
+    task.estimatedBudget,
+    task.estimated_budget,
+    rawPayload.client_budget,
+    rawPayload.clientBudget,
+    rawPayload.budget,
+    rawPayload.project_budget,
+    rawPayload.projectBudget,
+    rawPayload.estimatedBudget,
+    rawPayload.estimated_budget,
+    rawPayload.raw_payload?.client_budget,
+    rawPayload.raw_payload?.budget,
+    body.client_budget,
+    body.clientBudget,
+    body.budget,
+    body.project_budget,
+    body.projectBudget,
+    body.estimatedBudget,
+    body.estimated_budget
+  ];
+
+  for (const value of candidates) {
+    const cleaned = clean(value);
+    if (cleaned) return cleaned;
+  }
+
+  return "";
 }
 
 async function notifyOperations(task) {
@@ -39,16 +80,20 @@ async function notifyOperations(task) {
     task.preferredLanguage ||
     task.rawPayload?.preferred_language ||
     "en";
-  const clientBudget =
-    task.clientBudget ||
-    task.rawPayload?.client_budget ||
-    task.rawPayload?.clientBudget ||
-    task.rawPayload?.budget ||
-    task.rawPayload?.project_budget ||
-    task.rawPayload?.estimatedBudget ||
-    "";
+  const clientBudget = resolveClientBudget(task);
   const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
+  const telegramMessage = [
+    "🟡 DONEOVERNIGHT ASK",
+    `Reference: ${task.taskId}`,
+    `Name: ${task.name || "Unknown"}`,
+    `Email: ${task.email || "Unknown"}`,
+    `Client budget: ${clientBudget || "Not provided"}`,
+    suggestedPrice ? `Suggested: ${suggestedPrice}` : null,
+    `Deadline: ${task.deadline || "Not provided"}`,
+    `Source: ${task.source || "task_intake"}`,
+    `Review: ${reviewUrl}`
+  ].filter(Boolean).join("\n");
 
   try {
     const response = await fetch(webhookUrl, {
@@ -78,6 +123,7 @@ async function notifyOperations(task) {
         budget: clientBudget,
         client_budget: clientBudget,
         clientBudget,
+        client_budget_display: clientBudget ? `Client budget: ${clientBudget}` : "Client budget: Not provided",
         client_submitted_budget: clientBudget,
         submitted_budget: clientBudget,
         user_submitted_budget: clientBudget,
@@ -88,7 +134,11 @@ async function notifyOperations(task) {
         projectBudget: clientBudget,
         internal_suggested_price: suggestedPrice || null,
         suggested_price: suggestedPrice || null,
+        suggested_quote: suggestedPrice || null,
         internal_estimate: suggestedPrice || null,
+        telegram_message: telegramMessage,
+        operator_message: telegramMessage,
+        message: telegramMessage,
         client: {
           name: task.name,
           email: task.email,
@@ -167,6 +217,7 @@ function buildClientConfirmationEmailPayload(task) {
   const subject = "Task received — DONEOVERNIGHT";
   const reference = task.taskId;
   const reviewUrl = buildClientReviewUrl(task);
+  const clientBudget = resolveClientBudget(task);
   const text = [
     `Hi ${name},`,
     "",
@@ -199,8 +250,8 @@ function buildClientConfirmationEmailPayload(task) {
     reference_id: reference,
     source: task.source,
     intake_version: task.intakeVersion,
-    client_budget: task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget || "",
-    budget_present: Boolean(task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget),
+    client_budget: clientBudget,
+    budget_present: Boolean(clientBudget),
     task_summary: task.taskSummary,
     review_url: reviewUrl,
     client_review_url: reviewUrl,
