@@ -173,14 +173,6 @@ function buildClientConfirmationEmailPayload(task) {
 }
 
 async function sendClientConfirmationEmail(task) {
-  const resendResult = await sendTaskConfirmationEmailViaResend(task, {
-    timeoutMs: CLIENT_EMAIL_TIMEOUT_MS
-  });
-
-  if (resendResult.configured || resendResult.reason !== "not_configured") {
-    return resendResult;
-  }
-
   const payload = buildClientConfirmationEmailPayload(task);
   const result = await dispatchWebhook({
     tag: "[TASK_CONFIRMATION_EMAIL]",
@@ -190,7 +182,7 @@ async function sendClientConfirmationEmail(task) {
     timeoutMs: CLIENT_EMAIL_TIMEOUT_MS
   });
   const sent = result.fulfilled > 0;
-  return {
+  const webhookResult = {
     configured: result.attempted > 0,
     sent,
     delivered: sent,
@@ -198,6 +190,14 @@ async function sendClientConfirmationEmail(task) {
     provider: result.attempted ? "webhook" : "none",
     status: result
   };
+
+  if (webhookResult.configured || webhookResult.reason !== "not_configured") {
+    return webhookResult;
+  }
+
+  return sendTaskConfirmationEmailViaResend(task, {
+    timeoutMs: CLIENT_EMAIL_TIMEOUT_MS
+  });
 }
 
 function parseBody(req) {
