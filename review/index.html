@@ -506,7 +506,7 @@
     <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
       <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span>Workspace access</span></p>
       <h2 class="workspace-title" id="workspace-title">Workspace access</h2>
-      <p class="copy">Workspace access becomes available once review and approval are complete.</p>
+      <p class="copy" data-workspace-copy>Your workspace opens after your quote is approved and payment is confirmed.</p>
 
       <div class="workspace-grid">
         <ul class="workspace-list" aria-label="Workspace access includes">
@@ -518,15 +518,15 @@
         </ul>
 
         <div class="workspace-actions">
-          <a class="workspace-cta" data-workspace-cta href="/workspace">Workspace Pending</a>
-          <span class="workspace-status" data-workspace-status>Workspace pending</span>
-          <span class="workspace-message" data-workspace-message hidden>Workspace access becomes available after operator approval.</span>
+          <a class="workspace-cta" data-workspace-cta href="/workspace">Workspace locked</a>
+          <span class="workspace-status" data-workspace-status>Workspace locked</span>
+          <span class="workspace-message" data-workspace-message hidden>Workspace opens after quote approval and payment confirmation.</span>
         </div>
       </div>
     </section>
 
     <footer class="footer">
-      <span class="reference">Reference: <span data-reference>DON-...</span></span>
+      <span class="reference">Reference: <span data-reference>Reference pending</span></span>
       <span>Reply to the email if you want to add context.</span>
     </footer>
   </main>
@@ -544,6 +544,9 @@
         quote_preparation: "quote",
         quote_preparing: "quote",
         quote_ready: "quote_ready",
+        quote_sent: "quote_ready",
+        awaiting_payment: "quote_ready",
+        payment_pending: "quote_ready",
         awaiting_approval: "quote_ready",
         approval: "quote_ready"
       };
@@ -555,15 +558,27 @@
         "review_active",
         "quote_preparation",
         "quote_preparing",
-        "quote_ready"
+        "quote_ready",
+        "quote_sent",
+        "awaiting_payment",
+        "payment_pending",
+        "approved"
       ]);
       const activeWorkspaceStates = new Set([
-        "execution_approved",
-        "approved",
+        "quote_paid",
+        "quote_accepted_paid",
         "workspace_unlocking",
-        "workspace_active"
+        "workspace_active",
+        "execution_active"
       ]);
-      const reference = safe(params.get("task_id") || params.get("id") || params.get("reference"), 80);
+      const reference = safe(
+        params.get("task_id") ||
+        params.get("operational_id") ||
+        params.get("reference_id") ||
+        params.get("id") ||
+        params.get("reference"),
+        80
+      );
       const quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
       const quoteUrl = (() => {
         try {
@@ -576,6 +591,12 @@
 
       if (reference) {
         document.querySelector("[data-reference]").textContent = reference;
+      }
+
+      function buildWorkspaceHref() {
+        const workspaceUrl = new URL("/workspace/", window.location.origin);
+        if (reference) workspaceUrl.searchParams.set("task_id", reference);
+        return `${workspaceUrl.pathname}${workspaceUrl.search}`;
       }
 
       function setStep(name, status) {
@@ -608,9 +629,10 @@
       function configureWorkspaceAccess() {
         const workspace = document.querySelector("[data-workspace-unlock]");
         const cta = document.querySelector("[data-workspace-cta]");
+        const copy = document.querySelector("[data-workspace-copy]");
         const status = document.querySelector("[data-workspace-status]");
         const message = document.querySelector("[data-workspace-message]");
-        const isActive = activeWorkspaceStates.has(requested);
+        const isActive = activeWorkspaceStates.has(requested) && Boolean(reference);
         const isLocked = lockedWorkspaceStates.has(requested) || !requested || state === "review" || state === "quote" || state === "quote_ready";
 
         if (!workspace || (!isActive && !isLocked)) return;
@@ -618,22 +640,34 @@
         workspace.removeAttribute("hidden");
 
         if (isActive) {
-          cta.textContent = "Activate Workspace";
+          copy.textContent = "Your workspace is ready.";
+          cta.textContent = "Open workspace";
           cta.classList.remove("is-locked");
-          cta.href = "/workspace";
-          status.textContent = requested === "workspace_active" ? "Workspace active" : "Workspace unlocking";
+          cta.href = buildWorkspaceHref();
+          status.textContent = "Workspace ready";
           message.hidden = true;
+          cta.addEventListener("click", () => {
+            if (!reference) return;
+            try {
+              sessionStorage.setItem("doneovernight:workspaceHandoff", JSON.stringify({
+                task_id: reference,
+                taskId: reference,
+                source: "review_unlock"
+              }));
+            } catch (error) {}
+          });
           return;
         }
 
-        cta.textContent = "Workspace Pending";
+        copy.textContent = "Your workspace opens after your quote is approved and payment is confirmed.";
+        cta.textContent = "Workspace locked";
         cta.classList.add("is-locked");
-        cta.href = "/workspace";
-        status.textContent = "Workspace pending";
+        cta.href = buildWorkspaceHref();
+        status.textContent = "Workspace locked";
 
         cta.addEventListener("click", (event) => {
           event.preventDefault();
-          message.textContent = "Workspace access becomes available after operator approval.";
+          message.textContent = "Workspace opens after quote approval and payment confirmation.";
           message.hidden = false;
           cta.classList.remove("is-shaking");
           window.requestAnimationFrame(() => cta.classList.add("is-shaking"));

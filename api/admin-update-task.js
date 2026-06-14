@@ -194,14 +194,22 @@ async function verifyAdminKey(adminKey) {
   }
 }
 
+function buildTaskFilter(taskId) {
+  const encodedId = encodeURIComponent(taskId);
+  if (/^DON-\d{4}-\d{5}$/i.test(taskId)) {
+    return `task_id=eq.${encodedId}`;
+  }
+  return `or=(id.eq.${encodedId},task_id.eq.${encodedId})`;
+}
+
 async function patchTask(taskId, patch) {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
-  const encodedId = encodeURIComponent(taskId);
+  const taskFilter = buildTaskFilter(taskId);
 
   try {
-    const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?id=eq.${encodedId}`, {
+    const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}`, {
       method: "PATCH",
       signal: controller.signal,
       headers: {
@@ -253,7 +261,7 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     await verifyAdminKey(input.admin_key || req.headers["x-admin-key"]);
-    const taskId = clean(input.id);
+    const taskId = clean(input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
     if (!taskId) {
       return send(res, 400, {
         success: false,
