@@ -3389,6 +3389,8 @@ function renderTasks(tasks) {
     const renderSignature = getTaskRenderSignature(task);
     const createdAt = formatTaskDate(task.created_at);
     const deadline = task.deadline ? escapeHTML(task.deadline) : 'No deadline set';
+    const clientBudget = task.client_budget || task.raw_payload?.client_budget || task.raw_payload?.budget || task.raw_payload?.clientBudget || '';
+    const clientBudgetLabel = clientBudget ? escapeHTML(clientBudget) : 'Not indicated';
     const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Pending quote</span>';
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
     const quoteNote = task.quote_note ? `<div>${escapeHTML(task.quote_note)}</div>` : '';
@@ -3454,7 +3456,7 @@ function renderTasks(tasks) {
         </div>
         <div class="admin-task-meta">
           <div class="admin-task-metric"><span>Quote</span><strong>${quoteAmount}</strong></div>
-          <div class="admin-task-metric"><span>ETA</span><strong>${deliveryEta || 'Pending'}</strong></div>
+          <div class="admin-task-metric"><span>Client budget</span><strong>${clientBudgetLabel}</strong></div>
           <div class="admin-task-metric"><span>Source</span><strong>${escapeHTML(task.source || 'workspace')}</strong></div>
         </div>
         <div class="admin-task-activity">${escapeHTML(activityLabel)}</div>

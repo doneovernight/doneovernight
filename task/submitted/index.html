@@ -518,7 +518,7 @@
   <main class="page">
     <header class="header">
       <a href="../../" aria-label="DONEOVERNIGHT home">
-        <img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
+        <img class="logo" src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
       </a>
       <span class="status">Studio online</span>
     </header>
@@ -528,7 +528,7 @@
         <p class="eyebrow">Operational checkpoint</p>
         <h1 id="submittedTitle">Task received.</h1>
         <p class="copy">
-          Your request is entering the review runtime. Scope, timing, complexity, and execution routing are synchronizing now.
+          Your request is entering review. DONEOVERNIGHT is checking scope, timing, and the next step now.
         </p>
       </div>
 
@@ -549,13 +549,13 @@
         </div>
 
         <p class="panel-note">
-          Private intake recorded. Track the review layer first, then move through quote reveal, approval, assignment, and workspace unlock.
+          Private intake recorded. Track request receipt and review status before quote approval or workspace access opens.
         </p>
 
         <div class="runtime-signals" aria-label="Runtime signals">
           <span class="runtime-signal">Review queue active</span>
           <span class="runtime-signal">Scope synchronization active</span>
-          <span class="runtime-signal">Execution standby engaged</span>
+          <span class="runtime-signal">Quote preparation pending</span>
         </div>
 
         <div class="rail" aria-label="Future task states">
@@ -575,7 +575,7 @@
             <p>Returning execution layer detected · Workspace history synchronized</p>
             <a class="button secondary" id="workspaceButton" href="../../workspace">Open active workspace</a>
           </div>
-          <p class="action-note">The review runtime is your primary operational status layer before workspace unlock.</p>
+          <p class="action-note">Workspace access opens only after quote approval.</p>
         </div>
       </aside>
     </section>
@@ -585,7 +585,7 @@
     <div class="review-handoff-card" role="status" aria-live="polite">
       <p class="eyebrow">Review runtime</p>
       <h2>Opening review layer.</h2>
-      <p>Operational status is synchronizing across review, quote, assignment, and workspace unlock.</p>
+      <p>Request receipt and review status are opening now.</p>
     </div>
   </div>
 
@@ -622,14 +622,10 @@
         if (lastTask?.reviewUrl) return lastTask.reviewUrl;
         const reviewUrl = new URL("https://portal.doneovernight.com/review");
         const params = {
-          state: "review_active",
+          state: "request_received",
           task_id: taskId,
-          request: lastTask?.taskSummary || "",
-          client: lastTask?.name || "",
-          source: "Secure task intake",
           submitted: workspaceHandoff.createdAt,
-          priority: "Evaluating",
-          deadline: "Under review"
+          source: lastTask?.source || "task_intake"
         };
 
         Object.entries(params).forEach(([key, value]) => {

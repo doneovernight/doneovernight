@@ -7,6 +7,14 @@ const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confir
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
 
+function buildClientReviewUrl(task) {
+  const reviewUrl = new URL("https://portal.doneovernight.com/review");
+  reviewUrl.searchParams.set("state", "request_received");
+  if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
+  if (task?.createdAt) reviewUrl.searchParams.set("submitted", task.createdAt);
+  return reviewUrl.toString();
+}
+
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json");
@@ -30,6 +38,8 @@ async function notifyOperations(task) {
     task.preferredLanguage ||
     task.rawPayload?.preferred_language ||
     "en";
+  const clientBudget = task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget || "";
+  const reviewUrl = buildClientReviewUrl(task);
 
   try {
     const response = await fetch(webhookUrl, {
@@ -56,6 +66,10 @@ async function notifyOperations(task) {
         client_email: task.email,
         company: task.company,
         deadline: task.deadline,
+        budget: clientBudget,
+        client_budget: clientBudget,
+        clientBudget,
+        client_submitted_budget: clientBudget,
         priority: task.priority,
         source: task.source,
         intakeVersion: task.intakeVersion,
@@ -75,6 +89,8 @@ async function notifyOperations(task) {
         queue_state: task.queueState,
         queueState: task.queueState,
         review_window_estimate: task.reviewWindowEstimate,
+        review_url: reviewUrl,
+        client_review_url: reviewUrl,
         confirmation_email_to: task.email,
         confirmation_email_name: task.name,
         confirmation_email_required: true,
@@ -120,6 +136,7 @@ function buildClientConfirmationEmailPayload(task) {
   const name = task.name || "there";
   const subject = "Task received — DONEOVERNIGHT";
   const reference = task.taskId;
+  const reviewUrl = buildClientReviewUrl(task);
   const text = [
     `Hi ${name},`,
     "",
@@ -153,6 +170,8 @@ function buildClientConfirmationEmailPayload(task) {
     source: task.source,
     intake_version: task.intakeVersion,
     task_summary: task.taskSummary,
+    review_url: reviewUrl,
+    client_review_url: reviewUrl,
     text,
     html: `
       <div style="margin:0;padding:0;background:#050608;color:#f5f1ea;font-family:Inter,Arial,sans-serif">
@@ -165,6 +184,7 @@ function buildClientConfirmationEmailPayload(task) {
               <p style="margin:0;color:rgba(245,241,234,.52);font-size:11px;letter-spacing:.14em;text-transform:uppercase">Reference</p>
               <p style="margin:6px 0 0;color:#f5f1ea;font-size:18px;letter-spacing:.04em">${escapeHtml(reference)}</p>
             </div>
+            <p style="margin:0 0 18px"><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:13px 18px;border:1px solid rgba(233,196,138,.4);border-radius:999px;color:#e9c48a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">Track review</a></p>
             <p style="margin:0;color:rgba(245,241,234,.58);font-size:13px;line-height:1.6">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
           </div>
         </div>
@@ -175,6 +195,12 @@ function buildClientConfirmationEmailPayload(task) {
 
 async function sendClientConfirmationEmail(task) {
   const payload = buildClientConfirmationEmailPayload(task);
+  const taskWithReviewUrl = {
+    ...task,
+    reviewUrl: payload.review_url,
+    review_url: payload.review_url,
+    client_review_url: payload.client_review_url
+  };
   const result = await dispatchWebhook({
     tag: "[TASK_CONFIRMATION_EMAIL]",
     event: payload.event,
@@ -196,7 +222,7 @@ async function sendClientConfirmationEmail(task) {
     return webhookResult;
   }
 
-  return sendTaskConfirmationEmailViaResend(task, {
+  return sendTaskConfirmationEmailViaResend(taskWithReviewUrl, {
     timeoutMs: CLIENT_EMAIL_TIMEOUT_MS
   });
 }
@@ -305,7 +331,8 @@ module.exports = async function handler(req, res) {
       task,
       persistedTask,
       notification,
-      clientEmail
+      clientEmail,
+      reviewUrl: buildClientReviewUrl(task)
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {

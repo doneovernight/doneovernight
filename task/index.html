@@ -1729,6 +1729,14 @@
             </div>
 
             <div class="field-group">
+              <label class="label" for="taskBudget">
+                <span>Budget</span>
+                <span class="hint">Optional</span>
+              </label>
+              <input id="taskBudget" name="budget" type="text" inputmode="text" autocomplete="off" placeholder="Indicated budget, if you have one">
+            </div>
+
+            <div class="field-group">
               <label class="label">
                 <span>Contact</span>
                 <span class="hint">Required</span>
@@ -1793,7 +1801,7 @@
       <div class="runtime-handoff-signals">
         <span>Intake secured</span>
         <span>Review signal opening</span>
-        <span>Execution layer standing by</span>
+        <span>Review standing by</span>
       </div>
     </div>
   </div>
@@ -1889,6 +1897,7 @@
         return {
           task_description: readField("#taskDescription"),
           deadline: deadlineInput?.value.trim() || "",
+          budget: readField("#taskBudget"),
           email: readField("#taskEmail"),
           name: readField("#taskName"),
           company: readField("#taskCompany"),
@@ -1916,14 +1925,9 @@
         const taskId = data?.taskId || data?.task?.taskId || "";
         const submitted = data?.task?.createdAt || new Date().toISOString();
         const params = {
-          state: "review_active",
-          request: payload.task_description,
+          state: "request_received",
           task_id: taskId,
-          client: payload.name,
-          deadline: payload.deadline || "Under review",
-          source: "Secure task intake",
-          submitted,
-          priority: payload.deadline && /rush|4h|tonight|overnight/i.test(payload.deadline) ? "Priority review" : "Evaluating"
+          submitted
         };
 
         Object.entries(params).forEach(([key, value]) => {
@@ -1994,6 +1998,8 @@
             name: data.task?.name || payload.name,
             company: data.task?.company || payload.company,
             source: data.task?.source || payload.source,
+            deadline: data.task?.deadline || payload.deadline,
+            clientBudget: data.task?.clientBudget || payload.budget,
             status: data.task?.status || "review_pending",
             reviewWindowEstimate: data.task?.reviewWindowEstimate || "< 60 min",
             clientEmail: data.clientEmail || null,
