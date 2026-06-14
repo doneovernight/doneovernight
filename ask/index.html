@@ -717,11 +717,10 @@
     }
     .activity {
       display: grid;
-      grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
-      gap: clamp(22px, 4.6vw, 64px);
-      align-items: start;
-      padding: clamp(24px, 4vw, 48px) 0;
+      justify-items: center;
+      padding: clamp(68px, 8vw, 124px) 0;
       border-top: 1px solid rgba(245, 241, 234, 0.055);
+      text-align: center;
     }
     .activity-kicker,
     .how-kicker {
@@ -732,47 +731,29 @@
       letter-spacing: 0.22em;
       text-transform: uppercase;
     }
-    .activity-list {
+    .activity-kicker {
+      margin-bottom: clamp(28px, 4vw, 48px);
+    }
+    .activity-words {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      list-style: none;
+      gap: clamp(2px, 0.8vw, 8px);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(3.1rem, 8.8vw, 8.4rem);
+      font-weight: 400;
+      line-height: 0.96;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
     }
-    .activity-list li {
-      position: relative;
-      min-height: 38px;
-      padding: 10px 10px 10px 24px;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      color: rgba(245, 241, 234, 0.52);
-      font-size: 0.88rem;
+    .activity-words span {
+      display: block;
     }
-    .activity-list li::before {
-      position: absolute;
-      top: 50%;
-      left: 4px;
-      width: 5px;
-      height: 5px;
-      border-radius: 999px;
-      background: var(--green);
-      box-shadow: 0 0 10px rgba(139, 224, 173, 0.24);
-      transform: translateY(-50%);
-      animation: livePulse 4.8s ease-in-out infinite;
-      content: "";
-    }
-    .activity-note {
-      grid-column: 2;
-      margin-top: -4px;
-      color: rgba(245, 241, 234, 0.36);
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    @keyframes livePulse {
-      0%, 100% { opacity: 0.32; box-shadow: 0 0 8px rgba(139, 224, 173, 0.16); }
-      50% { opacity: 0.76; box-shadow: 0 0 14px rgba(139, 224, 173, 0.28); }
+    .activity-copy {
+      max-width: 28ch;
+      margin-top: clamp(28px, 4vw, 52px);
+      color: rgba(245, 241, 234, 0.5);
+      font-size: clamp(1rem, 1.35vw, 1.2rem);
+      line-height: 1.6;
     }
     .how { padding: clamp(10px, 2vw, 22px) 0 clamp(28px, 4.5vw, 54px); }
     .how-inner {
@@ -1054,12 +1035,6 @@
       .trust-panel {
         width: min(540px, 100%);
       }
-      .activity {
-        gap: clamp(28px, 5vw, 72px);
-      }
-      .activity-list {
-        gap: clamp(16px, 2.4vw, 30px);
-      }
       .how-list {
         gap: clamp(22px, 3vw, 44px);
       }
@@ -1154,16 +1129,7 @@
         margin-top: clamp(30px, 5vh, 58px);
       }
       .activity {
-        grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
-        gap: clamp(56px, 7vw, 118px);
-        padding: clamp(54px, 6vw, 90px) 0;
-      }
-      .activity-list {
-        grid-template-columns: repeat(3, minmax(170px, 1fr));
-      }
-      .activity-list li {
-        min-height: 54px;
-        padding-top: 17px;
+        padding: clamp(96px, 10vw, 164px) 0;
       }
       .how {
         padding-top: clamp(30px, 4.4vw, 62px);
@@ -1244,9 +1210,6 @@
       h1 { max-width: 11ch; }
       .grid { grid-template-columns: 1fr; }
       .actions .btn { flex: 1 1 180px; }
-      .activity { grid-template-columns: 1fr; }
-      .activity-list { grid-template-columns: 1fr 1fr 1fr; }
-      .activity-note { grid-column: auto; margin-top: -10px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
       .dispatch-sheet { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
@@ -1300,9 +1263,10 @@
       input { height: 44px; }
       textarea { min-height: 108px; }
       .deadline-chips { grid-template-columns: 1fr 1fr; }
-      .activity { padding: 22px 0 30px; }
-      .activity-list { grid-template-columns: 1fr; gap: 7px; }
-      .activity-list li { min-height: 38px; padding-top: 10px; padding-bottom: 10px; }
+      .activity { padding: 58px 0 64px; }
+      .activity-kicker { margin-bottom: 24px; }
+      .activity-words { gap: 4px; font-size: clamp(2.5rem, 13vw, 4.2rem); line-height: 1.02; }
+      .activity-copy { margin-top: 24px; font-size: 0.92rem; }
       .how-list { grid-template-columns: 1fr; }
       .how-step { min-height: auto; padding-bottom: 2px; }
       .dispatch-panel {
@@ -1321,7 +1285,6 @@
       .splash-thanks { display: none; }
       .splash-sky { display: none; }
       .atmosphere::before { animation: none; }
-      .activity-list li::before { animation: none; }
       .form-card { transition: none; }
       .dispatch-sheet { transition: none; }
       .btn,
@@ -1425,14 +1388,15 @@
       </aside>
     </section>
 
-    <section class="activity" aria-label="Live activity examples">
-      <p class="activity-kicker">Live activity</p>
-      <ul class="activity-list">
-        <li>Landing page fix</li>
-        <li>CRM automation</li>
-        <li>Booking flow</li>
-      </ul>
-      <p class="activity-note">Example request types</p>
+    <section class="activity" aria-label="DONEOVERNIGHT overnight execution layer">
+      <p class="activity-kicker">Overnight active</p>
+      <div class="activity-words" aria-label="Websites. Automations. Portals. Operations.">
+        <span>Websites.</span>
+        <span>Automations.</span>
+        <span>Portals.</span>
+        <span>Operations.</span>
+      </div>
+      <p class="activity-copy">Running while you sleep.</p>
     </section>
 
     <section class="how" id="how-it-works" aria-labelledby="howTitle">
