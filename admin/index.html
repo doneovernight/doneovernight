@@ -2779,6 +2779,10 @@ function getOperatorStatusGroup(status) {
   return 'pending';
 }
 
+function getOperatorResolvedStatus(operator = {}) {
+  return operator.status_group || operator.status;
+}
+
 function getStatusLabel(status) {
   const labels = {
     review_pending: 'Review pending',
@@ -3497,7 +3501,7 @@ if ('IntersectionObserver' in window) {
 function renderClients(clients) {
   adminClientsKicker.hidden = true;
   const counts = getClientGroups(clients);
-  document.querySelectorAll('.admin-client-tab').forEach((tab) => {
+  document.querySelectorAll('[data-client-filter]').forEach((tab) => {
     tab.classList.toggle('is-active', tab.dataset.clientFilter === adminClientFilter);
     const label = tab.dataset.clientFilter === 'pending'
       ? 'Pending'
@@ -3662,9 +3666,9 @@ function renderOperators(operators) {
 
 function getOperatorGroups(operators) {
   return {
-    pending: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'pending')),
-    active: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'active')),
-    inactive: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(operator.status) === 'inactive'))
+    pending: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'pending')),
+    active: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'active')),
+    inactive: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'inactive'))
   };
 }
 
@@ -3699,8 +3703,8 @@ function renderOperatorField(label, value) {
 
 function renderOperatorRow(operator) {
   const createdAt = formatTaskDate(operator.created_at);
-  const actions = operator.email ? getOperatorActions(operator.status) : [];
-  const group = getOperatorStatusGroup(operator.status);
+  const actions = operator.email ? getOperatorActions(getOperatorResolvedStatus(operator)) : [];
+  const group = getOperatorStatusGroup(getOperatorResolvedStatus(operator));
   const actionMarkup = actions.length ? `
     <div class="admin-client-actions">
       ${actions.map((action) => `
@@ -3723,7 +3727,7 @@ function renderOperatorRow(operator) {
           <h3 class="admin-client-name">${escapeHTML(operator.name || 'Unnamed operator')}</h3>
           <div class="admin-client-email">${escapeHTML(operator.email || 'No email')}</div>
         </div>
-        <span class="admin-status-pill ${getStatusClass(operator.status)}">${getOperatorStatusLabel(operator.status)}</span>
+        <span class="admin-status-pill ${getStatusClass(getOperatorResolvedStatus(operator))}">${getOperatorStatusLabel(getOperatorResolvedStatus(operator))}</span>
       </div>
       ${createdAt ? `<div class="admin-client-meta">${escapeHTML(createdAt)}</div>` : ''}
       <div class="admin-operator-detail-grid">
@@ -4891,7 +4895,7 @@ adminClientsList.addEventListener('click', async (e) => {
   });
 });
 
-document.querySelectorAll('.admin-client-tab').forEach((tab) => {
+document.querySelectorAll('[data-client-filter]').forEach((tab) => {
   tab.addEventListener('click', () => {
     if (!tab.dataset.clientFilter) return;
     adminClientFilter = tab.dataset.clientFilter || 'all';
