@@ -100,29 +100,18 @@ function hasEnv(name) {
 
 function getDispatchNotificationReadiness() {
   const webhookConfigured = [
-    "DISPATCH_NOTIFICATION_WEBHOOK_URL",
-    "DISPATCH_OPERATOR_WEBHOOK_URL",
-    "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL",
-    "DONEOVERNIGHT_TELEGRAM_WEBHOOK_URL"
+    "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"
   ].some(hasEnv);
   const doneovernightBotConfigured =
     hasEnv("DONEOVERNIGHT_BOT_TOKEN") && hasEnv("DONEOVERNIGHT_CHAT_ID");
-  const doneovernightSharedBotConfigured =
-    hasEnv("TELEGRAM_BOT_TOKEN") && hasEnv("DONEOVERNIGHT_CHAT_ID");
-  const opsBotConfigured =
-    hasEnv("OPS_TELEGRAM_BOT_TOKEN") && hasEnv("OPS_TELEGRAM_CHAT_ID");
 
   return {
-    configured: webhookConfigured || doneovernightBotConfigured || doneovernightSharedBotConfigured || opsBotConfigured,
-    method: doneovernightBotConfigured
+    configured: webhookConfigured || doneovernightBotConfigured,
+    method: webhookConfigured
+      ? "DONEOVERNIGHT Ops webhook"
+      : doneovernightBotConfigured
         ? "DONEOVERNIGHT bot"
-        : doneovernightSharedBotConfigured
-          ? "DONEOVERNIGHT chat via shared bot"
-          : opsBotConfigured
-            ? "Ops bot"
-            : webhookConfigured
-              ? "Webhook"
-              : "Not configured"
+        : "Not configured"
   };
 }
 
