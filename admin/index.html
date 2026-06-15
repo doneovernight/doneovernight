@@ -2739,7 +2739,7 @@ body.is-admin .admin-dashboard { display: block; }
           </div>
         </div>
         <div id="adminHeartbeatResult" class="admin-review-list">
-          <div class="placeholder">Run Heartbeat to check Website, Ask, Start, Portal, Admin, Workspace, Telegram, and Supabase.</div>
+          <div class="placeholder">Run Heartbeat to check routes, infrastructure status, and operational counts.</div>
         </div>
       </section>
 
@@ -3839,6 +3839,24 @@ function renderOperationsMetricCard(label, item = {}) {
   return renderTrafficSignalCard(label, item);
 }
 
+function makeHeartbeatCountCard(source, value, reason = 'Real operational count') {
+  if (value === null || value === undefined || value === '') {
+    return {
+      source,
+      status: 'Unavailable',
+      state: 'waiting',
+      reason: 'Operational count unavailable'
+    };
+  }
+  return {
+    source,
+    status: 'Healthy',
+    state: 'live',
+    value: Number.isFinite(Number(value)) ? Number(value) : 0,
+    reason
+  };
+}
+
 function renderLatestActivityCard(label, item = {}) {
   const state = getHeartbeatState(item);
   const value = item.status === 'Healthy' ? (item.task_id || item.value || item.email || 'Available') : getHeartbeatStatusLabel(item);
@@ -3879,14 +3897,17 @@ function renderHeartbeatResult(data = {}) {
     health.startWebsite,
     health.portalReview,
     health.adminWebsite,
-    health.workspace,
-    health.supabase,
-    health.taskCount,
-    health.dispatchCount,
-    deployments.vercel,
-    telegram
+    health.workspace
   ];
   adminHeartbeatStatus.textContent = checks.every(isHeartbeatOnline) ? 'Online' : 'Needs check';
+  const taskRequestsCount = health.taskCount?.status === 'Healthy'
+    ? health.taskCount
+    : operations.asks?.today;
+  const dispatchSignupsCount = health.dispatchCount?.status === 'Healthy'
+    ? health.dispatchCount
+    : operations.dispatch?.total;
+  const operatorsCount = makeHeartbeatCountCard('Operators', operations.operators?.total?.value, 'Active and pending operator records');
+  const deliveredTasksCount = makeHeartbeatCountCard('Delivered Tasks', operations.asks?.delivered?.value, 'Delivered task records');
 
   adminHeartbeatResult.innerHTML = `
     <div class="admin-heartbeat-layer">
@@ -3898,15 +3919,10 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatCard('Portal Review', health.portalReview, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Admin', health.adminWebsite, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Workspace', health.workspace, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Supabase', health.supabase, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Task Requests', health.taskCount, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Dispatch Signups', health.dispatchCount, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Vercel', deployments.vercel, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Telegram', telegram, generated, summary.runtimeMs)}
       </div>
     </div>
     <div class="admin-heartbeat-layer">
-      <h3 class="admin-heartbeat-layer-title">Status Layer</h3>
+      <h3 class="admin-heartbeat-layer-title">Infrastructure Status</h3>
       <div class="admin-status-grid">
         ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
         ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
@@ -3920,16 +3936,10 @@ function renderHeartbeatResult(data = {}) {
     <div class="admin-heartbeat-layer">
       <h3 class="admin-heartbeat-layer-title">Operations</h3>
       <div class="admin-status-grid">
-        ${renderOperationsMetricCard('Asks today', operations.asks?.today)}
-        ${renderOperationsMetricCard('Pending review', operations.asks?.pendingReview)}
-        ${renderOperationsMetricCard('Quote needed', operations.asks?.quoteNeeded)}
-        ${renderOperationsMetricCard('Awaiting payment', operations.asks?.awaitingPayment)}
-        ${renderOperationsMetricCard('Delivered', operations.asks?.delivered)}
-        ${renderOperationsMetricCard('Dispatch signups today', operations.dispatch?.today)}
-        ${renderOperationsMetricCard('Dispatch total', operations.dispatch?.total)}
-        ${renderOperationsMetricCard('Operators active', operations.operators?.active)}
-        ${renderOperationsMetricCard('Operators pending', operations.operators?.pending)}
-        ${renderOperationsMetricCard('Operators total', operations.operators?.total)}
+        ${renderOperationsMetricCard('Task Requests', taskRequestsCount)}
+        ${renderOperationsMetricCard('Dispatch Signups', dispatchSignupsCount)}
+        ${renderOperationsMetricCard('Operators', operatorsCount)}
+        ${renderOperationsMetricCard('Delivered Tasks', deliveredTasksCount)}
       </div>
     </div>
     <div class="admin-heartbeat-layer">
