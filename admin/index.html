@@ -2424,6 +2424,18 @@ body.is-admin .admin-dashboard { display: block; }
       </div>
     </div>
 
+    <div class="admin-overview-activity">
+      <div class="workspace-control-head">
+        <div>
+          <h2>Activity Log</h2>
+          <p>Recent operational events from asks, Dispatch, and operators.</p>
+        </div>
+      </div>
+      <div id="adminActivity">
+        <div class="placeholder">Loading recent activity...</div>
+      </div>
+    </div>
+
         </section>
 
     <div class="admin-grid">
@@ -2432,6 +2444,14 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="section-kicker"><span class="realtime-indicator">Realtime connected</span></div>
         <div id="adminTasksList">
           <div class="placeholder">Loading tasks...</div>
+        </div>
+
+        <div class="admin-subsection">
+          <h3>Delivered tasks</h3>
+          <div class="section-kicker">Completed delivery visibility</div>
+          <div id="adminDeliveredTasksList" class="admin-review-list">
+            <div class="placeholder">Delivered tasks will populate from asks.</div>
+          </div>
         </div>
       </section>
 
@@ -2477,9 +2497,9 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="revenue-cards-grid">
           <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
             <div class="revenue-card-inner">
-              <div class="stat-label">Quote pending</div>
+              <div class="stat-label">Pending Quotes</div>
               <div class="stat-value" id="adminPotentialRevenue">€0</div>
-              <div class="revenue-card-sub" id="potentialRevenueCount">0 quote pending</div>
+              <div class="revenue-card-sub" id="potentialRevenueCount">0 pending</div>
             </div>
             <span class="revenue-toggle-icon" aria-hidden="true">+</span>
           </div>
@@ -2522,6 +2542,14 @@ body.is-admin .admin-dashboard { display: block; }
 
         <div id="adminWorkspaceReadinessList" class="admin-review-list">
           <div class="placeholder">Workspace readiness will populate from asks.</div>
+        </div>
+
+        <div class="admin-subsection">
+          <h3>Deliveries + Revisions</h3>
+          <div class="section-kicker">Delivery and revision state</div>
+          <div id="adminDeliveriesRevisionsList" class="admin-review-list">
+            <div class="placeholder">Delivery and revision states will populate from asks.</div>
+          </div>
         </div>
 
         <div class="workspace-control-grid">
@@ -2637,7 +2665,6 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <div id="adminActivity" hidden></div>
     </div>
       </div>
     </div>
@@ -2668,11 +2695,13 @@ const adminClientsList = document.getElementById('adminClientsList');
 const adminOperatorsKicker = document.getElementById('adminOperatorsKicker');
 const adminOperatorsList = document.getElementById('adminOperatorsList');
 const adminTasksList = document.getElementById('adminTasksList');
+const adminDeliveredTasksList = document.getElementById('adminDeliveredTasksList');
 const adminDispatchKicker = document.getElementById('adminDispatchKicker');
 const adminDispatchList = document.getElementById('adminDispatchList');
 const adminReviewsList = document.getElementById('adminReviewsList');
 const adminQuotesPaymentsList = document.getElementById('adminQuotesPaymentsList');
 const adminWorkspaceReadinessList = document.getElementById('adminWorkspaceReadinessList');
+const adminDeliveriesRevisionsList = document.getElementById('adminDeliveriesRevisionsList');
 const adminHeartbeatKicker = document.getElementById('adminHeartbeatKicker');
 const adminHeartbeatRun = document.getElementById('adminHeartbeatRun');
 const adminHeartbeatSend = document.getElementById('adminHeartbeatSend');
@@ -3171,7 +3200,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const potentialCountEl = document.getElementById('potentialRevenueCount');
   if (paidCountEl) paidCountEl.textContent = `${paidTasks.length} transaction${paidTasks.length !== 1 ? 's' : ''}`;
   if (pendingCountEl) pendingCountEl.textContent = `${pendingTasks.length} awaiting`;
-  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} quote pending`;
+  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} pending`;
 
   if (activeRevenueDrawer) {
     const drawerContent = document.getElementById('revenueDrawerContent');
@@ -3315,6 +3344,67 @@ function renderReviews(tasks = adminTasks) {
   `;
 }
 
+function isDeliveredTask(task = {}) {
+  return ['delivered', 'completed'].includes(normalizeStatus(task.status));
+}
+
+function getDeliveryDate(task = {}) {
+  return task.delivered_at
+    || task.delivery_at
+    || task.delivery_completed_at
+    || task.completed_at
+    || task.raw_payload?.delivered_at
+    || task.raw_payload?.delivery_at
+    || task.updated_at
+    || task.created_at
+    || '';
+}
+
+function getRevisionStatus(task = {}) {
+  const explicit = task.revision_status
+    || task.revision_state
+    || task.raw_payload?.revision_status
+    || task.raw_payload?.revision_state
+    || '';
+  if (explicit) return explicit;
+  const status = normalizeStatus(task.status);
+  if (status === 'revision_requested') return 'Revision requested';
+  if (status === 'delivered' || status === 'completed') return 'No revision record';
+  return '';
+}
+
+function renderDeliveredTasks(tasks = adminTasks) {
+  if (!adminDeliveredTasksList) return;
+  const deliveredTasks = sortedTasks(tasks)
+    .filter(isDeliveredTask)
+    .slice(0, 50);
+  if (!deliveredTasks.length) {
+    adminDeliveredTasksList.innerHTML = '<div class="placeholder">No delivered tasks yet.</div>';
+    return;
+  }
+  adminDeliveredTasksList.innerHTML = `
+    ${deliveredTasks.map((task) => `
+      <article class="admin-review-row">
+        <div>
+          <span>Task ID</span>
+          <strong>${escapeHTML(getTaskId(task))}</strong>
+          <p>${escapeHTML(getTaskTitle(task))}</p>
+        </div>
+        <div>
+          <span>Client</span>
+          <strong>${escapeHTML(task.name || task.email || 'Unknown client')}</strong>
+          <p>${escapeHTML(task.email || task.source || 'No email')}</p>
+        </div>
+        <div>
+          <span>Delivered</span>
+          <strong>${escapeHTML(formatTaskDate(getDeliveryDate(task)) || 'Date unavailable')}</strong>
+          <p>${escapeHTML(getStatusLabel(task.status))} · ${escapeHTML(getRevisionStatus(task) || 'No revision record')}</p>
+        </div>
+      </article>
+    `).join('')}
+  `;
+}
+
 function getQuotePaymentState(task = {}) {
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
@@ -3407,13 +3497,76 @@ function renderWorkspaceReadiness(tasks = adminTasks) {
   `;
 }
 
+function isDeliveryOrRevisionTask(task = {}) {
+  const status = normalizeStatus(task.status);
+  return [
+    'delivery_prep',
+    'delivered',
+    'completed',
+    'revision_requested',
+    'awaiting_revision',
+    'revision_completed'
+  ].includes(status) || Boolean(task.delivered_at || task.delivery_at || task.revision_status || task.revision_state);
+}
+
+function getDeliveryRevisionState(task = {}) {
+  const status = normalizeStatus(task.status);
+  const revisionStatus = normalizeStatus(getRevisionStatus(task));
+  if (status === 'revision_requested' || revisionStatus === 'revision_requested') return 'revision requested';
+  if (status === 'awaiting_revision' || revisionStatus === 'awaiting_revision') return 'awaiting revision';
+  if (status === 'revision_completed' || revisionStatus === 'revision_completed') return 'revision completed';
+  if (status === 'delivery_prep') return 'delivery preparing';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'completed') return 'completed';
+  return getRevisionStatus(task) || getStatusLabel(task.status);
+}
+
+function renderDeliveriesRevisions(tasks = adminTasks) {
+  if (!adminDeliveriesRevisionsList) return;
+  const deliveryTasks = sortedTasks(tasks)
+    .filter(isDeliveryOrRevisionTask)
+    .slice(0, 50);
+  if (!deliveryTasks.length) {
+    adminDeliveriesRevisionsList.innerHTML = '<div class="placeholder">No delivery or revision states yet.</div>';
+    return;
+  }
+  adminDeliveriesRevisionsList.innerHTML = `
+    ${deliveryTasks.map((task) => {
+      const status = normalizeStatus(task.status);
+      const deliveryDate = ['delivered', 'completed'].includes(status)
+        ? getDeliveryDate(task)
+        : (task.delivered_at || task.delivery_at || task.delivery_completed_at || task.raw_payload?.delivered_at || task.raw_payload?.delivery_at || '');
+      const revisionStatus = getRevisionStatus(task);
+      return `
+        <article class="admin-review-row">
+          <div>
+            <span>Delivery state</span>
+            <strong>${escapeHTML(getDeliveryRevisionState(task))}</strong>
+            <p>${escapeHTML(getTaskId(task))} · ${escapeHTML(task.name || task.email || 'Unknown client')}</p>
+          </div>
+          <div>
+            <span>Revision status</span>
+            <strong>${escapeHTML(revisionStatus || 'No revision record')}</strong>
+            <p>${escapeHTML(task.delivery_link ? 'Delivery link present' : 'No delivery link')}</p>
+          </div>
+          <div>
+            <span>Delivery timestamp</span>
+            <strong>${escapeHTML(formatTaskDate(deliveryDate) || 'Not delivered yet')}</strong>
+            <p>Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
+          </div>
+        </article>
+      `;
+    }).join('')}
+  `;
+}
+
 function renderStatusPanels(status = adminSystemStatus) {
   if (!status) return;
   const integrations = status.integrations || {};
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Ready' : 'Not connected';
   if (adminPaymentStatusNote) {
-    adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected yet.';
+    adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected.';
   }
   if (adminHeartbeatList) {
     adminHeartbeatList.hidden = true;
@@ -3535,10 +3688,12 @@ async function loadDispatchContacts() {
     const data = await adminWorkspaceRequest({ action: 'list_dispatch' });
     adminDispatchContacts = Array.isArray(data.contacts) ? data.contacts : [];
     renderDispatchContacts(adminDispatchContacts, data.connection || {});
+    renderAdminActivity(adminTasks);
     updateStats();
   } catch (error) {
     adminDispatchContacts = [];
     renderDispatchContacts([], { connected: false, reason: 'admin request failed' });
+    renderAdminActivity(adminTasks);
   }
 }
 
@@ -3559,6 +3714,8 @@ function loadAdminOsPanels() {
   renderReviews();
   renderQuotesPayments();
   renderWorkspaceReadiness();
+  renderDeliveredTasks();
+  renderDeliveriesRevisions();
   loadDispatchContacts();
   loadSystemStatus();
 }
@@ -4269,43 +4426,109 @@ function focusOperationSection(target) {
 }
 
 function renderAdminActivity(tasks) {
-  if (!tasks.length) {
-    adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+  if (!adminActivity) return;
+  const events = [];
+  (tasks || []).forEach((task) => {
+    const status = normalizeStatus(task.status);
+    const paymentStatus = normalizeStatus(task.payment_status);
+    const client = task.name || task.email || 'Unknown client';
+    const taskId = getTaskId(task);
+    if (task.created_at) {
+      events.push({
+        title: 'Ask received',
+        meta: `${taskId} · ${client}`,
+        at: task.created_at
+      });
+    }
+    if (['review_pending', 'under_review'].includes(status)) {
+      events.push({
+        title: 'Review started',
+        meta: `${taskId} · ${client}`,
+        at: task.updated_at || task.created_at
+      });
+    }
+    if (status === 'quoted' || task.quoted_at || task.quote_amount || task.payment_link) {
+      events.push({
+        title: 'Quote sent',
+        meta: `${taskId} · ${client}`,
+        at: task.quoted_at || task.updated_at || task.created_at
+      });
+    }
+    if (paymentStatus === 'paid') {
+      events.push({
+        title: 'Payment received',
+        meta: `${taskId} · ${client}`,
+        at: task.paid_at || task.updated_at || task.created_at
+      });
+    }
+    if (['workspace_active', 'execution_active', 'queued', 'in_progress'].includes(status)) {
+      events.push({
+        title: 'Workspace opened',
+        meta: `${taskId} · ${client}`,
+        at: task.workspace_opened_at || task.updated_at || task.created_at
+      });
+    }
+    if (status === 'delivered') {
+      events.push({
+        title: 'Task delivered',
+        meta: `${taskId} · ${client}`,
+        at: getDeliveryDate(task)
+      });
+    }
+    if (status === 'revision_requested') {
+      events.push({
+        title: 'Revision requested',
+        meta: `${taskId} · ${client}`,
+        at: task.updated_at || task.created_at
+      });
+    }
+  });
+
+  (adminDispatchContacts || []).forEach((contact) => {
+    const at = contact.dispatch_subscribed_at || contact.created_at;
+    if (!at) return;
+    events.push({
+      title: 'Dispatch signup',
+      meta: contact.email || contact.page_hostname || 'Dispatch contact',
+      at
+    });
+  });
+
+  (adminOperators || []).forEach((operator) => {
+    if (getOperatorStatusGroup(operator.status) !== 'active') return;
+    const at = operator.approved_at || operator.updated_at || operator.created_at;
+    if (!at) return;
+    events.push({
+      title: 'Operator approved',
+      meta: operator.email || operator.full_name || operator.display_name || 'Operator',
+      at
+    });
+  });
+
+  const recentEvents = events
+    .filter((event) => event.at && !Number.isNaN(new Date(event.at).getTime()))
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 8);
+
+  if (!recentEvents.length) {
+    adminActivity.innerHTML = '<div class="placeholder">No recent operational activity yet.</div>';
     return;
   }
 
-  const latest = sortedTasks(tasks)[0];
-  const labels = {
-    new: 'New task awaiting quote',
-    review_pending: 'Task pending review',
-    quoted: 'Quote sent',
-    awaiting_payment: 'Awaiting payment',
-    verification_pending: 'Payment verification pending',
-    queued: 'Task queued',
-    in_progress: 'Task in progress',
-    delivery_prep: 'Delivery preparing',
-    delivered: 'Task delivered',
-    completed: 'Task completed',
-    revision_requested: 'Revision requested',
-    cancelled: 'Task cancelled',
-    rejected: 'Task rejected'
-  };
-  const status = normalizeStatus(latest.status);
-  const priority = getTaskPriority(latest);
-  const title = status === 'new' && priority.label === 'High'
-    ? 'High priority · New task awaiting quote'
-    : labels[status] || 'Task updated';
-  const createdAt = formatTaskDate(latest.created_at);
   adminActivity.innerHTML = `
-    <div class="admin-activity">
-      <div class="admin-activity-title">${escapeHTML(title)}</div>
-      ${createdAt ? `<div class="admin-activity-time">${escapeHTML(createdAt)}</div>` : ''}
-    </div>
+    ${recentEvents.map((event) => `
+      <div class="admin-activity">
+        <div class="admin-activity-title">${escapeHTML(event.title)}</div>
+        <div class="admin-activity-time">${escapeHTML(formatTaskDate(event.at) || 'Date unavailable')} · ${escapeHTML(event.meta)}</div>
+      </div>
+    `).join('')}
   `;
 }
 
 function setAdminLoading() {
   if (!adminTasks.length) adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
+  if (adminDeliveredTasksList && !adminTasks.length) adminDeliveredTasksList.innerHTML = '<div class="placeholder">Loading delivered tasks...</div>';
+  if (adminDeliveriesRevisionsList && !adminTasks.length) adminDeliveriesRevisionsList.innerHTML = '<div class="placeholder">Loading delivery and revision states...</div>';
 }
 
 function setAdminClientsLoading() {
@@ -4321,7 +4544,9 @@ function setAdminOperatorsLoading() {
 
 function setAdminError() {
   adminTasksList.innerHTML = '<div class="placeholder">Could not load tasks.</div>';
-  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+  if (adminDeliveredTasksList) adminDeliveredTasksList.innerHTML = '<div class="placeholder">Could not load delivered tasks.</div>';
+  if (adminDeliveriesRevisionsList) adminDeliveriesRevisionsList.innerHTML = '<div class="placeholder">Could not load delivery and revision states.</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Could not load operational activity.</div>';
 }
 
 function setAdminClientsError() {
@@ -4346,7 +4571,9 @@ function resetAdminDashboard() {
   adminClientsList.innerHTML = '<div class="placeholder">Loading clients&hellip;</div>';
   if (adminOperatorsList) adminOperatorsList.innerHTML = '<div class="placeholder">Loading operators&hellip;</div>';
   adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
-  adminActivity.innerHTML = '<div class="placeholder">Recent operator activity will appear here.</div>';
+  if (adminDeliveredTasksList) adminDeliveredTasksList.innerHTML = '<div class="placeholder">Loading delivered tasks...</div>';
+  if (adminDeliveriesRevisionsList) adminDeliveriesRevisionsList.innerHTML = '<div class="placeholder">Loading delivery and revision states...</div>';
+  adminActivity.innerHTML = '<div class="placeholder">Loading recent activity...</div>';
 }
 
 async function loadSupabaseRows(tableName) {
@@ -4436,6 +4663,7 @@ async function loadOperators(options = {}) {
     const operators = Array.isArray(data.operators) ? data.operators : [];
     adminOperators = sortedOperators(operators);
     renderOperators(adminOperators);
+    renderAdminActivity(adminTasks);
   } catch (error) {
     if (!options.silent || !adminOperators.length) {
       adminOperators = [];
@@ -4483,6 +4711,8 @@ async function loadTasks(options = {}) {
     renderReviews(adminTasks);
     renderQuotesPayments(adminTasks);
     renderWorkspaceReadiness(adminTasks);
+    renderDeliveredTasks(adminTasks);
+    renderDeliveriesRevisions(adminTasks);
     if (adminClients.length) renderClients(adminClients);
     renderAdminActivity(adminTasks);
   } catch (error) {
@@ -4634,6 +4864,8 @@ function renderAdminTaskState(tasks) {
   renderReviews(adminTasks);
   renderQuotesPayments(adminTasks);
   renderWorkspaceReadiness(adminTasks);
+  renderDeliveredTasks(adminTasks);
+  renderDeliveriesRevisions(adminTasks);
   if (adminClients.length) renderClients(adminClients);
   renderAdminActivity(adminTasks);
 }
@@ -5340,7 +5572,7 @@ function renderPotentialDrawerContent(tasks) {
   const total = potentialTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Quote pending</span>
+      <span class="revenue-drawer-title">Pending Quotes</span>
       <span class="revenue-drawer-total" style="color:#e6d3a3">${formatRevenue(total)}</span>
     </div>
     ${potentialTasks.map((t) => `
