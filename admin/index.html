@@ -2657,7 +2657,7 @@ const ADMIN_TASKS_ENDPOINT = '/api/admin-tasks';
 const ADMIN_TASKS_LEGACY_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
 const ADMIN_UPDATE_TASK_ENDPOINT = '/api/admin-update-task';
 const ADMIN_WORKSPACE_RECORDS_ENDPOINT = '/api/admin-workspace-records';
-const ADMIN_HEARTBEAT_ENDPOINT = '/api/admin-heartbeat';
+const ADMIN_HEARTBEAT_ENDPOINT = '/api/admin-workspace-records';
 const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
 const operatorSupabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -3512,6 +3512,7 @@ async function runAdminHeartbeat({ send = false } = {}) {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
+        action: 'heartbeat',
         send
       })
     });

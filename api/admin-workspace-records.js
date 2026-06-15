@@ -8,6 +8,7 @@ const OPERATOR_ACCESS_WEBHOOK_URL = "https://n8n.doneovernight.com/webhook/opera
 
 const crypto = require("crypto");
 const { clean, dispatchWebhook, getWebhookUrls, parseBody, send, slugify, supabaseFetch } = require("../lib/ops");
+const { generateHeartbeat, sendHeartbeat } = require("../heartbeat/summary");
 
 async function verifyAdminKey(adminKey) {
   if (!adminKey) return false;
@@ -103,6 +104,19 @@ function getAdminSystemStatus() {
       heartbeat: false,
       vercelDeployment: Boolean(process.env.VERCEL)
     }
+  };
+}
+
+async function runHeartbeat(input = {}) {
+  const shouldSend = input.send === true || input.send === "true";
+  const result = shouldSend
+    ? await sendHeartbeat()
+    : { summary: await generateHeartbeat(), telegram: { sent: false, status: "Dry run" } };
+
+  return {
+    sent: shouldSend,
+    summary: result.summary,
+    telegram: result.telegram
   };
 }
 
@@ -714,6 +728,11 @@ module.exports = async function handler(req, res) {
 
     if (action === "system_status") {
       return send(res, 200, { success: true, status: getAdminSystemStatus() });
+    }
+
+    if (action === "heartbeat") {
+      const result = await runHeartbeat(input);
+      return send(res, 200, { success: true, ...result });
     }
 
     if (action === "update_operator_status") {
