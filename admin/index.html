@@ -2613,8 +2613,19 @@ body.is-admin .admin-dashboard { display: block; }
       </section>
 
       <section class="admin-section is-wide" id="adminHeartbeatSection" data-admin-section="heartbeat">
-        <h2>Heartbeat</h2>
-        <div class="section-kicker">Phase 1 surface only</div>
+        <div class="workspace-control-head">
+          <div>
+            <h2>Heartbeat</h2>
+            <div class="section-kicker" id="adminHeartbeatKicker">Ready to run</div>
+          </div>
+          <div class="admin-client-actions" style="margin-top:0">
+            <button class="admin-client-action" id="adminHeartbeatRun" type="button">Run Heartbeat</button>
+            <button class="admin-client-action" id="adminHeartbeatSend" type="button">Send to Telegram</button>
+          </div>
+        </div>
+        <div id="adminHeartbeatResult" class="admin-review-list">
+          <div class="placeholder">Run Heartbeat to check routes, Supabase, counts, and Telegram readiness.</div>
+        </div>
         <div id="adminHeartbeatList" class="admin-status-grid">
           <div class="placeholder">Loading system status...</div>
         </div>
@@ -2646,6 +2657,7 @@ const ADMIN_TASKS_ENDPOINT = '/api/admin-tasks';
 const ADMIN_TASKS_LEGACY_ENDPOINT = 'https://n8n.doneovernight.com/webhook/admin-tasks';
 const ADMIN_UPDATE_TASK_ENDPOINT = '/api/admin-update-task';
 const ADMIN_WORKSPACE_RECORDS_ENDPOINT = '/api/admin-workspace-records';
+const ADMIN_HEARTBEAT_ENDPOINT = '/api/admin-heartbeat';
 const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
 const operatorSupabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -2663,6 +2675,10 @@ const adminDispatchList = document.getElementById('adminDispatchList');
 const adminReviewsList = document.getElementById('adminReviewsList');
 const adminQuotesPaymentsList = document.getElementById('adminQuotesPaymentsList');
 const adminWorkspaceReadinessList = document.getElementById('adminWorkspaceReadinessList');
+const adminHeartbeatKicker = document.getElementById('adminHeartbeatKicker');
+const adminHeartbeatRun = document.getElementById('adminHeartbeatRun');
+const adminHeartbeatSend = document.getElementById('adminHeartbeatSend');
+const adminHeartbeatResult = document.getElementById('adminHeartbeatResult');
 const adminHeartbeatList = document.getElementById('adminHeartbeatList');
 const adminSettingsList = document.getElementById('adminSettingsList');
 const adminActivity = document.getElementById('adminActivity');
@@ -3431,6 +3447,86 @@ function renderStatusPanels(status = adminSystemStatus) {
         <p>${escapeHTML(note)}</p>
       </div>
     `).join('');
+  }
+}
+
+function renderHeartbeatCard(label, item) {
+  const value = item?.value !== undefined && item?.value !== null
+    ? String(item.value)
+    : item?.code
+      ? `HTTP ${item.code}`
+      : item?.status || 'Unavailable';
+  const note = item?.reason || item?.source || 'Checked by Heartbeat';
+  return `
+    <div class="admin-status-item">
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value)}</strong>
+      <p>${escapeHTML(note)}</p>
+    </div>
+  `;
+}
+
+function renderHeartbeatResult(data = {}) {
+  if (!adminHeartbeatResult) return;
+  const summary = data.summary || {};
+  const health = summary.health || {};
+  const deployments = summary.deployments || {};
+  const telegram = data.telegram || {};
+  const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
+  if (adminHeartbeatKicker) {
+    adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}`;
+  }
+  adminHeartbeatStatus.textContent = health.website?.status === 'Healthy' && health.adminWebsite?.status === 'Healthy'
+    ? 'Healthy'
+    : 'Needs check';
+
+  adminHeartbeatResult.innerHTML = `
+    <div class="admin-status-grid">
+      ${renderHeartbeatCard('doneovernight.com', health.website)}
+      ${renderHeartbeatCard('ask.doneovernight.com', health.askWebsite)}
+      ${renderHeartbeatCard('start.doneovernight.com', health.startWebsite)}
+      ${renderHeartbeatCard('portal review', health.portalReview)}
+      ${renderHeartbeatCard('admin.doneovernight.com', health.adminWebsite)}
+      ${renderHeartbeatCard('Supabase', health.supabase)}
+      ${renderHeartbeatCard('Task requests', health.taskCount)}
+      ${renderHeartbeatCard('Dispatch signups', health.dispatchCount)}
+      ${renderHeartbeatCard('Vercel', deployments.vercel)}
+      ${renderHeartbeatCard('Telegram', telegram)}
+    </div>
+  `;
+}
+
+async function runAdminHeartbeat({ send = false } = {}) {
+  const button = send ? adminHeartbeatSend : adminHeartbeatRun;
+  const otherButton = send ? adminHeartbeatRun : adminHeartbeatSend;
+  if (!button || button.disabled) return;
+  const previousText = button.textContent;
+  button.disabled = true;
+  if (otherButton) otherButton.disabled = true;
+  button.textContent = send ? 'Sending...' : 'Running...';
+  if (adminHeartbeatKicker) adminHeartbeatKicker.textContent = send ? 'Running and sending Heartbeat...' : 'Running Heartbeat...';
+
+  try {
+    const response = await fetch(ADMIN_HEARTBEAT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
+        send
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Heartbeat failed');
+    renderHeartbeatResult(data);
+  } catch (error) {
+    if (adminHeartbeatKicker) adminHeartbeatKicker.textContent = 'Heartbeat failed';
+    if (adminHeartbeatResult) {
+      adminHeartbeatResult.innerHTML = `<div class="placeholder">Could not run Heartbeat: ${escapeHTML(error.message || 'Unknown error')}</div>`;
+    }
+  } finally {
+    button.disabled = false;
+    if (otherButton) otherButton.disabled = false;
+    button.textContent = previousText;
   }
 }
 
@@ -4909,6 +5005,9 @@ document.querySelectorAll('[data-operator-filter]').forEach((tab) => {
     renderOperators(adminOperators);
   });
 });
+
+adminHeartbeatRun?.addEventListener('click', () => runAdminHeartbeat({ send: false }));
+adminHeartbeatSend?.addEventListener('click', () => runAdminHeartbeat({ send: true }));
 
 adminOperatorsList?.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-operator-action]');

@@ -42,6 +42,43 @@ async function checkSupabase(config) {
   }
 }
 
+function parseContentRangeCount(value) {
+  const match = String(value || "").match(/\/(\d+|\*)$/);
+  if (!match || match[1] === "*") return null;
+  const count = Number.parseInt(match[1], 10);
+  return Number.isFinite(count) ? count : null;
+}
+
+async function countSupabaseTable(config, { source, table, column = "id", filter = "" }) {
+  if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
+    return unavailable(source, "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  const query = `${table}?select=${encodeURIComponent(column)}${filter ? `&${filter}` : ""}`;
+
+  try {
+    const response = await fetchWithTimeout(`${config.supabaseUrl}/rest/v1/${query}`, {
+      method: "GET",
+      headers: {
+        apikey: config.supabaseServiceRoleKey,
+        Authorization: `Bearer ${config.supabaseServiceRoleKey}`,
+        Accept: "application/json",
+        Prefer: "count=exact",
+        Range: "0-0"
+      }
+    });
+
+    if (!response.ok) return attention(source, `HTTP ${response.status}`, { code: response.status });
+    const count = parseContentRangeCount(response.headers.get("content-range"));
+    return healthy(source, {
+      value: count === null ? "Available" : count,
+      code: response.status
+    });
+  } catch (error) {
+    return attention(source, error.name === "AbortError" ? "Timed out" : "Request failed");
+  }
+}
+
 async function checkGitHub(config) {
   return checkHttp({
     source: "GitHub",
@@ -51,20 +88,35 @@ async function checkGitHub(config) {
 }
 
 async function getHealth(config) {
-  const [supabase, website, startWebsite, taskApi, github] = await Promise.all([
+  const [supabase, website, askWebsite, startWebsite, portalReview, adminWebsite, taskApi, github, taskCount, dispatchCount] = await Promise.all([
     checkSupabase(config),
     checkHttp({ source: "Website", url: config.siteUrl, expectedStatuses: [200] }),
+    checkHttp({ source: "Ask", url: config.askUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Start Website", url: config.startUrl, expectedStatuses: [200] }),
+    checkHttp({ source: "Portal Review", url: config.portalReviewUrl, expectedStatuses: [200] }),
+    checkHttp({ source: "Admin", url: config.adminUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Task API", url: config.taskApiUrl, expectedStatuses: [405], method: "GET" }),
-    checkGitHub(config)
+    checkGitHub(config),
+    countSupabaseTable(config, { source: "Task Requests", table: "task_requests", column: "id" }),
+    countSupabaseTable(config, {
+      source: "Dispatch Signups",
+      table: "crm_contacts",
+      column: "id",
+      filter: "dispatch_subscribed=eq.true"
+    })
   ]);
 
   return {
     supabase,
     website,
+    askWebsite,
     startWebsite,
+    portalReview,
+    adminWebsite,
     taskApi,
-    github
+    github,
+    taskCount,
+    dispatchCount
   };
 }
 

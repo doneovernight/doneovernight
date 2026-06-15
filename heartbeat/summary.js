@@ -35,13 +35,13 @@ async function generateHeartbeat(options = {}) {
     dispatch,
     contacts,
     placeholders: {
-      traffic: "Prepared",
-      leads: "Prepared",
-      contacts: "Prepared",
-      dispatch: "Prepared",
-      searchConsole: "Prepared",
-      caseStudies: "Prepared",
-      recommendations: "Prepared"
+      traffic: "Not connected",
+      leads: "Not connected",
+      contacts: "Not connected",
+      dispatch: "Not connected",
+      searchConsole: "Not connected",
+      caseStudies: "Not connected",
+      recommendations: "Not connected"
     }
   };
 
