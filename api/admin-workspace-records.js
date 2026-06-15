@@ -9,6 +9,7 @@ const OPERATOR_ACCESS_WEBHOOK_URL = "https://n8n.doneovernight.com/webhook/opera
 const crypto = require("crypto");
 const { clean, dispatchWebhook, getWebhookUrls, parseBody, send, slugify, supabaseFetch } = require("../lib/ops");
 const { getConfig } = require("../heartbeat/config");
+const { getAnalyticsSummary } = require("../heartbeat/providers/analytics");
 const { generateHeartbeat, sendHeartbeat } = require("../heartbeat/summary");
 
 async function verifyAdminKey(adminKey) {
@@ -89,6 +90,10 @@ async function listDispatchContacts() {
   }
 }
 
+async function getTrafficSignals() {
+  return getAnalyticsSummary(getConfig());
+}
+
 function getAdminSystemStatus() {
   return {
     auth: {
@@ -142,6 +147,8 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
   const integrations = getAdminSystemStatus().integrations || {};
   const health = summary.health || {};
   const deployments = summary.deployments || {};
+  const analytics = summary.analytics || {};
+  const analyticsConnected = analytics.status === "Connected" || analytics.status === "Partial";
   const generatedAt = summary.generatedAt || null;
 
   return {
@@ -177,10 +184,10 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
     },
     analytics: {
       source: "Analytics status",
-      state: integrations.analytics ? "live" : "waiting",
-      status: integrations.analytics ? "Connected" : "Not connected yet",
+      state: analyticsConnected ? "waiting" : integrations.analytics ? "live" : "waiting",
+      status: analyticsConnected ? "Partial" : integrations.analytics ? "Connected" : "Not connected yet",
       value: null,
-      reason: integrations.analytics ? "Analytics source connected" : "Analytics source not configured"
+      reason: analyticsConnected ? "Supabase conversion signals connected; Vercel Analytics not connected yet" : integrations.analytics ? "Analytics source connected" : "Analytics source not configured"
     },
     speedInsights: {
       source: "Speed Insights",
@@ -819,6 +826,11 @@ module.exports = async function handler(req, res) {
     if (action === "list_dispatch") {
       const result = await listDispatchContacts();
       return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "traffic_signals") {
+      const analytics = await getTrafficSignals();
+      return send(res, 200, { success: true, analytics });
     }
 
     if (action === "system_status") {

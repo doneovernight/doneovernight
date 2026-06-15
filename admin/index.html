@@ -2491,6 +2491,18 @@ body.is-admin .admin-dashboard { display: block; }
       </div>
     </div>
 
+    <div class="admin-heartbeat-layer" id="adminTrafficSignalsPanel" style="margin-top:24px">
+      <div class="workspace-control-head">
+        <div>
+          <h2>Traffic / Signals</h2>
+          <p>Public-site traffic when connected, plus real Supabase conversion signals.</p>
+        </div>
+      </div>
+      <div id="adminTrafficSignals" class="admin-status-grid">
+        <div class="placeholder">Loading Traffic / Signals...</div>
+      </div>
+    </div>
+
     <div class="admin-overview-activity">
       <div class="workspace-control-head">
         <div>
@@ -2772,6 +2784,7 @@ const adminHeartbeatKicker = document.getElementById('adminHeartbeatKicker');
 const adminHeartbeatRun = document.getElementById('adminHeartbeatRun');
 const adminHeartbeatSend = document.getElementById('adminHeartbeatSend');
 const adminHeartbeatResult = document.getElementById('adminHeartbeatResult');
+const adminTrafficSignals = document.getElementById('adminTrafficSignals');
 const adminSettingsList = document.getElementById('adminSettingsList');
 const adminActivity = document.getElementById('adminActivity');
 const adminNewTasksStat = document.getElementById('adminNewTasksStat');
@@ -2807,6 +2820,7 @@ let adminOperators = [];
 let adminDispatchContacts = [];
 let adminDispatchConnection = null;
 let adminSystemStatus = null;
+let adminTrafficSignalsData = null;
 let workspaceRecords = { messages: [], quotes: [] };
 let adminTaskPollingInterval = null;
 let adminTasksLoading = false;
@@ -3716,11 +3730,60 @@ function renderHeartbeatStatusCard(label, item = {}) {
   `;
 }
 
+function formatSignalValue(item = {}, fallback = 'Unavailable') {
+  if (!item || item.status !== 'Healthy') return fallback;
+  if (item.value === null || item.value === undefined || item.value === '') return '0';
+  return String(item.value);
+}
+
+function renderTrafficSignalCard(label, item = {}, options = {}) {
+  const state = getHeartbeatState(item);
+  const responseTime = Number.isFinite(item.responseTimeMs)
+    ? ` · Response ${Math.round(item.responseTimeMs)} ms`
+    : '';
+  const count = Number.isFinite(item.count) ? ` · ${item.count} events` : '';
+  const total = Number.isFinite(options.total) ? ` · Total ${options.total}` : '';
+  const reason = item.reason || item.source || 'Real signal';
+  return `
+    <div class="admin-status-item status-${escapeHTML(state)}">
+      <span class="admin-status-pulse" aria-hidden="true"></span>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(formatSignalValue(item, getHeartbeatStatusLabel(item)))}</strong>
+      <p>${escapeHTML(`${reason}${count}${total}${responseTime}`)}</p>
+    </div>
+  `;
+}
+
+function renderTrafficSignals(analytics = adminTrafficSignalsData) {
+  if (!adminTrafficSignals) return;
+  if (!analytics) {
+    adminTrafficSignals.innerHTML = '<div class="placeholder">Traffic / Signals unavailable.</div>';
+    return;
+  }
+  const signals = analytics.signals || {};
+  const traffic = analytics.traffic || {};
+  const vercel = analytics.vercel || {};
+  const askTotal = Number(signals.askSubmissionsTotal?.value);
+  const dispatchTotal = Number(signals.dispatchSignupsTotal?.value);
+
+  adminTrafficSignals.innerHTML = `
+    ${renderTrafficSignalCard('Today visits', traffic.todayVisits || vercel.todayVisits)}
+    ${renderTrafficSignalCard('Homepage visits', traffic.homepageVisits || vercel.homepageVisits)}
+    ${renderTrafficSignalCard('Ask visits', traffic.askVisits || vercel.askVisits)}
+    ${renderTrafficSignalCard('Start visits', traffic.startVisits || vercel.startVisits)}
+    ${renderTrafficSignalCard('Dispatch signups', signals.dispatchSignupsToday, { total: Number.isFinite(dispatchTotal) ? dispatchTotal : undefined })}
+    ${renderTrafficSignalCard('Ask submissions', signals.askSubmissionsToday, { total: Number.isFinite(askTotal) ? askTotal : undefined })}
+    ${renderTrafficSignalCard('Top source', signals.topSource)}
+    ${renderTrafficSignalCard('Top page', signals.topPage || traffic.topPublicRoute)}
+  `;
+}
+
 function renderHeartbeatResult(data = {}) {
   if (!adminHeartbeatResult) return;
   const summary = data.summary || {};
   const health = summary.health || {};
   const deployments = summary.deployments || {};
+  const analytics = summary.analytics || null;
   const telegram = data.telegram || {};
   const statusLayer = data.statusLayer || {};
   const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
@@ -3771,7 +3834,20 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
     </div>
+    <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Traffic / Signals</h3>
+      <div class="admin-status-grid">
+        ${renderTrafficSignalCard('Asks today', analytics?.signals?.askSubmissionsToday)}
+        ${renderTrafficSignalCard('Dispatch today', analytics?.signals?.dispatchSignupsToday)}
+        ${renderTrafficSignalCard('Top public route', analytics?.traffic?.topPublicRoute)}
+        ${renderTrafficSignalCard('Traffic availability', analytics?.vercel?.connection)}
+      </div>
+    </div>
   `;
+  if (analytics) {
+    adminTrafficSignalsData = analytics;
+    renderTrafficSignals(adminTrafficSignalsData);
+  }
 }
 
 async function runAdminHeartbeat({ send = false } = {}) {
@@ -3836,6 +3912,19 @@ async function loadSystemStatus() {
   }
 }
 
+async function loadTrafficSignals() {
+  if (!adminTrafficSignals) return;
+  adminTrafficSignals.innerHTML = '<div class="placeholder">Loading Traffic / Signals...</div>';
+  try {
+    const data = await adminWorkspaceRequest({ action: 'traffic_signals' });
+    adminTrafficSignalsData = data.analytics || null;
+    renderTrafficSignals(adminTrafficSignalsData);
+  } catch (error) {
+    adminTrafficSignalsData = null;
+    adminTrafficSignals.innerHTML = '<div class="placeholder">Traffic / Signals unavailable for this admin session.</div>';
+  }
+}
+
 function loadAdminOsPanels() {
   renderReviews();
   renderQuotesPayments();
@@ -3844,6 +3933,7 @@ function loadAdminOsPanels() {
   renderDeliveriesRevisions();
   loadDispatchContacts();
   loadSystemStatus();
+  loadTrafficSignals();
 }
 
 document.querySelectorAll('[data-admin-nav]').forEach((link) => {
@@ -4690,6 +4780,7 @@ function resetAdminDashboard() {
   adminTasks = [];
   adminClients = [];
   adminOperators = [];
+  adminTrafficSignalsData = null;
   adminTaskRenderSignature = '';
   updateStats();
   adminClientsKicker.hidden = false;
@@ -4699,6 +4790,7 @@ function resetAdminDashboard() {
   adminTasksList.innerHTML = '<div class="placeholder">Loading tasks...</div>';
   if (adminDeliveredTasksList) adminDeliveredTasksList.innerHTML = '<div class="placeholder">Loading delivered tasks...</div>';
   if (adminDeliveriesRevisionsList) adminDeliveriesRevisionsList.innerHTML = '<div class="placeholder">Loading delivery and revision states...</div>';
+  if (adminTrafficSignals) adminTrafficSignals.innerHTML = '<div class="placeholder">Loading Traffic / Signals...</div>';
   adminActivity.innerHTML = '<div class="placeholder">Loading recent activity...</div>';
 }
 
