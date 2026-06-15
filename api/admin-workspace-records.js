@@ -172,8 +172,10 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
       source: "Vercel deployment",
       state: deployments.vercel?.status === "Healthy" ? "live" : deployments.vercel?.status === "Needs attention" ? "error" : "waiting",
       status: deployments.vercel?.status || "Unavailable",
-      value: deployments.deploymentStatus || deployments.vercel?.deploymentUrl || null,
-      reason: deployments.vercel?.reason || deployments.vercel?.environment || "Vercel runtime"
+      value: deployments.deploymentTimestamp?.value || deployments.deploymentStatus || deployments.vercel?.deploymentUrl || null,
+      reason: deployments.latestCommit?.sha
+        ? `Commit ${deployments.latestCommit.sha} · ${deployments.deploymentStatus || "Status unavailable"}`
+        : deployments.latestCommit?.reason || deployments.vercel?.reason || deployments.vercel?.environment || "Vercel runtime"
     },
     payments: {
       source: "Payment system",

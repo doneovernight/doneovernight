@@ -2831,6 +2831,7 @@ let adminDispatchContacts = [];
 let adminDispatchConnection = null;
 let adminSystemStatus = null;
 let adminTrafficSignalsData = null;
+let adminHeartbeatGeneratedAt = null;
 let workspaceRecords = { messages: [], quotes: [] };
 let adminTaskPollingInterval = null;
 let adminTasksLoading = false;
@@ -3815,17 +3816,62 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
   `;
 }
 
+function formatHeartbeatAge(value) {
+  if (!value) return 'Unavailable';
+  const then = new Date(value).getTime();
+  if (!Number.isFinite(then)) return 'Unavailable';
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function updateHeartbeatAgeDisplay() {
+  if (!adminHeartbeatKicker || !adminHeartbeatGeneratedAt) return;
+  const generated = formatTaskDate(adminHeartbeatGeneratedAt) || 'Unavailable';
+  adminHeartbeatKicker.textContent = `Last heartbeat: ${generated} · age ${formatHeartbeatAge(adminHeartbeatGeneratedAt)}`;
+}
+
+function renderOperationsMetricCard(label, item = {}) {
+  return renderTrafficSignalCard(label, item);
+}
+
+function renderLatestActivityCard(label, item = {}) {
+  const state = getHeartbeatState(item);
+  const value = item.status === 'Healthy' ? (item.task_id || item.value || item.email || 'Available') : getHeartbeatStatusLabel(item);
+  const parts = [];
+  if (item.client) parts.push(item.client);
+  if (item.budget) parts.push(`Budget ${item.budget}`);
+  if (item.source) parts.push(`Source ${item.source}`);
+  if (item.created_at) parts.push(formatTaskDate(item.created_at) || item.created_at);
+  if (!parts.length && item.reason) parts.push(item.reason);
+
+  return `
+    <div class="admin-status-item status-${escapeHTML(state)}">
+      <span class="admin-status-pulse" aria-hidden="true"></span>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(value)}</strong>
+      <p>${escapeHTML(parts.join(' · ') || item.reason || 'No activity yet')}</p>
+    </div>
+  `;
+}
+
 function renderHeartbeatResult(data = {}) {
   if (!adminHeartbeatResult) return;
   const summary = data.summary || {};
   const health = summary.health || {};
   const deployments = summary.deployments || {};
   const analytics = summary.analytics || null;
+  const operations = summary.operations || {};
   const telegram = data.telegram || {};
   const statusLayer = data.statusLayer || {};
   const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
+  adminHeartbeatGeneratedAt = summary.generatedAt || null;
   if (adminHeartbeatKicker) {
-    adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}${Number.isFinite(summary.runtimeMs) ? ` · runtime ${Math.round(summary.runtimeMs)} ms` : ''}`;
+    adminHeartbeatKicker.textContent = `Last heartbeat: ${generated} · age ${formatHeartbeatAge(summary.generatedAt)}${Number.isFinite(summary.runtimeMs) ? ` · runtime ${Math.round(summary.runtimeMs)} ms` : ''}`;
   }
   const checks = [
     health.website,
@@ -3872,6 +3918,29 @@ function renderHeartbeatResult(data = {}) {
       </div>
     </div>
     <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Operations</h3>
+      <div class="admin-status-grid">
+        ${renderOperationsMetricCard('Asks today', operations.asks?.today)}
+        ${renderOperationsMetricCard('Pending review', operations.asks?.pendingReview)}
+        ${renderOperationsMetricCard('Quote needed', operations.asks?.quoteNeeded)}
+        ${renderOperationsMetricCard('Awaiting payment', operations.asks?.awaitingPayment)}
+        ${renderOperationsMetricCard('Delivered', operations.asks?.delivered)}
+        ${renderOperationsMetricCard('Dispatch signups today', operations.dispatch?.today)}
+        ${renderOperationsMetricCard('Dispatch total', operations.dispatch?.total)}
+        ${renderOperationsMetricCard('Operators active', operations.operators?.active)}
+        ${renderOperationsMetricCard('Operators pending', operations.operators?.pending)}
+        ${renderOperationsMetricCard('Operators total', operations.operators?.total)}
+      </div>
+    </div>
+    <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Latest Activity</h3>
+      <div class="admin-status-grid">
+        ${renderLatestActivityCard('Latest Ask', operations.latest?.ask)}
+        ${renderLatestActivityCard('Latest Dispatch Signup', operations.latest?.dispatchSignup)}
+        ${renderLatestActivityCard('Latest Operator Application', operations.latest?.operatorApplication)}
+      </div>
+    </div>
+    <div class="admin-heartbeat-layer">
       <h3 class="admin-heartbeat-layer-title">Traffic / Signals</h3>
       <div class="admin-status-grid">
         ${renderTrafficSignalCard('Asks today', analytics?.signals?.askSubmissionsToday)}
@@ -3886,6 +3955,8 @@ function renderHeartbeatResult(data = {}) {
     renderTrafficSignals(adminTrafficSignalsData);
   }
 }
+
+window.setInterval(updateHeartbeatAgeDisplay, 15000);
 
 async function runAdminHeartbeat({ send = false } = {}) {
   const button = send ? adminHeartbeatSend : adminHeartbeatRun;

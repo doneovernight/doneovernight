@@ -23,7 +23,9 @@ function getConfig(overrides = {}) {
     vercelCommitSha: overrides.vercelCommitSha || clean(process.env.VERCEL_GIT_COMMIT_SHA),
     vercelCommitMessage: overrides.vercelCommitMessage || clean(process.env.VERCEL_GIT_COMMIT_MESSAGE),
     vercelCommitRef: overrides.vercelCommitRef || clean(process.env.VERCEL_GIT_COMMIT_REF),
-    vercelProjectProductionUrl: overrides.vercelProjectProductionUrl || clean(process.env.VERCEL_PROJECT_PRODUCTION_URL)
+    vercelProjectProductionUrl: overrides.vercelProjectProductionUrl || clean(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+    vercelDeploymentId: overrides.vercelDeploymentId || clean(process.env.VERCEL_DEPLOYMENT_ID),
+    vercelDeploymentCreatedAt: overrides.vercelDeploymentCreatedAt || clean(process.env.VERCEL_DEPLOYMENT_CREATED_AT)
   };
 }
 

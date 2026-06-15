@@ -20,6 +20,13 @@ async function getDeploymentSummary(config) {
           message: config.vercelCommitMessage || "Unavailable"
         }
       : unavailable("Latest Commit", "VERCEL_GIT_COMMIT_SHA not available outside Vercel"),
+    deploymentTimestamp: config.vercelDeploymentCreatedAt
+      ? {
+          status: "Available",
+          value: config.vercelDeploymentCreatedAt
+        }
+      : unavailable("Deployment Timestamp", "Deployment timestamp unavailable"),
+    deploymentId: config.vercelDeploymentId || "",
     deploymentStatus: config.vercelUrl || config.vercelProjectProductionUrl
       ? "Running"
       : "Unavailable"
