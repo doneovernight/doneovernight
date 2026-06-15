@@ -2477,6 +2477,14 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="stat-label">Workspace ready</div>
         <div class="stat-value" id="adminInProgressCount">0</div>
       </div>
+      <div class="stat-card" data-target-section="adminDeliveredTasksSection" tabindex="0">
+        <div class="stat-label">Delivered Tasks</div>
+        <div class="stat-value" id="adminDeliveredTasksCount">0</div>
+      </div>
+      <div class="stat-card" data-target-section="adminOperatorsSection" tabindex="0">
+        <div class="stat-label">Operators</div>
+        <div class="stat-value" id="adminOperatorsCount">0 / 0 operators</div>
+      </div>
       <div class="stat-card" data-target-section="adminClientsSection" tabindex="0">
         <div class="stat-label">Dispatch signups</div>
         <div class="stat-value" id="adminDispatchCount">Unavailable</div>
@@ -2525,7 +2533,7 @@ body.is-admin .admin-dashboard { display: block; }
           <div class="placeholder">Loading tasks...</div>
         </div>
 
-        <div class="admin-subsection">
+        <div class="admin-subsection" id="adminDeliveredTasksSection">
           <h3>Delivered tasks</h3>
           <div class="section-kicker">Completed delivery visibility</div>
           <div id="adminDeliveredTasksList" class="admin-review-list">
@@ -2793,6 +2801,8 @@ const adminPendingReviewCount = document.getElementById('adminPendingReviewCount
 const adminQuoteNeededCount = document.getElementById('adminQuoteNeededCount');
 const adminPendingQuotesCount = document.getElementById('adminPendingQuotesCount');
 const adminInProgressCount = document.getElementById('adminInProgressCount');
+const adminDeliveredTasksCount = document.getElementById('adminDeliveredTasksCount');
+const adminOperatorsCount = document.getElementById('adminOperatorsCount');
 const adminDispatchCount = document.getElementById('adminDispatchCount');
 const adminSystemHealth = document.getElementById('adminSystemHealth');
 const adminHeartbeatStatus = document.getElementById('adminHeartbeatStatus');
@@ -2896,13 +2906,25 @@ function getClientStatusGroup(status) {
 
 function getOperatorStatusGroup(status) {
   const normalized = normalizeStatus(status);
-  if (['active', 'approved'].includes(normalized)) return 'active';
-  if (['revoked', 'inactive', 'rejected', 'cancelled'].includes(normalized)) return 'inactive';
+  if (['active', 'approved', 'live'].includes(normalized)) return 'active';
+  if (['revoked', 'inactive', 'rejected', 'cancelled', 'archived', 'deleted', 'removed'].includes(normalized)) return 'inactive';
   return 'pending';
 }
 
 function getOperatorResolvedStatus(operator = {}) {
-  return operator.status_group || operator.status;
+  return operator.status || operator.approval_state || operator.state || operator.status_group;
+}
+
+function isDeletedOperator(operator = {}) {
+  return ['deleted', 'removed'].includes(normalizeStatus(getOperatorResolvedStatus(operator))) || Boolean(operator.deleted_at);
+}
+
+function getCountableOperators(operators = adminOperators) {
+  return (operators || []).filter((operator) => !isDeletedOperator(operator));
+}
+
+function getActiveOperators(operators = adminOperators) {
+  return getCountableOperators(operators).filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'active');
 }
 
 function getStatusLabel(status) {
@@ -3242,7 +3264,10 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment').length;
   const workspaceReadyCount = tasks.filter((task) => ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status))).length;
   const activeClients = clients.filter((client) => getClientStatusGroup(client.status) === 'active').length;
-  const completedTasks = tasks.filter((task) => ['delivered', 'completed'].includes(normalizeStatus(task.status))).length;
+  const deliveredTasksCount = tasks.filter(isDeliveredTask).length;
+  const completedTasks = deliveredTasksCount;
+  const countableOperators = getCountableOperators(adminOperators);
+  const activeOperators = getActiveOperators(adminOperators);
 
   const paidTasks = tasks.filter(isPaidRevenueTask);
   const paidRevenue = paidTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
@@ -3266,6 +3291,8 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   adminQuoteNeededCount.textContent = quoteNeededCount;
   adminPendingQuotesCount.textContent = awaitingPaymentCount;
   adminInProgressCount.textContent = workspaceReadyCount;
+  if (adminDeliveredTasksCount) adminDeliveredTasksCount.textContent = deliveredTasksCount;
+  if (adminOperatorsCount) adminOperatorsCount.textContent = `${activeOperators.length} / ${countableOperators.length} operators`;
   adminDispatchCount.textContent = adminDispatchConnection?.connected ? String(adminDispatchContacts.length) : 'Unavailable';
   adminSystemHealth.textContent = adminSystemStatus?.integrations?.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Ready' : 'Not connected';
@@ -3423,8 +3450,18 @@ function renderReviews(tasks = adminTasks) {
   `;
 }
 
+const DELIVERED_TASK_STATES = ['delivered', 'completed', 'delivery_complete', 'delivered_ready'];
+
 function isDeliveredTask(task = {}) {
-  return ['delivered', 'completed'].includes(normalizeStatus(task.status));
+  const states = [
+    task.status,
+    task.state,
+    task.delivery_status,
+    task.raw_payload?.status,
+    task.raw_payload?.state,
+    task.raw_payload?.delivery_status
+  ].map(normalizeStatus);
+  return states.some((state) => DELIVERED_TASK_STATES.includes(state));
 }
 
 function getDeliveryDate(task = {}) {
@@ -3448,7 +3485,7 @@ function getRevisionStatus(task = {}) {
   if (explicit) return explicit;
   const status = normalizeStatus(task.status);
   if (status === 'revision_requested') return 'Revision requested';
-  if (status === 'delivered' || status === 'completed') return 'No revision record';
+  if (isDeliveredTask(task)) return 'No revision record';
   return '';
 }
 
@@ -4093,7 +4130,8 @@ function renderAdminClients(clients) {
 function renderOperators(operators) {
   if (!adminOperatorsList) return;
   adminOperatorsKicker.hidden = true;
-  const groups = getOperatorGroups(operators);
+  const countableOperators = getCountableOperators(operators);
+  const groups = getOperatorGroups(countableOperators);
   document.querySelectorAll('[data-operator-filter]').forEach((tab) => {
     tab.classList.toggle('is-active', tab.dataset.operatorFilter === adminOperatorFilter);
     const label = tab.dataset.operatorFilter === 'pending'
@@ -4105,11 +4143,11 @@ function renderOperators(operators) {
       ? groups.pending.length
       : tab.dataset.operatorFilter === 'active'
         ? groups.active.length
-        : operators.length;
+        : countableOperators.length;
     tab.textContent = `${label} ${count}`;
   });
 
-  if (!operators.length) {
+  if (!countableOperators.length) {
     adminOperatorsList.innerHTML = '<div class="placeholder">No operator applications yet.</div>';
     return;
   }
@@ -4133,10 +4171,11 @@ function renderOperators(operators) {
 }
 
 function getOperatorGroups(operators) {
+  const countableOperators = getCountableOperators(operators);
   return {
-    pending: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'pending')),
-    active: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'active')),
-    inactive: sortedOperators(operators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'inactive'))
+    pending: sortedOperators(countableOperators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'pending')),
+    active: sortedOperators(countableOperators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'active')),
+    inactive: sortedOperators(countableOperators.filter((operator) => getOperatorStatusGroup(getOperatorResolvedStatus(operator)) === 'inactive'))
   };
 }
 
@@ -4881,10 +4920,12 @@ async function loadOperators(options = {}) {
     const operators = Array.isArray(data.operators) ? data.operators : [];
     adminOperators = sortedOperators(operators);
     renderOperators(adminOperators);
+    updateStats();
     renderAdminActivity(adminTasks);
   } catch (error) {
     if (!options.silent || !adminOperators.length) {
       adminOperators = [];
+      updateStats();
       setAdminOperatorsError();
     }
   } finally {
