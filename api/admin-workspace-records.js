@@ -94,7 +94,36 @@ async function getTrafficSignals() {
   return getAnalyticsSummary(getConfig());
 }
 
+function hasEnv(name) {
+  return Boolean(clean(process.env[name]));
+}
+
+function getDispatchNotificationReadiness() {
+  const webhookConfigured = [
+    "DISPATCH_NOTIFICATION_WEBHOOK_URL",
+    "DISPATCH_OPERATOR_WEBHOOK_URL",
+    "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL",
+    "DONEOVERNIGHT_TELEGRAM_WEBHOOK_URL"
+  ].some(hasEnv);
+  const doneovernightBotConfigured =
+    hasEnv("DONEOVERNIGHT_BOT_TOKEN") && hasEnv("DONEOVERNIGHT_CHAT_ID");
+  const opsBotConfigured =
+    hasEnv("OPS_TELEGRAM_BOT_TOKEN") && hasEnv("OPS_TELEGRAM_CHAT_ID");
+
+  return {
+    configured: webhookConfigured || doneovernightBotConfigured || opsBotConfigured,
+    method: webhookConfigured
+      ? "Webhook"
+      : doneovernightBotConfigured
+        ? "DONEOVERNIGHT bot"
+        : opsBotConfigured
+          ? "Ops bot"
+          : "Not configured"
+  };
+}
+
 function getAdminSystemStatus() {
+  const dispatchNotification = getDispatchNotificationReadiness();
   return {
     auth: {
       method: "n8n admin key",
@@ -107,7 +136,9 @@ function getAdminSystemStatus() {
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
       analytics: false,
       heartbeat: true,
-      vercelDeployment: Boolean(process.env.VERCEL)
+      vercelDeployment: Boolean(process.env.VERCEL),
+      dispatchNotification: dispatchNotification.configured,
+      dispatchNotificationMethod: dispatchNotification.method
     }
   };
 }

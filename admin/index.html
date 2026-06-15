@@ -3718,6 +3718,7 @@ function renderStatusPanels(status = adminSystemStatus) {
       ['Admin auth method', status.auth?.method || 'n8n admin key', 'Current admin access uses a shared key verified by n8n.'],
       ['Shared key warning', status.auth?.sharedKey ? 'Active' : 'Unavailable', 'Shared keys are operationally simple but should be rotated carefully.'],
       ['Password reset', status.auth?.resetFlow ? 'Available' : 'Not available', 'No built-in admin password reset exists in the current flow.'],
+      ['Dispatch notification', integrations.dispatchNotification ? 'Connected' : 'Not configured', integrations.dispatchNotification ? `Operational Dispatch routing: ${integrations.dispatchNotificationMethod || 'Configured'}` : 'No Dispatch/Ops Telegram webhook or bot env configured.'],
       ['Future auth', 'Supabase Auth + roles', 'Recommended future migration for individual operator/admin accountability.']
     ].map(([label, value, note]) => `
       <div class="admin-status-item">
