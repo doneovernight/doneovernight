@@ -2654,7 +2654,6 @@ body.is-admin .admin-dashboard { display: block; }
         <div id="adminHeartbeatResult" class="admin-review-list">
           <div class="placeholder">Run Heartbeat to check Website, Ask, Start, Portal, Admin, Workspace, Telegram, and Supabase.</div>
         </div>
-        <div id="adminHeartbeatList" class="admin-status-grid" hidden></div>
       </section>
 
       <section class="admin-section is-wide" id="adminSettingsSection" data-admin-section="settings">
@@ -2706,7 +2705,6 @@ const adminHeartbeatKicker = document.getElementById('adminHeartbeatKicker');
 const adminHeartbeatRun = document.getElementById('adminHeartbeatRun');
 const adminHeartbeatSend = document.getElementById('adminHeartbeatSend');
 const adminHeartbeatResult = document.getElementById('adminHeartbeatResult');
-const adminHeartbeatList = document.getElementById('adminHeartbeatList');
 const adminSettingsList = document.getElementById('adminSettingsList');
 const adminActivity = document.getElementById('adminActivity');
 const adminNewTasksStat = document.getElementById('adminNewTasksStat');
@@ -3568,10 +3566,6 @@ function renderStatusPanels(status = adminSystemStatus) {
   if (adminPaymentStatusNote) {
     adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected.';
   }
-  if (adminHeartbeatList) {
-    adminHeartbeatList.hidden = true;
-    adminHeartbeatList.innerHTML = '';
-  }
   if (adminSettingsList) {
     adminSettingsList.innerHTML = [
       ['Admin auth method', status.auth?.method || 'n8n admin key', 'Current admin access uses a shared key verified by n8n.'],
@@ -3589,24 +3583,29 @@ function renderStatusPanels(status = adminSystemStatus) {
 }
 
 function isHeartbeatOnline(item) {
-  return item?.status === 'Healthy' || item?.status === 'Sent' || item?.status === 'Configured';
+  return ['Healthy', 'Sent', 'Configured', 'Connected'].includes(item?.status);
 }
 
-function renderHeartbeatCard(label, item, generated) {
+function renderHeartbeatCard(label, item, generated, runtimeMs) {
   const online = isHeartbeatOnline(item);
   const responseTime = Number.isFinite(item?.responseTimeMs)
     ? `${Math.round(item.responseTimeMs)} ms`
     : 'Response time unavailable';
+  const lastTelegramSend = label === 'Telegram'
+    ? ` · Last Telegram send ${item?.sentAt ? formatTaskDate(item.sentAt) : 'not sent in this run'}`
+    : '';
+  const runtime = Number.isFinite(runtimeMs) ? ` · Runtime ${Math.round(runtimeMs)} ms` : '';
   const detail = item?.reason
     || (item?.code ? `HTTP ${item.code}` : '')
     || (item?.messageId ? `Message ${item.messageId}` : '')
+    || item?.provider
     || item?.source
     || 'Checked by Heartbeat';
-  const note = `${detail} · ${responseTime} · Last run ${generated}`;
+  const note = `${detail} · ${responseTime} · Last run ${generated}${runtime}${lastTelegramSend}`;
   return `
     <div class="admin-status-item">
       <span>${escapeHTML(label)}</span>
-      <strong>${online ? 'Online' : 'Offline'}</strong>
+      <strong>${label === 'Telegram' && online ? '🟢 Connected' : online ? 'Online' : 'Offline'}</strong>
       <p>${escapeHTML(note)}</p>
     </div>
   `;
@@ -3619,7 +3618,7 @@ function renderHeartbeatResult(data = {}) {
   const telegram = data.telegram || {};
   const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
   if (adminHeartbeatKicker) {
-    adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}`;
+    adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}${Number.isFinite(summary.runtimeMs) ? ` · runtime ${Math.round(summary.runtimeMs)} ms` : ''}`;
   }
   const checks = [
     health.website,
@@ -3635,14 +3634,14 @@ function renderHeartbeatResult(data = {}) {
 
   adminHeartbeatResult.innerHTML = `
     <div class="admin-status-grid">
-      ${renderHeartbeatCard('Website', health.website, generated)}
-      ${renderHeartbeatCard('Ask', health.askWebsite, generated)}
-      ${renderHeartbeatCard('Start', health.startWebsite, generated)}
-      ${renderHeartbeatCard('Portal', health.portalReview, generated)}
-      ${renderHeartbeatCard('Admin', health.adminWebsite, generated)}
-      ${renderHeartbeatCard('Workspace', health.workspace, generated)}
-      ${renderHeartbeatCard('Telegram', telegram, generated)}
-      ${renderHeartbeatCard('Supabase', health.supabase, generated)}
+      ${renderHeartbeatCard('Website', health.website, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Ask', health.askWebsite, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Start', health.startWebsite, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Portal', health.portalReview, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Admin', health.adminWebsite, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Workspace', health.workspace, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Telegram', telegram, generated, summary.runtimeMs)}
+      ${renderHeartbeatCard('Supabase', health.supabase, generated, summary.runtimeMs)}
     </div>
   `;
 }
@@ -3664,7 +3663,7 @@ async function runAdminHeartbeat({ send = false } = {}) {
       body: JSON.stringify({
         admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
         action: 'heartbeat',
-        send
+        send: true
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -3705,7 +3704,6 @@ async function loadSystemStatus() {
     updateStats();
   } catch (error) {
     adminSystemStatus = null;
-    if (adminHeartbeatList) adminHeartbeatList.innerHTML = '<div class="placeholder">System status unavailable.</div>';
     if (adminSettingsList) adminSettingsList.innerHTML = '<div class="placeholder">Settings status unavailable.</div>';
   }
 }

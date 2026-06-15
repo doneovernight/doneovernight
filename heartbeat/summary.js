@@ -12,6 +12,7 @@ const { getSearchConsoleSummary } = require("./providers/search-console");
 const { sendTelegramMessage } = require("./telegram");
 
 async function generateHeartbeat(options = {}) {
+  const startedAt = Date.now();
   const config = getConfig(options.config || {});
   const [health, analytics, performance, deployments, searchConsole, caseStudies, dispatch, contacts] = await Promise.all([
     getHealth(config),
@@ -47,6 +48,7 @@ async function generateHeartbeat(options = {}) {
 
   summary.recommendation = await getRecommendation(summary, config);
   summary.telegramMessage = formatHeartbeatTelegram(summary);
+  summary.runtimeMs = Date.now() - startedAt;
 
   return summary;
 }
@@ -57,6 +59,7 @@ async function sendHeartbeat(options = {}) {
   const telegram = await sendTelegramMessage({
     botToken: config.telegramBotToken,
     chatId: config.telegramChatId,
+    webhookUrls: config.telegramWebhookUrls,
     text: summary.telegramMessage
   });
 

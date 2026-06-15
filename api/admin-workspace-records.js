@@ -110,11 +110,30 @@ function getAdminSystemStatus() {
 
 function getTelegramReadiness() {
   const config = getConfig();
+  if (config.telegramBotToken && config.telegramChatId) {
+    return {
+      sent: false,
+      status: "Connected",
+      reason: "Bot API configured",
+      provider: "bot_api"
+    };
+  }
+
+  if (Array.isArray(config.telegramWebhookUrls) && config.telegramWebhookUrls.length) {
+    return {
+      sent: false,
+      status: "Connected",
+      reason: "Telegram webhook configured",
+      provider: "webhook"
+    };
+  }
+
   if (!config.telegramBotToken) {
     return {
       sent: false,
       status: "Unavailable",
-      reason: "Missing TELEGRAM_BOT_TOKEN"
+      reason: "Missing TELEGRAM_BOT_TOKEN or heartbeat Telegram webhook",
+      provider: "none"
     };
   }
 
@@ -122,15 +141,10 @@ function getTelegramReadiness() {
     return {
       sent: false,
       status: "Unavailable",
-      reason: "Missing HEARTBEAT_TELEGRAM_CHAT_ID"
+      reason: "Missing HEARTBEAT_TELEGRAM_CHAT_ID",
+      provider: "none"
     };
   }
-
-  return {
-    sent: false,
-    status: "Configured",
-    reason: "Ready to send"
-  };
 }
 
 async function runHeartbeat(input = {}) {

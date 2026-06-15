@@ -4,11 +4,24 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function splitList(value) {
+  if (Array.isArray(value)) return value.map(clean).filter(Boolean);
+  return clean(value).split(",").map((item) => item.trim()).filter(Boolean);
+}
+
 function getConfig(overrides = {}) {
+  const telegramWebhookUrls = overrides.telegramWebhookUrls || [
+    ...splitList(process.env.HEARTBEAT_TELEGRAM_WEBHOOK_URL),
+    ...splitList(process.env.DISPATCH_OPERATOR_WEBHOOK_URL),
+    ...splitList(process.env.DISPATCH_NOTIFICATION_WEBHOOK_URL),
+    ...splitList(process.env.OPERATOR_APPLY_TELEGRAM_WEBHOOK_URL)
+  ];
+
   return {
     generatedAt: overrides.generatedAt || new Date(),
     telegramBotToken: overrides.telegramBotToken || clean(process.env.TELEGRAM_BOT_TOKEN),
     telegramChatId: overrides.telegramChatId || clean(process.env.HEARTBEAT_TELEGRAM_CHAT_ID) || DEFAULT_CHAT_ID,
+    telegramWebhookUrls: [...new Set(telegramWebhookUrls)],
     heartbeatApiKey: overrides.heartbeatApiKey || clean(process.env.HEARTBEAT_API_KEY),
     siteUrl: overrides.siteUrl || clean(process.env.HEARTBEAT_SITE_URL) || "https://doneovernight.com",
     askUrl: overrides.askUrl || clean(process.env.HEARTBEAT_ASK_URL) || "https://ask.doneovernight.com",
