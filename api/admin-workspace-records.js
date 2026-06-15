@@ -106,7 +106,6 @@ function getAdminSystemStatus() {
       telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.HEARTBEAT_TELEGRAM_CHAT_ID),
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
       analytics: false,
-      speedInsights: false,
       heartbeat: true,
       vercelDeployment: Boolean(process.env.VERCEL)
     }
@@ -148,7 +147,7 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
   const health = summary.health || {};
   const deployments = summary.deployments || {};
   const analytics = summary.analytics || {};
-  const analyticsConnected = analytics.status === "Connected" || analytics.status === "Partial";
+  const analyticsConnected = analytics.status === "Connected";
   const generatedAt = summary.generatedAt || null;
 
   return {
@@ -186,17 +185,10 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
     },
     analytics: {
       source: "Analytics status",
-      state: analyticsConnected ? "waiting" : integrations.analytics ? "live" : "waiting",
-      status: analyticsConnected ? "Partial" : integrations.analytics ? "Connected" : "Not connected yet",
+      state: analyticsConnected || integrations.analytics ? "live" : "waiting",
+      status: analyticsConnected || integrations.analytics ? "Connected" : "Analytics unavailable",
       value: null,
-      reason: analyticsConnected ? "Supabase conversion signals connected; Vercel Analytics not connected yet" : integrations.analytics ? "Analytics source connected" : "Analytics source not configured"
-    },
-    speedInsights: {
-      source: "Speed Insights",
-      state: integrations.speedInsights ? "live" : "waiting",
-      status: integrations.speedInsights ? "Connected" : "Not connected yet",
-      value: null,
-      reason: integrations.speedInsights ? "Speed Insights connected" : "Speed Insights not configured"
+      reason: analyticsConnected || integrations.analytics ? "Analytics source connected" : "Vercel Analytics not connected"
     },
     supabase: {
       source: "Supabase",

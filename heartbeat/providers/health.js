@@ -102,11 +102,10 @@ async function checkGitHub(config) {
 }
 
 async function getHealth(config) {
-  const [supabase, website, askWebsite, startWebsite, portalReview, adminWebsite, workspace, taskApi, github, taskCount, dispatchCount] = await Promise.all([
+  const [supabase, website, askWebsite, portalReview, adminWebsite, workspace, taskApi, github, taskCount, dispatchCount] = await Promise.all([
     checkSupabase(config),
     checkHttp({ source: "Website", url: config.siteUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Ask", url: config.askUrl, expectedStatuses: [200] }),
-    checkHttp({ source: "Start Website", url: config.startUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Portal", url: config.portalReviewUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Admin", url: config.adminUrl, expectedStatuses: [200] }),
     checkHttp({ source: "Workspace", url: config.workspaceUrl, expectedStatuses: [200] }),
@@ -125,7 +124,6 @@ async function getHealth(config) {
     supabase,
     website,
     askWebsite,
-    startWebsite,
     portalReview,
     adminWebsite,
     workspace,

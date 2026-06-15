@@ -2046,10 +2046,37 @@ body.is-admin .admin-dashboard { display: block; }
   border-top: 1px solid var(--line);
 }
 
+.admin-activity-feed {
+  max-height: 310px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .admin-activity-title {
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.admin-activity-view-all {
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid rgba(229, 196, 138, 0.2);
+  border-radius: 10px;
+  background: rgba(229, 196, 138, 0.05);
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 11px 12px;
+  cursor: pointer;
+}
+
+.admin-activity-view-all:hover,
+.admin-activity-view-all:focus-visible {
+  border-color: rgba(229, 196, 138, 0.42);
+  outline: none;
 }
 
 .section-kicker {
@@ -2483,7 +2510,7 @@ body.is-admin .admin-dashboard { display: block; }
       </div>
       <div class="stat-card" data-target-section="adminOperatorsSection" tabindex="0">
         <div class="stat-label">Operators</div>
-        <div class="stat-value" id="adminOperatorsCount">0 / 0 operators</div>
+        <div class="stat-value" id="adminOperatorsCount">0 Active · 0 Pending · 0 Total</div>
       </div>
       <div class="stat-card" data-target-section="adminClientsSection" tabindex="0">
         <div class="stat-label">Dispatch signups</div>
@@ -2503,7 +2530,7 @@ body.is-admin .admin-dashboard { display: block; }
       <div class="workspace-control-head">
         <div>
           <h2>Traffic / Signals</h2>
-          <p>Public-site traffic when connected, plus real Supabase conversion signals.</p>
+          <p>Public-site traffic when Vercel Analytics is connected.</p>
         </div>
       </div>
       <div id="adminTrafficSignals" class="admin-status-grid">
@@ -2514,8 +2541,8 @@ body.is-admin .admin-dashboard { display: block; }
     <div class="admin-overview-activity">
       <div class="workspace-control-head">
         <div>
-          <h2>Activity Log</h2>
-          <p>Recent operational events from asks, Dispatch, and operators.</p>
+          <h2>Activity Feed</h2>
+          <p>Latest operational events from asks, Dispatch, and operators.</p>
         </div>
       </div>
       <div id="adminActivity">
@@ -2848,6 +2875,7 @@ let adminClientFilter = 'all';
 let adminOperatorFilter = 'all';
 let activeMetricTarget = '';
 let activeRevenueDrawer = null;
+let adminActivityExpanded = false;
 let adminTaskRenderSignature = '';
 let adminStatsSnapshot = {
   totalTasks: 0,
@@ -3268,7 +3296,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const deliveredTasksCount = tasks.filter(isDeliveredTask).length;
   const completedTasks = deliveredTasksCount;
   const countableOperators = getCountableOperators(adminOperators);
-  const activeOperators = getActiveOperators(adminOperators);
+  const operatorGroups = getOperatorGroups(countableOperators);
 
   const paidTasks = tasks.filter(isPaidRevenueTask);
   const paidRevenue = paidTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
@@ -3293,7 +3321,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   adminPendingQuotesCount.textContent = awaitingPaymentCount;
   adminInProgressCount.textContent = workspaceReadyCount;
   if (adminDeliveredTasksCount) adminDeliveredTasksCount.textContent = deliveredTasksCount;
-  if (adminOperatorsCount) adminOperatorsCount.textContent = `${activeOperators.length} / ${countableOperators.length} operators`;
+  if (adminOperatorsCount) adminOperatorsCount.textContent = `${operatorGroups.active.length} Active · ${operatorGroups.pending.length} Pending · ${countableOperators.length} Total`;
   adminDispatchCount.textContent = adminDispatchConnection?.connected ? String(adminDispatchContacts.length) : 'Unavailable';
   adminSystemHealth.textContent = adminSystemStatus?.integrations?.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Ready' : 'Not connected';
@@ -3794,24 +3822,21 @@ function renderTrafficSignalCard(label, item = {}, options = {}) {
 
 function renderTrafficSignals(analytics = adminTrafficSignalsData) {
   if (!adminTrafficSignals) return;
-  if (!analytics) {
-    adminTrafficSignals.innerHTML = '<div class="placeholder">Traffic / Signals unavailable.</div>';
+  if (!analytics || analytics.status !== 'Connected') {
+    adminTrafficSignals.innerHTML = '<div class="placeholder">Analytics unavailable.</div>';
     return;
   }
   const signals = analytics.signals || {};
   const traffic = analytics.traffic || {};
   const vercel = analytics.vercel || {};
-  const askTotal = Number(signals.askSubmissionsTotal?.value);
   const dispatchTotal = Number(signals.dispatchSignupsTotal?.value);
 
   adminTrafficSignals.innerHTML = `
     ${renderTrafficSignalCard('Today visits', traffic.todayVisits || vercel.todayVisits)}
     ${renderTrafficSignalCard('Homepage visits', traffic.homepageVisits || vercel.homepageVisits)}
     ${renderTrafficSignalCard('Ask visits', traffic.askVisits || vercel.askVisits)}
-    ${renderTrafficSignalCard('Start visits', traffic.startVisits || vercel.startVisits)}
+    ${renderTrafficSignalCard('Review visits', traffic.reviewVisits || vercel.reviewVisits)}
     ${renderTrafficSignalCard('Dispatch signups', signals.dispatchSignupsToday, { total: Number.isFinite(dispatchTotal) ? dispatchTotal : undefined })}
-    ${renderTrafficSignalCard('Ask submissions', signals.askSubmissionsToday, { total: Number.isFinite(askTotal) ? askTotal : undefined })}
-    ${renderTrafficSignalCard('Top source', signals.topSource)}
     ${renderTrafficSignalCard('Top page', signals.topPage || traffic.topPublicRoute)}
   `;
 }
@@ -3852,7 +3877,7 @@ function makeHeartbeatCountCard(source, value, reason = 'Real operational count'
     source,
     status: 'Healthy',
     state: 'live',
-    value: Number.isFinite(Number(value)) ? Number(value) : 0,
+    value: Number.isFinite(Number(value)) ? Number(value) : String(value),
     reason
   };
 }
@@ -3894,7 +3919,6 @@ function renderHeartbeatResult(data = {}) {
   const checks = [
     health.website,
     health.askWebsite,
-    health.startWebsite,
     health.portalReview,
     health.adminWebsite,
     health.workspace
@@ -3906,8 +3930,20 @@ function renderHeartbeatResult(data = {}) {
   const dispatchSignupsCount = health.dispatchCount?.status === 'Healthy'
     ? health.dispatchCount
     : operations.dispatch?.total;
-  const operatorsCount = makeHeartbeatCountCard('Operators', operations.operators?.total?.value, 'Active and pending operator records');
+  const activeOperatorCount = Number(operations.operators?.active?.value || 0);
+  const pendingOperatorCount = Number(operations.operators?.pending?.value || 0);
+  const totalOperatorCount = Number(operations.operators?.total?.value || 0);
+  const operatorsCount = makeHeartbeatCountCard('Operators', `${activeOperatorCount} Active`, `${pendingOperatorCount} Pending · ${totalOperatorCount} Total`);
   const deliveredTasksCount = makeHeartbeatCountCard('Delivered Tasks', operations.asks?.delivered?.value, 'Delivered task records');
+  const trafficCards = analytics?.status === 'Connected'
+    ? `
+        ${renderTrafficSignalCard('Homepage visits', analytics?.traffic?.homepageVisits || analytics?.vercel?.homepageVisits)}
+        ${renderTrafficSignalCard('Ask visits', analytics?.traffic?.askVisits || analytics?.vercel?.askVisits)}
+        ${renderTrafficSignalCard('Review visits', analytics?.traffic?.reviewVisits || analytics?.vercel?.reviewVisits)}
+        ${renderTrafficSignalCard('Dispatch signups', analytics?.traffic?.dispatchSignups || analytics?.vercel?.dispatchSignups)}
+        ${renderTrafficSignalCard('Top route', analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute)}
+      `
+    : '<div class="placeholder">Analytics unavailable.</div>';
 
   adminHeartbeatResult.innerHTML = `
     <div class="admin-heartbeat-layer">
@@ -3915,7 +3951,6 @@ function renderHeartbeatResult(data = {}) {
       <div class="admin-status-grid">
         ${renderHeartbeatCard('Website', health.website, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Ask', health.askWebsite, generated, summary.runtimeMs)}
-        ${renderHeartbeatCard('Start', health.startWebsite, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Portal Review', health.portalReview, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Admin', health.adminWebsite, generated, summary.runtimeMs)}
         ${renderHeartbeatCard('Workspace', health.workspace, generated, summary.runtimeMs)}
@@ -3941,10 +3976,7 @@ function renderHeartbeatResult(data = {}) {
     <div class="admin-heartbeat-layer">
       <h3 class="admin-heartbeat-layer-title">Traffic / Signals</h3>
       <div class="admin-status-grid">
-        ${renderTrafficSignalCard('Asks today', analytics?.signals?.askSubmissionsToday)}
-        ${renderTrafficSignalCard('Dispatch today', analytics?.signals?.dispatchSignupsToday)}
-        ${renderTrafficSignalCard('Top public route', analytics?.traffic?.topPublicRoute)}
-        ${renderTrafficSignalCard('Traffic availability', analytics?.vercel?.connection)}
+        ${trafficCards}
       </div>
     </div>
     <div class="admin-heartbeat-layer">
@@ -3955,7 +3987,6 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
         ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
         ${renderHeartbeatStatusCard('Analytics status', statusLayer.analytics)}
-        ${renderHeartbeatStatusCard('Speed Insights', statusLayer.speedInsights)}
         ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
     </div>
@@ -4843,21 +4874,26 @@ function renderAdminActivity(tasks) {
 
   const recentEvents = events
     .filter((event) => event.at && !Number.isNaN(new Date(event.at).getTime()))
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 8);
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   if (!recentEvents.length) {
     adminActivity.innerHTML = '<div class="placeholder">No recent operational activity yet.</div>';
     return;
   }
 
+  const visibleEvents = adminActivityExpanded ? recentEvents : recentEvents.slice(0, 5);
+
   adminActivity.innerHTML = `
-    ${recentEvents.map((event) => `
-      <div class="admin-activity">
-        <div class="admin-activity-title">${escapeHTML(event.title)}</div>
-        <div class="admin-activity-time">${escapeHTML(formatTaskDate(event.at) || 'Date unavailable')} · ${escapeHTML(event.meta)}</div>
-      </div>
-    `).join('')}
+    <div class="admin-activity-feed">
+      ${visibleEvents.map((event) => `
+        <div class="admin-activity">
+          <div class="admin-activity-title">${escapeHTML(event.title)}</div>
+          <div class="admin-activity-time">${escapeHTML(event.meta)}</div>
+          <div class="admin-activity-time">${escapeHTML(getRelativeTime(event.at) || formatTaskDate(event.at) || 'Date unavailable')}</div>
+        </div>
+      `).join('')}
+    </div>
+    ${recentEvents.length > 5 ? `<button class="admin-activity-view-all" type="button" data-activity-view-all>${adminActivityExpanded ? 'Show Latest 5' : `View All ${recentEvents.length}`}</button>` : ''}
   `;
 }
 
@@ -5738,6 +5774,13 @@ document.querySelectorAll('.stat-card[data-target-section]').forEach((card) => {
       activate();
     }
   });
+});
+
+adminActivity?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-activity-view-all]');
+  if (!button) return;
+  adminActivityExpanded = !adminActivityExpanded;
+  renderAdminActivity(adminTasks);
 });
 
 adminTasksList.addEventListener('click', async (e) => {

@@ -17,6 +17,11 @@ function valueLine(result) {
   return statusLine(result);
 }
 
+function numericValue(result) {
+  const value = Number(result?.value);
+  return Number.isFinite(value) ? value : 0;
+}
+
 function latestAskLine(latest = {}) {
   if (latest.status !== "Healthy") return statusLine(latest);
   const lines = [
@@ -60,6 +65,39 @@ function telegramLastSendLine(telegram = {}) {
   return "Unavailable";
 }
 
+function formatVoiceSummary(summary = {}) {
+  const health = summary.health || {};
+  const operations = summary.operations || {};
+  const asks = operations.asks || {};
+  const operators = operations.operators || {};
+  const systems = [
+    health.supabase,
+    health.website,
+    health.askWebsite,
+    health.portalReview,
+    health.adminWebsite,
+    health.workspace
+  ];
+  const unhealthy = systems.filter((item) => item && item.status && item.status !== "Healthy");
+  const pendingReview = numericValue(asks.pendingReview);
+  const awaitingPayment = numericValue(asks.awaitingPayment);
+  const pendingOperators = numericValue(operators.pending);
+
+  return [
+    "Hi Don.",
+    "",
+    unhealthy.length ? "DONEOVERNIGHT needs attention." : "DONEOVERNIGHT is healthy.",
+    "",
+    summary.recommendation || "No operational bottlenecks detected.",
+    "",
+    `${pendingReview} ask${pendingReview === 1 ? "" : "s"} awaiting review.`,
+    `${awaitingPayment} payment${awaitingPayment === 1 ? "" : "s"} pending.`,
+    `${pendingOperators} operator application${pendingOperators === 1 ? "" : "s"} pending.`,
+    "",
+    "Full report below."
+  ].join("\n");
+}
+
 function formatHeartbeatTelegram(summary, telegram = summary.telegram || {}) {
   const generated = formatDate(summary.generatedAt) || summary.generatedAt || "Unavailable";
   const operations = summary.operations || {};
@@ -69,6 +107,8 @@ function formatHeartbeatTelegram(summary, telegram = summary.telegram || {}) {
   const latest = operations.latest || {};
 
   return [
+    formatVoiceSummary(summary),
+    "",
     "💓 DONEOVERNIGHT HEARTBEAT",
     "",
     "Generated:",
@@ -78,7 +118,6 @@ function formatHeartbeatTelegram(summary, telegram = summary.telegram || {}) {
     `Supabase: ${statusLine(summary.health?.supabase)}`,
     `Website: ${statusLine(summary.health?.website)}`,
     `Ask: ${statusLine(summary.health?.askWebsite)}`,
-    `Start: ${statusLine(summary.health?.startWebsite)}`,
     `Portal: ${statusLine(summary.health?.portalReview)}`,
     `Admin: ${statusLine(summary.health?.adminWebsite)}`,
     `Workspace: ${statusLine(summary.health?.workspace)}`,
@@ -95,6 +134,7 @@ function formatHeartbeatTelegram(summary, telegram = summary.telegram || {}) {
     "",
     `Operators active: ${valueLine(operators.active)}`,
     `Operators pending: ${valueLine(operators.pending)}`,
+    `Operators total: ${valueLine(operators.total)}`,
     "",
     "LATEST ACTIVITY",
     "Latest Ask",

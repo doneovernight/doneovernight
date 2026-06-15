@@ -7,7 +7,6 @@ const { getDeploymentSummary } = require("./providers/deployments");
 const { getDispatchSummary } = require("./providers/dispatch");
 const { getHealth } = require("./providers/health");
 const { getOperationsSummary } = require("./providers/operations");
-const { getPerformanceSummary } = require("./providers/performance");
 const { getRecommendation } = require("./providers/recommendations");
 const { getSearchConsoleSummary } = require("./providers/search-console");
 const { sendTelegramMessage } = require("./telegram");
@@ -15,11 +14,10 @@ const { sendTelegramMessage } = require("./telegram");
 async function generateHeartbeat(options = {}) {
   const startedAt = Date.now();
   const config = getConfig(options.config || {});
-  const [health, analytics, operations, performance, deployments, searchConsole, caseStudies, dispatch, contacts] = await Promise.all([
+  const [health, analytics, operations, deployments, searchConsole, caseStudies, dispatch, contacts] = await Promise.all([
     getHealth(config),
     getAnalyticsSummary(config),
     getOperationsSummary(config),
-    getPerformanceSummary(config),
     getDeploymentSummary(config),
     getSearchConsoleSummary(config),
     getCaseStudySummary(config),
@@ -32,7 +30,6 @@ async function generateHeartbeat(options = {}) {
     health,
     analytics,
     operations,
-    performance,
     deployments,
     searchConsole,
     caseStudies,

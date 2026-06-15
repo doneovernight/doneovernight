@@ -4,7 +4,6 @@ async function getRecommendation(summary) {
   const operational = [
     health.website,
     health.askWebsite,
-    health.startWebsite,
     health.portalReview,
     health.adminWebsite,
     health.workspace,

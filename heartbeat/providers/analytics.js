@@ -256,7 +256,8 @@ function getVercelAnalyticsStatus() {
     todayVisits: unavailable("Today visits", "Vercel Analytics not connected yet"),
     homepageVisits: unavailable("Homepage visits", "Vercel Analytics not connected yet"),
     askVisits: unavailable("Ask visits", "Vercel Analytics not connected yet"),
-    startVisits: unavailable("Start visits", "Vercel Analytics not connected yet"),
+    reviewVisits: unavailable("Review visits", "Vercel Analytics not connected yet"),
+    dispatchSignups: unavailable("Dispatch signups", "Vercel Analytics not connected yet"),
     topPublicRoute: unavailable("Top public route", "Vercel Analytics not connected yet"),
     connection: unavailable("Vercel Analytics", "No Vercel Analytics API token or export source configured")
   };
@@ -269,23 +270,19 @@ async function getAnalyticsSummary(config = {}) {
   ]);
   const vercel = getVercelAnalyticsStatus(config);
 
-  const supabaseConnected = [
-    signals.askSubmissionsToday,
-    signals.dispatchSignupsToday
-  ].some((item) => item.status === "Healthy");
-
   return {
     generatedAt: new Date().toISOString(),
     window,
-    status: supabaseConnected ? "Partial" : "Unavailable",
-    source: supabaseConnected ? "Supabase conversion signals" : "No analytics source connected",
+    status: "Unavailable",
+    source: "Vercel Analytics not connected",
     vercel,
     signals,
     traffic: {
       todayVisits: vercel.todayVisits,
       homepageVisits: vercel.homepageVisits,
       askVisits: vercel.askVisits,
-      startVisits: vercel.startVisits,
+      reviewVisits: vercel.reviewVisits,
+      dispatchSignups: vercel.dispatchSignups,
       topPublicRoute: vercel.topPublicRoute
     },
     conversions: {
