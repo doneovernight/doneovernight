@@ -97,9 +97,11 @@ function getAdminSystemStatus() {
     integrations: {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       telegram: Boolean(process.env.OPERATOR_APPLY_TELEGRAM_WEBHOOK_URL || process.env.TASK_SUBMIT_WEBHOOK_URL),
+      payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
       analytics: false,
       speedInsights: false,
-      heartbeat: false
+      heartbeat: false,
+      vercelDeployment: Boolean(process.env.VERCEL)
     }
   };
 }

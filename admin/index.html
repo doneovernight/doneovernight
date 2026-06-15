@@ -922,8 +922,8 @@ body.is-admin .admin-dashboard { display: block; }
 
 .admin-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
   align-items: start;
 }
 
@@ -942,6 +942,21 @@ body.is-admin .admin-dashboard { display: block; }
 
 .admin-section.is-wide {
   grid-column: 1 / -1;
+}
+
+.admin-subsection {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-subsection h3 {
+  margin: 0 0 12px;
+  color: rgba(245, 241, 234, 0.82);
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .admin-section.is-highlighted {
@@ -2355,12 +2370,12 @@ body.is-admin .admin-dashboard { display: block; }
         <nav class="admin-sidebar-nav">
           <a class="is-active" href="#adminOverviewSection" data-admin-nav="overview">Overview</a>
           <a href="#adminTasksSection" data-admin-nav="asks">Asks</a>
-          <a href="#adminClientsSection" data-admin-nav="clients">Clients</a>
-          <a href="#adminDispatchSection" data-admin-nav="dispatch">Dispatch</a>
+          <a href="#adminClientsSection" data-admin-nav="clients">Clients / Dispatch</a>
           <a href="#adminReviewsSection" data-admin-nav="reviews">Reviews</a>
+          <a href="#adminQuotesPaymentsSection" data-admin-nav="quotes">Quotes / Payments</a>
           <a href="#workspaceControlSection" data-admin-nav="workspaces">Workspaces</a>
-          <a href="#adminHeartbeatSection" data-admin-nav="heartbeat">Heartbeat</a>
           <a href="#adminOperatorsSection" data-admin-nav="operators">Operators</a>
+          <a href="#adminHeartbeatSection" data-admin-nav="heartbeat">Heartbeat</a>
           <a href="#adminSettingsSection" data-admin-nav="settings">Settings</a>
         </nav>
       </aside>
@@ -2375,27 +2390,27 @@ body.is-admin .admin-dashboard { display: block; }
     </header>
 
     <div class="stats-grid">
-      <div class="stat-card" id="adminNewTasksStat" data-target-section="active-operations" tabindex="0">
+      <div class="stat-card" id="adminNewTasksStat" data-target-section="adminTasksSection" tabindex="0">
         <div class="stat-label">New asks</div>
         <div class="stat-value" id="adminNewTasksCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="active-operations" tabindex="0">
+      <div class="stat-card" data-target-section="adminReviewsSection" tabindex="0">
         <div class="stat-label">Pending review</div>
         <div class="stat-value" id="adminPendingReviewCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="active-operations" tabindex="0">
+      <div class="stat-card" data-target-section="adminQuotesPaymentsSection" tabindex="0">
         <div class="stat-label">Quote needed</div>
         <div class="stat-value" id="adminQuoteNeededCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="awaiting-payment" tabindex="0">
+      <div class="stat-card" data-target-section="adminQuotesPaymentsSection" tabindex="0">
         <div class="stat-label">Payment pending</div>
         <div class="stat-value" id="adminPendingQuotesCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="in-progress" tabindex="0">
+      <div class="stat-card" data-target-section="workspaceControlSection" tabindex="0">
         <div class="stat-label">Workspace ready</div>
         <div class="stat-value" id="adminInProgressCount">0</div>
       </div>
-      <div class="stat-card" data-target-section="adminDispatchSection" tabindex="0">
+      <div class="stat-card" data-target-section="adminClientsSection" tabindex="0">
         <div class="stat-label">Dispatch signups</div>
         <div class="stat-value" id="adminDispatchCount">Unavailable</div>
       </div>
@@ -2411,92 +2426,6 @@ body.is-admin .admin-dashboard { display: block; }
 
         </section>
 
-    <div class="revenue-center">
-      <div class="revenue-center-head">
-        <div>
-          <p class="revenue-center-eyebrow">Operational finance</p>
-          <h2 class="revenue-center-title">Operational Revenue Center</h2>
-        </div>
-        <p class="revenue-center-note">Revenue is tied to real tasks, payment states, and client movement.</p>
-      </div>
-      <div class="revenue-cards-grid">
-
-        <div class="revenue-card revenue-paid" id="paidRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
-          <div class="revenue-card-inner">
-            <div class="stat-label">Paid revenue</div>
-            <div class="stat-value" id="adminPaidRevenue">€0</div>
-            <div class="revenue-card-sub" id="paidRevenueCount">0 transactions</div>
-          </div>
-          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
-        </div>
-
-        <div class="revenue-card revenue-pending" id="pendingRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
-          <div class="revenue-card-inner">
-            <div class="stat-label">Pending revenue</div>
-            <div class="stat-value" id="adminPendingRevenue">€0</div>
-            <div class="revenue-card-sub" id="pendingRevenueCount">0 awaiting</div>
-          </div>
-          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
-        </div>
-
-        <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
-          <div class="revenue-card-inner">
-            <div class="stat-label">Potential revenue</div>
-            <div class="stat-value" id="adminPotentialRevenue">€0</div>
-            <div class="revenue-card-sub" id="potentialRevenueCount">0 in pipeline</div>
-          </div>
-          <span class="revenue-toggle-icon" aria-hidden="true">+</span>
-        </div>
-
-        <div class="revenue-drawer" id="revenueDrawer" aria-hidden="true" aria-live="polite">
-          <div class="revenue-drawer-content" id="revenueDrawerContent"></div>
-        </div>
-
-      </div>
-    </div>
-
-    <section class="operator-layer" aria-labelledby="operatorLayerTitle">
-      <div class="operator-layer-head">
-        <div>
-          <p class="operator-layer-eyebrow">Specialist operating system</p>
-          <h2 class="operator-layer-title" id="operatorLayerTitle">Centralized operations, modular by craft.</h2>
-        </div>
-        <p class="operator-layer-note">Built for independent operators who deliver visual, creative, strategic, and execution-heavy work without turning DONEOVERNIGHT into a generic marketplace.</p>
-      </div>
-
-      <div class="operator-surface-grid" aria-label="Operator infrastructure surfaces">
-        <article class="operator-surface-card is-live">
-          <div class="operator-surface-status">Live</div>
-          <h3>Clients + intake</h3>
-          <p>Approve new workspaces, keep pending clients visible, and route requests into the right operational flow.</p>
-        </article>
-        <article class="operator-surface-card is-live">
-          <div class="operator-surface-status">Live</div>
-          <h3>Quotes + payments</h3>
-          <p>Send operational quotes, monitor payment states, and keep revenue tied to real task movement.</p>
-        </article>
-        <article class="operator-surface-card">
-          <div class="operator-surface-status">Next layer</div>
-          <h3>Contracts + signatures</h3>
-          <p>Prepared for private agreements, licensing terms, approvals, and signature-ready delivery gates.</p>
-        </article>
-        <article class="operator-surface-card">
-          <div class="operator-surface-status">Next layer</div>
-          <h3>Deliveries + revisions</h3>
-          <p>Designed for asset drops, review cycles, final exports, follow-ups, and specialist delivery history.</p>
-        </article>
-      </div>
-
-      <div class="specialist-strip" aria-label="Specialist paths">
-        <span class="specialist-chip">Videographers</span>
-        <span class="specialist-chip">Editors</span>
-        <span class="specialist-chip">Brand designers</span>
-        <span class="specialist-chip">Visual systems</span>
-        <span class="specialist-chip">Automation operators</span>
-        <span class="specialist-chip">Creative specialists</span>
-      </div>
-    </section>
-
     <div class="admin-grid">
       <section class="admin-section is-wide" id="adminTasksSection" data-admin-section="asks">
         <h2>Asks</h2>
@@ -2506,8 +2435,8 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <section class="admin-section" id="adminClientsSection" data-admin-section="clients">
-        <h2>Clients</h2>
+      <section class="admin-section is-wide" id="adminClientsSection" data-admin-section="clients">
+        <h2>Clients / Dispatch</h2>
         <div class="section-kicker" id="adminClientsKicker">Not connected yet</div>
         <div class="admin-client-tabs" aria-label="Client filter">
           <button class="admin-client-tab is-active" type="button" data-client-filter="all">All</button>
@@ -2517,13 +2446,13 @@ body.is-admin .admin-dashboard { display: block; }
         <div id="adminClientsList">
           <div class="placeholder">Loading clients&hellip;</div>
         </div>
-      </section>
 
-      <section class="admin-section" id="adminDispatchSection" data-admin-section="dispatch">
-        <h2>Dispatch</h2>
-        <div class="section-kicker" id="adminDispatchKicker">Loading Dispatch contacts...</div>
-        <div id="adminDispatchList">
-          <div class="placeholder">Loading Dispatch signups...</div>
+        <div class="admin-subsection">
+          <h3>Dispatch signups</h3>
+          <div class="section-kicker" id="adminDispatchKicker">Loading Dispatch contacts...</div>
+          <div id="adminDispatchList">
+            <div class="placeholder">Loading Dispatch signups...</div>
+          </div>
         </div>
       </section>
 
@@ -2535,16 +2464,50 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <section class="admin-section" id="adminOperatorsSection" data-admin-section="operators">
-        <h2>Operators</h2>
-        <div class="section-kicker" id="adminOperatorsKicker">Not connected yet</div>
-        <div class="admin-client-tabs" aria-label="Operator filter">
-          <button class="admin-client-tab is-active" type="button" data-operator-filter="all">All</button>
-          <button class="admin-client-tab" type="button" data-operator-filter="pending">Pending</button>
-          <button class="admin-client-tab" type="button" data-operator-filter="active">Active</button>
+      <section class="admin-section is-wide" id="adminQuotesPaymentsSection" data-admin-section="quotes">
+        <div class="revenue-center-head">
+          <div>
+            <p class="revenue-center-eyebrow">Quotes / Payments</p>
+            <h2 class="revenue-center-title">Quote and payment state.</h2>
+          </div>
+          <p class="revenue-center-note">Only real task, quote, and payment states are shown. Payment system connection appears in Heartbeat.</p>
         </div>
-        <div id="adminOperatorsList">
-          <div class="placeholder">Loading operators&hellip;</div>
+        <div class="section-kicker" id="adminPaymentStatusNote">Payment system status loading...</div>
+
+        <div class="revenue-cards-grid">
+          <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+            <div class="revenue-card-inner">
+              <div class="stat-label">Quote pending</div>
+              <div class="stat-value" id="adminPotentialRevenue">€0</div>
+              <div class="revenue-card-sub" id="potentialRevenueCount">0 quote pending</div>
+            </div>
+            <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+          </div>
+
+          <div class="revenue-card revenue-pending" id="pendingRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+            <div class="revenue-card-inner">
+              <div class="stat-label">Awaiting payment</div>
+              <div class="stat-value" id="adminPendingRevenue">€0</div>
+              <div class="revenue-card-sub" id="pendingRevenueCount">0 awaiting</div>
+            </div>
+            <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+          </div>
+
+          <div class="revenue-card revenue-paid" id="paidRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
+            <div class="revenue-card-inner">
+              <div class="stat-label">Paid</div>
+              <div class="stat-value" id="adminPaidRevenue">€0</div>
+              <div class="revenue-card-sub" id="paidRevenueCount">0 transactions</div>
+            </div>
+            <span class="revenue-toggle-icon" aria-hidden="true">+</span>
+          </div>
+
+          <div class="revenue-drawer" id="revenueDrawer" aria-hidden="true" aria-live="polite">
+            <div class="revenue-drawer-content" id="revenueDrawerContent"></div>
+          </div>
+        </div>
+        <div id="adminQuotesPaymentsList" class="admin-review-list">
+          <div class="placeholder">Quote and payment states will populate from asks.</div>
         </div>
       </section>
 
@@ -2636,6 +2599,19 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="workspace-control-message" id="workspaceControlMessage" aria-live="polite"></div>
       </section>
 
+      <section class="admin-section is-wide" id="adminOperatorsSection" data-admin-section="operators">
+        <h2>Operators</h2>
+        <div class="section-kicker" id="adminOperatorsKicker">Not connected yet</div>
+        <div class="admin-client-tabs" aria-label="Operator filter">
+          <button class="admin-client-tab is-active" type="button" data-operator-filter="all">All</button>
+          <button class="admin-client-tab" type="button" data-operator-filter="pending">Pending</button>
+          <button class="admin-client-tab" type="button" data-operator-filter="active">Active</button>
+        </div>
+        <div id="adminOperatorsList">
+          <div class="placeholder">Loading operators&hellip;</div>
+        </div>
+      </section>
+
       <section class="admin-section is-wide" id="adminHeartbeatSection" data-admin-section="heartbeat">
         <h2>Heartbeat</h2>
         <div class="section-kicker">Phase 1 surface only</div>
@@ -2652,12 +2628,7 @@ body.is-admin .admin-dashboard { display: block; }
         </div>
       </section>
 
-      <section class="admin-section is-wide">
-        <h2>Activity</h2>
-        <div id="adminActivity">
-          <div class="placeholder">Recent operator activity will appear here.</div>
-        </div>
-      </section>
+      <div id="adminActivity" hidden></div>
     </div>
       </div>
     </div>
@@ -2690,6 +2661,7 @@ const adminTasksList = document.getElementById('adminTasksList');
 const adminDispatchKicker = document.getElementById('adminDispatchKicker');
 const adminDispatchList = document.getElementById('adminDispatchList');
 const adminReviewsList = document.getElementById('adminReviewsList');
+const adminQuotesPaymentsList = document.getElementById('adminQuotesPaymentsList');
 const adminWorkspaceReadinessList = document.getElementById('adminWorkspaceReadinessList');
 const adminHeartbeatList = document.getElementById('adminHeartbeatList');
 const adminSettingsList = document.getElementById('adminSettingsList');
@@ -2703,6 +2675,7 @@ const adminInProgressCount = document.getElementById('adminInProgressCount');
 const adminDispatchCount = document.getElementById('adminDispatchCount');
 const adminSystemHealth = document.getElementById('adminSystemHealth');
 const adminHeartbeatStatus = document.getElementById('adminHeartbeatStatus');
+const adminPaymentStatusNote = document.getElementById('adminPaymentStatusNote');
 const adminPaidRevenue = document.getElementById('adminPaidRevenue');
 const adminPendingRevenue = document.getElementById('adminPendingRevenue');
 const adminPotentialRevenue = document.getElementById('adminPotentialRevenue');
@@ -2908,11 +2881,12 @@ function getPaymentStatusLabel(status) {
 function getTaskActions(status) {
   const actions = {
     review_pending: [
-      { type: 'quote', label: 'Send quote' },
+      { type: 'quote', label: 'Prepare quote' },
       { type: 'move', label: 'Cancel', status: 'cancelled' }
     ],
     new: [
-      { type: 'quote', label: 'Send quote' },
+      { type: 'move', label: 'Mark under review', status: 'review_pending' },
+      { type: 'quote', label: 'Prepare quote' },
       { type: 'move', label: 'Cancel', status: 'cancelled' }
     ],
     quoted: [
@@ -3179,7 +3153,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const potentialCountEl = document.getElementById('potentialRevenueCount');
   if (paidCountEl) paidCountEl.textContent = `${paidTasks.length} transaction${paidTasks.length !== 1 ? 's' : ''}`;
   if (pendingCountEl) pendingCountEl.textContent = `${pendingTasks.length} awaiting`;
-  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} in pipeline`;
+  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} quote pending`;
 
   if (activeRevenueDrawer) {
     const drawerContent = document.getElementById('revenueDrawerContent');
@@ -3200,11 +3174,11 @@ function setSidebarActive(sectionId) {
     adminOverviewSection: 'overview',
     adminTasksSection: 'asks',
     adminClientsSection: 'clients',
-    adminDispatchSection: 'dispatch',
     adminReviewsSection: 'reviews',
+    adminQuotesPaymentsSection: 'quotes',
     workspaceControlSection: 'workspaces',
-    adminHeartbeatSection: 'heartbeat',
     adminOperatorsSection: 'operators',
+    adminHeartbeatSection: 'heartbeat',
     adminSettingsSection: 'settings'
   };
   const key = map[sectionId];
@@ -3314,12 +3288,56 @@ function renderReviews(tasks = adminTasks) {
             <div>
               <span>Review link</span>
               <strong>${escapeHTML(task.task_id || task.id || 'No task id')}</strong>
-              <p><a href="https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}" target="_blank" rel="noopener noreferrer">Open review</a></p>
+              <p><a href="https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}" target="_blank" rel="noopener noreferrer">Open review</a> · Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
             </div>
           </article>
         `;
       }).join('')}
     </div>
+  `;
+}
+
+function getQuotePaymentState(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  if (paymentStatus === 'paid') return 'paid';
+  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting payment';
+  if (status === 'quoted' || task.quote_amount || task.payment_link) return 'quote sent';
+  return 'quote pending';
+}
+
+function renderQuotesPayments(tasks = adminTasks) {
+  if (!adminQuotesPaymentsList) return;
+  const quoteTasks = sortedTasks(tasks)
+    .filter((task) => !['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
+    .slice(0, 80);
+  if (!quoteTasks.length) {
+    adminQuotesPaymentsList.innerHTML = '<div class="placeholder">No quote or payment states yet.</div>';
+    return;
+  }
+  adminQuotesPaymentsList.innerHTML = `
+    ${quoteTasks.map((task) => {
+      const state = getQuotePaymentState(task);
+      return `
+        <article class="admin-review-row">
+          <div>
+            <span>Quote/payment state</span>
+            <strong>${escapeHTML(state)}</strong>
+            <p>${escapeHTML(getTaskId(task))} · ${escapeHTML(task.name || task.email || 'Unknown client')}</p>
+          </div>
+          <div>
+            <span>Amount</span>
+            <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'No real amount yet'}</strong>
+            <p>${escapeHTML(task.payment_link ? 'Payment link present' : 'No payment link')}</p>
+          </div>
+          <div>
+            <span>Payment status</span>
+            <strong>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</strong>
+            <p>Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
+          </div>
+        </article>
+      `;
+    }).join('')}
   `;
 }
 
@@ -3346,6 +3364,8 @@ function renderWorkspaceReadiness(tasks = adminTasks) {
     ${workspaceTasks.map((task) => {
       const state = getReviewState(task);
       const workspaceStatus = getWorkspaceStatus(task);
+      const workspaceSlug = slugifyWorkspace(task.company || task.name || task.email || '');
+      const workspaceActive = ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
       return `
         <article class="admin-review-row">
           <div>
@@ -3361,7 +3381,7 @@ function renderWorkspaceReadiness(tasks = adminTasks) {
           <div>
             <span>Quote/payment</span>
             <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Quote pending'}</strong>
-            <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</p>
+            <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}${workspaceActive && workspaceSlug ? ` · <a href="https://portal.doneovernight.com/workspace/${encodeURIComponent(workspaceSlug)}" target="_blank" rel="noopener noreferrer">Open workspace</a>` : ''}</p>
           </div>
         </article>
       `;
@@ -3374,10 +3394,15 @@ function renderStatusPanels(status = adminSystemStatus) {
   const integrations = status.integrations || {};
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Connected' : 'Not connected';
+  if (adminPaymentStatusNote) {
+    adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected yet.';
+  }
   if (adminHeartbeatList) {
     adminHeartbeatList.innerHTML = [
       ['Last heartbeat', 'Unavailable', 'Heartbeat Phase 2 is not connected yet.'],
       ['Telegram status', integrations.telegram ? 'Configured' : 'Not connected', 'Detected from server-side notification configuration.'],
+      ['Vercel deployment', integrations.vercelDeployment ? 'Connected' : 'Unavailable', 'Detected from the production function runtime.'],
+      ['Payment system', integrations.payments ? 'Connected' : 'Not connected yet', 'No payment provider secrets or payment provider marker are exposed.'],
       ['Analytics status', integrations.analytics ? 'Connected' : 'Not connected', 'No analytics health feed is connected to Admin OS yet.'],
       ['Speed Insights', integrations.speedInsights ? 'Connected' : 'Not connected', 'Speed Insights status is a placeholder in Phase 1.'],
       ['Supabase', integrations.supabase ? 'Connected' : 'Not connected', 'Service-role backed admin APIs are configured server-side.']
@@ -3433,6 +3458,7 @@ async function loadSystemStatus() {
 
 function loadAdminOsPanels() {
   renderReviews();
+  renderQuotesPayments();
   renderWorkspaceReadiness();
   loadDispatchContacts();
   loadSystemStatus();
@@ -3450,11 +3476,11 @@ if ('IntersectionObserver' in window) {
     'adminOverviewSection',
     'adminTasksSection',
     'adminClientsSection',
-    'adminDispatchSection',
     'adminReviewsSection',
+    'adminQuotesPaymentsSection',
     'workspaceControlSection',
-    'adminHeartbeatSection',
     'adminOperatorsSection',
+    'adminHeartbeatSection',
     'adminSettingsSection'
   ]
     .map((id) => document.getElementById(id))
@@ -3921,6 +3947,8 @@ function renderTasks(tasks) {
     const deadline = task.deadline ? escapeHTML(task.deadline) : 'No deadline set';
     const clientBudget = task.client_budget || task.raw_payload?.client_budget || task.raw_payload?.budget || task.raw_payload?.clientBudget || '';
     const clientBudgetLabel = clientBudget ? escapeHTML(clientBudget) : 'Not indicated';
+    const internalEstimate = task.suggested_quote || task.internal_suggested_estimate || task.internal_estimate || task.raw_payload?.suggested_quote || task.raw_payload?.internal_suggested_estimate || '';
+    const internalEstimateLabel = internalEstimate ? escapeHTML(internalEstimate) : 'Not generated';
     const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Pending quote</span>';
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
     const quoteNote = task.quote_note ? `<div>${escapeHTML(task.quote_note)}</div>` : '';
@@ -3993,7 +4021,7 @@ function renderTasks(tasks) {
           <div class="admin-task-metric"><span>Deadline</span><strong>${deadline}</strong></div>
         </div>
         <div class="admin-task-meta">
-          <div class="admin-task-metric"><span>Quote</span><strong>${quoteAmount}</strong></div>
+          <div class="admin-task-metric"><span>Internal estimate</span><strong>${internalEstimateLabel}</strong></div>
           <div class="admin-task-metric"><span>Client budget</span><strong>${clientBudgetLabel}</strong></div>
           <div class="admin-task-metric"><span>Source</span><strong>${escapeHTML(task.source || 'workspace')}</strong></div>
         </div>
@@ -4354,6 +4382,7 @@ async function loadTasks(options = {}) {
     updateStats();
     renderTasks(adminTasks);
     renderReviews(adminTasks);
+    renderQuotesPayments(adminTasks);
     renderWorkspaceReadiness(adminTasks);
     if (adminClients.length) renderClients(adminClients);
     renderAdminActivity(adminTasks);
@@ -4504,6 +4533,7 @@ function renderAdminTaskState(tasks) {
   updateStats();
   renderTasks(adminTasks);
   renderReviews(adminTasks);
+  renderQuotesPayments(adminTasks);
   renderWorkspaceReadiness(adminTasks);
   if (adminClients.length) renderClients(adminClients);
   renderAdminActivity(adminTasks);
@@ -5150,7 +5180,7 @@ function renderPaidDrawerContent(tasks) {
   const total = paidTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Paid revenue breakdown</span>
+      <span class="revenue-drawer-title">Paid quotes</span>
       <span class="revenue-drawer-total" style="color:var(--green)">${formatRevenue(total)}</span>
     </div>
     ${paidTasks.map((t) => `
@@ -5208,7 +5238,7 @@ function renderPotentialDrawerContent(tasks) {
   const total = potentialTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Pipeline breakdown</span>
+      <span class="revenue-drawer-title">Quote pending</span>
       <span class="revenue-drawer-total" style="color:#e6d3a3">${formatRevenue(total)}</span>
     </div>
     ${potentialTasks.map((t) => `
