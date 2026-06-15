@@ -269,7 +269,7 @@ function formatLatestAsk(task) {
     created_at: task.created_at || null,
     reason: [
       clean(task.name) || clean(task.email) || "Unknown client",
-      budget ? `Budget: ${budget}` : "Budget unavailable",
+      budget ? `Budget: ${budget}` : "Budget: Not provided",
       clean(task.source) || clean(task.raw_payload?.source) || "Source unavailable"
     ].join(" · ")
   });

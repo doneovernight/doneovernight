@@ -3922,18 +3922,6 @@ function renderHeartbeatResult(data = {}) {
       </div>
     </div>
     <div class="admin-heartbeat-layer">
-      <h3 class="admin-heartbeat-layer-title">Infrastructure Status</h3>
-      <div class="admin-status-grid">
-        ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
-        ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
-        ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
-        ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
-        ${renderHeartbeatStatusCard('Analytics status', statusLayer.analytics)}
-        ${renderHeartbeatStatusCard('Speed Insights', statusLayer.speedInsights)}
-        ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
-      </div>
-    </div>
-    <div class="admin-heartbeat-layer">
       <h3 class="admin-heartbeat-layer-title">Operations</h3>
       <div class="admin-status-grid">
         ${renderOperationsMetricCard('Task Requests', taskRequestsCount)}
@@ -3957,6 +3945,18 @@ function renderHeartbeatResult(data = {}) {
         ${renderTrafficSignalCard('Dispatch today', analytics?.signals?.dispatchSignupsToday)}
         ${renderTrafficSignalCard('Top public route', analytics?.traffic?.topPublicRoute)}
         ${renderTrafficSignalCard('Traffic availability', analytics?.vercel?.connection)}
+      </div>
+    </div>
+    <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Infrastructure Status</h3>
+      <div class="admin-status-grid">
+        ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
+        ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
+        ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
+        ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
+        ${renderHeartbeatStatusCard('Analytics status', statusLayer.analytics)}
+        ${renderHeartbeatStatusCard('Speed Insights', statusLayer.speedInsights)}
+        ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
     </div>
   `;
@@ -3985,7 +3985,7 @@ async function runAdminHeartbeat({ send = false } = {}) {
       body: JSON.stringify({
         admin_key: sessionStorage.getItem('doneovernight_admin_key') || '',
         action: 'heartbeat',
-        send: true
+        send
       })
     });
     const data = await response.json().catch(() => ({}));

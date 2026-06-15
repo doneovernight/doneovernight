@@ -21,7 +21,7 @@ function latestAskLine(latest = {}) {
   if (latest.status !== "Healthy") return statusLine(latest);
   const lines = [
     latest.task_id || latest.value || "Unavailable",
-    latest.budget ? `Budget: ${latest.budget}` : "Budget: Unavailable",
+    latest.budget ? `Budget: ${latest.budget}` : "Budget: Not provided",
     `Source: ${latest.source || "Unavailable"}`,
     latest.created_at ? `Created: ${formatDate(latest.created_at)}` : "Created: Unavailable"
   ];
