@@ -98,7 +98,7 @@ function getAdminSystemStatus() {
     },
     integrations: {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
-      telegram: Boolean(process.env.OPERATOR_APPLY_TELEGRAM_WEBHOOK_URL || process.env.TASK_SUBMIT_WEBHOOK_URL),
+      telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.HEARTBEAT_TELEGRAM_CHAT_ID),
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
       analytics: false,
       speedInsights: false,
@@ -119,20 +119,11 @@ function getTelegramReadiness() {
     };
   }
 
-  if (Array.isArray(config.telegramWebhookUrls) && config.telegramWebhookUrls.length) {
-    return {
-      sent: false,
-      status: "Connected",
-      reason: "Telegram webhook configured",
-      provider: "webhook"
-    };
-  }
-
   if (!config.telegramBotToken) {
     return {
       sent: false,
       status: "Unavailable",
-      reason: "Missing TELEGRAM_BOT_TOKEN or heartbeat Telegram webhook",
+      reason: "Missing TELEGRAM_BOT_TOKEN",
       provider: "none"
     };
   }
@@ -147,16 +138,80 @@ function getTelegramReadiness() {
   }
 }
 
+function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
+  const integrations = getAdminSystemStatus().integrations || {};
+  const health = summary.health || {};
+  const deployments = summary.deployments || {};
+  const generatedAt = summary.generatedAt || null;
+
+  return {
+    lastHeartbeat: {
+      source: "Last heartbeat",
+      state: generatedAt ? "live" : "waiting",
+      status: generatedAt ? "Live" : "Waiting",
+      value: generatedAt,
+      responseTimeMs: summary.runtimeMs,
+      reason: generatedAt ? "Heartbeat completed" : "Run Heartbeat to generate status"
+    },
+    telegram: {
+      source: "Telegram status",
+      state: telegram.status === "Sent" ? "live" : telegram.status === "Connected" ? "waiting" : "error",
+      status: telegram.status === "Sent" ? "Connected" : telegram.status || "Unavailable",
+      value: telegram.sentAt || null,
+      responseTimeMs: telegram.responseTimeMs,
+      reason: telegram.reason || (telegram.messageId ? `Message ${telegram.messageId}` : telegram.provider || "Bot API")
+    },
+    vercel: {
+      source: "Vercel deployment",
+      state: deployments.vercel?.status === "Healthy" ? "live" : deployments.vercel?.status === "Needs attention" ? "error" : "waiting",
+      status: deployments.vercel?.status || "Unavailable",
+      value: deployments.deploymentStatus || deployments.vercel?.deploymentUrl || null,
+      reason: deployments.vercel?.reason || deployments.vercel?.environment || "Vercel runtime"
+    },
+    payments: {
+      source: "Payment system",
+      state: integrations.payments ? "live" : "waiting",
+      status: integrations.payments ? "Connected" : "Not connected yet",
+      value: null,
+      reason: integrations.payments ? "Payment provider env detected" : "Payment provider not configured"
+    },
+    analytics: {
+      source: "Analytics status",
+      state: integrations.analytics ? "live" : "waiting",
+      status: integrations.analytics ? "Connected" : "Not connected yet",
+      value: null,
+      reason: integrations.analytics ? "Analytics source connected" : "Analytics source not configured"
+    },
+    speedInsights: {
+      source: "Speed Insights",
+      state: integrations.speedInsights ? "live" : "waiting",
+      status: integrations.speedInsights ? "Connected" : "Not connected yet",
+      value: null,
+      reason: integrations.speedInsights ? "Speed Insights connected" : "Speed Insights not configured"
+    },
+    supabase: {
+      source: "Supabase",
+      state: health.supabase?.status === "Healthy" ? "live" : health.supabase?.status === "Needs attention" ? "error" : "waiting",
+      status: health.supabase?.status === "Healthy" ? "Connected" : health.supabase?.status || "Unavailable",
+      value: health.supabase?.code ? `HTTP ${health.supabase.code}` : null,
+      responseTimeMs: health.supabase?.responseTimeMs,
+      reason: health.supabase?.reason || "Supabase task_requests query"
+    }
+  };
+}
+
 async function runHeartbeat(input = {}) {
   const shouldSend = input.send === true || input.send === "true";
   const result = shouldSend
     ? await sendHeartbeat()
     : { summary: await generateHeartbeat(), telegram: getTelegramReadiness() };
+  const statusLayer = buildHeartbeatStatusLayer(result.summary, result.telegram);
 
   return {
     sent: shouldSend,
     summary: result.summary,
-    telegram: result.telegram
+    telegram: result.telegram,
+    statusLayer
   };
 }
 

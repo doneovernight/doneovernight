@@ -59,7 +59,6 @@ async function sendHeartbeat(options = {}) {
   const telegram = await sendTelegramMessage({
     botToken: config.telegramBotToken,
     chatId: config.telegramChatId,
-    webhookUrls: config.telegramWebhookUrls,
     text: summary.telegramMessage
   });
 

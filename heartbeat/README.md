@@ -9,14 +9,10 @@ node heartbeat/run.js
 node heartbeat/run.js --send
 ```
 
-Supported Telegram delivery environment:
+Required to send Telegram:
 
 - `TELEGRAM_BOT_TOKEN`
-- `HEARTBEAT_TELEGRAM_CHAT_ID` (defaults to `8615489344`)
-- `HEARTBEAT_TELEGRAM_WEBHOOK_URL`
-- `OPERATOR_APPLY_TELEGRAM_WEBHOOK_URL`
-
-Heartbeat prefers the Bot API when `TELEGRAM_BOT_TOKEN` is configured, and otherwise uses the existing DONEOVERNIGHT Telegram webhook infrastructure.
+- `HEARTBEAT_TELEGRAM_CHAT_ID`
 
 Optional health source environment:
 

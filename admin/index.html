@@ -1079,6 +1079,73 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
+.admin-heartbeat-layer {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-heartbeat-layer + .admin-heartbeat-layer {
+  margin-top: 16px;
+}
+
+.admin-heartbeat-layer-title {
+  margin: 0;
+  color: rgba(245, 241, 234, 0.46);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.admin-status-item {
+  position: relative;
+  padding-left: 34px;
+}
+
+.admin-status-pulse {
+  position: absolute;
+  top: 17px;
+  left: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.28);
+  box-shadow: 0 0 0 0 rgba(245, 241, 234, 0.12);
+}
+
+.admin-status-item.status-live .admin-status-pulse {
+  background: var(--green);
+  box-shadow: 0 0 0 6px rgba(139, 224, 173, 0.08);
+  animation: statusPulseGreen 1.9s ease-in-out infinite;
+}
+
+.admin-status-item.status-waiting .admin-status-pulse {
+  background: #f4d28a;
+  box-shadow: 0 0 0 6px rgba(244, 210, 138, 0.08);
+  animation: statusPulseAmber 2.1s ease-in-out infinite;
+}
+
+.admin-status-item.status-error .admin-status-pulse {
+  background: var(--red);
+  box-shadow: 0 0 0 6px rgba(229, 112, 112, 0.08);
+  animation: statusPulseRed 1.6s ease-in-out infinite;
+}
+
+@keyframes statusPulseGreen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 224, 173, 0.18); }
+  50% { box-shadow: 0 0 0 8px rgba(139, 224, 173, 0.02); }
+}
+
+@keyframes statusPulseAmber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 210, 138, 0.18); }
+  50% { box-shadow: 0 0 0 8px rgba(244, 210, 138, 0.02); }
+}
+
+@keyframes statusPulseRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 112, 112, 0.18); }
+  50% { box-shadow: 0 0 0 8px rgba(229, 112, 112, 0.02); }
+}
+
 .admin-dispatch-list,
 .admin-review-list {
   display: grid;
@@ -3586,8 +3653,27 @@ function isHeartbeatOnline(item) {
   return ['Healthy', 'Sent', 'Configured', 'Connected'].includes(item?.status);
 }
 
+function getHeartbeatState(item) {
+  if (!item) return 'waiting';
+  if (item.state) return item.state;
+  if (['Healthy', 'Sent', 'Connected', 'Configured'].includes(item.status)) return 'live';
+  if (item.status === 'Needs attention') return 'error';
+  if (item.status === 'Unavailable') return 'waiting';
+  return 'waiting';
+}
+
+function getHeartbeatStatusLabel(item) {
+  if (!item) return 'Waiting';
+  if (item.status === 'Healthy') return 'Online';
+  if (item.status === 'Sent' || item.status === 'Connected' || item.status === 'Configured') return 'Connected';
+  if (item.status === 'Needs attention') return 'Offline';
+  if (item.status === 'Unavailable') return 'Not connected yet';
+  return item.status || 'Waiting';
+}
+
 function renderHeartbeatCard(label, item, generated, runtimeMs) {
-  const online = isHeartbeatOnline(item);
+  const state = getHeartbeatState(item);
+  const online = state === 'live';
   const responseTime = Number.isFinite(item?.responseTimeMs)
     ? `${Math.round(item.responseTimeMs)} ms`
     : 'Response time unavailable';
@@ -3603,10 +3689,29 @@ function renderHeartbeatCard(label, item, generated, runtimeMs) {
     || 'Checked by Heartbeat';
   const note = `${detail} · ${responseTime} · Last run ${generated}${runtime}${lastTelegramSend}`;
   return `
-    <div class="admin-status-item">
+    <div class="admin-status-item status-${escapeHTML(state)}">
+      <span class="admin-status-pulse" aria-hidden="true"></span>
       <span>${escapeHTML(label)}</span>
-      <strong>${label === 'Telegram' && online ? '🟢 Connected' : online ? 'Online' : 'Offline'}</strong>
+      <strong>${escapeHTML(getHeartbeatStatusLabel(item))}</strong>
       <p>${escapeHTML(note)}</p>
+    </div>
+  `;
+}
+
+function renderHeartbeatStatusCard(label, item = {}) {
+  const state = getHeartbeatState(item);
+  const responseTime = Number.isFinite(item.responseTimeMs)
+    ? ` · Response ${Math.round(item.responseTimeMs)} ms`
+    : '';
+  const value = item.value
+    ? ` · ${formatTaskDate(item.value) || item.value}`
+    : '';
+  return `
+    <div class="admin-status-item status-${escapeHTML(state)}">
+      <span class="admin-status-pulse" aria-hidden="true"></span>
+      <span>${escapeHTML(label)}</span>
+      <strong>${escapeHTML(item.status || getHeartbeatStatusLabel(item))}</strong>
+      <p>${escapeHTML(`${item.reason || item.source || 'Status reported by Heartbeat'}${value}${responseTime}`)}</p>
     </div>
   `;
 }
@@ -3615,7 +3720,9 @@ function renderHeartbeatResult(data = {}) {
   if (!adminHeartbeatResult) return;
   const summary = data.summary || {};
   const health = summary.health || {};
+  const deployments = summary.deployments || {};
   const telegram = data.telegram || {};
+  const statusLayer = data.statusLayer || {};
   const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
   if (adminHeartbeatKicker) {
     adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}${Number.isFinite(summary.runtimeMs) ? ` · runtime ${Math.round(summary.runtimeMs)} ms` : ''}`;
@@ -3627,21 +3734,42 @@ function renderHeartbeatResult(data = {}) {
     health.portalReview,
     health.adminWebsite,
     health.workspace,
-    telegram,
-    health.supabase
+    health.supabase,
+    health.taskCount,
+    health.dispatchCount,
+    deployments.vercel,
+    telegram
   ];
   adminHeartbeatStatus.textContent = checks.every(isHeartbeatOnline) ? 'Online' : 'Needs check';
 
   adminHeartbeatResult.innerHTML = `
-    <div class="admin-status-grid">
-      ${renderHeartbeatCard('Website', health.website, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Ask', health.askWebsite, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Start', health.startWebsite, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Portal', health.portalReview, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Admin', health.adminWebsite, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Workspace', health.workspace, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Telegram', telegram, generated, summary.runtimeMs)}
-      ${renderHeartbeatCard('Supabase', health.supabase, generated, summary.runtimeMs)}
+    <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Operational Checks</h3>
+      <div class="admin-status-grid">
+        ${renderHeartbeatCard('Website', health.website, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Ask', health.askWebsite, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Start', health.startWebsite, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Portal Review', health.portalReview, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Admin', health.adminWebsite, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Workspace', health.workspace, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Supabase', health.supabase, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Task Requests', health.taskCount, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Dispatch Signups', health.dispatchCount, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Vercel', deployments.vercel, generated, summary.runtimeMs)}
+        ${renderHeartbeatCard('Telegram', telegram, generated, summary.runtimeMs)}
+      </div>
+    </div>
+    <div class="admin-heartbeat-layer">
+      <h3 class="admin-heartbeat-layer-title">Status Layer</h3>
+      <div class="admin-status-grid">
+        ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
+        ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
+        ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
+        ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
+        ${renderHeartbeatStatusCard('Analytics status', statusLayer.analytics)}
+        ${renderHeartbeatStatusCard('Speed Insights', statusLayer.speedInsights)}
+        ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
+      </div>
     </div>
   `;
 }
