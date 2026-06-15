@@ -2470,7 +2470,7 @@ body.is-admin .admin-dashboard { display: block; }
             <p class="revenue-center-eyebrow">Quotes / Payments</p>
             <h2 class="revenue-center-title">Quote and payment state.</h2>
           </div>
-          <p class="revenue-center-note">Only real task, quote, and payment states are shown. Payment system connection appears in Heartbeat.</p>
+          <p class="revenue-center-note">Only real task, quote, and payment states are shown.</p>
         </div>
         <div class="section-kicker" id="adminPaymentStatusNote">Payment system status loading...</div>
 
@@ -2620,15 +2620,13 @@ body.is-admin .admin-dashboard { display: block; }
           </div>
           <div class="admin-client-actions" style="margin-top:0">
             <button class="admin-client-action" id="adminHeartbeatRun" type="button">Run Heartbeat</button>
-            <button class="admin-client-action" id="adminHeartbeatSend" type="button">Send to Telegram</button>
+            <button class="admin-client-action" id="adminHeartbeatSend" type="button">Send Heartbeat To Telegram</button>
           </div>
         </div>
         <div id="adminHeartbeatResult" class="admin-review-list">
-          <div class="placeholder">Run Heartbeat to check routes, Supabase, counts, and Telegram readiness.</div>
+          <div class="placeholder">Run Heartbeat to check Website, Ask, Start, Portal, Admin, Workspace, Telegram, and Supabase.</div>
         </div>
-        <div id="adminHeartbeatList" class="admin-status-grid">
-          <div class="placeholder">Loading system status...</div>
-        </div>
+        <div id="adminHeartbeatList" class="admin-status-grid" hidden></div>
       </section>
 
       <section class="admin-section is-wide" id="adminSettingsSection" data-admin-section="settings">
@@ -3162,7 +3160,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   adminInProgressCount.textContent = workspaceReadyCount;
   adminDispatchCount.textContent = adminDispatchConnection?.connected ? String(adminDispatchContacts.length) : 'Unavailable';
   adminSystemHealth.textContent = adminSystemStatus?.integrations?.supabase ? 'Connected' : 'Unavailable';
-  adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Connected' : 'Not connected';
+  adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Ready' : 'Not connected';
   adminPaidRevenue.textContent = formatRevenue(paidRevenue);
   adminPendingRevenue.textContent = formatRevenue(pendingRevenue);
   adminPotentialRevenue.textContent = formatRevenue(potentialRevenue);
@@ -3413,26 +3411,13 @@ function renderStatusPanels(status = adminSystemStatus) {
   if (!status) return;
   const integrations = status.integrations || {};
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
-  adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Connected' : 'Not connected';
+  adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Ready' : 'Not connected';
   if (adminPaymentStatusNote) {
     adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected yet.';
   }
   if (adminHeartbeatList) {
-    adminHeartbeatList.innerHTML = [
-      ['Last heartbeat', 'Unavailable', 'Heartbeat Phase 2 is not connected yet.'],
-      ['Telegram status', integrations.telegram ? 'Configured' : 'Not connected', 'Detected from server-side notification configuration.'],
-      ['Vercel deployment', integrations.vercelDeployment ? 'Connected' : 'Unavailable', 'Detected from the production function runtime.'],
-      ['Payment system', integrations.payments ? 'Connected' : 'Not connected yet', 'No payment provider secrets or payment provider marker are exposed.'],
-      ['Analytics status', integrations.analytics ? 'Connected' : 'Not connected', 'No analytics health feed is connected to Admin OS yet.'],
-      ['Speed Insights', integrations.speedInsights ? 'Connected' : 'Not connected', 'Speed Insights status is a placeholder in Phase 1.'],
-      ['Supabase', integrations.supabase ? 'Connected' : 'Not connected', 'Service-role backed admin APIs are configured server-side.']
-    ].map(([label, value, note]) => `
-      <div class="admin-status-item">
-        <span>${escapeHTML(label)}</span>
-        <strong>${escapeHTML(value)}</strong>
-        <p>${escapeHTML(note)}</p>
-      </div>
-    `).join('');
+    adminHeartbeatList.hidden = true;
+    adminHeartbeatList.innerHTML = '';
   }
   if (adminSettingsList) {
     adminSettingsList.innerHTML = [
@@ -3450,17 +3435,25 @@ function renderStatusPanels(status = adminSystemStatus) {
   }
 }
 
-function renderHeartbeatCard(label, item) {
-  const value = item?.value !== undefined && item?.value !== null
-    ? String(item.value)
-    : item?.code
-      ? `HTTP ${item.code}`
-      : item?.status || 'Unavailable';
-  const note = item?.reason || item?.source || 'Checked by Heartbeat';
+function isHeartbeatOnline(item) {
+  return item?.status === 'Healthy' || item?.status === 'Sent' || item?.status === 'Configured';
+}
+
+function renderHeartbeatCard(label, item, generated) {
+  const online = isHeartbeatOnline(item);
+  const responseTime = Number.isFinite(item?.responseTimeMs)
+    ? `${Math.round(item.responseTimeMs)} ms`
+    : 'Response time unavailable';
+  const detail = item?.reason
+    || (item?.code ? `HTTP ${item.code}` : '')
+    || (item?.messageId ? `Message ${item.messageId}` : '')
+    || item?.source
+    || 'Checked by Heartbeat';
+  const note = `${detail} · ${responseTime} · Last run ${generated}`;
   return `
     <div class="admin-status-item">
       <span>${escapeHTML(label)}</span>
-      <strong>${escapeHTML(value)}</strong>
+      <strong>${online ? 'Online' : 'Offline'}</strong>
       <p>${escapeHTML(note)}</p>
     </div>
   `;
@@ -3470,28 +3463,33 @@ function renderHeartbeatResult(data = {}) {
   if (!adminHeartbeatResult) return;
   const summary = data.summary || {};
   const health = summary.health || {};
-  const deployments = summary.deployments || {};
   const telegram = data.telegram || {};
   const generated = summary.generatedAt ? formatTaskDate(summary.generatedAt) : 'Unavailable';
   if (adminHeartbeatKicker) {
     adminHeartbeatKicker.textContent = `Last heartbeat: ${generated}`;
   }
-  adminHeartbeatStatus.textContent = health.website?.status === 'Healthy' && health.adminWebsite?.status === 'Healthy'
-    ? 'Healthy'
-    : 'Needs check';
+  const checks = [
+    health.website,
+    health.askWebsite,
+    health.startWebsite,
+    health.portalReview,
+    health.adminWebsite,
+    health.workspace,
+    telegram,
+    health.supabase
+  ];
+  adminHeartbeatStatus.textContent = checks.every(isHeartbeatOnline) ? 'Online' : 'Needs check';
 
   adminHeartbeatResult.innerHTML = `
     <div class="admin-status-grid">
-      ${renderHeartbeatCard('doneovernight.com', health.website)}
-      ${renderHeartbeatCard('ask.doneovernight.com', health.askWebsite)}
-      ${renderHeartbeatCard('start.doneovernight.com', health.startWebsite)}
-      ${renderHeartbeatCard('portal review', health.portalReview)}
-      ${renderHeartbeatCard('admin.doneovernight.com', health.adminWebsite)}
-      ${renderHeartbeatCard('Supabase', health.supabase)}
-      ${renderHeartbeatCard('Task requests', health.taskCount)}
-      ${renderHeartbeatCard('Dispatch signups', health.dispatchCount)}
-      ${renderHeartbeatCard('Vercel', deployments.vercel)}
-      ${renderHeartbeatCard('Telegram', telegram)}
+      ${renderHeartbeatCard('Website', health.website, generated)}
+      ${renderHeartbeatCard('Ask', health.askWebsite, generated)}
+      ${renderHeartbeatCard('Start', health.startWebsite, generated)}
+      ${renderHeartbeatCard('Portal', health.portalReview, generated)}
+      ${renderHeartbeatCard('Admin', health.adminWebsite, generated)}
+      ${renderHeartbeatCard('Workspace', health.workspace, generated)}
+      ${renderHeartbeatCard('Telegram', telegram, generated)}
+      ${renderHeartbeatCard('Supabase', health.supabase, generated)}
     </div>
   `;
 }

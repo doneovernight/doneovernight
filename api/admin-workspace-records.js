@@ -8,6 +8,7 @@ const OPERATOR_ACCESS_WEBHOOK_URL = "https://n8n.doneovernight.com/webhook/opera
 
 const crypto = require("crypto");
 const { clean, dispatchWebhook, getWebhookUrls, parseBody, send, slugify, supabaseFetch } = require("../lib/ops");
+const { getConfig } = require("../heartbeat/config");
 const { generateHeartbeat, sendHeartbeat } = require("../heartbeat/summary");
 
 async function verifyAdminKey(adminKey) {
@@ -101,9 +102,34 @@ function getAdminSystemStatus() {
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
       analytics: false,
       speedInsights: false,
-      heartbeat: false,
+      heartbeat: true,
       vercelDeployment: Boolean(process.env.VERCEL)
     }
+  };
+}
+
+function getTelegramReadiness() {
+  const config = getConfig();
+  if (!config.telegramBotToken) {
+    return {
+      sent: false,
+      status: "Unavailable",
+      reason: "Missing TELEGRAM_BOT_TOKEN"
+    };
+  }
+
+  if (!config.telegramChatId) {
+    return {
+      sent: false,
+      status: "Unavailable",
+      reason: "Missing HEARTBEAT_TELEGRAM_CHAT_ID"
+    };
+  }
+
+  return {
+    sent: false,
+    status: "Configured",
+    reason: "Ready to send"
   };
 }
 
@@ -111,7 +137,7 @@ async function runHeartbeat(input = {}) {
   const shouldSend = input.send === true || input.send === "true";
   const result = shouldSend
     ? await sendHeartbeat()
-    : { summary: await generateHeartbeat(), telegram: { sent: false, status: "Dry run" } };
+    : { summary: await generateHeartbeat(), telegram: getTelegramReadiness() };
 
   return {
     sent: shouldSend,

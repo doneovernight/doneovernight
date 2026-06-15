@@ -15,6 +15,7 @@ function getConfig(overrides = {}) {
     startUrl: overrides.startUrl || clean(process.env.HEARTBEAT_START_URL) || "https://start.doneovernight.com",
     portalReviewUrl: overrides.portalReviewUrl || clean(process.env.HEARTBEAT_PORTAL_REVIEW_URL) || "https://portal.doneovernight.com/review",
     adminUrl: overrides.adminUrl || clean(process.env.HEARTBEAT_ADMIN_URL) || "https://admin.doneovernight.com",
+    workspaceUrl: overrides.workspaceUrl || clean(process.env.HEARTBEAT_WORKSPACE_URL) || "https://portal.doneovernight.com/workspace",
     taskApiUrl: overrides.taskApiUrl || clean(process.env.HEARTBEAT_TASK_API_URL) || "https://doneovernight.com/api/task-submit",
     repositoryUrl: overrides.repositoryUrl || clean(process.env.HEARTBEAT_REPOSITORY_URL) || "https://github.com/doneovernight/doneovernight",
     supabaseUrl: overrides.supabaseUrl || clean(process.env.SUPABASE_URL).replace(/\/+$/, ""),

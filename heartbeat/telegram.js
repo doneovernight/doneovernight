@@ -17,6 +17,7 @@ async function sendTelegramMessage({ botToken, chatId, text }) {
     };
   }
 
+  const startedAt = Date.now();
   const response = await fetchWithTimeout(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: {
@@ -29,20 +30,23 @@ async function sendTelegramMessage({ botToken, chatId, text }) {
       disable_web_page_preview: true
     })
   });
+  const responseTimeMs = Date.now() - startedAt;
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.ok === false) {
     return {
       sent: false,
       status: "Needs attention",
-      reason: data.description || `Telegram HTTP ${response.status}`
+      reason: data.description || `Telegram HTTP ${response.status}`,
+      responseTimeMs
     };
   }
 
   return {
     sent: true,
     status: "Sent",
-    messageId: data.result?.message_id || null
+    messageId: data.result?.message_id || null,
+    responseTimeMs
   };
 }
 

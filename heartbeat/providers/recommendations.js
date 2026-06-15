@@ -1,20 +1,26 @@
 async function getRecommendation(summary) {
   const health = summary.health || {};
-  const attention = Object.values(health).filter((item) => item?.status === "Needs attention");
-  const unavailable = [
-    summary.analytics?.traffic?.homepageVisits,
-    summary.performance?.fcp
-  ].filter((item) => item?.status === "Unavailable");
+  const operational = [
+    health.website,
+    health.askWebsite,
+    health.startWebsite,
+    health.portalReview,
+    health.adminWebsite,
+    health.workspace,
+    health.supabase
+  ];
+  const attention = operational.filter((item) => item?.status === "Needs attention");
+  const unavailable = operational.filter((item) => item?.status === "Unavailable");
 
   if (attention.length) {
     return `Check ${attention.map((item) => item.source).join(", ")} first.`;
   }
 
   if (unavailable.length) {
-    return "Connect analytics and Speed Insights APIs next so Heartbeat can report real traffic and performance numbers.";
+    return `Configure ${unavailable.map((item) => item.source).join(", ")} to complete operational coverage.`;
   }
 
-  return "Review traffic, conversions, and performance, then pick one improvement for today.";
+  return "All operational checks are online.";
 }
 
 module.exports = {
