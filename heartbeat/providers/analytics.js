@@ -323,16 +323,17 @@ function makeConversionFunnel(rows = [], responseTimeMs = 0) {
   const visits = countEventType(rows, "page_view");
   const asks = countEventType(rows, "ask_submitted");
   const reviews = countEventType(rows, "review_opened");
+  const planSent = countEventType(rows, "execution_plan_sent");
   const plans = countEventType(rows, "execution_plan_viewed");
   const approvals = countEventType(rows, "approve_start_clicked");
   const payments = countEventType(rows, "payment_link_clicked");
   const workspaces = countEventType(rows, "workspace_opened");
 
   return healthy("Conversion funnel", {
-    value: `Visit ${visits} → Ask ${asks} → Review ${reviews} → Plan ${plans} → Approve ${approvals} → Pay ${payments} → Workspace ${workspaces}`,
+    value: `Visit ${visits} → Ask ${asks} → Review ${reviews} → Plan sent ${planSent} → Plan viewed ${plans} → Approve ${approvals} → Pay ${payments} → Workspace ${workspaces}`,
     responseTimeMs,
     reason: "First-party event funnel",
-    stages: { visits, asks, reviews, plans, approvals, payments, workspaces }
+    stages: { visits, asks, reviews, planSent, plans, approvals, payments, workspaces }
   });
 }
 
