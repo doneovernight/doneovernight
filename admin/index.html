@@ -3039,20 +3039,25 @@ function getStatusLabel(status) {
   const labels = {
     request_received: 'Request received',
     under_review: 'Review in progress',
+    review_in_progress: 'Review in progress',
     quote_preparation: 'Execution plan',
     quote_ready: 'Execution plan ready',
+    execution_plan_ready: 'Execution plan ready',
     review_pending: 'Review in progress',
     new: 'Request received',
     needs_info: 'Needs information',
     on_hold: 'On hold',
     quoted: 'Execution plan ready',
     quote_sent: 'Execution plan ready',
+    awaiting_start: 'Awaiting start',
+    payment_started: 'Start opened',
     awaiting_payment: 'Awaiting start',
     payment_confirmed: 'Operators assigned',
     paid: 'Operators assigned',
     workspace_ready: 'Execution started',
     workspace_active: 'Project active',
     execution_active: 'Project active',
+    project_active: 'Project active',
     verification_pending: 'Verification pending',
     queued: 'Awaiting start',
     in_progress: 'Project active',
@@ -3154,9 +3159,9 @@ function getTaskOperationalBucket(task = {}) {
   if (['completed'].includes(status)) return 'completed';
   if (['archived', 'cancelled', 'rejected'].includes(status)) return 'archived';
   if (isDeliveredTask(task)) return 'delivered';
-  if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return 'active';
-  if (status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid') return 'awaiting_start';
-  if (['review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(status)) return 'review_complete';
+  if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return 'active';
+  if (status === 'awaiting_start' || status === 'payment_started' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid') return 'awaiting_start';
+  if (['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status)) return 'review_complete';
   if (status === 'needs_info') return 'needs_info';
   return 'new';
 }
@@ -3306,13 +3311,14 @@ function getTaskRenderSignature(task) {
 }
 
 function getLifecycleIndex(status) {
-  const stages = ['new', 'review_pending', 'quote_sent', 'awaiting_payment', 'payment_confirmed', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
+  const stages = ['new', 'review_pending', 'execution_plan_ready', 'awaiting_start', 'payment_confirmed', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
   const normalized = normalizeStatus(status);
   if (normalized === 'request_received') return stages.indexOf('new');
   if (normalized === 'needs_info') return stages.indexOf('review_pending');
-  if (normalized === 'quoted') return stages.indexOf('quote_sent');
+  if (normalized === 'quoted' || normalized === 'quote_sent') return stages.indexOf('execution_plan_ready');
+  if (normalized === 'awaiting_payment' || normalized === 'payment_started') return stages.indexOf('awaiting_start');
   if (normalized === 'revision_requested') return stages.indexOf('in_progress');
-  if (normalized === 'workspace_ready' || normalized === 'workspace_active' || normalized === 'execution_active' || normalized === 'queued') return stages.indexOf('in_progress');
+  if (normalized === 'workspace_ready' || normalized === 'workspace_active' || normalized === 'execution_active' || normalized === 'project_active' || normalized === 'queued') return stages.indexOf('in_progress');
   const index = stages.indexOf(normalized);
   return index >= 0 ? index : 0;
 }
@@ -3321,8 +3327,8 @@ function renderLifecycle(status) {
   const stages = [
     ['new', 'Request'],
     ['review_pending', 'Review'],
-    ['quote_sent', 'Plan'],
-    ['awaiting_payment', 'Start'],
+    ['execution_plan_ready', 'Plan'],
+    ['awaiting_start', 'Start'],
     ['payment_confirmed', 'Operators'],
     ['in_progress', 'Active'],
     ['delivery_prep', 'Prep'],
@@ -3331,7 +3337,7 @@ function renderLifecycle(status) {
   ];
   const currentIndex = getLifecycleIndex(status);
   const normalizedStatus = normalizeStatus(status);
-  const current = ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'revision_requested'].includes(normalizedStatus) ? 'in_progress' : normalizedStatus === 'quoted' ? 'quote_sent' : normalizedStatus === 'request_received' ? 'new' : normalizedStatus;
+  const current = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'revision_requested'].includes(normalizedStatus) ? 'in_progress' : normalizedStatus === 'quoted' || normalizedStatus === 'quote_sent' ? 'execution_plan_ready' : normalizedStatus === 'awaiting_payment' || normalizedStatus === 'payment_started' ? 'awaiting_start' : normalizedStatus === 'request_received' ? 'new' : normalizedStatus;
   return `
     <div class="admin-lifecycle" aria-label="Lifecycle">
       ${stages.map(([key, label], index) => {
@@ -3368,12 +3374,12 @@ function taskMatchesOperationalFilter(task, filter) {
   if (filter === 'all') return true;
   if (filter === 'new') return ['new', 'request_received'].includes(status);
   if (filter === 'needs_info') return status === 'needs_info';
-  if (filter === 'review_complete') return ['review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(status) && !['awaiting_payment', 'payment_confirmed', 'paid'].includes(paymentStatus);
+  if (filter === 'review_complete') return ['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status) && !['awaiting_payment', 'payment_confirmed', 'paid'].includes(paymentStatus);
   if (filter === 'awaiting_start') {
-    if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
-    return status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid';
+    if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
+    return status === 'awaiting_start' || status === 'payment_started' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid';
   }
-  if (filter === 'project_active') return ['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+  if (filter === 'project_active') return ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
   if (filter === 'delivered') return isDeliveredTask(task);
   if (filter === 'completed') return status === 'completed';
   if (filter === 'archived') return ['archived', 'cancelled', 'rejected'].includes(status);
@@ -3493,9 +3499,9 @@ function getRevenueRecovery(task = {}) {
 function updateStats(tasks = adminTasks, clients = adminClients) {
   const newTasksCount = tasks.filter((task) => ['new', 'request_received'].includes(normalizeStatus(task.status))).length;
   const pendingReviewCount = tasks.filter((task) => normalizeStatus(task.status) === 'needs_info').length;
-  const quoteNeededCount = tasks.filter((task) => ['quote_sent', 'quoted', 'awaiting_payment'].includes(normalizeStatus(task.status)) || normalizeStatus(task.payment_status) === 'awaiting_payment').length;
-  const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment').length;
-  const workspaceReadyCount = tasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
+  const quoteNeededCount = tasks.filter((task) => ['quote_sent', 'quoted', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment'].includes(normalizeStatus(task.status)) || normalizeStatus(task.payment_status) === 'awaiting_payment').length;
+  const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(normalizeStatus(task.status))).length;
+  const workspaceReadyCount = tasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
   const activeClients = clients.filter((client) => getClientStatusGroup(client.status) === 'active').length;
   const deliveredTasksCount = tasks.filter(isDeliveredTask).length;
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -3626,6 +3632,9 @@ function getReviewState(task = {}) {
     'quote_preparation',
     'quote_ready',
     'quote_sent',
+    'execution_plan_ready',
+    'awaiting_start',
+    'payment_started',
     'awaiting_payment',
     'payment_pending',
     'quote_paid',
@@ -3637,19 +3646,20 @@ function getReviewState(task = {}) {
     'workspace_ready',
     'workspace_active',
     'execution_active',
+    'project_active',
     'delivered'
   ]);
   if (allowed.has(rawState)) return rawState;
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
   if (status === 'new') return 'request_received';
-  if (status === 'review_pending') return 'under_review';
-  if (status === 'quoted') return task.quote_amount ? 'quote_ready' : 'quote_preparation';
-  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting_payment';
+  if (status === 'review_pending' || status === 'review_in_progress') return 'under_review';
+  if (status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready') return task.quote_amount || task.payment_link ? 'execution_plan_ready' : 'quote_preparation';
+  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment' || status === 'awaiting_start' || status === 'payment_started') return 'awaiting_start';
   if (paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'paid';
   if (paymentStatus === 'paid') return 'paid';
   if (status === 'workspace_ready') return 'workspace_ready';
-  if (status === 'workspace_active') return 'workspace_active';
+  if (status === 'workspace_active' || status === 'project_active') return 'workspace_active';
   if (['queued', 'in_progress', 'delivery_prep'].includes(status)) return 'execution_active';
   if (status === 'delivered') return 'delivered';
   return status || 'request_received';
@@ -3767,8 +3777,8 @@ function getQuotePaymentState(task = {}) {
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
   if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'operators assigned';
-  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting start';
-  if (status === 'quote_sent' || status === 'quoted' || task.quote_amount || task.payment_link) return 'execution plan ready';
+  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment' || status === 'awaiting_start' || status === 'payment_started') return 'awaiting start';
+  if (status === 'quote_sent' || status === 'quoted' || status === 'execution_plan_ready' || task.quote_amount || task.payment_link) return 'execution plan ready';
   return 'plan pending';
 }
 
@@ -3810,11 +3820,11 @@ function renderQuotesPayments(tasks = adminTasks) {
 function getWorkspaceStatus(task = {}) {
   const status = normalizeStatus(task.workspace_status || task.raw_payload?.workspace_status || task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  if (status === 'workspace_active' || status === 'execution_active') return status;
+  if (status === 'workspace_active' || status === 'execution_active' || status === 'project_active') return status === 'project_active' ? 'workspace_active' : status;
   if (status === 'workspace_ready') return 'ready to unlock';
   if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'ready to unlock';
-  if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || normalizeStatus(task.status) === 'awaiting_payment') return 'locked · awaiting start';
-  if (task.quote_amount || normalizeStatus(task.status) === 'quoted') return 'locked · plan pending';
+  if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || ['awaiting_payment', 'awaiting_start', 'payment_started'].includes(normalizeStatus(task.status))) return 'locked · awaiting start';
+  if (task.quote_amount || ['quoted', 'quote_sent', 'execution_plan_ready'].includes(normalizeStatus(task.status))) return 'locked · plan pending';
   return 'locked · review active';
 }
 
@@ -3832,7 +3842,7 @@ function renderWorkspaceReadiness(tasks = adminTasks) {
       const state = getReviewState(task);
       const workspaceStatus = getWorkspaceStatus(task);
       const workspaceSlug = slugifyWorkspace(task.company || task.name || task.email || '');
-      const workspaceActive = ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
+      const workspaceActive = ['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
       return `
         <article class="admin-review-row">
           <div>
@@ -4779,7 +4789,7 @@ function renderTasks(tasks) {
     {
       title: 'Review / Plan',
       slug: 'active-operations',
-      tasks: visibleTasks.filter((task) => normalizeStatus(task.payment_status) !== 'awaiting_payment' && ['new', 'request_received', 'needs_info', 'on_hold', 'review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(normalizeStatus(task.status)))
+      tasks: visibleTasks.filter((task) => normalizeStatus(task.payment_status) !== 'awaiting_payment' && ['new', 'request_received', 'needs_info', 'on_hold', 'review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(normalizeStatus(task.status)))
     },
     {
       title: 'Awaiting Start',
@@ -4787,14 +4797,14 @@ function renderTasks(tasks) {
       tasks: visibleTasks.filter((task) => {
         const status = normalizeStatus(task.status);
         const paymentStatus = normalizeStatus(task.payment_status);
-        if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
-        return paymentStatus === 'awaiting_payment' || status === 'awaiting_payment' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed';
+        if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
+        return paymentStatus === 'awaiting_payment' || status === 'awaiting_start' || status === 'payment_started' || status === 'awaiting_payment' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed';
       })
     },
     {
       title: 'Project Active',
       slug: 'in-progress',
-      tasks: visibleTasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
+      tasks: visibleTasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
     },
     {
       title: 'Delivered',
@@ -4821,7 +4831,7 @@ function renderTasks(tasks) {
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
     const quoteNoteText = task.quote_note ? escapeHTML(task.quote_note) : '';
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
-    const workspaceIsActive = ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
+    const workspaceIsActive = ['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
     const actions = task.id
       ? [
           { type: 'open-review', label: 'Open review' },
@@ -4834,8 +4844,8 @@ function renderTasks(tasks) {
     }
     const status = normalizeStatus(task.status);
     const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
-    const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
-    const isAwaitingPayment = normalizeStatus(task.payment_status) === 'awaiting_payment' || status === 'awaiting_payment';
+    const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+    const isAwaitingPayment = normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(status);
     const isDelivered = status === 'delivered';
     const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
     const priority = getTaskPriority(task);
@@ -5100,7 +5110,7 @@ function renderAdminActivity(tasks) {
         at: task.updated_at || task.created_at
       });
     }
-    if (status === 'quoted' || task.quoted_at || task.quote_amount || task.payment_link) {
+    if (status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.payment_link) {
       events.push({
         title: 'Execution plan sent',
         meta: `${taskId} · ${client}`,
@@ -5114,7 +5124,7 @@ function renderAdminActivity(tasks) {
         at: task.paid_at || task.updated_at || task.created_at
       });
     }
-    if (['workspace_active', 'execution_active', 'queued', 'in_progress'].includes(status)) {
+    if (['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress'].includes(status)) {
       events.push({
         title: 'Workspace opened',
         meta: `${taskId} · ${client}`,
@@ -5784,9 +5794,9 @@ function _openOpModal(type, task) {
           <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
         </div>
         <div class="op-modal-field">
-          <label for="omQLink">Custom Payment Link <span class="field-opt">optional</span></label>
-          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.me/doneovernight?amount=350" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
-          <p class="field-opt">Leave empty to auto-generate a Bunq link with the investment amount and DON reference.</p>
+          <label for="omQLink">Custom payment link — optional</label>
+          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.me/doneovernight/350/DON-2026-00000" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+          <p class="field-opt">Leave empty to automatically generate a Bunq link with this DON reference.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';
@@ -6072,11 +6082,9 @@ adminActivity?.addEventListener('click', (event) => {
 function buildBunqPaymentLinkFromQuote(value, reference = '') {
   const amount = String(value || '').replace(/[^\d]/g, '');
   if (!amount) return '';
-  const params = new URLSearchParams({ amount });
   const cleanReference = String(reference || '').trim();
-  // bunq.me keeps this query value as a payment reference hint; the review page also shows the DON reference.
-  if (cleanReference) params.set('description', cleanReference);
-  return `https://bunq.me/doneovernight?${params.toString()}`;
+  if (cleanReference) return `https://bunq.me/doneovernight/${encodeURIComponent(amount)}/${encodeURIComponent(cleanReference)}`;
+  return `https://bunq.me/doneovernight/${encodeURIComponent(amount)}`;
 }
 
 adminTasksList.addEventListener('click', async (e) => {
@@ -6103,7 +6111,7 @@ adminTasksList.addEventListener('click', async (e) => {
 
     await updateTask(button, {
       id: taskId,
-      status: 'quote_sent',
+      status: 'execution_plan_ready',
       quote_amount: quote.quote_amount,
       delivery_eta: quote.delivery_eta,
       quote_note: quote.quote_note,

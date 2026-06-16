@@ -6,15 +6,20 @@ const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 const VALID_STATUSES = new Set([
   "review_pending",
   "request_received",
+  "review_in_progress",
   "new",
   "needs_info",
   "on_hold",
   "quoted",
   "quote_sent",
+  "execution_plan_ready",
+  "awaiting_start",
+  "payment_started",
   "awaiting_payment",
   "payment_confirmed",
   "workspace_ready",
   "workspace_active",
+  "project_active",
   "execution_active",
   "verification_pending",
   "queued",
@@ -72,11 +77,11 @@ function extractQuoteAmountDigits(value) {
 function buildBunqPaymentLink(value, reference = "") {
   const amount = extractQuoteAmountDigits(value);
   if (!amount) return "";
-  const params = new URLSearchParams({ amount });
   const cleanReference = clean(reference);
-  // bunq.me preserves unknown query params; description is used here as a payment reference hint.
-  if (cleanReference) params.set("description", cleanReference);
-  return `https://bunq.me/doneovernight?${params.toString()}`;
+  const encodedAmount = encodeURIComponent(amount);
+  const encodedReference = encodeURIComponent(cleanReference);
+  if (encodedReference) return `https://bunq.me/doneovernight/${encodedAmount}/${encodedReference}`;
+  return `https://bunq.me/doneovernight/${encodedAmount}`;
 }
 
 function getSupabaseConfig() {
@@ -182,7 +187,7 @@ function buildPatch(input) {
     }
   });
 
-  if (patch.status === "quote_sent") {
+  if (patch.status === "quote_sent" || patch.status === "execution_plan_ready" || patch.status === "awaiting_start") {
     if (patch.payment_link && patch.payment_status === undefined) {
       patch.payment_status = "awaiting_payment";
     }
@@ -197,6 +202,8 @@ function buildPatch(input) {
 
 function isQuoteUpdate(input = {}, patch = {}) {
   return patch.status === "quote_sent" ||
+    patch.status === "execution_plan_ready" ||
+    patch.status === "awaiting_start" ||
     input.quote_amount !== undefined ||
     input.delivery_eta !== undefined ||
     input.quote_note !== undefined ||
@@ -284,7 +291,7 @@ async function loadTask(taskId) {
 }
 
 function finalizeQuotePatch(patch, existingTask = {}) {
-  if (patch.status !== "quote_sent") return patch;
+  if (!["quote_sent", "execution_plan_ready", "awaiting_start"].includes(patch.status)) return patch;
 
   const existingPaymentLink = clean(existingTask.payment_link || existingTask.raw_payload?.payment_link || "");
   const hasSubmittedPaymentLink = Boolean(clean(patch.payment_link));

@@ -11,6 +11,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    window.plausible = window.plausible || function() {
+      (window.plausible.q = window.plausible.q || []).push(arguments);
+    };
+    window.trackEvent = window.trackEvent || function(name, props) {
+      try {
+        if (!name || typeof window.plausible !== "function") return;
+        const safeProps = {};
+        Object.entries(props || {}).forEach(([key, value]) => {
+          if (value === undefined || value === null) return;
+          const safeKey = String(key).replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 40);
+          const safeValue = String(value).replace(/[\r\n\t]/g, " ").slice(0, 80);
+          if (!safeKey || /@/.test(safeValue)) return;
+          safeProps[safeKey] = safeValue;
+        });
+        window.plausible(name, Object.keys(safeProps).length ? { props: safeProps } : undefined);
+      } catch (error) {}
+    };
+  </script>
+  <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <style>
     :root {
       --bg: #040506;
@@ -725,12 +746,16 @@
         archived: "review",
         review_active: "review",
         under_review: "review",
+        review_in_progress: "review",
         operator_assigned: "review",
         complexity_verified: "review",
         quote_preparation: "quote",
         quote_preparing: "quote",
         quote_ready: "quote_ready",
         quote_sent: "quote_ready",
+        execution_plan_ready: "quote_ready",
+        awaiting_start: "quote_ready",
+        payment_started: "quote_ready",
         awaiting_payment: "quote_ready",
         payment_pending: "quote_ready",
         paid: "quote_ready",
@@ -739,6 +764,7 @@
         workspace_unlocking: "workspace_ready",
         workspace_active: "workspace_ready",
         execution_active: "workspace_ready",
+        project_active: "workspace_ready",
         delivered: "workspace_ready",
         revision_requested: "workspace_ready",
         awaiting_approval: "quote_ready",
@@ -753,22 +779,27 @@
         "on_hold",
         "archived",
         "under_review",
+        "review_in_progress",
         "review_active",
         "quote_preparation",
         "quote_preparing",
         "quote_ready",
         "quote_sent",
+        "execution_plan_ready",
+        "awaiting_start",
+        "payment_started",
         "awaiting_payment",
-        "payment_pending",
-        "paid",
-        "payment_confirmed",
-        "approved"
+        "payment_pending"
       ]);
       const activeWorkspaceStates = new Set([
+        "paid",
+        "payment_confirmed",
+        "approved",
         "workspace_ready",
         "workspace_unlocking",
         "workspace_active",
         "execution_active",
+        "project_active",
         "delivered",
         "revision_requested"
       ]);
@@ -835,7 +866,7 @@
         const paymentReference = document.querySelector("[data-payment-reference]");
         const confidence = document.querySelector("[data-confidence-note]");
         const startNow = document.querySelector("[data-start-now]");
-        const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
+        const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
         const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
@@ -850,10 +881,21 @@
         if (cta) {
           cta.classList.remove("is-visible");
           cta.removeAttribute("href");
+          cta.onclick = null;
           cta.textContent = "Approve & Start";
           if (shouldShowQuote && quoteUrl) {
             cta.href = quoteUrl;
             cta.classList.add("is-visible");
+            cta.onclick = () => {
+              window.trackEvent?.("approve_start_clicked", {
+                state: requested,
+                reference
+              });
+              window.trackEvent?.("payment_link_opened", {
+                state: requested,
+                reference
+              });
+            };
           }
         }
 
@@ -909,6 +951,7 @@
             on_hold: "This request is on hold. DONEOVERNIGHT will continue as soon as the next operational input is available.",
             archived: "This request is archived. Reply to the email if you need it reopened.",
             under_review: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+            review_in_progress: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
             review_active: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
             request_received: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step."
           };
@@ -926,13 +969,16 @@
         if (state === "quote" || state === "quote_ready") {
           const copyByState = {
             awaiting_payment: "Your execution plan is ready. Approve the plan to start execution.",
+            awaiting_start: "Your execution plan is ready. Approve the plan to start execution.",
+            payment_started: "Your execution plan is ready. Approve the plan to start execution.",
             payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
             paid: "Operators are being assigned and execution is being scheduled.",
             payment_confirmed: "Operators are being assigned and execution is being scheduled.",
+            execution_plan_ready: "Your request has been reviewed. The execution plan is ready for the next step.",
             quote_sent: "Your request has been reviewed. The execution plan is ready for the next step.",
             quote_ready: "Your request has been reviewed. The execution plan is ready for the next step."
           };
-          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Operators assigned" : requested === "quote_sent" ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan");
+          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Operators assigned" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan");
           setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
             ? "Your request has been reviewed. The execution plan is ready for the next step."
@@ -942,7 +988,7 @@
           setStep("quote", ["paid", "payment_confirmed"].includes(requested) ? "complete" : "active");
           setStep("workspace", ["paid", "payment_confirmed"].includes(requested) ? "active" : "");
           const quoteChip = document.querySelector("[data-chip='quote']");
-          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Execution approved" : requested === "quote_sent" ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan";
+          if (quoteChip) quoteChip.textContent = ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Execution approved" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan";
           const workspaceChip = document.querySelector("[data-chip='workspace']");
           if (workspaceChip && ["paid", "payment_confirmed"].includes(requested)) workspaceChip.textContent = "Operators assigned";
         }
@@ -1068,6 +1114,10 @@
             payment_reference: safe(data.review.quote?.payment_reference || data.review.task_id || reference, 120),
             payment_link: quoteUrl
           };
+          window.trackEvent?.("review_opened", {
+            state: requested,
+            reference
+          });
           renderReviewState();
           configureWorkspaceAccess();
         } catch (error) {
