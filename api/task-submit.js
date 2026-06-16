@@ -41,6 +41,7 @@ const ANALYTICS_EVENT_ALIASES = {
 };
 
 function clean(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
 }
 
@@ -269,8 +270,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
   const quoteAmount = firstClean(task.quote_amount, task.raw_payload?.quote_amount, "");
   const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
   const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
-  const paymentLink = firstClean(task.payment_link, task.raw_payload?.payment_link, "");
-  const checkoutUrl = paymentLink ? buildSecureCheckoutUrl(task) : "";
+  const checkoutUrl = buildSecureCheckoutUrl(task);
   const informationRequest = extractInformationRequest(
     task.information_request,
     task.info_request,
