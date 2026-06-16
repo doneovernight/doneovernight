@@ -710,6 +710,10 @@
             <span class="quote-summary-label">Deliverables</span>
             <span class="quote-summary-value" data-quote-deliverables></span>
           </div>
+          <div class="quote-summary-item" data-workspace-activation-wrap hidden>
+            <span class="quote-summary-label">Workspace Activation</span>
+            <span class="quote-summary-value" data-workspace-activation></span>
+          </div>
           <div class="quote-summary-item" data-quote-amount-wrap hidden>
             <span class="quote-summary-label">Investment</span>
             <span class="quote-summary-value" data-quote-amount></span>
@@ -902,9 +906,10 @@
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
         const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
         const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", shouldShowQuote ? quoteDetails.deliverables : "");
+        const hasWorkspaceActivation = setQuoteField("[data-workspace-activation-wrap]", "[data-workspace-activation]", shouldShowQuote ? "Secure workspace opens after approval and start confirmation." : "");
 
         if (summary) {
-          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables);
+          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables || hasWorkspaceActivation);
           summary.hidden = !visible;
           summary.classList.toggle("is-visible", visible);
         }

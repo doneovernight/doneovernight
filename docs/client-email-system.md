@@ -50,20 +50,20 @@ https://doneovernight.com/brand/doneovernight-neutral.png
 
 ## Execution Plan Email
 
-The execution plan email must be short. Its purpose is only to get the client back to the secure review page. Execution plan details live on Review.
+The execution plan email must be short. Its purpose is only to create the click back to the secure review page. The client should not make the decision inside the email. Execution plan details live on Review.
 
 Required content:
 
 - Status label: `EXECUTION PLAN READY`
 - Headline: `Execution plan ready.`
 - Greeting: `Hi <client_name>,`
-- Intro: `Your execution plan is ready to review.`
-- Lead: `Review the scope, timing, investment, and start step inside your secure review page.`
-- Reference: DON reference
+- Intro: `Your execution plan is ready.`
+- Lead: `Open your secure review page to continue.`
+- Reference: DON reference in footer area only
 - CTA: `Review Execution Plan`
 - CTA destination: `secure_review_url`
 
-Do not show investment amounts, timelines/ETAs, scope text, deliverables, payment links, raw payment fallback links, secure checkout links, provider names, giant quote tables, technical details, internal statuses, or operator information in the email.
+Do not show investment, amount, quote amount, timeline, ETA, scope note, deliverables, plan detail cards, payment links, raw payment fallback links, secure checkout links, provider names, giant quote tables, technical details, internal statuses, or operator information in the email.
 
 ## Review And Secure Checkout Flow
 
