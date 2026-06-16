@@ -163,8 +163,35 @@ function buildPatch(input) {
     }
   });
 
+  if (patch.status === "quote_sent") {
+    if (patch.payment_link && patch.payment_status === undefined) {
+      patch.payment_status = "awaiting_payment";
+    }
+    if (!patch.quoted_at) {
+      patch.quoted_at = new Date().toISOString();
+    }
+  }
+
   patch.updated_at = validateTimestamp(input.updated_at, "updated_at") || new Date().toISOString();
   return patch;
+}
+
+function isQuoteUpdate(input = {}, patch = {}) {
+  return patch.status === "quote_sent" ||
+    input.quote_amount !== undefined ||
+    input.delivery_eta !== undefined ||
+    input.quote_note !== undefined ||
+    input.payment_link !== undefined;
+}
+
+function buildQuoteEmailStatus(input = {}, patch = {}) {
+  if (!isQuoteUpdate(input, patch)) return undefined;
+  return {
+    configured: false,
+    sent: false,
+    provider: "not_configured",
+    reason: "admin_quote_email_not_implemented"
+  };
 }
 
 async function verifyAdminKey(adminKey) {
@@ -278,11 +305,13 @@ module.exports = async function handler(req, res) {
 
     const patch = buildPatch(input);
     const updatedTask = await patchTask(taskId, patch);
+    const quoteEmail = buildQuoteEmailStatus(input, patch);
     return send(res, 200, {
       success: true,
       task: updatedTask,
       updated_task: updatedTask,
-      data: updatedTask
+      data: updatedTask,
+      ...(quoteEmail ? { quoteEmail } : {})
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {

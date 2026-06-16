@@ -114,7 +114,8 @@ function getLinkedReviewState(task = {}) {
   if (["workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "workspace_ready";
   if (["paid", "payment_confirmed", "quote_paid"].includes(paymentStatus) || ["paid", "payment_confirmed", "quote_paid"].includes(status)) return "paid";
   if (["awaiting_payment", "payment_pending"].includes(paymentStatus) || ["awaiting_payment", "payment_pending"].includes(status)) return "awaiting_payment";
-  if (["quote_ready", "quote_sent", "quoted"].includes(rawState) || ["quote_ready", "quote_sent", "quoted"].includes(status) || task.quote_amount || task.payment_link) return "quote_ready";
+  if (["quote_sent", "quoted"].includes(rawState) || ["quote_sent", "quoted"].includes(status) || task.quote_amount || task.payment_link) return "quote_sent";
+  if (rawState === "quote_ready" || status === "quote_ready") return "quote_ready";
   if (["quote_preparation", "quote_preparing"].includes(rawState) || ["quote_preparation", "quote_preparing"].includes(status)) return "quote_preparation";
   if (["review_pending", "under_review"].includes(status) || ["under_review", "review_active"].includes(rawState)) return "under_review";
   return "request_received";
@@ -127,6 +128,13 @@ function getReviewWorkspaceState(reviewState) {
 }
 
 function publicTaskSnapshot(task = {}, reviewState) {
+  const quoteAmount = firstClean(task.quote_amount, task.raw_payload?.quote_amount, "");
+  const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
+  const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
+  const paymentLink = firstClean(task.payment_link, task.raw_payload?.payment_link, "");
+  const quoteIsReady = ["quote_ready", "quote_sent", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState);
+  const paymentIsOpen = ["quote_sent", "awaiting_payment"].includes(reviewState);
+
   return {
     task_id: firstClean(task.task_id, task.taskId, task.id),
     operational_id: firstClean(task.task_id, task.taskId, task.id),
@@ -140,10 +148,16 @@ function publicTaskSnapshot(task = {}, reviewState) {
     updated_at: firstClean(task.updated_at, task.created_at, ""),
     task_summary: firstClean(task.task_summary, task.task_description, task.raw_payload?.task_summary, task.raw_payload?.task_description, ""),
     quote: {
-      ready: ["quote_ready", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
+      ready: quoteIsReady,
+      status: reviewState,
+      amount: quoteAmount,
+      quote_amount: quoteAmount,
+      delivery_eta: deliveryEta,
+      note: quoteNote,
+      quote_note: quoteNote,
       payment_required: reviewState === "awaiting_payment",
       payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
-      payment_link: reviewState === "awaiting_payment" ? firstClean(task.payment_link, "") : ""
+      payment_link: paymentIsOpen ? paymentLink : ""
     },
     workspace: {
       state: getReviewWorkspaceState(reviewState)

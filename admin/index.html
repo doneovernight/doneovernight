@@ -3078,7 +3078,8 @@ function getTaskActions(status) {
     ],
     quote_sent: [
       { type: 'quote', label: 'Edit quote' },
-      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' }
+      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' },
+      { type: 'move', label: 'Payment confirmed', status: 'payment_confirmed' }
     ],
     awaiting_payment: [
       { type: 'move', label: 'Payment confirmed', status: 'payment_confirmed' }
@@ -5524,7 +5525,7 @@ function _openOpModal(type, task) {
         </div>
         <div class="op-modal-field">
           <label for="omQLink">Payment link <span class="field-opt">optional</span></label>
-          <input id="omQLink" name="payment_link" type="url" placeholder="https://stripe.com/…" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.don.com" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
         </div>`;
     } else {
       title.textContent  = 'Deliver';

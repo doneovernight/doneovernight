@@ -261,6 +261,54 @@
       display: inline-flex;
     }
 
+    .quote-summary {
+      display: none;
+      max-width: 640px;
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid rgba(233,196,138,0.18);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.035);
+    }
+
+    .quote-summary.is-visible {
+      display: block;
+    }
+
+    .quote-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .quote-summary-item {
+      min-width: 0;
+    }
+
+    .quote-summary-label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .quote-summary-value {
+      color: var(--ink);
+      font-size: 0.96rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .quote-summary-note {
+      grid-column: 1 / -1;
+      margin-top: 2px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(248,244,236,0.08);
+    }
+
     .workspace-unlock {
       width: 100%;
       margin: calc(clamp(42px, 8vh, 78px) * -0.55) 0 clamp(42px, 8vh, 78px);
@@ -444,6 +492,10 @@
         grid-template-columns: 1fr;
       }
 
+      .quote-summary-grid {
+        grid-template-columns: 1fr;
+      }
+
       .step {
         min-height: 82px;
       }
@@ -497,6 +549,23 @@
         <div class="step" data-step="quote">
           <span class="step-index">03</span>
           <span class="step-label">Quote</span>
+        </div>
+      </div>
+
+      <div class="quote-summary" data-quote-summary hidden>
+        <div class="quote-summary-grid">
+          <div class="quote-summary-item" data-quote-amount-wrap hidden>
+            <span class="quote-summary-label">Quote</span>
+            <span class="quote-summary-value" data-quote-amount></span>
+          </div>
+          <div class="quote-summary-item" data-quote-eta-wrap hidden>
+            <span class="quote-summary-label">Delivery ETA</span>
+            <span class="quote-summary-value" data-quote-eta></span>
+          </div>
+          <div class="quote-summary-item quote-summary-note" data-quote-note-wrap hidden>
+            <span class="quote-summary-label">Note</span>
+            <span class="quote-summary-value" data-quote-note></span>
+          </div>
         </div>
       </div>
 
@@ -600,6 +669,12 @@
           return "";
         }
       })();
+      let quoteDetails = {
+        amount: "",
+        delivery_eta: "",
+        note: "",
+        payment_link: ""
+      };
 
       if (reference) {
         requested = "request_received";
@@ -614,6 +689,46 @@
       function setText(selector, value) {
         const element = document.querySelector(selector);
         if (element) element.textContent = value;
+      }
+
+      function formatQuoteAmount(value) {
+        const cleaned = safe(value, 80);
+        if (!cleaned) return "";
+        return /^€/.test(cleaned) ? cleaned : `€${cleaned}`;
+      }
+
+      function setQuoteField(wrapSelector, valueSelector, value) {
+        const wrap = document.querySelector(wrapSelector);
+        const element = document.querySelector(valueSelector);
+        if (!wrap || !element) return false;
+        const cleaned = safe(value, 260);
+        wrap.hidden = !cleaned;
+        if (cleaned) element.textContent = cleaned;
+        return Boolean(cleaned);
+      }
+
+      function renderQuoteDetails() {
+        const summary = document.querySelector("[data-quote-summary]");
+        const cta = document.querySelector("[data-quote-cta]");
+        const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
+        const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
+        const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
+        const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
+
+        if (summary) {
+          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote);
+          summary.hidden = !visible;
+          summary.classList.toggle("is-visible", visible);
+        }
+
+        if (cta) {
+          cta.classList.remove("is-visible");
+          cta.removeAttribute("href");
+          if (shouldShowQuote && quoteUrl) {
+            cta.href = quoteUrl;
+            cta.classList.add("is-visible");
+          }
+        }
       }
 
       function buildWorkspaceHref() {
@@ -646,7 +761,7 @@
             quote_sent: "Your request has been reviewed. The quote is ready for the next step.",
             quote_ready: "Your request has been reviewed. The quote is ready for the next step."
           };
-          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : state === "quote_ready" ? "Quote ready" : "Quote pending");
+          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : requested === "quote_sent" ? "Quote sent" : state === "quote_ready" ? "Quote ready" : "Quote pending");
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
             ? "Your request has been reviewed. The quote is ready for the next step."
             : "Your request has been reviewed. DONEOVERNIGHT is preparing the quote and next step."));
@@ -654,7 +769,7 @@
           setStep("review", "complete");
           setStep("quote", ["paid", "payment_confirmed"].includes(requested) ? "complete" : "active");
           const quoteChip = document.querySelector("[data-chip='quote']");
-          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : state === "quote_ready" ? "Quote ready" : "Quote pending";
+          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : requested === "quote_sent" ? "Quote sent" : state === "quote_ready" ? "Quote ready" : "Quote pending";
         }
 
         if (state === "workspace_ready") {
@@ -677,6 +792,8 @@
           cta.href = quoteUrl;
           cta.classList.add("is-visible");
         }
+
+        renderQuoteDetails();
       }
 
       function configureWorkspaceAccess() {
@@ -752,6 +869,7 @@
             requested = "request_received";
             state = "review";
             quoteUrl = "";
+            quoteDetails = { amount: "", delivery_eta: "", note: "", payment_link: "" };
             renderReviewState();
             configureWorkspaceAccess();
             return;
@@ -761,12 +879,19 @@
           state = stateAliases[requested] || "review";
           reference = safe(data.review.task_id || reference, 80);
           quoteUrl = safe(data.review.quote?.payment_link || "", 500);
+          quoteDetails = {
+            amount: safe(data.review.quote?.quote_amount || data.review.quote?.amount || "", 80),
+            delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
+            note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
+            payment_link: quoteUrl
+          };
           renderReviewState();
           configureWorkspaceAccess();
         } catch (error) {
           requested = "request_received";
           state = "review";
           quoteUrl = "";
+          quoteDetails = { amount: "", delivery_eta: "", note: "", payment_link: "" };
           renderReviewState();
           configureWorkspaceAccess();
         }
