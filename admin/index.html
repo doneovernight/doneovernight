@@ -2608,7 +2608,7 @@ body.is-admin .admin-dashboard { display: block; }
       <div class="workspace-control-head">
         <div>
           <h2>Traffic / Signals</h2>
-          <p>Public-site traffic when Vercel Analytics is connected.</p>
+          <p>Privacy-safe first-party events from DONEOVERNIGHT pages.</p>
         </div>
       </div>
       <div id="adminTrafficSignals" class="admin-status-grid">
@@ -4067,21 +4067,19 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
   }
   const signals = analytics.signals || {};
   const traffic = analytics.traffic || {};
-  const vercel = analytics.vercel || {};
-  const dispatchTotal = Number(signals.dispatchSignupsTotal?.value);
-  const askTotal = Number(signals.askSubmissionsTotal?.value);
-  const analyticsReason = analytics.vercel?.connection?.reason || analytics.source || 'Vercel Analytics unavailable';
+  const firstParty = analytics.firstParty || {};
+  const analyticsReason = analytics.firstParty?.connection?.reason || analytics.source || 'First-party analytics unavailable';
 
   adminTrafficSignals.innerHTML = `
-    ${renderTrafficSignalCard('Today visits', traffic.todayVisits || vercel.todayVisits)}
-    ${renderTrafficSignalCard('Homepage visits', traffic.homepageVisits || vercel.homepageVisits)}
-    ${renderTrafficSignalCard('Ask visits', traffic.askVisits || vercel.askVisits)}
-    ${renderTrafficSignalCard('Review visits', traffic.reviewVisits || vercel.reviewVisits)}
-    ${renderTrafficSignalCard('Workspace visits', traffic.workspaceVisits || vercel.workspaceVisits)}
-    ${renderTrafficSignalCard('Top page', traffic.topPublicRoute || vercel.topPublicRoute || signals.topPage)}
-    ${renderTrafficSignalCard('Traffic trend', traffic.trafficTrend || vercel.trafficTrend)}
-    ${renderTrafficSignalCard('Ask submissions', signals.askSubmissionsToday, { total: Number.isFinite(askTotal) ? askTotal : undefined })}
-    ${renderTrafficSignalCard('Dispatch signups', signals.dispatchSignupsToday, { total: Number.isFinite(dispatchTotal) ? dispatchTotal : undefined })}
+    ${renderTrafficSignalCard('Today visits', traffic.todayVisits || firstParty.todayVisits)}
+    ${renderTrafficSignalCard('Ask views', traffic.askViews || firstParty.askViews)}
+    ${renderTrafficSignalCard('Review opens', traffic.reviewOpens || firstParty.reviewOpens)}
+    ${renderTrafficSignalCard('Execution plan views', traffic.executionPlanViews || firstParty.executionPlanViews)}
+    ${renderTrafficSignalCard('Payment clicks', traffic.paymentClicks || firstParty.paymentClicks)}
+    ${renderTrafficSignalCard('Workspace opens', traffic.workspaceOpens || firstParty.workspaceOpens)}
+    ${renderTrafficSignalCard('Conversion funnel', traffic.conversionFunnel || firstParty.conversionFunnel)}
+    ${renderTrafficSignalCard('Top page', traffic.topPublicRoute || firstParty.topPublicRoute || signals.topPage)}
+    ${renderTrafficSignalCard('Traffic trend', traffic.trafficTrend || firstParty.trafficTrend)}
     <div class="placeholder">${escapeHTML(analyticsReason)}</div>
   `;
 }
@@ -4182,15 +4180,14 @@ function renderHeartbeatResult(data = {}) {
   const deliveredTasksCount = makeHeartbeatCountCard('Delivered Tasks', operations.asks?.delivered?.value, 'Delivered task records');
   const trafficCards = analytics
     ? `
-        ${renderTrafficSignalCard('Homepage visits', analytics?.traffic?.homepageVisits || analytics?.vercel?.homepageVisits)}
-        ${renderTrafficSignalCard('Ask visits', analytics?.traffic?.askVisits || analytics?.vercel?.askVisits)}
-        ${renderTrafficSignalCard('Review visits', analytics?.traffic?.reviewVisits || analytics?.vercel?.reviewVisits)}
-        ${renderTrafficSignalCard('Workspace visits', analytics?.traffic?.workspaceVisits || analytics?.vercel?.workspaceVisits)}
-        ${renderTrafficSignalCard('Top page', analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute || analytics?.signals?.topPage)}
-        ${renderTrafficSignalCard('Traffic trend', analytics?.traffic?.trafficTrend || analytics?.vercel?.trafficTrend)}
-        ${renderTrafficSignalCard('Ask submissions', analytics?.signals?.askSubmissionsToday, { total: Number(analytics?.signals?.askSubmissionsTotal?.value) })}
-        ${renderTrafficSignalCard('Dispatch signups', analytics?.signals?.dispatchSignupsToday || analytics?.traffic?.dispatchSignups || analytics?.vercel?.dispatchSignups, { total: Number(analytics?.signals?.dispatchSignupsTotal?.value) })}
-        <div class="placeholder">${escapeHTML(analytics?.vercel?.connection?.reason || analytics?.source || 'Vercel Analytics unavailable')}</div>
+        ${renderTrafficSignalCard('Today visits', analytics?.traffic?.todayVisits || analytics?.firstParty?.todayVisits)}
+        ${renderTrafficSignalCard('Ask views', analytics?.traffic?.askViews || analytics?.firstParty?.askViews)}
+        ${renderTrafficSignalCard('Review opens', analytics?.traffic?.reviewOpens || analytics?.firstParty?.reviewOpens)}
+        ${renderTrafficSignalCard('Execution plan views', analytics?.traffic?.executionPlanViews || analytics?.firstParty?.executionPlanViews)}
+        ${renderTrafficSignalCard('Payment clicks', analytics?.traffic?.paymentClicks || analytics?.firstParty?.paymentClicks)}
+        ${renderTrafficSignalCard('Workspace opens', analytics?.traffic?.workspaceOpens || analytics?.firstParty?.workspaceOpens)}
+        ${renderTrafficSignalCard('Conversion funnel', analytics?.traffic?.conversionFunnel || analytics?.firstParty?.conversionFunnel)}
+        <div class="placeholder">${escapeHTML(analytics?.firstParty?.connection?.reason || analytics?.source || 'First-party analytics unavailable')}</div>
       `
     : '<div class="placeholder">Traffic / Signals unavailable.</div>';
 

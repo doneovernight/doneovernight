@@ -127,7 +127,7 @@ Pay
 Workspace
 ```
 
-Existing tracking hooks include Review Opened, Approve & Start Clicked, and Payment Link Opened. Future analytics should join these with Vercel Observability route traffic and Supabase task state changes.
+Existing tracking hooks include Review Opened, Execution Plan Viewed, Approve & Start Clicked, Payment Link Clicked, and Workspace Opened. Analytics should read first-party `analytics_events` rows and Supabase task state changes only.
 
 ## Email Open And Review Click Tracking
 

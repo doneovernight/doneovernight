@@ -30,6 +30,7 @@
       } catch (error) {}
     };
   </script>
+  <script src="/assets/first-party-events.js"></script>
   <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
   <style>
@@ -1170,6 +1171,13 @@
             state: requested,
             reference
           });
+          if (["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested)) {
+            window.trackEvent?.("execution_plan_viewed", {
+              state: requested,
+              reference,
+              task_id: reference
+            });
+          }
           renderReviewState();
           configureWorkspaceAccess();
         } catch (error) {

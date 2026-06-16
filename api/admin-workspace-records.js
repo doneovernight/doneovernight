@@ -127,7 +127,7 @@ function getAdminSystemStatus() {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.HEARTBEAT_TELEGRAM_CHAT_ID),
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
-      analytics: false,
+      analytics: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       heartbeat: true,
       vercelDeployment: Boolean(process.env.VERCEL),
       dispatchNotification: dispatchNotification.configured,
@@ -209,10 +209,10 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
     },
     analytics: {
       source: "Analytics status",
-      state: analyticsConnected || integrations.analytics ? "live" : "waiting",
-      status: analyticsConnected || integrations.analytics ? "Connected" : "Analytics unavailable",
+      state: analyticsConnected ? "live" : "waiting",
+      status: analyticsConnected ? "Connected" : "Analytics unavailable",
       value: null,
-      reason: analyticsConnected || integrations.analytics ? "Analytics source connected" : "Vercel Analytics not connected"
+      reason: analyticsConnected ? "Supabase analytics_events source connected" : analytics.source || "Supabase analytics_events not connected"
     },
     supabase: {
       source: "Supabase",

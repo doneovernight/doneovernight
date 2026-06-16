@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const { dispatchWebhook, getWebhookUrls, supabaseFetch } = require("../lib/ops");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
@@ -10,6 +11,28 @@ const { attachReviewSecurity, buildSecureReviewUrl, verifyReviewToken } = requir
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
 const TASK_ID_PATTERN = /^DON-\d{4}-\d{5}$/i;
+const ANALYTICS_EVENT_TABLE = "analytics_events";
+const ALLOWED_ANALYTICS_EVENTS = new Set([
+  "page_view",
+  "ask_started",
+  "ask_submitted",
+  "review_opened",
+  "execution_plan_viewed",
+  "approve_start_clicked",
+  "payment_link_clicked",
+  "workspace_opened"
+]);
+const ANALYTICS_EVENT_ALIASES = {
+  "ask visitor": "page_view",
+  "qr visitor": "page_view",
+  "start opened": "ask_started",
+  "start task submitted": "ask_submitted",
+  "task submitted": "ask_submitted",
+  "review opened": "review_opened",
+  "approve start clicked": "approve_start_clicked",
+  "payment link opened": "payment_link_clicked",
+  "workspace opened": "workspace_opened"
+};
 
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -81,6 +104,90 @@ function firstClean(...values) {
     if (cleaned) return cleaned;
   }
   return "";
+}
+
+function normalizeAnalyticsEventType(value) {
+  const raw = clean(value);
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const alias = ANALYTICS_EVENT_ALIASES[raw.toLowerCase()] || ANALYTICS_EVENT_ALIASES[normalized.replace(/_/g, " ")];
+  return ALLOWED_ANALYTICS_EVENTS.has(normalized) ? normalized : alias || "";
+}
+
+function stripAnalyticsUrl(value) {
+  const raw = clean(value).slice(0, 500);
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, "https://doneovernight.com");
+    return `${url.hostname}${url.pathname}`.replace(/\/+$/, "") || "/";
+  } catch (error) {
+    return raw.split("?")[0].split("#")[0].slice(0, 240);
+  }
+}
+
+function safeAnalyticsMetadata(input = {}) {
+  const output = {};
+  Object.entries(input || {}).forEach(([key, value]) => {
+    const safeKey = clean(key).slice(0, 48).replace(/[^a-zA-Z0-9_:-]/g, "");
+    const safeValue = clean(String(value ?? "")).slice(0, 140).replace(/[\r\n\t]/g, " ");
+    if (!safeKey || !safeValue || /@/.test(safeValue) || /token/i.test(safeKey) || /token/i.test(safeValue)) return;
+    output[safeKey] = safeValue;
+  });
+  return output;
+}
+
+function hashAnalyticsUserAgent(value = "") {
+  const safe = clean(value).slice(0, 500);
+  if (!safe) return "";
+  return crypto.createHash("sha256").update(safe).digest("hex").slice(0, 32);
+}
+
+function isTrackEventRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "", "https://doneovernight.com");
+    if (url.searchParams.get("track_event") === "1") return true;
+  } catch (error) {}
+  return input.action === "track_event" || input.intent === "track_event";
+}
+
+async function handleTrackEventRequest(req, res, input = {}) {
+  const eventType = normalizeAnalyticsEventType(input.event_type || input.eventType || input.name || input.event);
+  if (!eventType) {
+    return send(res, 400, { success: false, error: "Unsupported event type" });
+  }
+
+  const row = {
+    event_type: eventType,
+    task_id: clean(input.task_id || input.taskId || input.reference).slice(0, 100),
+    source: clean(input.source || input.page || input.category || "public").slice(0, 100),
+    route: stripAnalyticsUrl(input.route || input.path || input.url || req.headers.referer || ""),
+    referrer: stripAnalyticsUrl(input.referrer || input.referrer_url || ""),
+    session_id: clean(input.session_id || input.sessionId).slice(0, 120),
+    user_agent_hash: hashAnalyticsUserAgent(req.headers["user-agent"] || ""),
+    metadata: safeAnalyticsMetadata(input.metadata || input.props || {})
+  };
+
+  try {
+    await supabaseFetch(ANALYTICS_EVENT_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(row)
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: true,
+      reason: "stored",
+      event_type: eventType
+    });
+  } catch (error) {
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: false,
+      reason: error.statusCode ? `supabase_http_${error.statusCode}` : "tracking_failed",
+      event_type: eventType
+    });
+  }
 }
 
 function extractInformationRequest(...values) {
@@ -482,6 +589,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isTrackEventRequest(req, input)) {
+      return handleTrackEventRequest(req, res, input);
+    }
+
     if (isDispatchSubscribeRequest(req)) {
       const result = await subscribeToDispatch(input);
       return send(res, result.statusCode, result.payload);

@@ -1,8 +1,8 @@
 const { attention, fetchWithTimeout, healthy, unavailable } = require("./utils");
 
 const TIME_ZONE = "Europe/Amsterdam";
-const VERCEL_OBSERVABILITY_QUERY_URL = "https://api.vercel.com/v2/observability/query";
-const ANALYTICS_UNAVAILABLE = "Analytics temporarily unavailable";
+const EVENT_TABLE = "analytics_events";
+const ANALYTICS_UNAVAILABLE = "First-party analytics unavailable";
 const TRACKED_ROUTE_MATCHERS = {
   homepageVisits: {
     label: "Homepage visits",
@@ -217,15 +217,6 @@ function signalFromResult(result, emptyReason) {
   return result;
 }
 
-function sumRows(rows = [], metric = "vercel.request.count") {
-  const rollupKey = `${String(metric).replace(/\./g, "_")}_sum`;
-
-  return rows.reduce((total, row) => {
-    const value = Number(row?.[rollupKey] ?? row?.value ?? row?.count ?? row?.total ?? 0);
-    return total + (Number.isFinite(value) ? value : 0);
-  }, 0);
-}
-
 function normalizeRoute(value) {
   return String(value || "").trim();
 }
@@ -238,19 +229,28 @@ function routeMatches(route, matcher = {}) {
   return matcher.includes?.some((candidate) => lowerRoute.includes(candidate.toLowerCase())) || false;
 }
 
-function countForRoute(rows, matcher, metric) {
-  return sumRows(rows.filter((row) => routeMatches(row.route || row.path || row.host || row.pathname, matcher)), metric);
+function countEvents(rows = [], predicate = () => true) {
+  return rows.reduce((count, row) => count + (predicate(row) ? 1 : 0), 0);
 }
 
-function topRoute(rows = [], metric) {
+function countEventType(rows = [], eventType) {
+  return countEvents(rows, (row) => row.event_type === eventType);
+}
+
+function countPageViewsForRoute(rows = [], matcher = {}) {
+  return countEvents(rows, (row) => row.event_type === "page_view" && routeMatches(row.route, matcher));
+}
+
+function topRoute(rows = []) {
   const totals = new Map();
 
-  rows.forEach((row) => {
-    const route = normalizeRoute(row.route || row.path || row.pathname || row.host || "Unknown route");
-    if (!route) return;
-    const value = sumRows([row], metric);
-    totals.set(route, (totals.get(route) || 0) + value);
-  });
+  rows
+    .filter((row) => row.event_type === "page_view")
+    .forEach((row) => {
+      const route = normalizeRoute(row.route || "Unknown route");
+      if (!route) return;
+      totals.set(route, (totals.get(route) || 0) + 1);
+    });
 
   const [route, count] = [...totals.entries()].sort((a, b) => b[1] - a[1])[0] || [];
   return route ? { route, count } : null;
@@ -270,79 +270,77 @@ function getTrafficState(today, previous) {
   return "Needs attention";
 }
 
-async function queryVercelRouteMetrics(config, window, { source = "Vercel Analytics" } = {}) {
-  const token = cleanSignal(config.vercelAnalyticsToken);
-  const teamId = cleanSignal(config.vercelAnalyticsTeamId);
-  const projectId = cleanSignal(config.vercelAnalyticsProjectId);
-  const metric = cleanSignal(config.vercelAnalyticsMetric) || "vercel.request.count";
-
-  if (!token) return unavailable(source, "Missing VERCEL_ANALYTICS_TOKEN");
-  if (!teamId) return unavailable(source, "Missing VERCEL_ANALYTICS_TEAM_ID");
-  if (!projectId) return unavailable(source, "Missing VERCEL_ANALYTICS_PROJECT_ID");
-
+async function queryAnalyticsEvents(config, window, { source = "First-party analytics" } = {}) {
+  if (!hasSupabase(config)) {
+    return unavailable(source, "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
   const startedAt = Date.now();
-  const body = {
-    scope: {
-      type: "project",
-      ownerId: teamId,
-      projectIds: [projectId]
-    },
-    metric,
-    aggregation: "sum",
-    startTime: window.startAt,
-    endTime: window.endAt,
-    granularity: { hours: 1 },
-    groupBy: ["route"],
-    limit: 100
-  };
+  const query = [
+    `${EVENT_TABLE}?select=${encodeURIComponent("event_type,task_id,source,route,referrer,session_id,created_at,metadata")}`,
+    `created_at=gte.${encodeURIComponent(window.startAt)}`,
+    `created_at=lt.${encodeURIComponent(window.endAt)}`,
+    "order=created_at.desc",
+    "limit=10000"
+  ].join("&");
 
   try {
-    const response = await fetchWithTimeout(`${VERCEL_OBSERVABILITY_QUERY_URL}?teamId=${encodeURIComponent(teamId)}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      body: JSON.stringify(body)
-    }, 10_000);
+    const response = await supabaseGet(config, query);
     const responseTimeMs = Date.now() - startedAt;
-    const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const reason = payload?.error?.message || payload?.message || `Vercel Analytics HTTP ${response.status}`;
-      return attention(source, reason, {
+      return attention(source, `Supabase events HTTP ${response.status}`, {
         code: response.status,
         responseTimeMs,
-        endpoint: "/v2/observability/query",
-        metric
+        table: EVENT_TABLE
       });
     }
 
+    const rows = await response.json().catch(() => []);
     return healthy(source, {
-      data: Array.isArray(payload.data) ? payload.data : [],
-      summary: Array.isArray(payload.summary) ? payload.summary : [],
-      statistics: payload.statistics || {},
+      data: Array.isArray(rows) ? rows : [],
       code: response.status,
       responseTimeMs,
-      endpoint: "/v2/observability/query",
-      metric,
+      table: EVENT_TABLE,
       window
     });
   } catch (error) {
-    return attention(source, error.name === "AbortError" ? "Vercel Analytics query timed out" : "Vercel Analytics query failed", {
+    return attention(source, error.name === "AbortError" ? "Supabase events query timed out" : "Supabase events query failed", {
       responseTimeMs: Date.now() - startedAt,
-      endpoint: "/v2/observability/query",
-      metric
+      table: EVENT_TABLE
     });
   }
 }
 
-async function getVercelAnalyticsStatus(config, window) {
+function makeEventSignal(source, value, responseTimeMs, reason = "First-party event count") {
+  return healthy(source, {
+    value,
+    responseTimeMs,
+    reason
+  });
+}
+
+function makeConversionFunnel(rows = [], responseTimeMs = 0) {
+  const visits = countEventType(rows, "page_view");
+  const asks = countEventType(rows, "ask_submitted");
+  const reviews = countEventType(rows, "review_opened");
+  const plans = countEventType(rows, "execution_plan_viewed");
+  const approvals = countEventType(rows, "approve_start_clicked");
+  const payments = countEventType(rows, "payment_link_clicked");
+  const workspaces = countEventType(rows, "workspace_opened");
+
+  return healthy("Conversion funnel", {
+    value: `Visit ${visits} → Ask ${asks} → Review ${reviews} → Plan ${plans} → Approve ${approvals} → Pay ${payments} → Workspace ${workspaces}`,
+    responseTimeMs,
+    reason: "First-party event funnel",
+    stages: { visits, asks, reviews, plans, approvals, payments, workspaces }
+  });
+}
+
+async function getFirstPartyAnalyticsStatus(config, window) {
   const previousWindow = getPreviousWindow(window);
   const [todayResult, previousResult] = await Promise.all([
-    queryVercelRouteMetrics(config, window, { source: "Vercel Analytics today" }),
-    queryVercelRouteMetrics(config, previousWindow, { source: "Vercel Analytics yesterday" })
+    queryAnalyticsEvents(config, window, { source: "First-party events today" }),
+    queryAnalyticsEvents(config, previousWindow, { source: "First-party events yesterday" })
   ]);
 
   const fallbackCard = (source, reason = ANALYTICS_UNAVAILABLE) => unavailable(source, reason);
@@ -351,46 +349,45 @@ async function getVercelAnalyticsStatus(config, window) {
     return {
       todayVisits: fallbackCard("Today visits", reason),
       homepageVisits: fallbackCard("Homepage visits", reason),
-      askVisits: fallbackCard("Ask visits", reason),
-      startVisits: fallbackCard("Start visits", reason),
-      reviewVisits: fallbackCard("Review visits", reason),
-      workspaceVisits: fallbackCard("Workspace visits", reason),
-      adminVisits: fallbackCard("Admin visits", reason),
+      askViews: fallbackCard("Ask views", reason),
+      askVisits: fallbackCard("Ask views", reason),
+      reviewOpens: fallbackCard("Review opens", reason),
+      reviewVisits: fallbackCard("Review opens", reason),
+      executionPlanViews: fallbackCard("Execution plan views", reason),
+      paymentClicks: fallbackCard("Payment clicks", reason),
+      workspaceOpens: fallbackCard("Workspace opens", reason),
+      workspaceVisits: fallbackCard("Workspace opens", reason),
       trafficTrend: fallbackCard("Traffic trend", reason),
       topPublicRoute: fallbackCard("Top page", reason),
+      conversionFunnel: fallbackCard("Conversion funnel", reason),
       connection: todayResult,
-      endpoint: "/v2/observability/query"
+      endpoint: EVENT_TABLE
     };
   }
 
   const rows = todayResult.data || [];
   const previousRows = previousResult.status === "Healthy" ? previousResult.data || [] : [];
-  const metric = todayResult.metric || config.vercelAnalyticsMetric || "vercel.request.count";
-  const totalToday = Math.round(sumRows(rows, metric));
-  const totalPrevious = Math.round(sumRows(previousRows, metric));
-  const bestRoute = topRoute(rows, metric);
-  const makeRouteSignal = (key) => {
-    const matcher = TRACKED_ROUTE_MATCHERS[key];
-    const value = Math.round(countForRoute(rows, matcher, metric));
-    return healthy(matcher.label, {
-      value,
-      responseTimeMs: todayResult.responseTimeMs,
-      reason: "Vercel route metric"
-    });
-  };
+  const totalToday = countEventType(rows, "page_view");
+  const totalPrevious = countEventType(previousRows, "page_view");
+  const bestRoute = topRoute(rows);
+  const homepageViews = countPageViewsForRoute(rows, TRACKED_ROUTE_MATCHERS.homepageVisits);
+  const askViews = countPageViewsForRoute(rows, TRACKED_ROUTE_MATCHERS.askVisits);
+  const reviewOpens = countEventType(rows, "review_opened");
+  const executionPlanViews = countEventType(rows, "execution_plan_viewed");
+  const paymentClicks = countEventType(rows, "payment_link_clicked");
+  const workspaceOpens = countEventType(rows, "workspace_opened") + countPageViewsForRoute(rows, TRACKED_ROUTE_MATCHERS.workspaceVisits);
 
   return {
-    todayVisits: healthy("Today visits", {
-      value: totalToday,
-      responseTimeMs: todayResult.responseTimeMs,
-      reason: "Vercel route metric"
-    }),
-    homepageVisits: makeRouteSignal("homepageVisits"),
-    askVisits: makeRouteSignal("askVisits"),
-    startVisits: makeRouteSignal("startVisits"),
-    reviewVisits: makeRouteSignal("reviewVisits"),
-    workspaceVisits: makeRouteSignal("workspaceVisits"),
-    adminVisits: makeRouteSignal("adminVisits"),
+    todayVisits: makeEventSignal("Today visits", totalToday, todayResult.responseTimeMs, "First-party page_view events"),
+    homepageVisits: makeEventSignal("Homepage visits", homepageViews, todayResult.responseTimeMs),
+    askViews: makeEventSignal("Ask views", askViews, todayResult.responseTimeMs),
+    askVisits: makeEventSignal("Ask views", askViews, todayResult.responseTimeMs),
+    reviewOpens: makeEventSignal("Review opens", reviewOpens, todayResult.responseTimeMs),
+    reviewVisits: makeEventSignal("Review opens", reviewOpens, todayResult.responseTimeMs),
+    executionPlanViews: makeEventSignal("Execution plan views", executionPlanViews, todayResult.responseTimeMs),
+    paymentClicks: makeEventSignal("Payment clicks", paymentClicks, todayResult.responseTimeMs),
+    workspaceOpens: makeEventSignal("Workspace opens", workspaceOpens, todayResult.responseTimeMs),
+    workspaceVisits: makeEventSignal("Workspace opens", workspaceOpens, todayResult.responseTimeMs),
     trafficTrend: {
       source: "Traffic trend",
       status: getTrafficState(totalToday, totalPrevious),
@@ -401,19 +398,19 @@ async function getVercelAnalyticsStatus(config, window) {
     topPublicRoute: bestRoute
       ? healthy("Top page", {
           value: bestRoute.route,
-          count: Math.round(bestRoute.count),
-          reason: "Vercel route metric",
+          count: bestRoute.count,
+          reason: "First-party page_view events",
           responseTimeMs: todayResult.responseTimeMs
         })
-      : unavailable("Top page", "No Vercel route traffic in this window"),
-    connection: healthy("Vercel Analytics", {
+      : unavailable("Top page", "No page_view events in this window"),
+    conversionFunnel: makeConversionFunnel(rows, todayResult.responseTimeMs),
+    connection: healthy("First-party analytics", {
       value: "Connected",
       responseTimeMs: todayResult.responseTimeMs,
-      endpoint: "/v2/observability/query",
-      metric
+      table: EVENT_TABLE
     }),
-    endpoint: "/v2/observability/query",
-    metric
+    endpoint: EVENT_TABLE,
+    rows
   };
 }
 
@@ -487,35 +484,48 @@ async function getSupabaseSignals(config, window) {
       : unavailable("Top source", "No source data available today"),
     topPage: topPage
       ? healthy("Top page", { value: topPage.value, count: topPage.count })
-      : unavailable("Top page", "Vercel route analytics not connected yet")
+      : unavailable("Top page", "No first-party page events available yet")
   };
 }
 
 async function getAnalyticsSummary(config = {}) {
   const window = getTodayWindow(config.generatedAt instanceof Date ? config.generatedAt : new Date());
-  const [signals, vercel] = await Promise.all([
-    getSupabaseSignals(config, window),
-    getVercelAnalyticsStatus(config, window)
-  ]);
-  const connected = vercel.connection?.status === "Healthy";
+  const firstParty = await getFirstPartyAnalyticsStatus(config, window);
+  const connected = firstParty.connection?.status === "Healthy";
+  const signals = {
+    askSubmissionsToday: firstParty.askSubmitted || makeEventSignal("Ask submissions today", firstParty.conversionFunnel?.stages?.asks || 0, firstParty.connection?.responseTimeMs || 0),
+    askSubmissionsTotal: unavailable("Ask submissions total", "Use operations task counts for lifetime asks"),
+    dispatchSignupsToday: unavailable("Dispatch signups today", "Dispatch is tracked in crm_contacts, not analytics_events"),
+    dispatchSignupsTotal: unavailable("Dispatch signups total", "Dispatch is tracked in crm_contacts, not analytics_events"),
+    topSource: unavailable("Top source", "Source breakdown is not surfaced yet"),
+    topPage: firstParty.topPublicRoute
+  };
 
   return {
     generatedAt: new Date().toISOString(),
     window,
     status: connected ? "Connected" : "Unavailable",
-    source: connected ? "Vercel Analytics" : ANALYTICS_UNAVAILABLE,
-    vercel,
+    source: connected ? "First-party Supabase analytics" : ANALYTICS_UNAVAILABLE,
+    provider: connected ? "supabase_analytics_events" : "supabase_analytics_events_unavailable",
+    vercel: {
+      connection: unavailable("External analytics", "Disabled. DONEOVERNIGHT now uses first-party Supabase events.")
+    },
+    firstParty,
     signals,
     traffic: {
-      todayVisits: vercel.todayVisits,
-      homepageVisits: vercel.homepageVisits,
-      askVisits: vercel.askVisits,
-      startVisits: vercel.startVisits,
-      reviewVisits: vercel.reviewVisits,
-      workspaceVisits: vercel.workspaceVisits,
-      adminVisits: vercel.adminVisits,
-      trafficTrend: vercel.trafficTrend,
-      topPublicRoute: vercel.topPublicRoute
+      todayVisits: firstParty.todayVisits,
+      homepageVisits: firstParty.homepageVisits,
+      askViews: firstParty.askViews,
+      askVisits: firstParty.askViews,
+      reviewOpens: firstParty.reviewOpens,
+      reviewVisits: firstParty.reviewOpens,
+      executionPlanViews: firstParty.executionPlanViews,
+      paymentClicks: firstParty.paymentClicks,
+      workspaceOpens: firstParty.workspaceOpens,
+      workspaceVisits: firstParty.workspaceOpens,
+      trafficTrend: firstParty.trafficTrend,
+      topPublicRoute: firstParty.topPublicRoute,
+      conversionFunnel: firstParty.conversionFunnel
     },
     conversions: {
       askSubmissionsToday: signals.askSubmissionsToday,
