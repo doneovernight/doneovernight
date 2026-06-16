@@ -4077,7 +4077,8 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
 
   adminTrafficSignals.innerHTML = `
     ${renderTrafficSignalCard('Today visits', traffic.todayVisits || firstParty.todayVisits)}
-    ${renderTrafficSignalCard('Ask views', traffic.askViews || firstParty.askViews)}
+    ${renderTrafficSignalCard('Ask page views', traffic.askViews || firstParty.askViews)}
+    ${renderTrafficSignalCard('Ask submissions', traffic.askSubmissions || firstParty.askSubmissions || signals.askSubmissionsToday)}
     ${renderTrafficSignalCard('Review opens', traffic.reviewOpens || firstParty.reviewOpens)}
     ${renderTrafficSignalCard('Execution plan views', traffic.executionPlanViews || firstParty.executionPlanViews)}
     ${renderTrafficSignalCard('Payment clicks', traffic.paymentClicks || firstParty.paymentClicks)}
@@ -4187,7 +4188,8 @@ function renderHeartbeatResult(data = {}) {
   const trafficCards = analytics
     ? `
         ${renderTrafficSignalCard('Today visits', analytics?.traffic?.todayVisits || analytics?.firstParty?.todayVisits)}
-        ${renderTrafficSignalCard('Ask views', analytics?.traffic?.askViews || analytics?.firstParty?.askViews)}
+        ${renderTrafficSignalCard('Ask page views', analytics?.traffic?.askViews || analytics?.firstParty?.askViews)}
+        ${renderTrafficSignalCard('Ask submissions', analytics?.traffic?.askSubmissions || analytics?.firstParty?.askSubmissions || analytics?.signals?.askSubmissionsToday)}
         ${renderTrafficSignalCard('Review opens', analytics?.traffic?.reviewOpens || analytics?.firstParty?.reviewOpens)}
         ${renderTrafficSignalCard('Execution plan views', analytics?.traffic?.executionPlanViews || analytics?.firstParty?.executionPlanViews)}
         ${renderTrafficSignalCard('Payment clicks', analytics?.traffic?.paymentClicks || analytics?.firstParty?.paymentClicks)}

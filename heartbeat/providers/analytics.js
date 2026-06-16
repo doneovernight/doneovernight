@@ -221,6 +221,40 @@ function normalizeRoute(value) {
   return String(value || "").trim();
 }
 
+function cleanPublicRoute(value) {
+  const rawRoute = normalizeRoute(value);
+  if (!rawRoute) return "";
+
+  let hostname = "";
+  let pathname = rawRoute;
+
+  try {
+    const parsed = new URL(rawRoute.startsWith("http") ? rawRoute : `https://doneovernight.com${rawRoute.startsWith("/") ? "" : "/"}${rawRoute}`);
+    hostname = parsed.hostname.toLowerCase();
+    pathname = parsed.pathname || "/";
+  } catch (error) {
+    pathname = rawRoute;
+  }
+
+  const lowerPath = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  if (hostname === "ask.doneovernight.com" || lowerPath === "/ask" || lowerPath.startsWith("/ask/")) return "/ask";
+  if (hostname === "start.doneovernight.com" || lowerPath === "/start" || lowerPath.startsWith("/start/")) return "/start";
+  if (hostname === "pay.doneovernight.com" || lowerPath === "/pay" || lowerPath.startsWith("/pay/")) return "/pay";
+  if (
+    hostname === "portal.doneovernight.com" && (lowerPath === "/review" || lowerPath.startsWith("/review/")) ||
+    lowerPath === "/portal/review" ||
+    lowerPath.startsWith("/portal/review/")
+  ) return "/review";
+  if (
+    (hostname === "portal.doneovernight.com" || hostname === "client.doneovernight.com") && (lowerPath === "/workspace" || lowerPath.startsWith("/workspace/")) ||
+    lowerPath === "/portal/workspace" ||
+    lowerPath.startsWith("/portal/workspace/")
+  ) return "/workspace";
+  if ((hostname === "doneovernight.com" || hostname === "www.doneovernight.com" || !hostname) && lowerPath === "/") return "/";
+
+  return "";
+}
+
 function routeMatches(route, matcher = {}) {
   const cleanRoute = normalizeRoute(route);
   const lowerRoute = cleanRoute.toLowerCase();
@@ -247,7 +281,7 @@ function topRoute(rows = []) {
   rows
     .filter((row) => row.event_type === "page_view")
     .forEach((row) => {
-      const route = normalizeRoute(row.route || "Unknown route");
+      const route = cleanPublicRoute(row.route);
       if (!route) return;
       totals.set(route, (totals.get(route) || 0) + 1);
     });
@@ -350,8 +384,9 @@ async function getFirstPartyAnalyticsStatus(config, window) {
     return {
       todayVisits: fallbackCard("Today visits", reason),
       homepageVisits: fallbackCard("Homepage visits", reason),
-      askViews: fallbackCard("Ask views", reason),
-      askVisits: fallbackCard("Ask views", reason),
+      askViews: fallbackCard("Ask page views", reason),
+      askVisits: fallbackCard("Ask page views", reason),
+      askSubmissions: fallbackCard("Ask submissions", reason),
       reviewOpens: fallbackCard("Review opens", reason),
       reviewVisits: fallbackCard("Review opens", reason),
       executionPlanViews: fallbackCard("Execution plan views", reason),
@@ -373,6 +408,7 @@ async function getFirstPartyAnalyticsStatus(config, window) {
   const bestRoute = topRoute(rows);
   const homepageViews = countPageViewsForRoute(rows, TRACKED_ROUTE_MATCHERS.homepageVisits);
   const askViews = countPageViewsForRoute(rows, TRACKED_ROUTE_MATCHERS.askVisits);
+  const askSubmissions = countEventType(rows, "ask_submitted");
   const reviewOpens = countEventType(rows, "review_opened");
   const executionPlanViews = countEventType(rows, "execution_plan_viewed");
   const paymentClicks = countEventType(rows, "payment_link_clicked");
@@ -381,8 +417,9 @@ async function getFirstPartyAnalyticsStatus(config, window) {
   return {
     todayVisits: makeEventSignal("Today visits", totalToday, todayResult.responseTimeMs, "First-party page_view events"),
     homepageVisits: makeEventSignal("Homepage visits", homepageViews, todayResult.responseTimeMs),
-    askViews: makeEventSignal("Ask views", askViews, todayResult.responseTimeMs),
-    askVisits: makeEventSignal("Ask views", askViews, todayResult.responseTimeMs),
+    askViews: makeEventSignal("Ask page views", askViews, todayResult.responseTimeMs, "First-party ask page_view events"),
+    askVisits: makeEventSignal("Ask page views", askViews, todayResult.responseTimeMs, "First-party ask page_view events"),
+    askSubmissions: makeEventSignal("Ask submissions", askSubmissions, todayResult.responseTimeMs, "First-party ask_submitted events"),
     reviewOpens: makeEventSignal("Review opens", reviewOpens, todayResult.responseTimeMs),
     reviewVisits: makeEventSignal("Review opens", reviewOpens, todayResult.responseTimeMs),
     executionPlanViews: makeEventSignal("Execution plan views", executionPlanViews, todayResult.responseTimeMs),
@@ -521,6 +558,7 @@ async function getAnalyticsSummary(config = {}) {
       homepageVisits: firstParty.homepageVisits,
       askViews: firstParty.askViews,
       askVisits: firstParty.askViews,
+      askSubmissions: firstParty.askSubmissions,
       reviewOpens: firstParty.reviewOpens,
       reviewVisits: firstParty.reviewOpens,
       executionPlanViews: firstParty.executionPlanViews,
