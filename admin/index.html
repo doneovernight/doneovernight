@@ -4053,9 +4053,11 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
     ${renderTrafficSignalCard('Homepage visits', traffic.homepageVisits || vercel.homepageVisits)}
     ${renderTrafficSignalCard('Ask visits', traffic.askVisits || vercel.askVisits)}
     ${renderTrafficSignalCard('Review visits', traffic.reviewVisits || vercel.reviewVisits)}
+    ${renderTrafficSignalCard('Workspace visits', traffic.workspaceVisits || vercel.workspaceVisits)}
+    ${renderTrafficSignalCard('Top page', traffic.topPublicRoute || vercel.topPublicRoute || signals.topPage)}
+    ${renderTrafficSignalCard('Traffic trend', traffic.trafficTrend || vercel.trafficTrend)}
     ${renderTrafficSignalCard('Ask submissions', signals.askSubmissionsToday, { total: Number.isFinite(askTotal) ? askTotal : undefined })}
     ${renderTrafficSignalCard('Dispatch signups', signals.dispatchSignupsToday, { total: Number.isFinite(dispatchTotal) ? dispatchTotal : undefined })}
-    ${renderTrafficSignalCard('Top page', signals.topPage || traffic.topPublicRoute)}
     <div class="placeholder">${escapeHTML(analyticsReason)}</div>
   `;
 }
@@ -4159,9 +4161,11 @@ function renderHeartbeatResult(data = {}) {
         ${renderTrafficSignalCard('Homepage visits', analytics?.traffic?.homepageVisits || analytics?.vercel?.homepageVisits)}
         ${renderTrafficSignalCard('Ask visits', analytics?.traffic?.askVisits || analytics?.vercel?.askVisits)}
         ${renderTrafficSignalCard('Review visits', analytics?.traffic?.reviewVisits || analytics?.vercel?.reviewVisits)}
+        ${renderTrafficSignalCard('Workspace visits', analytics?.traffic?.workspaceVisits || analytics?.vercel?.workspaceVisits)}
+        ${renderTrafficSignalCard('Top page', analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute || analytics?.signals?.topPage)}
+        ${renderTrafficSignalCard('Traffic trend', analytics?.traffic?.trafficTrend || analytics?.vercel?.trafficTrend)}
         ${renderTrafficSignalCard('Ask submissions', analytics?.signals?.askSubmissionsToday, { total: Number(analytics?.signals?.askSubmissionsTotal?.value) })}
         ${renderTrafficSignalCard('Dispatch signups', analytics?.signals?.dispatchSignupsToday || analytics?.traffic?.dispatchSignups || analytics?.vercel?.dispatchSignups, { total: Number(analytics?.signals?.dispatchSignupsTotal?.value) })}
-        ${renderTrafficSignalCard('Top route', analytics?.signals?.topPage || analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute)}
         <div class="placeholder">${escapeHTML(analytics?.vercel?.connection?.reason || analytics?.source || 'Vercel Analytics unavailable')}</div>
       `
     : '<div class="placeholder">Traffic / Signals unavailable.</div>';

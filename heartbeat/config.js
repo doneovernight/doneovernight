@@ -25,7 +25,23 @@ function getConfig(overrides = {}) {
     vercelCommitRef: overrides.vercelCommitRef || clean(process.env.VERCEL_GIT_COMMIT_REF),
     vercelProjectProductionUrl: overrides.vercelProjectProductionUrl || clean(process.env.VERCEL_PROJECT_PRODUCTION_URL),
     vercelDeploymentId: overrides.vercelDeploymentId || clean(process.env.VERCEL_DEPLOYMENT_ID),
-    vercelDeploymentCreatedAt: overrides.vercelDeploymentCreatedAt || clean(process.env.VERCEL_DEPLOYMENT_CREATED_AT)
+    vercelDeploymentCreatedAt: overrides.vercelDeploymentCreatedAt || clean(process.env.VERCEL_DEPLOYMENT_CREATED_AT),
+    vercelAnalyticsToken: overrides.vercelAnalyticsToken || clean(process.env.VERCEL_ANALYTICS_TOKEN),
+    vercelAnalyticsTeamId:
+      overrides.vercelAnalyticsTeamId ||
+      clean(process.env.VERCEL_ANALYTICS_TEAM_ID) ||
+      clean(process.env.VERCEL_TEAM_ID) ||
+      clean(process.env.VERCEL_ORG_ID) ||
+      "team_poT2RkL0qD1tRiGKXsAOcBr3",
+    vercelAnalyticsProjectId:
+      overrides.vercelAnalyticsProjectId ||
+      clean(process.env.VERCEL_ANALYTICS_PROJECT_ID) ||
+      clean(process.env.VERCEL_PROJECT_ID) ||
+      "prj_dj9WlUTfSq6OgVZDCE5uCTEQ9mV5",
+    vercelAnalyticsMetric:
+      overrides.vercelAnalyticsMetric ||
+      clean(process.env.VERCEL_ANALYTICS_METRIC) ||
+      "vercel.request.count"
   };
 }
 
