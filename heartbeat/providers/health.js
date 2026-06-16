@@ -113,7 +113,7 @@ async function getHealth(config) {
     checkGitHub(config),
     countSupabaseTable(config, { source: "Task Requests", table: "task_requests", column: "id" }),
     countSupabaseTable(config, {
-      source: "Dispatch Signups",
+      source: "Total Dispatch Signups",
       table: "crm_contacts",
       column: "id",
       filter: "dispatch_subscribed=eq.true"
