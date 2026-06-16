@@ -127,6 +127,7 @@ function getAdminSystemStatus() {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.HEARTBEAT_TELEGRAM_CHAT_ID),
       payments: Boolean(process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_PROVIDER),
+      manualBunqLinks: true,
       analytics: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
       heartbeat: true,
       vercelDeployment: Boolean(process.env.VERCEL),
@@ -202,17 +203,17 @@ function buildHeartbeatStatusLayer(summary = {}, telegram = {}) {
     },
     payments: {
       source: "Payment system",
-      state: integrations.payments ? "live" : "waiting",
-      status: integrations.payments ? "Connected" : "Not connected yet",
+      state: integrations.payments || integrations.manualBunqLinks ? "live" : "waiting",
+      status: integrations.payments ? "Connected" : integrations.manualBunqLinks ? "Manual Bunq Links Active" : "Not connected yet",
       value: null,
-      reason: integrations.payments ? "Payment provider env detected" : "Payment provider not configured"
+      reason: integrations.payments ? "Payment provider env detected" : integrations.manualBunqLinks ? "Generated Bunq payment links are active" : "Payment provider not configured"
     },
     analytics: {
-      source: "Analytics status",
+      source: "Funnel Tracking",
       state: analyticsConnected ? "live" : "waiting",
-      status: analyticsConnected ? "Connected" : "Analytics unavailable",
+      status: analyticsConnected ? "Connected" : "Waiting",
       value: null,
-      reason: analyticsConnected ? "Supabase analytics_events source connected" : analytics.source || "Supabase analytics_events not connected"
+      reason: analyticsConnected ? "Supabase analytics_events source connected" : "Uses Traffic / Signals event store when configured"
     },
     supabase: {
       source: "Supabase",

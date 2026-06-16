@@ -490,13 +490,16 @@ async function getSupabaseSignals(config, window) {
 
 async function getAnalyticsSummary(config = {}) {
   const window = getTodayWindow(config.generatedAt instanceof Date ? config.generatedAt : new Date());
-  const firstParty = await getFirstPartyAnalyticsStatus(config, window);
+  const [firstParty, supabaseSignals] = await Promise.all([
+    getFirstPartyAnalyticsStatus(config, window),
+    getSupabaseSignals(config, window)
+  ]);
   const connected = firstParty.connection?.status === "Healthy";
   const signals = {
     askSubmissionsToday: firstParty.askSubmitted || makeEventSignal("Ask submissions today", firstParty.conversionFunnel?.stages?.asks || 0, firstParty.connection?.responseTimeMs || 0),
     askSubmissionsTotal: unavailable("Ask submissions total", "Use operations task counts for lifetime asks"),
-    dispatchSignupsToday: unavailable("Dispatch signups today", "Dispatch is tracked in crm_contacts, not analytics_events"),
-    dispatchSignupsTotal: unavailable("Dispatch signups total", "Dispatch is tracked in crm_contacts, not analytics_events"),
+    dispatchSignupsToday: supabaseSignals.dispatchSignupsToday,
+    dispatchSignupsTotal: supabaseSignals.dispatchSignupsTotal,
     topSource: unavailable("Top source", "Source breakdown is not surfaced yet"),
     topPage: firstParty.topPublicRoute
   };
@@ -523,6 +526,7 @@ async function getAnalyticsSummary(config = {}) {
       paymentClicks: firstParty.paymentClicks,
       workspaceOpens: firstParty.workspaceOpens,
       workspaceVisits: firstParty.workspaceOpens,
+      dispatchSignupsToday: supabaseSignals.dispatchSignupsToday,
       trafficTrend: firstParty.trafficTrend,
       topPublicRoute: firstParty.topPublicRoute,
       conversionFunnel: firstParty.conversionFunnel

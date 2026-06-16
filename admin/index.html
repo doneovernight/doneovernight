@@ -3949,7 +3949,11 @@ function renderStatusPanels(status = adminSystemStatus) {
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Ready' : 'Not connected';
   if (adminPaymentStatusNote) {
-    adminPaymentStatusNote.textContent = integrations.payments ? 'Payment system connected' : 'Payment system not connected.';
+    adminPaymentStatusNote.textContent = integrations.payments
+      ? 'Payment system connected'
+      : integrations.manualBunqLinks
+        ? 'Manual Bunq Links Active'
+        : 'Payment provider unavailable.';
   }
   if (adminSettingsList) {
     adminSettingsList.innerHTML = [
@@ -4069,6 +4073,7 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
   const traffic = analytics.traffic || {};
   const firstParty = analytics.firstParty || {};
   const analyticsReason = analytics.firstParty?.connection?.reason || analytics.source || 'First-party analytics unavailable';
+  const showAnalyticsWarning = analytics.status !== 'Connected';
 
   adminTrafficSignals.innerHTML = `
     ${renderTrafficSignalCard('Today visits', traffic.todayVisits || firstParty.todayVisits)}
@@ -4077,10 +4082,11 @@ function renderTrafficSignals(analytics = adminTrafficSignalsData) {
     ${renderTrafficSignalCard('Execution plan views', traffic.executionPlanViews || firstParty.executionPlanViews)}
     ${renderTrafficSignalCard('Payment clicks', traffic.paymentClicks || firstParty.paymentClicks)}
     ${renderTrafficSignalCard('Workspace opens', traffic.workspaceOpens || firstParty.workspaceOpens)}
+    ${renderTrafficSignalCard('Dispatch Signups Today', traffic.dispatchSignupsToday || signals.dispatchSignupsToday)}
     ${renderTrafficSignalCard('Conversion funnel', traffic.conversionFunnel || firstParty.conversionFunnel)}
     ${renderTrafficSignalCard('Top page', traffic.topPublicRoute || firstParty.topPublicRoute || signals.topPage)}
     ${renderTrafficSignalCard('Traffic trend', traffic.trafficTrend || firstParty.trafficTrend)}
-    <div class="placeholder">${escapeHTML(analyticsReason)}</div>
+    ${showAnalyticsWarning ? `<div class="placeholder">${escapeHTML(analyticsReason)}</div>` : ''}
   `;
 }
 
@@ -4186,8 +4192,9 @@ function renderHeartbeatResult(data = {}) {
         ${renderTrafficSignalCard('Execution plan views', analytics?.traffic?.executionPlanViews || analytics?.firstParty?.executionPlanViews)}
         ${renderTrafficSignalCard('Payment clicks', analytics?.traffic?.paymentClicks || analytics?.firstParty?.paymentClicks)}
         ${renderTrafficSignalCard('Workspace opens', analytics?.traffic?.workspaceOpens || analytics?.firstParty?.workspaceOpens)}
+        ${renderTrafficSignalCard('Dispatch Signups Today', analytics?.traffic?.dispatchSignupsToday || analytics?.signals?.dispatchSignupsToday)}
         ${renderTrafficSignalCard('Conversion funnel', analytics?.traffic?.conversionFunnel || analytics?.firstParty?.conversionFunnel)}
-        <div class="placeholder">${escapeHTML(analytics?.firstParty?.connection?.reason || analytics?.source || 'First-party analytics unavailable')}</div>
+        ${analytics.status !== 'Connected' ? `<div class="placeholder">${escapeHTML(analytics?.firstParty?.connection?.reason || analytics?.source || 'First-party analytics unavailable')}</div>` : ''}
       `
     : '<div class="placeholder">Traffic / Signals unavailable.</div>';
 
@@ -4206,7 +4213,7 @@ function renderHeartbeatResult(data = {}) {
       <h3 class="admin-heartbeat-layer-title">Operations</h3>
       <div class="admin-status-grid">
         ${renderOperationsMetricCard('Task Requests', taskRequestsCount)}
-        ${renderOperationsMetricCard('Dispatch Signups', dispatchSignupsCount)}
+        ${renderOperationsMetricCard('Total Dispatch Signups', dispatchSignupsCount)}
         ${renderOperationsMetricCard('Operators', operatorsCount)}
         ${renderOperationsMetricCard('Delivered Tasks', deliveredTasksCount)}
       </div>
@@ -4232,7 +4239,7 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
         ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
         ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
-        ${renderHeartbeatStatusCard('Analytics status', statusLayer.analytics)}
+        ${renderHeartbeatStatusCard('Funnel Tracking', statusLayer.analytics)}
         ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
     </div>
