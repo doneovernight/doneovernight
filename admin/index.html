@@ -5808,6 +5808,11 @@ adminActivity?.addEventListener('click', (event) => {
   renderAdminActivity(adminTasks);
 });
 
+function buildBunqPaymentLinkFromQuote(value) {
+  const amount = String(value || '').replace(/[^\d]/g, '');
+  return amount ? `https://bunq.me/doneovernight?amount=${amount}` : '';
+}
+
 adminTasksList.addEventListener('click', async (e) => {
   const button = e.target.closest('.admin-task-action');
   if (!button || button.disabled) return;
@@ -5819,6 +5824,7 @@ adminTasksList.addEventListener('click', async (e) => {
     const task = (adminTasks || []).find(t => t.id === taskId);
     const quote = await promptForQuote(task);
     if (!quote) return;
+    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount);
 
     await updateTask(button, {
       id: taskId,
@@ -5826,12 +5832,12 @@ adminTasksList.addEventListener('click', async (e) => {
       quote_amount: quote.quote_amount,
       delivery_eta: quote.delivery_eta,
       quote_note: quote.quote_note,
-      payment_link: quote.payment_link,
-      payment_status: quote.payment_link ? 'awaiting_payment' : 'not_required_yet',
+      payment_link: paymentLink,
+      payment_status: paymentLink ? 'awaiting_payment' : 'not_required_yet',
       updated_at: new Date().toISOString(),
       quoted_at: new Date().toISOString()
     });
-    await createWorkspaceQuote(task, quote);
+    await createWorkspaceQuote(task, { ...quote, payment_link: paymentLink });
     await postWorkspaceMessage({
       task,
       message: 'Operational quote sent for review.',

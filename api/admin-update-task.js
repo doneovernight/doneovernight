@@ -59,6 +59,16 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function extractQuoteAmountDigits(value) {
+  if (value === undefined || value === null || value === "") return "";
+  return String(value).replace(/[^\d]/g, "");
+}
+
+function buildBunqPaymentLink(value) {
+  const amount = extractQuoteAmountDigits(value);
+  return amount ? `https://bunq.me/doneovernight?amount=${amount}` : "";
+}
+
 function getSupabaseConfig() {
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -110,9 +120,8 @@ function validateTimestamp(value, field) {
 
 function normalizeQuoteAmount(value) {
   if (value === undefined || value === null || value === "") return undefined;
-  const normalized = typeof value === "number"
-    ? value
-    : Number(String(value).replace(/[^\d.,-]/g, "").replace(",", "."));
+  const amount = extractQuoteAmountDigits(value);
+  const normalized = amount ? Number(amount) : NaN;
   if (!Number.isFinite(normalized) || normalized < 0) {
     const error = new Error("Invalid quote_amount");
     error.code = "INVALID_QUOTE_AMOUNT";
@@ -235,6 +244,67 @@ function buildTaskFilter(taskId) {
   return `or=(id.eq.${encodedId},task_id.eq.${encodedId})`;
 }
 
+async function loadTask(taskId) {
+  const { url, serviceRoleKey } = getSupabaseConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+  const taskFilter = buildTaskFilter(taskId);
+
+  try {
+    const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}&select=*&limit=1`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        Accept: "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const error = new Error("Supabase task lookup failed");
+      error.code = "TASK_LOOKUP_FAILED";
+      error.statusCode = 502;
+      throw error;
+    }
+
+    const rows = await response.json();
+    return Array.isArray(rows) ? rows[0] : null;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Supabase task lookup timed out");
+      timeoutError.code = "TASK_LOOKUP_TIMEOUT";
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function finalizeQuotePatch(patch, existingTask = {}) {
+  if (patch.status !== "quote_sent") return patch;
+
+  const existingPaymentLink = clean(existingTask.payment_link || existingTask.raw_payload?.payment_link || "");
+  const hasSubmittedPaymentLink = Boolean(clean(patch.payment_link));
+
+  if (!hasSubmittedPaymentLink && existingPaymentLink) {
+    delete patch.payment_link;
+  }
+
+  if (!hasSubmittedPaymentLink && !existingPaymentLink) {
+    const generatedPaymentLink = buildBunqPaymentLink(patch.quote_amount || existingTask.quote_amount || existingTask.raw_payload?.quote_amount);
+    if (generatedPaymentLink) patch.payment_link = generatedPaymentLink;
+  }
+
+  if ((patch.payment_link || existingPaymentLink) && !["payment_confirmed", "paid"].includes(patch.payment_status)) {
+    patch.payment_status = "awaiting_payment";
+  }
+
+  return patch;
+}
+
 async function patchTask(taskId, patch) {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
@@ -304,6 +374,15 @@ module.exports = async function handler(req, res) {
     }
 
     const patch = buildPatch(input);
+    const existingTask = isQuoteUpdate(input, patch) ? await loadTask(taskId) : null;
+    if (isQuoteUpdate(input, patch) && !existingTask) {
+      return send(res, 404, {
+        success: false,
+        error: "Task not found",
+        code: "TASK_NOT_FOUND"
+      });
+    }
+    finalizeQuotePatch(patch, existingTask || {});
     const updatedTask = await patchTask(taskId, patch);
     const quoteEmail = buildQuoteEmailStatus(input, patch);
     return send(res, 200, {
