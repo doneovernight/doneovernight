@@ -79,10 +79,12 @@ function buildBunqPaymentLink(value, reference = "") {
   const amount = extractQuoteAmountDigits(value);
   if (!amount) return "";
   const cleanReference = clean(reference);
+  const description = cleanReference
+    ? `${cleanReference} Execution Plan`
+    : "DONEOVERNIGHT Execution Plan";
   const encodedAmount = encodeURIComponent(amount);
-  const encodedReference = encodeURIComponent(cleanReference);
-  if (encodedReference) return `https://bunq.me/doneovernight/${encodedAmount}/${encodedReference}`;
-  return `https://bunq.me/doneovernight/${encodedAmount}`;
+  const encodedDescription = encodeURIComponent(description);
+  return `https://bunq.me/doneovernight?amount=${encodedAmount}&description=${encodedDescription}`;
 }
 
 function getSupabaseConfig() {

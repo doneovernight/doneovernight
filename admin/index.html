@@ -5811,8 +5811,8 @@ function _openOpModal(type, task) {
         </div>
         <div class="op-modal-field">
           <label for="omQLink">Custom payment link — optional</label>
-          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.me/doneovernight/350/DON-2026-00000" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
-          <p class="field-opt">Leave empty to automatically generate a Bunq link with this DON reference.</p>
+          <input id="omQLink" name="payment_link" type="url" placeholder="https://checkout.example.com/session" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+          <p class="field-opt">Optional. Leave empty to auto-generate a Bunq payment link. Use only when sending a custom checkout link.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';
@@ -6099,8 +6099,8 @@ function buildBunqPaymentLinkFromQuote(value, reference = '') {
   const amount = String(value || '').replace(/[^\d]/g, '');
   if (!amount) return '';
   const cleanReference = String(reference || '').trim();
-  if (cleanReference) return `https://bunq.me/doneovernight/${encodeURIComponent(amount)}/${encodeURIComponent(cleanReference)}`;
-  return `https://bunq.me/doneovernight/${encodeURIComponent(amount)}`;
+  const description = cleanReference ? `${cleanReference} Execution Plan` : 'DONEOVERNIGHT Execution Plan';
+  return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }
 
 adminTasksList.addEventListener('click', async (e) => {
