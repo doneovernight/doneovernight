@@ -5,7 +5,10 @@ const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 
 const VALID_STATUSES = new Set([
   "review_pending",
+  "request_received",
   "new",
+  "needs_info",
+  "on_hold",
   "quoted",
   "quote_sent",
   "awaiting_payment",
@@ -20,6 +23,7 @@ const VALID_STATUSES = new Set([
   "delivered",
   "completed",
   "revision_requested",
+  "archived",
   "cancelled",
   "rejected"
 ]);

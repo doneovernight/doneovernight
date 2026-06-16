@@ -109,6 +109,9 @@ function getLinkedReviewState(task = {}) {
   const workspaceStatus = normalizeTaskStatus(task.workspace_status || task.raw_payload?.workspace_status);
 
   if (["revision_requested", "awaiting_revision"].includes(status) || ["revision_requested", "awaiting_revision"].includes(deliveryStatus)) return "revision_requested";
+  if (["needs_info", "needs_information"].includes(status) || ["needs_info", "needs_information"].includes(rawState)) return "needs_info";
+  if (["on_hold"].includes(status) || ["on_hold"].includes(rawState)) return "on_hold";
+  if (["archived", "cancelled", "rejected"].includes(status) || ["archived", "cancelled", "rejected"].includes(rawState)) return "archived";
   if (["delivered", "completed", "delivery_complete", "delivered_ready"].includes(status) || ["delivered", "completed", "delivery_complete", "delivered_ready"].includes(deliveryStatus)) return "delivered";
   if (["workspace_active", "execution_active"].includes(status) || ["workspace_active", "execution_active"].includes(workspaceStatus)) return "workspace_active";
   if (["workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "workspace_ready";

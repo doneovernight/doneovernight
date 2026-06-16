@@ -1948,7 +1948,7 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-lifecycle {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(9, minmax(58px, 1fr));
+  grid-template-columns: repeat(8, minmax(58px, 1fr));
   gap: 8px;
   margin-top: 15px;
   padding: 12px 0 2px;
@@ -2485,27 +2485,27 @@ body.is-admin .admin-dashboard { display: block; }
 
     <div class="stats-grid">
       <div class="stat-card" id="adminNewTasksStat" data-target-section="adminTasksSection" tabindex="0">
-        <div class="stat-label">New asks</div>
+        <div class="stat-label">New Requests</div>
         <div class="stat-value" id="adminNewTasksCount">0</div>
       </div>
       <div class="stat-card" data-target-section="adminReviewsSection" tabindex="0">
-        <div class="stat-label">Pending review</div>
+        <div class="stat-label">Needs Info</div>
         <div class="stat-value" id="adminPendingReviewCount">0</div>
       </div>
       <div class="stat-card" data-target-section="adminQuotesPaymentsSection" tabindex="0">
-        <div class="stat-label">Quote needed</div>
+        <div class="stat-label">Awaiting Start</div>
         <div class="stat-value" id="adminQuoteNeededCount">0</div>
       </div>
       <div class="stat-card" data-target-section="adminQuotesPaymentsSection" tabindex="0">
-        <div class="stat-label">Payment pending</div>
+        <div class="stat-label">Revenue Waiting</div>
         <div class="stat-value" id="adminPendingQuotesCount">0</div>
       </div>
       <div class="stat-card" data-target-section="workspaceControlSection" tabindex="0">
-        <div class="stat-label">Workspace ready</div>
+        <div class="stat-label">Active Projects</div>
         <div class="stat-value" id="adminInProgressCount">0</div>
       </div>
       <div class="stat-card" data-target-section="adminDeliveredTasksSection" tabindex="0">
-        <div class="stat-label">Delivered Tasks</div>
+        <div class="stat-label">Delivered Today</div>
         <div class="stat-value" id="adminDeliveredTasksCount">0</div>
       </div>
       <div class="stat-card" data-target-section="adminOperatorsSection" tabindex="0">
@@ -2601,17 +2601,17 @@ body.is-admin .admin-dashboard { display: block; }
       <section class="admin-section is-wide" id="adminQuotesPaymentsSection" data-admin-section="quotes">
         <div class="revenue-center-head">
           <div>
-            <p class="revenue-center-eyebrow">Quotes / Payments</p>
-            <h2 class="revenue-center-title">Quote and payment state.</h2>
+            <p class="revenue-center-eyebrow">Execution Plans / Starts</p>
+            <h2 class="revenue-center-title">Plan and start state.</h2>
           </div>
-          <p class="revenue-center-note">Only real task, quote, and payment states are shown.</p>
+          <p class="revenue-center-note">Only real task, plan, and manual start states are shown.</p>
         </div>
         <div class="section-kicker" id="adminPaymentStatusNote">Payment system status loading...</div>
 
         <div class="revenue-cards-grid">
           <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
             <div class="revenue-card-inner">
-              <div class="stat-label">Pending Quotes</div>
+              <div class="stat-label">Plan Pending</div>
               <div class="stat-value" id="adminPotentialRevenue">€0</div>
               <div class="revenue-card-sub" id="potentialRevenueCount">0 pending</div>
             </div>
@@ -2620,7 +2620,7 @@ body.is-admin .admin-dashboard { display: block; }
 
           <div class="revenue-card revenue-pending" id="pendingRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
             <div class="revenue-card-inner">
-              <div class="stat-label">Awaiting payment</div>
+              <div class="stat-label">Awaiting Start</div>
               <div class="stat-value" id="adminPendingRevenue">€0</div>
               <div class="revenue-card-sub" id="pendingRevenueCount">0 awaiting</div>
             </div>
@@ -2641,7 +2641,7 @@ body.is-admin .admin-dashboard { display: block; }
           </div>
         </div>
         <div id="adminQuotesPaymentsList" class="admin-review-list">
-          <div class="placeholder">Quote and payment states will populate from asks.</div>
+          <div class="placeholder">Execution plan and start states will populate from asks.</div>
         </div>
       </section>
 
@@ -2873,6 +2873,7 @@ let adminClientRealtimeChannel = null;
 let adminOperatorRealtimeChannel = null;
 let adminClientFilter = 'all';
 let adminOperatorFilter = 'all';
+let adminTaskFilter = 'all';
 let activeMetricTarget = '';
 let activeRevenueDrawer = null;
 let adminActivityExpanded = false;
@@ -2958,23 +2959,31 @@ function getActiveOperators(operators = adminOperators) {
 
 function getStatusLabel(status) {
   const labels = {
-    review_pending: 'Review pending',
-    new: 'Quote pending',
-    quoted: 'Quote sent',
-    quote_sent: 'Quote sent',
-    awaiting_payment: 'Awaiting payment',
-    payment_confirmed: 'Payment confirmed',
-    workspace_ready: 'Workspace ready',
-    workspace_active: 'Workspace active',
-    execution_active: 'Execution active',
+    request_received: 'Request received',
+    under_review: 'Review in progress',
+    quote_preparation: 'Execution plan',
+    quote_ready: 'Execution plan ready',
+    review_pending: 'Review in progress',
+    new: 'Request received',
+    needs_info: 'Needs information',
+    on_hold: 'On hold',
+    quoted: 'Execution plan ready',
+    quote_sent: 'Execution plan ready',
+    awaiting_payment: 'Awaiting start',
+    payment_confirmed: 'Operators assigned',
+    paid: 'Operators assigned',
+    workspace_ready: 'Execution scheduled',
+    workspace_active: 'Project active',
+    execution_active: 'Project active',
     verification_pending: 'Verification pending',
-    queued: 'Queued',
-    in_progress: 'In progress',
+    queued: 'Awaiting start',
+    in_progress: 'Project active',
     delivery_prep: 'Delivery prep',
     delivered: 'Delivered',
     completed: 'Completed',
     revision_requested: 'Revision requested',
-    cancelled: 'Cancelled',
+    archived: 'Archived',
+    cancelled: 'Archived',
     rejected: 'Not accepted'
   };
   return labels[normalizeStatus(status)] || 'Pending';
@@ -3052,10 +3061,10 @@ function getStatusClass(status) {
 function getPaymentStatusLabel(status) {
   const labels = {
     not_required_yet: 'Not required yet',
-    awaiting_payment: 'Awaiting payment',
-    payment_confirmed: 'Payment confirmed',
-    paid: 'Paid',
-    payment_failed: 'Payment failed',
+    awaiting_payment: 'Awaiting start',
+    payment_confirmed: 'Operators assigned',
+    paid: 'Operators assigned',
+    payment_failed: 'Start blocked',
     refunded: 'Refunded'
   };
   return labels[normalizeStatus(status)] || 'Not required yet';
@@ -3063,32 +3072,44 @@ function getPaymentStatusLabel(status) {
 
 function getTaskActions(status) {
   const actions = {
+    request_received: [
+      { type: 'move', label: 'Mark under review', status: 'review_pending' },
+      { type: 'move', label: 'Needs info', status: 'needs_info' },
+      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Archive', status: 'archived' }
+    ],
     review_pending: [
-      { type: 'quote', label: 'Prepare quote' },
-      { type: 'move', label: 'Cancel', status: 'cancelled' }
+      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Archive', status: 'archived' }
     ],
     new: [
       { type: 'move', label: 'Mark under review', status: 'review_pending' },
-      { type: 'quote', label: 'Prepare quote' },
-      { type: 'move', label: 'Cancel', status: 'cancelled' }
+      { type: 'move', label: 'Needs info', status: 'needs_info' },
+      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Archive', status: 'archived' }
+    ],
+    needs_info: [
+      { type: 'move', label: 'Mark under review', status: 'review_pending' },
+      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Archive', status: 'archived' }
     ],
     quoted: [
-      { type: 'quote', label: 'Edit quote' },
-      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' }
+      { type: 'quote', label: 'Edit plan' },
+      { type: 'move', label: 'Awaiting start', status: 'awaiting_payment' }
     ],
     quote_sent: [
-      { type: 'quote', label: 'Edit quote' },
-      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' },
-      { type: 'move', label: 'Payment confirmed', status: 'payment_confirmed' }
+      { type: 'quote', label: 'Edit plan' },
+      { type: 'move', label: 'Awaiting start', status: 'awaiting_payment' },
+      { type: 'move', label: 'Confirm start', status: 'payment_confirmed' }
     ],
     awaiting_payment: [
-      { type: 'move', label: 'Payment confirmed', status: 'payment_confirmed' }
+      { type: 'move', label: 'Confirm start', status: 'payment_confirmed' }
     ],
     payment_confirmed: [
-      { type: 'move', label: 'Workspace ready', status: 'workspace_ready' }
+      { type: 'move', label: 'Schedule execution', status: 'workspace_ready' }
     ],
     workspace_ready: [
-      { type: 'move', label: 'Unlock workspace', status: 'workspace_active' }
+      { type: 'move', label: 'Start execution', status: 'workspace_active' }
     ],
     verification_pending: [
       { type: 'move', label: 'Queue task', status: 'queued' }
@@ -3108,7 +3129,7 @@ function getTaskActions(status) {
     ],
     revision_requested: [
       { type: 'move', label: 'Resume work', status: 'in_progress' },
-      { type: 'move', label: 'Cancel', status: 'cancelled' }
+      { type: 'move', label: 'Archive', status: 'archived' }
     ]
   };
   return actions[normalizeStatus(status)] || [];
@@ -3218,27 +3239,32 @@ function getTaskRenderSignature(task) {
 }
 
 function getLifecycleIndex(status) {
-  const stages = ['review_pending', 'quote_sent', 'awaiting_payment', 'payment_confirmed', 'workspace_ready', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
-  const normalized = normalizeStatus(status) === 'new' ? 'review_pending' : normalizeStatus(status);
+  const stages = ['new', 'review_pending', 'quote_sent', 'awaiting_payment', 'payment_confirmed', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
+  const normalized = normalizeStatus(status);
+  if (normalized === 'request_received') return stages.indexOf('new');
+  if (normalized === 'needs_info') return stages.indexOf('review_pending');
+  if (normalized === 'quoted') return stages.indexOf('quote_sent');
   if (normalized === 'revision_requested') return stages.indexOf('in_progress');
+  if (normalized === 'workspace_ready' || normalized === 'workspace_active' || normalized === 'execution_active' || normalized === 'queued') return stages.indexOf('in_progress');
   const index = stages.indexOf(normalized);
   return index >= 0 ? index : 0;
 }
 
 function renderLifecycle(status) {
   const stages = [
+    ['new', 'Request'],
     ['review_pending', 'Review'],
-    ['quote_sent', 'Quote'],
-    ['awaiting_payment', 'Pay'],
-    ['payment_confirmed', 'Confirm'],
-    ['workspace_ready', 'Workspace'],
-    ['in_progress', 'Work'],
+    ['quote_sent', 'Plan'],
+    ['awaiting_payment', 'Start'],
+    ['payment_confirmed', 'Operators'],
+    ['in_progress', 'Active'],
     ['delivery_prep', 'Prep'],
-    ['delivered', 'Delivery'],
+    ['delivered', 'Delivered'],
     ['completed', 'Complete']
   ];
   const currentIndex = getLifecycleIndex(status);
-  const current = normalizeStatus(status) === 'new' ? 'review_pending' : normalizeStatus(status);
+  const normalizedStatus = normalizeStatus(status);
+  const current = ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'revision_requested'].includes(normalizedStatus) ? 'in_progress' : normalizedStatus === 'quoted' ? 'quote_sent' : normalizedStatus === 'request_received' ? 'new' : normalizedStatus;
   return `
     <div class="admin-lifecycle" aria-label="Lifecycle">
       ${stages.map(([key, label], index) => {
@@ -3255,6 +3281,56 @@ function sortedTasks(tasks) {
     const bTime = new Date(b.created_at || 0).getTime();
     return bTime - aTime;
   });
+}
+
+const TASK_FILTERS = [
+  ['all', 'All'],
+  ['new', 'New'],
+  ['needs_info', 'Needs Info'],
+  ['review_complete', 'Review Complete'],
+  ['awaiting_start', 'Awaiting Start'],
+  ['project_active', 'Project Active'],
+  ['delivered', 'Delivered'],
+  ['completed', 'Completed'],
+  ['archived', 'Archived']
+];
+
+function taskMatchesOperationalFilter(task, filter) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  if (filter === 'all') return true;
+  if (filter === 'new') return ['new', 'request_received'].includes(status);
+  if (filter === 'needs_info') return status === 'needs_info';
+  if (filter === 'review_complete') return ['review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(status) && !['awaiting_payment', 'payment_confirmed', 'paid'].includes(paymentStatus);
+  if (filter === 'awaiting_start') {
+    if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
+    return status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid';
+  }
+  if (filter === 'project_active') return ['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+  if (filter === 'delivered') return isDeliveredTask(task);
+  if (filter === 'completed') return status === 'completed';
+  if (filter === 'archived') return ['archived', 'cancelled', 'rejected'].includes(status);
+  return true;
+}
+
+function getTaskFilterCounts(tasks = []) {
+  return TASK_FILTERS.reduce((counts, [key]) => {
+    counts[key] = key === 'all'
+      ? tasks.length
+      : tasks.filter((task) => taskMatchesOperationalFilter(task, key)).length;
+    return counts;
+  }, {});
+}
+
+function renderTaskFilterChips(counts = {}) {
+  return TASK_FILTERS.map(([key, label]) => `
+    <button
+      class="admin-client-tab ${adminTaskFilter === key ? 'is-active' : ''}"
+      type="button"
+      data-task-filter="${escapeHTML(key)}"
+      aria-pressed="${adminTaskFilter === key ? 'true' : 'false'}"
+    >${escapeHTML(label)} <span>${Number(counts[key] || 0)}</span></button>
+  `).join('');
 }
 
 function sortedClients(clients) {
@@ -3294,7 +3370,8 @@ function getRelativeTime(value) {
 
 function getTaskActivityLabel(task) {
   const status = normalizeStatus(task.status);
-  if (task.quoted_at) return `Quote generated ${getRelativeTime(task.quoted_at)}`;
+  if (task.quoted_at) return `Execution plan generated ${getRelativeTime(task.quoted_at)}`;
+  if (status === 'needs_info') return 'Waiting for client information';
   if (status === 'review_pending' || status === 'new') return 'Operator reviewing';
   if (status === 'in_progress') return 'Execution active';
   if (status === 'queued') return 'Queued for execution';
@@ -3303,14 +3380,15 @@ function getTaskActivityLabel(task) {
 }
 
 function updateStats(tasks = adminTasks, clients = adminClients) {
-  const reviewStatuses = ['new', 'review_pending'];
-  const newTasksCount = tasks.filter((task) => reviewStatuses.includes(normalizeStatus(task.status))).length;
-  const pendingReviewCount = newTasksCount;
-  const quoteNeededCount = tasks.filter((task) => ['new', 'review_pending', 'quote_preparation'].includes(normalizeStatus(task.status)) && !task.quote_amount).length;
+  const newTasksCount = tasks.filter((task) => ['new', 'request_received'].includes(normalizeStatus(task.status))).length;
+  const pendingReviewCount = tasks.filter((task) => normalizeStatus(task.status) === 'needs_info').length;
+  const quoteNeededCount = tasks.filter((task) => ['quote_sent', 'quoted', 'awaiting_payment'].includes(normalizeStatus(task.status)) || normalizeStatus(task.payment_status) === 'awaiting_payment').length;
   const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment').length;
-  const workspaceReadyCount = tasks.filter((task) => ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status))).length;
+  const workspaceReadyCount = tasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
   const activeClients = clients.filter((client) => getClientStatusGroup(client.status) === 'active').length;
   const deliveredTasksCount = tasks.filter(isDeliveredTask).length;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const deliveredTodayCount = tasks.filter((task) => isDeliveredTask(task) && String(task.delivered_at || task.updated_at || task.created_at || '').slice(0, 10) === todayKey).length;
   const completedTasks = deliveredTasksCount;
   const countableOperators = getCountableOperators(adminOperators);
   const operatorGroups = getOperatorGroups(countableOperators);
@@ -3336,7 +3414,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   adminQuoteNeededCount.textContent = quoteNeededCount;
   adminPendingQuotesCount.textContent = awaitingPaymentCount;
   adminInProgressCount.textContent = workspaceReadyCount;
-  if (adminDeliveredTasksCount) adminDeliveredTasksCount.textContent = deliveredTasksCount;
+  if (adminDeliveredTasksCount) adminDeliveredTasksCount.textContent = deliveredTodayCount;
   if (adminOperatorsCount) adminOperatorsCount.textContent = `${operatorGroups.active.length} Active · ${operatorGroups.pending.length} Pending · ${countableOperators.length} Total`;
   adminDispatchCount.textContent = adminDispatchConnection?.connected ? String(adminDispatchContacts.length) : 'Unavailable';
   adminSystemHealth.textContent = adminSystemStatus?.integrations?.supabase ? 'Connected' : 'Unavailable';
@@ -3351,7 +3429,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const potentialCountEl = document.getElementById('potentialRevenueCount');
   if (paidCountEl) paidCountEl.textContent = `${paidTasks.length} transaction${paidTasks.length !== 1 ? 's' : ''}`;
   if (pendingCountEl) pendingCountEl.textContent = `${pendingTasks.length} awaiting`;
-  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} quote${potentialTasks.length !== 1 ? 's' : ''} pending`;
+  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} plan${potentialTasks.length !== 1 ? 's' : ''} pending`;
 
   if (activeRevenueDrawer) {
     const drawerContent = document.getElementById('revenueDrawerContent');
@@ -3440,6 +3518,12 @@ function getReviewState(task = {}) {
     'awaiting_payment',
     'payment_pending',
     'quote_paid',
+    'needs_info',
+    'on_hold',
+    'archived',
+    'paid',
+    'payment_confirmed',
+    'workspace_ready',
     'workspace_active',
     'execution_active',
     'delivered'
@@ -3477,12 +3561,12 @@ function renderReviews(tasks = adminTasks) {
           <article class="admin-review-row">
             <div>
               <span>Review state</span>
-              <strong>${escapeHTML(state.replace(/_/g, ' '))}</strong>
+              <strong>${escapeHTML(getStatusLabel(state))}</strong>
               <p>${escapeHTML(getTaskId(task))} · ${escapeHTML(task.name || task.email || 'Unknown client')}</p>
             </div>
             <div>
-              <span>Quote/payment</span>
-              <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Quote pending'}</strong>
+              <span>Plan/start</span>
+              <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Plan pending'}</strong>
               <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</p>
             </div>
             <div>
@@ -3571,10 +3655,10 @@ function renderDeliveredTasks(tasks = adminTasks) {
 function getQuotePaymentState(task = {}) {
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'paid';
-  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting payment';
-  if (status === 'quote_sent' || status === 'quoted' || task.quote_amount || task.payment_link) return 'quote sent';
-  return 'quote pending';
+  if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'operators assigned';
+  if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting start';
+  if (status === 'quote_sent' || status === 'quoted' || task.quote_amount || task.payment_link) return 'execution plan ready';
+  return 'plan pending';
 }
 
 function renderQuotesPayments(tasks = adminTasks) {
@@ -3583,7 +3667,7 @@ function renderQuotesPayments(tasks = adminTasks) {
     .filter((task) => !['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
     .slice(0, 80);
   if (!quoteTasks.length) {
-    adminQuotesPaymentsList.innerHTML = '<div class="placeholder">No quote or payment states yet.</div>';
+    adminQuotesPaymentsList.innerHTML = '<div class="placeholder">No execution plan or start states yet.</div>';
     return;
   }
   adminQuotesPaymentsList.innerHTML = `
@@ -3592,17 +3676,17 @@ function renderQuotesPayments(tasks = adminTasks) {
       return `
         <article class="admin-review-row">
           <div>
-            <span>Quote/payment state</span>
+            <span>Plan/start state</span>
             <strong>${escapeHTML(state)}</strong>
             <p>${escapeHTML(getTaskId(task))} · ${escapeHTML(task.name || task.email || 'Unknown client')}</p>
           </div>
           <div>
             <span>Amount</span>
             <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'No real amount yet'}</strong>
-            <p>${escapeHTML(task.payment_link ? 'Payment link present' : 'No payment link')}</p>
+            <p>${escapeHTML(task.payment_link ? 'Start link present' : 'No start link')}</p>
           </div>
           <div>
-            <span>Payment status</span>
+            <span>Start status</span>
             <strong>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</strong>
             <p>Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
           </div>
@@ -3618,8 +3702,8 @@ function getWorkspaceStatus(task = {}) {
   if (status === 'workspace_active' || status === 'execution_active') return status;
   if (status === 'workspace_ready') return 'ready to unlock';
   if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'ready to unlock';
-  if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || normalizeStatus(task.status) === 'awaiting_payment') return 'locked · payment pending';
-  if (task.quote_amount || normalizeStatus(task.status) === 'quoted') return 'locked · quote pending';
+  if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || normalizeStatus(task.status) === 'awaiting_payment') return 'locked · awaiting start';
+  if (task.quote_amount || normalizeStatus(task.status) === 'quoted') return 'locked · plan pending';
   return 'locked · review active';
 }
 
@@ -3651,8 +3735,8 @@ function renderWorkspaceReadiness(tasks = adminTasks) {
             <p>Review: ${escapeHTML(state.replace(/_/g, ' '))}</p>
           </div>
           <div>
-            <span>Quote/payment</span>
-            <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Quote pending'}</strong>
+            <span>Plan/start</span>
+            <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'Plan pending'}</strong>
             <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}${workspaceActive && workspaceSlug ? ` · <a href="https://portal.doneovernight.com/workspace/${encodeURIComponent(workspaceSlug)}" target="_blank" rel="noopener noreferrer">Open workspace</a>` : ''}</p>
           </div>
         </article>
@@ -4561,31 +4645,51 @@ function renderTasks(tasks) {
     return;
   }
 
+  const filterCounts = getTaskFilterCounts(tasks);
+  const visibleTasks = sortedTasks(tasks).filter((task) => taskMatchesOperationalFilter(task, adminTaskFilter));
+  if (!visibleTasks.length) {
+    adminTasksList.innerHTML = `
+      <div class="admin-task-list">
+        <div class="admin-client-tabs admin-task-filters" aria-label="Task filter">
+          ${renderTaskFilterChips(filterCounts)}
+        </div>
+        <div class="placeholder">No tasks match this operational filter.</div>
+      </div>
+    `;
+    adminTaskRenderSignature = `empty:${adminTaskFilter}:${JSON.stringify(filterCounts)}`;
+    return;
+  }
+
   const groups = [
     {
-      title: 'Review / Quote',
+      title: 'Review / Plan',
       slug: 'active-operations',
-      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.payment_status) !== 'awaiting_payment' && ['new', 'review_pending', 'quoted'].includes(normalizeStatus(task.status)))
+      tasks: visibleTasks.filter((task) => normalizeStatus(task.payment_status) !== 'awaiting_payment' && ['new', 'request_received', 'needs_info', 'on_hold', 'review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(normalizeStatus(task.status)))
     },
     {
-      title: 'Awaiting Payment',
+      title: 'Awaiting Start',
       slug: 'awaiting-payment',
-      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || normalizeStatus(task.status) === 'awaiting_payment')
+      tasks: visibleTasks.filter((task) => {
+        const status = normalizeStatus(task.status);
+        const paymentStatus = normalizeStatus(task.payment_status);
+        if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
+        return paymentStatus === 'awaiting_payment' || status === 'awaiting_payment' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed';
+      })
     },
     {
-      title: 'In Progress',
+      title: 'Project Active',
       slug: 'in-progress',
-      tasks: sortedTasks(tasks).filter((task) => ['verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
+      tasks: visibleTasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
     },
     {
       title: 'Delivered',
       slug: 'delivered',
-      tasks: sortedTasks(tasks).filter((task) => normalizeStatus(task.status) === 'delivered')
+      tasks: visibleTasks.filter(isDeliveredTask)
     },
     {
       title: 'Completed Archive',
       slug: 'completed-archive',
-      tasks: sortedTasks(tasks).filter((task) => ['completed', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
+      tasks: visibleTasks.filter((task) => ['completed', 'archived', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
     }
   ].filter((group) => group.tasks.length);
 
@@ -4598,9 +4702,9 @@ function renderTasks(tasks) {
     const clientBudgetLabel = clientBudget ? escapeHTML(clientBudget) : 'Not indicated';
     const internalEstimate = task.suggested_quote || task.internal_suggested_estimate || task.internal_estimate || task.raw_payload?.suggested_quote || task.raw_payload?.internal_suggested_estimate || '';
     const internalEstimateLabel = internalEstimate ? escapeHTML(internalEstimate) : 'Not generated';
-    const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Pending quote</span>';
+    const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Plan pending</span>';
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
-    const quoteNote = task.quote_note ? `<div>${escapeHTML(task.quote_note)}</div>` : '';
+    const quoteNoteText = task.quote_note ? escapeHTML(task.quote_note) : '';
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const workspaceIsActive = ['workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
     const actions = task.id
@@ -4615,21 +4719,21 @@ function renderTasks(tasks) {
       actions.push({ type: 'send-branding', label: 'Send full branding link' });
     }
     const status = normalizeStatus(task.status);
-    const isNew = ['new', 'review_pending'].includes(status);
+    const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
     const isActive = ['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
     const isAwaitingPayment = normalizeStatus(task.payment_status) === 'awaiting_payment' || status === 'awaiting_payment';
     const isDelivered = status === 'delivered';
-    const isComplete = ['completed', 'cancelled', 'rejected'].includes(status);
+    const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
     const priority = getTaskPriority(task);
     const activityLabel = getTaskActivityLabel(task);
     const paymentCallout = isAwaitingPayment ? `
       <div class="admin-payment-callout">
         <div>
-          <strong>Payment follow-up</strong>
-          <span>${escapeHTML(task.name || task.email || 'Client')} is awaiting payment before execution continues.</span>
+          <strong>Awaiting start</strong>
+          <span>${escapeHTML(task.name || task.email || 'Client')} can approve the plan and start execution.</span>
         </div>
         ${task.payment_link
-          ? `<a class="admin-payment-link" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Open payment →</a>`
+          ? `<a class="admin-payment-link" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Open start link →</a>`
           : '<span class="admin-payment-link" aria-disabled="true">Link pending</span>'}
       </div>
     ` : '';
@@ -4678,9 +4782,10 @@ function renderTasks(tasks) {
         ${renderLifecycle(task.status)}
         ${(task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link) ? `
           <div class="admin-task-detail">
-            <span class="admin-task-detail-label">Operational Quote</span>
-            <div>${quoteAmount}${deliveryEta ? ` · ${deliveryEta}` : ''}</div>
-            ${quoteNote}
+            <span class="admin-task-detail-label">Execution Plan</span>
+            ${quoteNoteText ? `<div><strong>Scope</strong> · ${quoteNoteText}</div>` : ''}
+            ${deliveryEta ? `<div><strong>Timeline</strong> · ${deliveryEta}</div>` : ''}
+            <div><strong>Investment</strong> · ${quoteAmount}</div>
             ${task.payment_link ? `<div class="admin-task-eta">${escapeHTML(task.payment_link)}</div>` : ''}
           </div>
         ` : ''}
@@ -4690,15 +4795,26 @@ function renderTasks(tasks) {
     `;
   };
 
-  const nextSignature = JSON.stringify(groups.map((group) => [
+  const filterMarkup = `
+    <div class="admin-client-tabs admin-task-filters" aria-label="Task filter">
+      ${renderTaskFilterChips(filterCounts)}
+    </div>
+  `;
+
+  const nextSignature = JSON.stringify([
+    adminTaskFilter,
+    filterCounts,
+    groups.map((group) => [
     group.slug,
     group.tasks.map((task) => `${getTaskDomId(task)}:${getTaskRenderSignature(task)}`)
-  ]));
+    ])
+  ]);
   if (nextSignature === adminTaskRenderSignature) return;
 
   const renderFullTaskList = () => {
     adminTasksList.innerHTML = `
       <div class="admin-task-list">
+        ${filterMarkup}
         ${groups.map((group) => `
           <section class="operation-group" data-operation-section="${escapeHTML(group.slug)}">
             <div class="operation-group-head">
@@ -4720,6 +4836,10 @@ function renderTasks(tasks) {
   }
 
   const activeTaskId = document.activeElement?.closest?.('.admin-task-row')?.dataset?.taskRowId || '';
+  const existingFilters = list.querySelector('.admin-task-filters');
+  if (existingFilters) existingFilters.outerHTML = filterMarkup;
+  else list.insertAdjacentHTML('afterbegin', filterMarkup);
+
   const nextGroupSlugs = new Set(groups.map((group) => group.slug));
   [...list.querySelectorAll('[data-operation-section]')].forEach((section) => {
     if (!nextGroupSlugs.has(section.dataset.operationSection)) section.remove();
@@ -4742,8 +4862,9 @@ function renderTasks(tasks) {
       list.appendChild(section);
     }
 
-    if (list.children[groupIndex] !== section) {
-      list.insertBefore(section, list.children[groupIndex] || null);
+    const desiredIndex = groupIndex + 1;
+    if (list.children[desiredIndex] !== section) {
+      list.insertBefore(section, list.children[desiredIndex] || null);
     }
     section.querySelector('.operation-group-title').textContent = group.title;
     section.querySelector('.operation-group-count').textContent = group.tasks.length;
@@ -4842,14 +4963,14 @@ function renderAdminActivity(tasks) {
     }
     if (status === 'quoted' || task.quoted_at || task.quote_amount || task.payment_link) {
       events.push({
-        title: 'Quote sent',
+        title: 'Execution plan sent',
         meta: `${taskId} · ${client}`,
         at: task.quoted_at || task.updated_at || task.created_at
       });
     }
     if (paymentStatus === 'paid') {
       events.push({
-        title: 'Payment received',
+        title: 'Start confirmed',
         meta: `${taskId} · ${client}`,
         at: task.paid_at || task.updated_at || task.created_at
       });
@@ -5431,7 +5552,7 @@ function _getOpModal() {
     <div class="op-modal-backdrop" id="opModalBackdrop" aria-hidden="true">
       <div class="op-modal" role="dialog" aria-modal="true" aria-labelledby="opModalTitle">
         <div class="op-modal-head">
-          <h2 class="op-modal-title" id="opModalTitle">Send Quote</h2>
+          <h2 class="op-modal-title" id="opModalTitle">Prepare Execution Plan</h2>
           <button class="op-modal-close" id="opModalClose" type="button" aria-label="Close">×</button>
         </div>
         <div class="op-modal-error-line" id="opModalError"></div>
@@ -5484,8 +5605,8 @@ function _getOpModal() {
       return true;
     }
 
-    if (!requireField('quote_amount', 'Quote amount is required.')) return;
-    if (!requireField('delivery_eta', 'Delivery ETA is required.')) return;
+    if (!requireField('quote_amount', 'Investment amount is required.')) return;
+    if (!requireField('delivery_eta', 'Timeline / ETA is required.')) return;
     if (!requireField('delivery_link', 'Delivery link is required.')) return;
 
     const result = {};
@@ -5508,24 +5629,25 @@ function _openOpModal(type, task) {
     errLine.classList.remove('is-shown');
 
     if (type === 'quote') {
-      title.textContent  = task?.quote_amount ? 'Edit Quote' : 'Send Quote';
-      submit.textContent = task?.quote_amount ? 'Update quote' : 'Send quote';
+      title.textContent  = task?.quote_amount ? 'Edit Execution Plan' : 'Prepare Execution Plan';
+      submit.textContent = task?.quote_amount ? 'Update plan' : 'Send plan';
       fields.innerHTML = `
         <div class="op-modal-field">
-          <label for="omQAmt">Quote amount</label>
+          <label for="omQAmt">Investment amount</label>
           <input id="omQAmt" name="quote_amount" type="text" placeholder="€350" value="${escapeHTML(task?.quote_amount || '')}" autocomplete="off">
         </div>
         <div class="op-modal-field">
-          <label for="omQEta">Delivery ETA</label>
+          <label for="omQEta">Timeline / ETA</label>
           <input id="omQEta" name="delivery_eta" type="text" placeholder="Tomorrow 10:00" value="${escapeHTML(task?.delivery_eta || '')}" autocomplete="off">
         </div>
         <div class="op-modal-field">
-          <label for="omQNote">Note <span class="field-opt">optional</span></label>
+          <label for="omQNote">Scope note <span class="field-opt">optional</span></label>
           <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
         </div>
         <div class="op-modal-field">
-          <label for="omQLink">Payment link <span class="field-opt">optional</span></label>
-          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.don.com" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+          <label for="omQLink">Custom Payment Link <span class="field-opt">optional</span></label>
+          <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.me/doneovernight?amount=350" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
+          <p class="field-opt">Leave empty to automatically generate a Bunq payment link.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';
@@ -5757,7 +5879,7 @@ workspaceQuoteForm?.addEventListener('submit', async (event) => {
     workspaceQuoteCurrency.value = 'EUR';
     workspaceQuoteNotes.value = '';
     await loadWorkspaceRecords({ silent: true });
-    setWorkspaceControlMessage('Quote sent to workspace.');
+    setWorkspaceControlMessage('Execution plan sent to workspace.');
   } catch (error) {
     setWorkspaceControlMessage(error.message || 'Could not send workspace quote.', true);
   } finally {
@@ -5814,6 +5936,14 @@ function buildBunqPaymentLinkFromQuote(value) {
 }
 
 adminTasksList.addEventListener('click', async (e) => {
+  const filterButton = e.target.closest('[data-task-filter]');
+  if (filterButton) {
+    adminTaskFilter = filterButton.dataset.taskFilter || 'all';
+    adminTaskRenderSignature = '';
+    renderAdminTasks(adminTasks);
+    return;
+  }
+
   const button = e.target.closest('.admin-task-action');
   if (!button || button.disabled) return;
 
@@ -5840,7 +5970,7 @@ adminTasksList.addEventListener('click', async (e) => {
     await createWorkspaceQuote(task, { ...quote, payment_link: paymentLink });
     await postWorkspaceMessage({
       task,
-      message: 'Operational quote sent for review.',
+      message: 'Execution plan sent for review.',
       message_type: 'approval_request'
     }).catch(() => {});
   }
@@ -5916,7 +6046,7 @@ function getBlockingReason(status) {
     review_pending: 'Review in progress',
     new: 'Review in progress',
     quoted: 'Awaiting confirmation',
-    awaiting_payment: 'Awaiting payment',
+    awaiting_payment: 'Awaiting start',
     verification_pending: 'Verification pending'
   };
   return reasons[normalizeStatus(status)] || 'Pending review';
@@ -5952,11 +6082,11 @@ function renderPaidDrawerContent(tasks) {
 
 function renderPendingDrawerContent(tasks) {
   const pendingTasks = tasks.filter(isPendingRevenueTask);
-  if (!pendingTasks.length) return '<div class="revenue-empty">No pending payments.</div>';
+  if (!pendingTasks.length) return '<div class="revenue-empty">No plans awaiting start.</div>';
   const total = pendingTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Awaiting payment</span>
+      <span class="revenue-drawer-title">Awaiting Start</span>
       <span class="revenue-drawer-total" style="color:#f4d28a">${formatRevenue(total)}</span>
     </div>
     ${pendingTasks.map((t) => `
@@ -5967,8 +6097,8 @@ function renderPendingDrawerContent(tasks) {
           <div class="revenue-item-task">${escapeHTML(getTaskTitle(t))}<span class="revenue-item-id">${escapeHTML(getTaskId(t))}</span></div>
         </div>
         <div>
-          <div class="revenue-item-stage">Payment<strong>${escapeHTML(getPaymentStatusLabel(t.payment_status))}</strong></div>
-          <div class="revenue-item-stage">Quote<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
+          <div class="revenue-item-stage">Start<strong>${escapeHTML(getPaymentStatusLabel(t.payment_status))}</strong></div>
+          <div class="revenue-item-stage">Plan<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
           ${t.delivery_eta ? `<div class="revenue-item-date">ETA: ${escapeHTML(t.delivery_eta)}</div>` : ''}
           <div class="revenue-item-blocker">Follow-up required</div>
         </div>
@@ -5985,7 +6115,7 @@ function renderPotentialDrawerContent(tasks) {
   if (!potentialTasks.length) return '<div class="revenue-empty">No pipeline tasks.</div>';
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Pending Quotes</span>
+      <span class="revenue-drawer-title">Pending Plans</span>
       <span class="revenue-drawer-total" style="color:#e6d3a3">${potentialTasks.length} pending</span>
     </div>
     ${potentialTasks.map((t) => `
@@ -6002,7 +6132,7 @@ function renderPotentialDrawerContent(tasks) {
         <div class="revenue-item-meta">
           ${t.quote_amount
             ? `<span class="revenue-item-amount revenue-potential-amount">${escapeHTML(String(t.quote_amount))}</span>`
-            : `<span class="revenue-item-amount" style="color:rgba(245,241,234,.28)">No quote</span>`}
+            : `<span class="revenue-item-amount" style="color:rgba(245,241,234,.28)">No plan</span>`}
         </div>
       </div>
     `).join('')}

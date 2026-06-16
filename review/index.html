@@ -198,7 +198,7 @@
 
     .timeline {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-top: 28px;
     }
@@ -528,54 +528,63 @@
 
     <section class="receipt" aria-labelledby="review-title">
       <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span data-state-label>Request received</span></p>
-      <h1 id="review-title">Request under review.</h1>
+      <h1 id="review-title">Request received.</h1>
       <p class="copy" data-state-copy>Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step.</p>
 
       <div class="chips" aria-label="Request status">
         <span class="chip is-complete" data-chip="received">Request received</span>
-        <span class="chip is-active" data-chip="review">Under review</span>
-        <span class="chip" data-chip="quote">Quote pending</span>
+        <span class="chip is-active" data-chip="review">Review in progress</span>
+        <span class="chip" data-chip="quote">Execution plan</span>
+        <span class="chip" data-chip="workspace">Project active</span>
       </div>
 
       <div class="timeline" aria-label="Review timeline">
         <div class="step is-complete" data-step="received">
           <span class="step-index">01</span>
-          <span class="step-label">Received</span>
+          <span class="step-label">Request received</span>
         </div>
         <div class="step is-active" data-step="review">
           <span class="step-index">02</span>
-          <span class="step-label">Review</span>
+          <span class="step-label">Review in progress</span>
         </div>
         <div class="step" data-step="quote">
           <span class="step-index">03</span>
-          <span class="step-label">Quote</span>
+          <span class="step-label">Execution plan</span>
+        </div>
+        <div class="step" data-step="workspace">
+          <span class="step-index">04</span>
+          <span class="step-label">Project active</span>
         </div>
       </div>
 
       <div class="quote-summary" data-quote-summary hidden>
         <div class="quote-summary-grid">
-          <div class="quote-summary-item" data-quote-amount-wrap hidden>
-            <span class="quote-summary-label">Quote</span>
-            <span class="quote-summary-value" data-quote-amount></span>
+          <div class="quote-summary-item quote-summary-note" data-quote-note-wrap hidden>
+            <span class="quote-summary-label">Scope</span>
+            <span class="quote-summary-value" data-quote-note></span>
           </div>
           <div class="quote-summary-item" data-quote-eta-wrap hidden>
-            <span class="quote-summary-label">Delivery ETA</span>
+            <span class="quote-summary-label">Timeline</span>
             <span class="quote-summary-value" data-quote-eta></span>
           </div>
-          <div class="quote-summary-item quote-summary-note" data-quote-note-wrap hidden>
-            <span class="quote-summary-label">Note</span>
-            <span class="quote-summary-value" data-quote-note></span>
+          <div class="quote-summary-item" data-quote-deliverables-wrap hidden>
+            <span class="quote-summary-label">Deliverables</span>
+            <span class="quote-summary-value" data-quote-deliverables></span>
+          </div>
+          <div class="quote-summary-item" data-quote-amount-wrap hidden>
+            <span class="quote-summary-label">Investment</span>
+            <span class="quote-summary-value" data-quote-amount></span>
           </div>
         </div>
       </div>
 
-      <a class="quote-cta" data-quote-cta href="#">Pay securely</a>
+      <a class="quote-cta" data-quote-cta href="#">Approve &amp; Start</a>
     </section>
 
     <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
       <p class="eyebrow"><span class="dot" aria-hidden="true"></span><span>Workspace access</span></p>
       <h2 class="workspace-title" id="workspace-title">Workspace access</h2>
-      <p class="copy" data-workspace-copy>Your workspace opens after your quote is approved and payment is confirmed.</p>
+      <p class="copy" data-workspace-copy>Your workspace opens after your execution plan is approved and the start is confirmed.</p>
 
       <div class="workspace-grid">
         <ul class="workspace-list" aria-label="Workspace access includes">
@@ -589,7 +598,7 @@
         <div class="workspace-actions">
           <a class="workspace-cta" data-workspace-cta href="/workspace">Workspace locked</a>
           <span class="workspace-status" data-workspace-status>Workspace locked</span>
-          <span class="workspace-message" data-workspace-message hidden>Workspace opens after quote approval and payment confirmation.</span>
+          <span class="workspace-message" data-workspace-message hidden>Workspace opens after execution plan approval and start confirmation.</span>
         </div>
       </div>
     </section>
@@ -606,6 +615,9 @@
       const safe = (value, limit = 140) => String(value || "").trim().slice(0, limit);
       const stateAliases = {
         request_received: "review",
+        needs_info: "review",
+        on_hold: "review",
+        archived: "review",
         review_active: "review",
         under_review: "review",
         operator_assigned: "review",
@@ -632,6 +644,9 @@
       let state = stateAliases[requested] || "review";
       const lockedWorkspaceStates = new Set([
         "request_received",
+        "needs_info",
+        "on_hold",
+        "archived",
         "under_review",
         "review_active",
         "quote_preparation",
@@ -673,6 +688,7 @@
         amount: "",
         delivery_eta: "",
         note: "",
+        deliverables: "",
         payment_link: ""
       };
 
@@ -714,9 +730,10 @@
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
         const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
+        const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", shouldShowQuote ? quoteDetails.deliverables : "");
 
         if (summary) {
-          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote);
+          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables);
           summary.hidden = !visible;
           summary.classList.toggle("is-visible", visible);
         }
@@ -724,7 +741,7 @@
         if (cta) {
           cta.classList.remove("is-visible");
           cta.removeAttribute("href");
-          cta.textContent = "Pay securely";
+          cta.textContent = "Approve & Start";
           if (shouldShowQuote && quoteUrl) {
             cta.href = quoteUrl;
             cta.classList.add("is-visible");
@@ -753,39 +770,66 @@
           setText("[data-reference]", reference);
         }
 
+        if (state === "review") {
+          const reviewCopy = {
+            needs_info: "One final item is needed before execution can begin. Reply with the requested detail and DONEOVERNIGHT will continue the review.",
+            on_hold: "This request is on hold. DONEOVERNIGHT will continue as soon as the next operational input is available.",
+            archived: "This request is archived. Reply to the email if you need it reopened.",
+            under_review: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+            review_active: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+            request_received: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step."
+          };
+          setText("[data-state-label]", requested === "needs_info" ? "Needs information" : requested === "on_hold" ? "On hold" : requested === "archived" ? "Archived" : requested === "request_received" ? "Request received" : "Review in progress");
+          setText("#review-title", requested === "needs_info" ? "Needs information." : requested === "on_hold" ? "On hold." : requested === "archived" ? "Request archived." : requested === "request_received" ? "Request received." : "Request under review.");
+          setText("[data-state-copy]", reviewCopy[requested] || reviewCopy.request_received);
+          setStep("received", "complete");
+          setStep("review", requested === "request_received" ? "" : "active");
+          setStep("quote", "");
+          setStep("workspace", "");
+          const reviewChip = document.querySelector("[data-chip='review']");
+          if (reviewChip) reviewChip.textContent = requested === "needs_info" ? "Needs information" : requested === "on_hold" ? "On hold" : "Review in progress";
+        }
+
         if (state === "quote" || state === "quote_ready") {
           const copyByState = {
-            awaiting_payment: "Your quote is ready. Payment confirmation is the next step before workspace access opens.",
-            payment_pending: "Your quote is ready. Payment confirmation is the next step before workspace access opens.",
-            paid: "Payment is confirmed. Workspace access is preparing.",
-            payment_confirmed: "Payment is confirmed. Workspace access is preparing.",
-            quote_sent: "Your request has been reviewed. The quote is ready for the next step.",
-            quote_ready: "Your request has been reviewed. The quote is ready for the next step."
+            awaiting_payment: "Your execution plan is ready. Approve the plan to start execution.",
+            payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
+            paid: "Operators are being assigned and execution is being scheduled.",
+            payment_confirmed: "Operators are being assigned and execution is being scheduled.",
+            quote_sent: "Your request has been reviewed. The execution plan is ready for the next step.",
+            quote_ready: "Your request has been reviewed. The execution plan is ready for the next step."
           };
-          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : requested === "quote_sent" ? "Quote sent" : state === "quote_ready" ? "Quote ready" : "Quote pending");
+          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Operators assigned" : requested === "quote_sent" ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan");
+          setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
-            ? "Your request has been reviewed. The quote is ready for the next step."
-            : "Your request has been reviewed. DONEOVERNIGHT is preparing the quote and next step."));
+            ? "Your request has been reviewed. The execution plan is ready for the next step."
+            : "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step."));
           setStep("received", "complete");
           setStep("review", "complete");
           setStep("quote", ["paid", "payment_confirmed"].includes(requested) ? "complete" : "active");
+          setStep("workspace", ["paid", "payment_confirmed"].includes(requested) ? "active" : "");
           const quoteChip = document.querySelector("[data-chip='quote']");
-          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : requested === "quote_sent" ? "Quote sent" : state === "quote_ready" ? "Quote ready" : "Quote pending";
+          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Execution approved" : requested === "quote_sent" ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan";
+          const workspaceChip = document.querySelector("[data-chip='workspace']");
+          if (workspaceChip && ["paid", "payment_confirmed"].includes(requested)) workspaceChip.textContent = "Operators assigned";
         }
 
         if (state === "workspace_ready") {
-          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : "Workspace ready");
+          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : "Project active");
+          setText("#review-title", ["delivered"].includes(requested) ? "Delivered." : ["revision_requested"].includes(requested) ? "Revision requested." : "Project active.");
           setText("[data-state-copy]", ["delivered"].includes(requested)
             ? "Delivery is prepared in your workspace."
             : ["revision_requested"].includes(requested)
               ? "Your revision request is visible to operations."
-              : "Your workspace is ready for updates, approvals, delivery tracking, and communication.");
+              : "Your project is active for updates, approvals, delivery tracking, and communication.");
         setStep("received", "complete");
         setStep("review", "complete");
           setStep("quote", "complete");
           setStep("workspace", "active");
           const quoteChip = document.querySelector("[data-chip='quote']");
-          if (quoteChip) quoteChip.textContent = "Payment confirmed";
+          if (quoteChip) quoteChip.textContent = "Execution approved";
+          const workspaceChip = document.querySelector("[data-chip='workspace']");
+          if (workspaceChip) workspaceChip.textContent = "Project active";
         }
 
         if (state === "quote_ready" && quoteUrl) {
@@ -835,7 +879,7 @@
           return;
         }
 
-        copy.textContent = "Your workspace opens after your quote is approved and payment is confirmed.";
+        copy.textContent = "Your workspace opens after your execution plan is approved and the start is confirmed.";
         cta.textContent = "Workspace locked";
         cta.classList.add("is-locked");
         cta.href = buildWorkspaceHref();
@@ -843,7 +887,7 @@
 
         cta.addEventListener("click", (event) => {
           event.preventDefault();
-          message.textContent = "Workspace opens after quote approval and payment confirmation.";
+          message.textContent = "Workspace opens after execution plan approval and start confirmation.";
           message.hidden = false;
           cta.classList.remove("is-shaking");
           window.requestAnimationFrame(() => cta.classList.add("is-shaking"));
@@ -870,7 +914,7 @@
             requested = "request_received";
             state = "review";
             quoteUrl = "";
-            quoteDetails = { amount: "", delivery_eta: "", note: "", payment_link: "" };
+            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
             renderReviewState();
             configureWorkspaceAccess();
             return;
@@ -884,6 +928,7 @@
             amount: safe(data.review.quote?.quote_amount || data.review.quote?.amount || "", 80),
             delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
             note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
+            deliverables: safe(data.review.task_summary || data.review.quote?.deliverables || "", 260),
             payment_link: quoteUrl
           };
           renderReviewState();
@@ -892,7 +937,7 @@
           requested = "request_received";
           state = "review";
           quoteUrl = "";
-          quoteDetails = { amount: "", delivery_eta: "", note: "", payment_link: "" };
+          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
           renderReviewState();
           configureWorkspaceAccess();
         }
