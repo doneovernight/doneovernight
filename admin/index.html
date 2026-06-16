@@ -2119,21 +2119,132 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-status-pill.status-active { color: var(--green); }
 .admin-status-pill.status-revoked { color: rgba(245, 241, 234, 0.44); }
 
-.admin-activity {
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
+.admin-activity-feed {
+  display: grid;
+  gap: 8px;
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 3px 6px 3px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233,196,138,.22) rgba(255,255,255,.035);
 }
 
-.admin-activity-feed {
-  max-height: 310px;
-  overflow-y: auto;
-  padding-right: 6px;
+.admin-activity {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(245, 241, 234, 0.07);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(245, 241, 234, 0.028), rgba(245, 241, 234, 0.01)),
+    rgba(5, 6, 8, 0.22);
+  padding: 11px 12px;
+}
+
+.admin-activity::before {
+  position: absolute;
+  top: 28px;
+  bottom: -13px;
+  left: 20px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(233,196,138,.18), transparent);
+  content: "";
+}
+
+.admin-activity:last-child::before {
+  display: none;
+}
+
+.admin-activity-dot {
+  position: relative;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: rgba(233, 196, 138, 0.76);
+  box-shadow: 0 0 14px rgba(233, 196, 138, 0.18);
+}
+
+.admin-activity[data-kind="dispatch"] .admin-activity-dot,
+.admin-activity[data-kind="operator"] .admin-activity-dot {
+  background: rgba(139, 224, 173, 0.78);
+  box-shadow: 0 0 14px rgba(139, 224, 173, 0.18);
+}
+
+.admin-activity[data-kind="payment"] .admin-activity-dot,
+.admin-activity[data-kind="plan"] .admin-activity-dot {
+  background: rgba(244, 210, 138, 0.84);
+  box-shadow: 0 0 16px rgba(244, 210, 138, 0.2);
+}
+
+.admin-activity-main {
+  min-width: 0;
+}
+
+.admin-activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .admin-activity-title {
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.admin-activity-ref {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: rgba(245, 241, 234, 0.46);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.admin-activity-ref strong {
+  color: rgba(233, 196, 138, 0.68);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-activity-meta {
+  margin-top: 5px;
+  color: rgba(245, 241, 234, 0.36);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.admin-activity-time {
+  color: rgba(245, 241, 234, 0.42);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.admin-activity-chip {
+  justify-self: end;
+  border: 1px solid rgba(245, 241, 234, 0.1);
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.035);
+  color: rgba(245, 241, 234, 0.46);
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .admin-activity-view-all {
@@ -2303,6 +2414,22 @@ body.is-admin .admin-dashboard { display: block; }
   }
   .admin-task-action-panel {
     width: min(240px, calc(100vw - 24px));
+  }
+  .admin-activity {
+    grid-template-columns: 16px minmax(0, 1fr);
+  }
+  .admin-activity-chip {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 2px;
+  }
+  .admin-activity-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .admin-activity-time {
+    white-space: normal;
   }
   .revenue-center-head {
     align-items: start;
@@ -5116,81 +5243,125 @@ function focusOperationSection(target) {
 function renderAdminActivity(tasks) {
   if (!adminActivity) return;
   const events = [];
+  const makeEvent = ({ title, taskId = '', client = '', source = '', kind = 'task', chip = 'Task', at }) => ({
+    title,
+    taskId,
+    client,
+    source,
+    kind,
+    chip,
+    at
+  });
   (tasks || []).forEach((task) => {
     const status = normalizeStatus(task.status);
     const paymentStatus = normalizeStatus(task.payment_status);
     const client = task.name || task.email || 'Unknown client';
     const taskId = getTaskId(task);
+    const source = task.source || task.raw_payload?.source || 'ask intake';
     if (task.created_at) {
-      events.push({
+      events.push(makeEvent({
         title: 'Ask received',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'ask',
+        chip: 'Ask',
         at: task.created_at
-      });
+      }));
     }
     if (['review_pending', 'under_review'].includes(status)) {
-      events.push({
+      events.push(makeEvent({
         title: 'Review started',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'review',
+        chip: 'Review',
         at: task.updated_at || task.created_at
-      });
+      }));
     }
     if (status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.payment_link) {
-      events.push({
+      events.push(makeEvent({
         title: 'Execution plan sent',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'plan',
+        chip: 'Plan',
         at: task.quoted_at || task.updated_at || task.created_at
-      });
+      }));
     }
     if (paymentStatus === 'paid') {
-      events.push({
+      events.push(makeEvent({
         title: 'Start confirmed',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'payment',
+        chip: 'Start',
         at: task.paid_at || task.updated_at || task.created_at
-      });
+      }));
     }
     if (['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress'].includes(status)) {
-      events.push({
+      events.push(makeEvent({
         title: 'Workspace opened',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'workspace',
+        chip: 'Workspace',
         at: task.workspace_opened_at || task.updated_at || task.created_at
-      });
+      }));
     }
     if (status === 'delivered') {
-      events.push({
+      events.push(makeEvent({
         title: 'Task delivered',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'delivery',
+        chip: 'Delivered',
         at: getDeliveryDate(task)
-      });
+      }));
     }
     if (status === 'revision_requested') {
-      events.push({
+      events.push(makeEvent({
         title: 'Revision requested',
-        meta: `${taskId} · ${client}`,
+        taskId,
+        client,
+        source,
+        kind: 'revision',
+        chip: 'Revision',
         at: task.updated_at || task.created_at
-      });
+      }));
     }
   });
 
   (adminDispatchContacts || []).forEach((contact) => {
     const at = contact.dispatch_subscribed_at || contact.created_at;
     if (!at) return;
-    events.push({
+    events.push(makeEvent({
       title: 'Dispatch signup',
-      meta: contact.email || contact.page_hostname || 'Dispatch contact',
+      client: contact.email || 'Dispatch contact',
+      source: contact.page_hostname || contact.source || contact.last_source || 'dispatch',
+      kind: 'dispatch',
+      chip: 'Dispatch',
       at
-    });
+    }));
   });
 
   (adminOperators || []).forEach((operator) => {
     if (getOperatorStatusGroup(operator.status) !== 'active') return;
     const at = operator.approved_at || operator.updated_at || operator.created_at;
     if (!at) return;
-    events.push({
+    events.push(makeEvent({
       title: 'Operator approved',
-      meta: operator.email || operator.full_name || operator.display_name || 'Operator',
+      client: operator.full_name || operator.display_name || operator.email || 'Operator',
+      source: operator.role || operator.handle || operator.source || 'operator',
+      kind: 'operator',
+      chip: 'Operator',
       at
-    });
+    }));
   });
 
   const recentEvents = events
@@ -5206,13 +5377,24 @@ function renderAdminActivity(tasks) {
 
   adminActivity.innerHTML = `
     <div class="admin-activity-feed">
-      ${visibleEvents.map((event) => `
-        <div class="admin-activity">
-          <div class="admin-activity-title">${escapeHTML(event.title)}</div>
-          <div class="admin-activity-time">${escapeHTML(event.meta)}</div>
-          <div class="admin-activity-time">${escapeHTML(getRelativeTime(event.at) || formatTaskDate(event.at) || 'Date unavailable')}</div>
+      ${visibleEvents.map((event) => {
+        const relative = getRelativeTime(event.at) || formatTaskDate(event.at) || 'Date unavailable';
+        const reference = event.taskId || 'Operational event';
+        const actor = [event.client, event.source].filter(Boolean).join(' · ') || 'DONEOVERNIGHT';
+        return `
+        <div class="admin-activity" data-kind="${escapeHTML(event.kind || 'task')}">
+          <span class="admin-activity-dot" aria-hidden="true"></span>
+          <div class="admin-activity-main">
+            <div class="admin-activity-head">
+              <div class="admin-activity-title">${escapeHTML(event.title)}</div>
+              <time class="admin-activity-time">${escapeHTML(relative)}</time>
+            </div>
+            <div class="admin-activity-ref"><strong>${escapeHTML(reference)}</strong>${actor ? ` · ${escapeHTML(actor)}` : ''}</div>
+            <div class="admin-activity-meta">${escapeHTML(formatTaskDate(event.at) || '')}</div>
+          </div>
+          <span class="admin-activity-chip">${escapeHTML(event.chip || 'Event')}</span>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
   `;
 }
