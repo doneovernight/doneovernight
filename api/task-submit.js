@@ -48,11 +48,7 @@ function clean(value) {
 function buildClientReviewUrl(task) {
   const secureUrl = buildSecureReviewUrl(task);
   if (secureUrl) return secureUrl;
-  const reviewUrl = new URL("https://portal.doneovernight.com/review");
-  reviewUrl.searchParams.set("state", "request_received");
-  if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
-  if (task?.createdAt) reviewUrl.searchParams.set("submitted", task.createdAt);
-  return reviewUrl.toString();
+  return "";
 }
 
 function buildSecureCheckoutUrl(task) {

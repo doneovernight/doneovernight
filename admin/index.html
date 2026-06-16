@@ -3824,6 +3824,23 @@ function getReviewState(task = {}) {
   return status || 'request_received';
 }
 
+function isTokenizedReviewUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return Boolean(parsed.searchParams.get('task_id') && parsed.searchParams.get('token'));
+  } catch (error) {
+    return false;
+  }
+}
+
+function getTaskSecureReviewUrl(task = {}) {
+  return [task.secure_review_url, task.client_review_url, task.review_url]
+    .map((value) => String(value || '').trim())
+    .find(isTokenizedReviewUrl) || '';
+}
+
 function renderReviews(tasks = adminTasks) {
   if (!adminReviewsList) return;
   const reviewTasks = sortedTasks(tasks)
@@ -3837,6 +3854,7 @@ function renderReviews(tasks = adminTasks) {
     <div class="admin-review-list">
       ${reviewTasks.map((task) => {
         const state = getReviewState(task);
+        const reviewUrl = getTaskSecureReviewUrl(task);
         return `
           <article class="admin-review-row">
             <div>
@@ -3852,7 +3870,7 @@ function renderReviews(tasks = adminTasks) {
             <div>
               <span>Review link</span>
               <strong>${escapeHTML(task.task_id || task.id || 'No task id')}</strong>
-              <p><a href="${escapeHTML(task.secure_review_url || task.client_review_url || `https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}`)}" target="_blank" rel="noopener noreferrer">Open review</a> · Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
+              <p>${reviewUrl ? `<a href="${escapeHTML(reviewUrl)}" target="_blank" rel="noopener noreferrer">Open review</a>` : '<span>Secure link unavailable</span>'} · Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
             </div>
           </article>
         `;
@@ -6382,9 +6400,12 @@ adminTasksList.addEventListener('click', async (e) => {
 
   if (button.dataset.action === 'open-review') {
     const task = (adminTasks || []).find(t => t.id === taskId);
-    const state = getReviewState(task);
-    const reviewTaskId = task?.task_id || task?.taskId || task?.id || '';
-    window.open(task?.secure_review_url || task?.client_review_url || `https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(reviewTaskId)}`, '_blank', 'noopener,noreferrer');
+    const reviewUrl = getTaskSecureReviewUrl(task);
+    if (!reviewUrl) {
+      if (message) message.textContent = 'Secure review link is not available for this task yet.';
+      return;
+    }
+    window.open(reviewUrl, '_blank', 'noopener,noreferrer');
     return;
   }
 
