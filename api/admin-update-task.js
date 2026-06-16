@@ -1,6 +1,7 @@
 const TASK_TABLE = "task_requests";
 const ADMIN_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
+const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -193,16 +194,6 @@ function isQuoteUpdate(input = {}, patch = {}) {
     input.payment_link !== undefined;
 }
 
-function buildQuoteEmailStatus(input = {}, patch = {}) {
-  if (!isQuoteUpdate(input, patch)) return undefined;
-  return {
-    configured: false,
-    sent: false,
-    provider: "not_configured",
-    reason: "admin_quote_email_not_implemented"
-  };
-}
-
 async function verifyAdminKey(adminKey) {
   const key = clean(adminKey);
   if (!key) {
@@ -384,7 +375,17 @@ module.exports = async function handler(req, res) {
     }
     finalizeQuotePatch(patch, existingTask || {});
     const updatedTask = await patchTask(taskId, patch);
-    const quoteEmail = buildQuoteEmailStatus(input, patch);
+    let quoteEmail;
+    if (isQuoteUpdate(input, patch)) {
+      quoteEmail = await sendAdminQuoteEmail(updatedTask).catch((error) => ({
+        configured: false,
+        sent: false,
+        delivered: false,
+        reason: "failed",
+        provider: "none",
+        error: error.code || "ADMIN_QUOTE_EMAIL_FAILED"
+      }));
+    }
     return send(res, 200, {
       success: true,
       task: updatedTask,
