@@ -1742,20 +1742,17 @@ body.is-admin .admin-dashboard { display: block; }
   flex-wrap: wrap;
 }
 
-.admin-task-action-rail {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-  border: 1px solid rgba(245, 241, 234, 0.08);
-  border-radius: 999px;
-  background:
-    linear-gradient(135deg, rgba(233, 196, 138, 0.045), rgba(245, 241, 234, 0.012)),
-    rgba(5, 6, 8, 0.28);
-  padding: 6px;
-  animation: softRise 0.18s ease both;
+.admin-task-actions {
+  border-top: 1px solid rgba(245, 241, 234, 0.06);
+  padding-top: 12px;
+}
+
+.admin-task-actions-label {
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .admin-task-action,
@@ -1772,12 +1769,6 @@ body.is-admin .admin-dashboard { display: block; }
   cursor: pointer;
   box-shadow: 0 0 18px rgba(233, 196, 138, 0.08);
   transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.25s;
-}
-
-.admin-task-action-toggle[aria-expanded="true"] {
-  background: rgba(233, 196, 138, 0.13);
-  border-color: rgba(233, 196, 138, 0.58);
-  color: #ffe3ad;
 }
 
 .admin-task-action:hover,
@@ -2396,15 +2387,17 @@ body.is-admin .admin-dashboard { display: block; }
   .admin-recovery-card {
     grid-template-columns: 1fr;
   }
-  .admin-task-action-rail {
-    align-items: stretch;
-    border-radius: 8px;
+  .admin-task-actions {
     display: grid;
-    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
   }
-  .admin-task-action-rail .admin-task-action {
+  .admin-task-actions-label,
+  .admin-task-message {
+    grid-column: 1 / -1;
+  }
+  .admin-task-action {
     width: 100%;
-    text-align: left;
   }
   .admin-activity {
     grid-template-columns: 16px minmax(0, 1fr);
@@ -3079,7 +3072,6 @@ let activeMetricTarget = '';
 let activeRevenueDrawer = null;
 let adminActivityExpanded = false;
 let adminTaskRenderSignature = '';
-let openTaskActionRailTaskId = '';
 let adminStatsSnapshot = {
   totalTasks: 0,
   pendingReviewTasks: 0,
@@ -4986,7 +4978,6 @@ function renderTasks(tasks) {
     if (task.id && isSaiUniversityBrandingTask(task) && !task.delivery_link) {
       actions.push({ type: 'send-branding', label: 'Send full branding link' });
     }
-    const isActionRailOpen = String(openTaskActionRailTaskId || '') === String(task.id || '');
     const status = normalizeStatus(task.status);
     const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
     const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
@@ -5026,27 +5017,17 @@ function renderTasks(tasks) {
     ` : '';
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
-        <button
-          class="admin-task-action admin-task-action-toggle"
-          type="button"
-          data-task-action-toggle="true"
-          data-task-id="${escapeHTML(task.id)}"
-          aria-expanded="${isActionRailOpen ? 'true' : 'false'}"
-        >Actions</button>
-        ${isActionRailOpen ? `
-          <div class="admin-task-action-rail" role="group" aria-label="Task actions for ${escapeHTML(getTaskId(task))}">
-            ${actions.map((action) => `
-              <button
-                class="admin-task-action"
-                type="button"
-                data-action="${action.type}"
-                ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
-                ${action.intent ? `data-intent="${escapeHTML(action.intent)}"` : ''}
-                data-task-id="${escapeHTML(task.id)}"
-              >${action.label}</button>
-            `).join('')}
-          </div>
-        ` : ''}
+        <span class="admin-task-actions-label">Actions</span>
+        ${actions.map((action) => `
+          <button
+            class="admin-task-action"
+            type="button"
+            data-action="${action.type}"
+            ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
+            ${action.intent ? `data-intent="${escapeHTML(action.intent)}"` : ''}
+            data-task-id="${escapeHTML(task.id)}"
+          >${action.label}</button>
+        `).join('')}
         <span class="admin-task-message" aria-live="polite"></span>
       </div>
     ` : '';
@@ -5103,7 +5084,6 @@ function renderTasks(tasks) {
 
   const nextSignature = JSON.stringify([
     adminTaskFilter,
-    openTaskActionRailTaskId,
     filterCounts,
     groups.map((group) => [
     group.slug,
@@ -6303,26 +6283,8 @@ adminTasksList.addEventListener('click', async (e) => {
   const filterButton = e.target.closest('[data-task-filter]');
   if (filterButton) {
     adminTaskFilter = filterButton.dataset.taskFilter || 'all';
-    openTaskActionRailTaskId = '';
     adminTaskRenderSignature = '';
     renderAdminTasks(adminTasks);
-    return;
-  }
-
-  const actionToggle = e.target.closest('[data-task-action-toggle]');
-  if (actionToggle) {
-    const toggleTaskId = actionToggle.dataset.taskId || '';
-    openTaskActionRailTaskId = openTaskActionRailTaskId === toggleTaskId ? '' : toggleTaskId;
-    adminTaskRenderSignature = '';
-    renderAdminTasks(adminTasks);
-    if (openTaskActionRailTaskId) {
-      window.requestAnimationFrame(() => {
-        const openedToggle = [...adminTasksList.querySelectorAll('[data-task-action-toggle]')]
-          .find((toggle) => toggle.dataset.taskId === openTaskActionRailTaskId);
-        const openedRail = openedToggle?.closest('.admin-task-row')?.querySelector('.admin-task-action-rail');
-        openedRail?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-      });
-    }
     return;
   }
 
