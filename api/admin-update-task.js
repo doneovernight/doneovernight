@@ -379,6 +379,18 @@ async function patchTask(taskId, patch) {
   }
 }
 
+async function patchTaskRawPayload(taskId, existingTask = {}, payloadPatch = {}) {
+  const currentRawPayload = existingTask && typeof existingTask.raw_payload === "object" && existingTask.raw_payload
+    ? existingTask.raw_payload
+    : {};
+  return patchTask(taskId, {
+    raw_payload: {
+      ...currentRawPayload,
+      ...payloadPatch
+    }
+  });
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "PATCH") {
     res.setHeader("Allow", "POST, PATCH");
@@ -408,7 +420,7 @@ module.exports = async function handler(req, res) {
       });
     }
     finalizeQuotePatch(patch, existingTask || {});
-    const updatedTask = await patchTask(taskId, patch);
+    let updatedTask = await patchTask(taskId, patch);
     let quoteEmail;
     let needsInfoEmail;
     if (isQuoteUpdate(input, patch)) {
@@ -420,6 +432,14 @@ module.exports = async function handler(req, res) {
         provider: "none",
         error: error.code || "ADMIN_QUOTE_EMAIL_FAILED"
       }));
+      const emailDelivered = quoteEmail?.delivered === true || quoteEmail?.sent === true;
+      const emailStatus = emailDelivered ? "sent" : (quoteEmail?.configured === false ? "not_configured" : "failed");
+      updatedTask = await patchTaskRawPayload(taskId, updatedTask, {
+        execution_plan_sent_at: patch.quoted_at || new Date().toISOString(),
+        execution_plan_email_status: emailStatus,
+        execution_plan_email_delivered: emailDelivered,
+        execution_plan_email_provider: quoteEmail?.provider || "none"
+      }).catch(() => updatedTask);
     }
     if (isNeedsInfoUpdate(patch)) {
       needsInfoEmail = await sendNeedsInfoEmail(updatedTask).catch((error) => ({

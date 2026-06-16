@@ -45,7 +45,7 @@ lib/email/client-template.js
 The current production logo source is:
 
 ```txt
-https://doneovernight.com/brand/doneovernight-white.png
+https://doneovernight.com/brand/doneovernight-neutral.png
 ```
 
 ## Execution Plan Email

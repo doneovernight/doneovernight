@@ -251,8 +251,8 @@ function getLinkedReviewState(task = {}) {
   if (["workspace_active", "execution_active", "project_active"].includes(status) || ["workspace_active", "execution_active", "project_active"].includes(workspaceStatus)) return "workspace_active";
   if (["workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "workspace_ready";
   if (["paid", "payment_confirmed", "quote_paid"].includes(paymentStatus) || ["paid", "payment_confirmed", "quote_paid"].includes(status)) return "paid";
-  if (["awaiting_payment", "payment_pending"].includes(paymentStatus) || ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(status)) return "awaiting_start";
   if (["execution_plan_ready", "quote_sent", "quoted"].includes(rawState) || ["execution_plan_ready", "quote_sent", "quoted"].includes(status) || task.quote_amount || task.payment_link) return "execution_plan_ready";
+  if (["awaiting_payment", "payment_pending"].includes(paymentStatus) || ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(status)) return "awaiting_start";
   if (rawState === "quote_ready" || status === "quote_ready") return "execution_plan_ready";
   if (["quote_preparation", "quote_preparing"].includes(rawState) || ["quote_preparation", "quote_preparing"].includes(status)) return "quote_preparation";
   if (["review_pending", "review_in_progress", "under_review"].includes(status) || ["under_review", "review_in_progress", "review_active"].includes(rawState)) return "under_review";
@@ -304,6 +304,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
       delivery_eta: deliveryEta,
       note: quoteNote,
       quote_note: quoteNote,
+      deliverables: firstClean(task.task_summary, task.task_description, task.raw_payload?.task_summary, task.raw_payload?.task_description, ""),
       payment_required: paymentIsOpen,
       payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
       reference: firstClean(task.task_id, task.taskId, task.id),
