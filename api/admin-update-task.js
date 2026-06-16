@@ -2,6 +2,7 @@ const TASK_TABLE = "task_requests";
 const ADMIN_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
+const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -210,6 +211,10 @@ function isQuoteUpdate(input = {}, patch = {}) {
     input.payment_link !== undefined;
 }
 
+function isNeedsInfoUpdate(patch = {}) {
+  return patch.status === "needs_info";
+}
+
 async function verifyAdminKey(adminKey) {
   const key = clean(adminKey);
   if (!key) {
@@ -384,8 +389,9 @@ module.exports = async function handler(req, res) {
     }
 
     const patch = buildPatch(input);
-    const existingTask = isQuoteUpdate(input, patch) ? await loadTask(taskId) : null;
-    if (isQuoteUpdate(input, patch) && !existingTask) {
+    const shouldLoadExistingTask = isQuoteUpdate(input, patch) || isNeedsInfoUpdate(patch);
+    const existingTask = shouldLoadExistingTask ? await loadTask(taskId) : null;
+    if (shouldLoadExistingTask && !existingTask) {
       return send(res, 404, {
         success: false,
         error: "Task not found",
@@ -395,6 +401,7 @@ module.exports = async function handler(req, res) {
     finalizeQuotePatch(patch, existingTask || {});
     const updatedTask = await patchTask(taskId, patch);
     let quoteEmail;
+    let needsInfoEmail;
     if (isQuoteUpdate(input, patch)) {
       quoteEmail = await sendAdminQuoteEmail(updatedTask).catch((error) => ({
         configured: false,
@@ -405,12 +412,23 @@ module.exports = async function handler(req, res) {
         error: error.code || "ADMIN_QUOTE_EMAIL_FAILED"
       }));
     }
+    if (isNeedsInfoUpdate(patch)) {
+      needsInfoEmail = await sendNeedsInfoEmail(updatedTask).catch((error) => ({
+        configured: false,
+        sent: false,
+        delivered: false,
+        reason: "failed",
+        provider: "none",
+        error: error.code || "ADMIN_NEEDS_INFO_EMAIL_FAILED"
+      }));
+    }
     return send(res, 200, {
       success: true,
       task: updatedTask,
       updated_task: updatedTask,
       data: updatedTask,
-      ...(quoteEmail ? { quoteEmail } : {})
+      ...(quoteEmail ? { quoteEmail } : {}),
+      ...(needsInfoEmail ? { needsInfoEmail } : {})
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {

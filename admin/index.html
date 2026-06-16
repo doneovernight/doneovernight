@@ -3461,32 +3461,46 @@ function getDaysSince(value) {
 function getRevenueRecovery(task = {}) {
   const waitingSince = task.quoted_at || task.updated_at || task.created_at;
   const days = getDaysSince(waitingSince);
+  if (days < 1) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: '24h',
+      suggestedAction: 'Still reviewing your execution plan?'
+    };
+  }
   if (days < 2) {
     return {
       daysWaiting: `${days}`,
-      nextFollowup: days === 0 ? 'Day 2' : 'Tomorrow',
-      suggestedAction: 'Send Reminder'
+      nextFollowup: '48h',
+      suggestedAction: 'Gentle check-in'
     };
   }
-  if (days < 5) {
+  if (days < 3) {
     return {
       daysWaiting: `${days}`,
-      nextFollowup: 'Day 5',
-      suggestedAction: 'Alternative Scope'
+      nextFollowup: '72h',
+      suggestedAction: 'Questions before we start?'
     };
   }
-  if (days < 10) {
+  if (days < 7) {
     return {
       daysWaiting: `${days}`,
-      nextFollowup: 'Day 10',
-      suggestedAction: 'New Solution Recommendation'
+      nextFollowup: '7d',
+      suggestedAction: 'Would a smaller version help?'
+    };
+  }
+  if (days < 14) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: '14d',
+      suggestedAction: 'Should we keep this open?'
     };
   }
   if (days < 21) {
     return {
       daysWaiting: `${days}`,
-      nextFollowup: 'Day 21',
-      suggestedAction: 'Referral Opportunity'
+      nextFollowup: 'Referral recovery',
+      suggestedAction: 'Ask for a relevant referral'
     };
   }
   return {
@@ -3498,7 +3512,7 @@ function getRevenueRecovery(task = {}) {
 
 function updateStats(tasks = adminTasks, clients = adminClients) {
   const newTasksCount = tasks.filter((task) => ['new', 'request_received'].includes(normalizeStatus(task.status))).length;
-  const pendingReviewCount = tasks.filter((task) => normalizeStatus(task.status) === 'needs_info').length;
+  const pendingReviewCount = tasks.filter((task) => ['review_pending', 'review_in_progress', 'quote_preparation'].includes(normalizeStatus(task.status))).length;
   const quoteNeededCount = tasks.filter((task) => ['quote_sent', 'quoted', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment'].includes(normalizeStatus(task.status)) || normalizeStatus(task.payment_status) === 'awaiting_payment').length;
   const awaitingPaymentCount = tasks.filter((task) => normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(normalizeStatus(task.status))).length;
   const workspaceReadyCount = tasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;
@@ -5680,10 +5694,12 @@ async function updateTask(button, payload) {
       renderAdminTaskState(nextTasks);
     }
     await loadTasks();
+    return data;
   } catch (error) {
     button.disabled = false;
     button.textContent = previousText;
     if (message) message.textContent = payload.status === 'rejected' ? 'Could not reject task.' : 'Could not update task.';
+    return null;
   }
 }
 
@@ -6175,12 +6191,20 @@ adminTasksList.addEventListener('click', async (e) => {
     if (button.dataset.status === 'needs_info') {
       const question = window.prompt('What information is needed from the client?');
       if (!question || !question.trim()) return;
-      await moveTaskToStage(button, taskId, button.dataset.status, {
+      const data = await moveTaskToStage(button, taskId, button.dataset.status, {
         delivery_note: `Information requested: ${question.trim()}`
       });
       const row = button.closest('.admin-task-row');
       const message = row?.querySelector('.admin-task-message');
-      if (message) message.textContent = 'Information request stored. Client email automation is not configured yet.';
+      if (message) {
+        if (data?.needsInfoEmail?.delivered) {
+          message.textContent = 'Information request sent to client.';
+        } else if (data?.needsInfoEmail?.configured === false) {
+          message.textContent = 'Information request stored. Email route not configured yet.';
+        } else {
+          message.textContent = 'Information request stored. Email delivery not confirmed.';
+        }
+      }
       button.closest('details')?.removeAttribute('open');
       return;
     }

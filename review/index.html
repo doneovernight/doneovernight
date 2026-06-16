@@ -311,6 +311,39 @@
       display: block;
     }
 
+    .info-request {
+      display: none;
+      max-width: 640px;
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid rgba(233,196,138,0.2);
+      border-radius: 10px;
+      background: rgba(233,196,138,0.045);
+    }
+
+    .info-request.is-visible {
+      display: block;
+    }
+
+    .info-request-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .info-request-text {
+      margin: 0;
+      color: var(--ink);
+      font-size: 0.98rem;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
     .quote-summary-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -683,6 +716,11 @@
         </div>
       </div>
 
+      <div class="info-request" data-info-request hidden>
+        <span class="info-request-label">Requested information</span>
+        <p class="info-request-text" data-info-request-text></p>
+      </div>
+
       <p class="confidence-note" data-confidence-note>Execution begins immediately after approval.</p>
 
       <section class="start-now" data-start-now hidden aria-labelledby="start-now-title">
@@ -828,6 +866,7 @@
         payment_reference: "",
         payment_link: ""
       };
+      let informationRequest = "";
 
       if (reference) {
         requested = "request_received";
@@ -922,6 +961,16 @@
             setText("[data-start-timeline]", quoteDetails.delivery_eta || "Execution starts after approval.");
           }
         }
+      }
+
+      function renderInformationRequest() {
+        const wrap = document.querySelector("[data-info-request]");
+        const text = document.querySelector("[data-info-request-text]");
+        if (!wrap || !text) return;
+        const visible = requested === "needs_info" && Boolean(informationRequest);
+        wrap.hidden = !visible;
+        wrap.classList.toggle("is-visible", visible);
+        text.textContent = visible ? informationRequest : "";
       }
 
       function buildWorkspaceHref() {
@@ -1021,6 +1070,7 @@
         }
 
         renderQuoteDetails();
+        renderInformationRequest();
       }
 
       function configureWorkspaceAccess() {
@@ -1096,6 +1146,7 @@
             requested = "request_received";
             state = "review";
             quoteUrl = "";
+            informationRequest = "";
             quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
             renderReviewState();
             configureWorkspaceAccess();
@@ -1105,6 +1156,7 @@
           requested = safe(data.review.state || data.review.status).toLowerCase() || "request_received";
           state = stateAliases[requested] || "review";
           reference = safe(data.review.task_id || reference, 80);
+          informationRequest = safe(data.review.information_request || data.review.requested_information || "", 500);
           quoteUrl = safe(data.review.quote?.payment_link || "", 500);
           quoteDetails = {
             amount: safe(data.review.quote?.quote_amount || data.review.quote?.amount || "", 80),
@@ -1124,6 +1176,7 @@
           requested = "request_received";
           state = "review";
           quoteUrl = "";
+          informationRequest = "";
           quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
           renderReviewState();
           configureWorkspaceAccess();

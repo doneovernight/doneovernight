@@ -82,6 +82,11 @@ function firstClean(...values) {
   return "";
 }
 
+function extractInformationRequest(...values) {
+  const request = firstClean(...values);
+  return request.replace(/^information requested:\s*/i, "").trim();
+}
+
 function buildTaskFilter(taskId) {
   const encoded = encodeURIComponent(taskId);
   if (TASK_ID_PATTERN.test(taskId)) return `task_id=eq.${encoded}`;
@@ -135,6 +140,14 @@ function publicTaskSnapshot(task = {}, reviewState) {
   const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
   const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
   const paymentLink = firstClean(task.payment_link, task.raw_payload?.payment_link, "");
+  const informationRequest = extractInformationRequest(
+    task.information_request,
+    task.info_request,
+    task.delivery_note,
+    task.raw_payload?.information_request,
+    task.raw_payload?.info_request,
+    task.raw_payload?.delivery_note
+  );
   const quoteIsReady = ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState);
   const paymentIsOpen = ["quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment"].includes(reviewState);
 
@@ -150,6 +163,8 @@ function publicTaskSnapshot(task = {}, reviewState) {
     submitted_at: firstClean(task.created_at, task.raw_payload?.created_at, ""),
     updated_at: firstClean(task.updated_at, task.created_at, ""),
     task_summary: firstClean(task.task_summary, task.task_description, task.raw_payload?.task_summary, task.raw_payload?.task_description, ""),
+    information_request: reviewState === "needs_info" ? informationRequest : "",
+    requested_information: reviewState === "needs_info" ? informationRequest : "",
     quote: {
       ready: quoteIsReady,
       status: reviewState,
