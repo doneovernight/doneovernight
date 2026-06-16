@@ -283,6 +283,19 @@
       display: inline-flex;
     }
 
+    .activation-note {
+      display: none;
+      max-width: 520px;
+      margin-top: 12px;
+      color: rgba(248,244,236,0.48);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .activation-note.is-visible {
+      display: block;
+    }
+
     .payment-reference {
       display: none;
       margin-top: 12px;
@@ -747,6 +760,7 @@
       </section>
 
       <a class="quote-cta" data-quote-cta href="#">Approve &amp; Start</a>
+      <p class="activation-note" data-activation-note>Your workspace is activated automatically after approval and start confirmation.</p>
       <p class="payment-reference" data-payment-reference></p>
     </section>
 
@@ -898,6 +912,7 @@
       function renderQuoteDetails() {
         const summary = document.querySelector("[data-quote-summary]");
         const cta = document.querySelector("[data-quote-cta]");
+        const activationNote = document.querySelector("[data-activation-note]");
         const paymentReference = document.querySelector("[data-payment-reference]");
         const confidence = document.querySelector("[data-confidence-note]");
         const startNow = document.querySelector("[data-start-now]");
@@ -933,6 +948,10 @@
               });
             };
           }
+        }
+
+        if (activationNote) {
+          activationNote.classList.toggle("is-visible", shouldShowQuote && Boolean(quoteUrl));
         }
 
         if (paymentReference) {
