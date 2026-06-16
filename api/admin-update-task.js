@@ -69,9 +69,14 @@ function extractQuoteAmountDigits(value) {
   return String(value).replace(/[^\d]/g, "");
 }
 
-function buildBunqPaymentLink(value) {
+function buildBunqPaymentLink(value, reference = "") {
   const amount = extractQuoteAmountDigits(value);
-  return amount ? `https://bunq.me/doneovernight?amount=${amount}` : "";
+  if (!amount) return "";
+  const params = new URLSearchParams({ amount });
+  const cleanReference = clean(reference);
+  // bunq.me preserves unknown query params; description is used here as a payment reference hint.
+  if (cleanReference) params.set("description", cleanReference);
+  return `https://bunq.me/doneovernight?${params.toString()}`;
 }
 
 function getSupabaseConfig() {
@@ -289,7 +294,10 @@ function finalizeQuotePatch(patch, existingTask = {}) {
   }
 
   if (!hasSubmittedPaymentLink && !existingPaymentLink) {
-    const generatedPaymentLink = buildBunqPaymentLink(patch.quote_amount || existingTask.quote_amount || existingTask.raw_payload?.quote_amount);
+    const generatedPaymentLink = buildBunqPaymentLink(
+      patch.quote_amount || existingTask.quote_amount || existingTask.raw_payload?.quote_amount,
+      existingTask.task_id || existingTask.taskId || existingTask.id
+    );
     if (generatedPaymentLink) patch.payment_link = generatedPaymentLink;
   }
 

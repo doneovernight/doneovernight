@@ -5782,7 +5782,7 @@ function _openOpModal(type, task) {
         <div class="op-modal-field">
           <label for="omQLink">Custom Payment Link <span class="field-opt">optional</span></label>
           <input id="omQLink" name="payment_link" type="url" placeholder="https://bunq.me/doneovernight?amount=350" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
-          <p class="field-opt">Leave empty to automatically generate a Bunq payment link.</p>
+          <p class="field-opt">Leave empty to auto-generate a Bunq link with the investment amount and DON reference.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';
@@ -6065,9 +6065,14 @@ adminActivity?.addEventListener('click', (event) => {
   renderAdminActivity(adminTasks);
 });
 
-function buildBunqPaymentLinkFromQuote(value) {
+function buildBunqPaymentLinkFromQuote(value, reference = '') {
   const amount = String(value || '').replace(/[^\d]/g, '');
-  return amount ? `https://bunq.me/doneovernight?amount=${amount}` : '';
+  if (!amount) return '';
+  const params = new URLSearchParams({ amount });
+  const cleanReference = String(reference || '').trim();
+  // bunq.me keeps this query value as a payment reference hint; the review page also shows the DON reference.
+  if (cleanReference) params.set('description', cleanReference);
+  return `https://bunq.me/doneovernight?${params.toString()}`;
 }
 
 adminTasksList.addEventListener('click', async (e) => {
@@ -6089,7 +6094,8 @@ adminTasksList.addEventListener('click', async (e) => {
     const task = (adminTasks || []).find(t => t.id === taskId);
     const quote = await promptForQuote(task);
     if (!quote) return;
-    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount);
+    const paymentReference = task?.task_id || task?.taskId || task?.id || taskId;
+    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount, paymentReference);
 
     await updateTask(button, {
       id: taskId,

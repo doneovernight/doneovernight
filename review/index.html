@@ -261,6 +261,21 @@
       display: inline-flex;
     }
 
+    .payment-reference {
+      display: none;
+      margin-top: 12px;
+      color: rgba(248,244,236,0.5);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .payment-reference.is-visible {
+      display: block;
+    }
+
     .quote-summary {
       display: none;
       max-width: 640px;
@@ -668,6 +683,7 @@
       </section>
 
       <a class="quote-cta" data-quote-cta href="#">Approve &amp; Start</a>
+      <p class="payment-reference" data-payment-reference></p>
     </section>
 
     <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
@@ -778,6 +794,7 @@
         delivery_eta: "",
         note: "",
         deliverables: "",
+        payment_reference: "",
         payment_link: ""
       };
 
@@ -815,6 +832,7 @@
       function renderQuoteDetails() {
         const summary = document.querySelector("[data-quote-summary]");
         const cta = document.querySelector("[data-quote-cta]");
+        const paymentReference = document.querySelector("[data-payment-reference]");
         const confidence = document.querySelector("[data-confidence-note]");
         const startNow = document.querySelector("[data-start-now]");
         const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
@@ -837,6 +855,12 @@
             cta.href = quoteUrl;
             cta.classList.add("is-visible");
           }
+        }
+
+        if (paymentReference) {
+          const visible = shouldShowQuote && quoteDetails.payment_reference;
+          paymentReference.classList.toggle("is-visible", Boolean(visible));
+          paymentReference.textContent = visible ? `Payment reference: ${quoteDetails.payment_reference}` : "";
         }
 
         if (confidence) {
@@ -1026,7 +1050,7 @@
             requested = "request_received";
             state = "review";
             quoteUrl = "";
-            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
+            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
             renderReviewState();
             configureWorkspaceAccess();
             return;
@@ -1041,6 +1065,7 @@
             delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
             note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
             deliverables: safe(data.review.task_summary || data.review.quote?.deliverables || "", 260),
+            payment_reference: safe(data.review.quote?.payment_reference || data.review.task_id || reference, 120),
             payment_link: quoteUrl
           };
           renderReviewState();
@@ -1049,7 +1074,7 @@
           requested = "request_received";
           state = "review";
           quoteUrl = "";
-          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
+          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
           renderReviewState();
           configureWorkspaceAccess();
         }

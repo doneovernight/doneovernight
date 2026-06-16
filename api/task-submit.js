@@ -160,6 +160,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
       quote_note: quoteNote,
       payment_required: reviewState === "awaiting_payment",
       payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
+      payment_reference: firstClean(task.task_id, task.taskId, task.id),
       payment_link: paymentIsOpen ? paymentLink : ""
     },
     workspace: {
