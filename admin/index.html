@@ -2684,7 +2684,7 @@ body.is-admin .admin-dashboard { display: block; }
           </div>
           <p class="revenue-center-note">Only real task, plan, and manual start states are shown.</p>
         </div>
-        <div class="section-kicker" id="adminPaymentStatusNote">Secure checkout status loading...</div>
+        <div class="section-kicker" id="adminPaymentStatusNote">Payment system status loading...</div>
 
         <div class="revenue-cards-grid">
           <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
@@ -3949,12 +3949,11 @@ function renderStatusPanels(status = adminSystemStatus) {
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Ready' : 'Not connected';
   if (adminPaymentStatusNote) {
-    const manualSecureCheckout = integrations.manualSecureCheckout || integrations.manualBunqLinks;
     adminPaymentStatusNote.textContent = integrations.payments
-      ? 'Secure checkout connected'
-      : manualSecureCheckout
-        ? 'Manual Secure Checkout Active'
-        : 'Secure checkout unavailable.';
+      ? 'Payment system connected'
+      : integrations.manualBunqLinks
+        ? 'Manual Bunq Links Active'
+        : 'Payment provider unavailable.';
   }
   if (adminSettingsList) {
     adminSettingsList.innerHTML = [
@@ -4239,7 +4238,7 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
         ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
         ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
-        ${renderHeartbeatStatusCard('Secure checkout', statusLayer.payments)}
+        ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
         ${renderHeartbeatStatusCard('Funnel Tracking', statusLayer.analytics)}
         ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
