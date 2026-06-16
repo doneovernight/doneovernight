@@ -1356,9 +1356,13 @@ body.is-admin .admin-dashboard { display: block; }
   gap: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
-  max-height: none;
-  overflow: visible;
-  padding-right: 0;
+  max-height: clamp(420px, calc(100vh - 260px), 760px);
+  overflow-x: visible;
+  overflow-y: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233,196,138,.26) rgba(255,255,255,.04);
 }
 
 .operation-group {
@@ -1751,18 +1755,24 @@ body.is-admin .admin-dashboard { display: block; }
 }
 
 .admin-task-action-panel {
-  position: absolute;
-  right: 0;
-  z-index: 20;
+  position: fixed;
+  top: var(--task-action-menu-top, 0);
+  left: var(--task-action-menu-left, 0);
+  z-index: 10000;
   display: grid;
   gap: 6px;
   min-width: 190px;
-  margin-top: 8px;
+  max-width: min(260px, calc(100vw - 24px));
+  margin-top: 0;
   padding: 8px;
   border: 1px solid rgba(245, 241, 234, 0.12);
   border-radius: 8px;
   background: rgba(6, 7, 9, 0.96);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+.admin-task-action-menu[data-placement="top"] .admin-task-action-panel {
+  margin-top: 0;
 }
 
 .admin-task-action-panel .admin-task-action {
@@ -2273,7 +2283,6 @@ body.is-admin .admin-dashboard { display: block; }
   .admin-sidebar-nav a {
     white-space: nowrap;
   }
-  .admin-task-list,
   .admin-client-list,
   .admin-operator-list,
   .admin-dispatch-list,
@@ -2293,8 +2302,7 @@ body.is-admin .admin-dashboard { display: block; }
     grid-template-columns: 1fr;
   }
   .admin-task-action-panel {
-    left: 0;
-    right: auto;
+    width: min(240px, calc(100vw - 24px));
   }
   .revenue-center-head {
     align-items: start;
@@ -4899,7 +4907,7 @@ function renderTasks(tasks) {
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
         <details class="admin-task-action-menu">
-          <summary class="admin-task-action">Actions</summary>
+          <summary class="admin-task-action admin-task-action-menu-toggle" aria-label="Task actions">Actions</summary>
           <div class="admin-task-action-panel">
             ${actions.map((action) => `
               <button
@@ -6109,6 +6117,49 @@ function buildBunqPaymentLinkFromQuote(value, reference = '', taskReference = ''
   return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }
 
+function closeTaskActionMenus(exceptMenu = null) {
+  if (!adminTasksList) return;
+  adminTasksList.querySelectorAll('.admin-task-action-menu[open]').forEach((menu) => {
+    if (menu === exceptMenu) return;
+    menu.removeAttribute('open');
+    menu.removeAttribute('data-placement');
+  });
+}
+
+function positionTaskActionMenu(menu) {
+  const toggle = menu?.querySelector('.admin-task-action-menu-toggle');
+  const panel = menu?.querySelector('.admin-task-action-panel');
+  if (!menu?.open || !toggle || !panel) return;
+
+  const gap = 8;
+  const viewportMargin = 12;
+  const toggleRect = toggle.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const panelWidth = Math.min(
+    Math.max(panelRect.width || 190, 190),
+    Math.max(190, window.innerWidth - viewportMargin * 2)
+  );
+  const panelHeight = panelRect.height || 220;
+  const spaceBelow = window.innerHeight - toggleRect.bottom - gap - viewportMargin;
+  const spaceAbove = toggleRect.top - gap - viewportMargin;
+  const opensAbove = spaceBelow < panelHeight && spaceAbove > spaceBelow;
+  const rawTop = opensAbove
+    ? toggleRect.top - panelHeight - gap
+    : toggleRect.bottom + gap;
+  const top = Math.min(
+    Math.max(viewportMargin, rawTop),
+    Math.max(viewportMargin, window.innerHeight - panelHeight - viewportMargin)
+  );
+  const left = Math.min(
+    Math.max(viewportMargin, toggleRect.right - panelWidth),
+    Math.max(viewportMargin, window.innerWidth - panelWidth - viewportMargin)
+  );
+
+  menu.style.setProperty('--task-action-menu-top', `${Math.round(top)}px`);
+  menu.style.setProperty('--task-action-menu-left', `${Math.round(left)}px`);
+  menu.dataset.placement = opensAbove ? 'top' : 'bottom';
+}
+
 adminTasksList.addEventListener('click', async (e) => {
   const filterButton = e.target.closest('[data-task-filter]');
   if (filterButton) {
@@ -6118,11 +6169,22 @@ adminTasksList.addEventListener('click', async (e) => {
     return;
   }
 
+  const menuToggle = e.target.closest('.admin-task-action-menu-toggle');
+  if (menuToggle) {
+    const menu = menuToggle.closest('.admin-task-action-menu');
+    window.requestAnimationFrame(() => {
+      if (!menu?.open) return;
+      closeTaskActionMenus(menu);
+      positionTaskActionMenu(menu);
+    });
+  }
+
   const button = e.target.closest('.admin-task-action');
   if (!button || button.disabled) return;
 
   const taskId = button.dataset.taskId;
   if (!taskId) return;
+  closeTaskActionMenus();
 
   if (button.dataset.action === 'quote') {
     const task = (adminTasks || []).find(t => t.id === taskId);
@@ -6247,6 +6309,19 @@ adminTasksList.addEventListener('click', async (e) => {
     }
   }
 });
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest('.admin-task-action-menu')) return;
+  closeTaskActionMenus();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeTaskActionMenus();
+});
+
+adminTasksList.addEventListener('scroll', () => closeTaskActionMenus(), { passive: true });
+window.addEventListener('resize', () => closeTaskActionMenus(), { passive: true });
+window.addEventListener('scroll', () => closeTaskActionMenus(), { passive: true });
 
 /* ── Revenue Drawer ─────────────────────────────────────── */
 
