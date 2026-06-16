@@ -6,7 +6,12 @@ const VALID_STATUSES = new Set([
   "review_pending",
   "new",
   "quoted",
+  "quote_sent",
   "awaiting_payment",
+  "payment_confirmed",
+  "workspace_ready",
+  "workspace_active",
+  "execution_active",
   "verification_pending",
   "queued",
   "in_progress",
@@ -21,6 +26,7 @@ const VALID_STATUSES = new Set([
 const VALID_PAYMENT_STATUSES = new Set([
   "not_required_yet",
   "awaiting_payment",
+  "payment_confirmed",
   "paid",
   "payment_failed",
   "refunded"

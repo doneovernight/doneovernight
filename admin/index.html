@@ -2463,7 +2463,7 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="admin-sidebar-label">Admin OS</div>
         <nav class="admin-sidebar-nav">
           <a class="is-active" href="#adminOverviewSection" data-admin-nav="overview">Overview</a>
-          <a href="#adminTasksSection" data-admin-nav="asks">Asks</a>
+          <a href="#adminTasksSection" data-admin-nav="asks">Asks / Tasks</a>
           <a href="#adminClientsSection" data-admin-nav="clients">Clients / Dispatch</a>
           <a href="#adminReviewsSection" data-admin-nav="reviews">Reviews</a>
           <a href="#adminQuotesPaymentsSection" data-admin-nav="quotes">Quotes / Payments</a>
@@ -2554,7 +2554,7 @@ body.is-admin .admin-dashboard { display: block; }
 
     <div class="admin-grid">
       <section class="admin-section is-wide" id="adminTasksSection" data-admin-section="asks">
-        <h2>Asks</h2>
+        <h2>Asks / Tasks</h2>
         <div class="section-kicker"><span class="realtime-indicator">Realtime connected</span></div>
         <div id="adminTasksList">
           <div class="placeholder">Loading tasks...</div>
@@ -2961,7 +2961,12 @@ function getStatusLabel(status) {
     review_pending: 'Review pending',
     new: 'Quote pending',
     quoted: 'Quote sent',
+    quote_sent: 'Quote sent',
     awaiting_payment: 'Awaiting payment',
+    payment_confirmed: 'Payment confirmed',
+    workspace_ready: 'Workspace ready',
+    workspace_active: 'Workspace active',
+    execution_active: 'Execution active',
     verification_pending: 'Verification pending',
     queued: 'Queued',
     in_progress: 'In progress',
@@ -3048,6 +3053,7 @@ function getPaymentStatusLabel(status) {
   const labels = {
     not_required_yet: 'Not required yet',
     awaiting_payment: 'Awaiting payment',
+    payment_confirmed: 'Payment confirmed',
     paid: 'Paid',
     payment_failed: 'Payment failed',
     refunded: 'Refunded'
@@ -3070,8 +3076,18 @@ function getTaskActions(status) {
       { type: 'quote', label: 'Edit quote' },
       { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' }
     ],
+    quote_sent: [
+      { type: 'quote', label: 'Edit quote' },
+      { type: 'move', label: 'Awaiting payment', status: 'awaiting_payment' }
+    ],
     awaiting_payment: [
-      { type: 'move', label: 'Payment submitted', status: 'verification_pending' }
+      { type: 'move', label: 'Payment confirmed', status: 'payment_confirmed' }
+    ],
+    payment_confirmed: [
+      { type: 'move', label: 'Workspace ready', status: 'workspace_ready' }
+    ],
+    workspace_ready: [
+      { type: 'move', label: 'Unlock workspace', status: 'workspace_active' }
     ],
     verification_pending: [
       { type: 'move', label: 'Queue task', status: 'queued' }
@@ -3201,7 +3217,7 @@ function getTaskRenderSignature(task) {
 }
 
 function getLifecycleIndex(status) {
-  const stages = ['review_pending', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
+  const stages = ['review_pending', 'quote_sent', 'awaiting_payment', 'payment_confirmed', 'workspace_ready', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
   const normalized = normalizeStatus(status) === 'new' ? 'review_pending' : normalizeStatus(status);
   if (normalized === 'revision_requested') return stages.indexOf('in_progress');
   const index = stages.indexOf(normalized);
@@ -3211,10 +3227,10 @@ function getLifecycleIndex(status) {
 function renderLifecycle(status) {
   const stages = [
     ['review_pending', 'Review'],
-    ['quoted', 'Quote'],
+    ['quote_sent', 'Quote'],
     ['awaiting_payment', 'Pay'],
-    ['verification_pending', 'Verify'],
-    ['queued', 'Queue'],
+    ['payment_confirmed', 'Confirm'],
+    ['workspace_ready', 'Workspace'],
     ['in_progress', 'Work'],
     ['delivery_prep', 'Prep'],
     ['delivered', 'Delivery'],
@@ -3434,7 +3450,9 @@ function getReviewState(task = {}) {
   if (status === 'review_pending') return 'under_review';
   if (status === 'quoted') return task.quote_amount ? 'quote_ready' : 'quote_preparation';
   if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting_payment';
-  if (paymentStatus === 'paid') return 'quote_paid';
+  if (paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'paid';
+  if (paymentStatus === 'paid') return 'paid';
+  if (status === 'workspace_ready') return 'workspace_ready';
   if (status === 'workspace_active') return 'workspace_active';
   if (['queued', 'in_progress', 'delivery_prep'].includes(status)) return 'execution_active';
   if (status === 'delivered') return 'delivered';
@@ -3469,7 +3487,7 @@ function renderReviews(tasks = adminTasks) {
             <div>
               <span>Review link</span>
               <strong>${escapeHTML(task.task_id || task.id || 'No task id')}</strong>
-              <p><a href="https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}" target="_blank" rel="noopener noreferrer">Open review</a> · Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
+              <p><a href="${escapeHTML(task.secure_review_url || task.client_review_url || `https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(task.task_id || task.id || '')}`)}" target="_blank" rel="noopener noreferrer">Open review</a> · Updated ${escapeHTML(formatTaskDate(task.updated_at || task.created_at) || 'Unavailable')}</p>
             </div>
           </article>
         `;
@@ -3552,9 +3570,9 @@ function renderDeliveredTasks(tasks = adminTasks) {
 function getQuotePaymentState(task = {}) {
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  if (paymentStatus === 'paid') return 'paid';
+  if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'paid';
   if (paymentStatus === 'awaiting_payment' || status === 'awaiting_payment') return 'awaiting payment';
-  if (status === 'quoted' || task.quote_amount || task.payment_link) return 'quote sent';
+  if (status === 'quote_sent' || status === 'quoted' || task.quote_amount || task.payment_link) return 'quote sent';
   return 'quote pending';
 }
 
@@ -3597,7 +3615,8 @@ function getWorkspaceStatus(task = {}) {
   const status = normalizeStatus(task.workspace_status || task.raw_payload?.workspace_status || task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
   if (status === 'workspace_active' || status === 'execution_active') return status;
-  if (paymentStatus === 'paid') return 'ready to unlock';
+  if (status === 'workspace_ready') return 'ready to unlock';
+  if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'ready to unlock';
   if (['awaiting_payment', 'payment_pending'].includes(paymentStatus) || normalizeStatus(task.status) === 'awaiting_payment') return 'locked · payment pending';
   if (task.quote_amount || normalizeStatus(task.status) === 'quoted') return 'locked · quote pending';
   return 'locked · review active';
@@ -5802,7 +5821,7 @@ adminTasksList.addEventListener('click', async (e) => {
 
     await updateTask(button, {
       id: taskId,
-      status: 'quoted',
+      status: 'quote_sent',
       quote_amount: quote.quote_amount,
       delivery_eta: quote.delivery_eta,
       quote_note: quote.quote_note,
@@ -5823,7 +5842,7 @@ adminTasksList.addEventListener('click', async (e) => {
     const task = (adminTasks || []).find(t => t.id === taskId);
     const state = getReviewState(task);
     const reviewTaskId = task?.task_id || task?.taskId || task?.id || '';
-    window.open(`https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(reviewTaskId)}`, '_blank', 'noopener,noreferrer');
+    window.open(task?.secure_review_url || task?.client_review_url || `https://portal.doneovernight.com/review?state=${encodeURIComponent(state)}&task_id=${encodeURIComponent(reviewTaskId)}`, '_blank', 'noopener,noreferrer');
     return;
   }
 

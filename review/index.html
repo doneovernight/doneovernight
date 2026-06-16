@@ -547,11 +547,20 @@
         quote_sent: "quote_ready",
         awaiting_payment: "quote_ready",
         payment_pending: "quote_ready",
+        paid: "quote_ready",
+        payment_confirmed: "quote_ready",
+        workspace_ready: "workspace_ready",
+        workspace_unlocking: "workspace_ready",
+        workspace_active: "workspace_ready",
+        execution_active: "workspace_ready",
+        delivered: "workspace_ready",
+        revision_requested: "workspace_ready",
         awaiting_approval: "quote_ready",
         approval: "quote_ready"
       };
-      const requested = safe(params.get("state")).toLowerCase();
-      const state = stateAliases[requested] || "review";
+      const token = safe(params.get("token"), 240);
+      let requested = safe(params.get("state")).toLowerCase();
+      let state = stateAliases[requested] || "review";
       const lockedWorkspaceStates = new Set([
         "request_received",
         "under_review",
@@ -562,16 +571,19 @@
         "quote_sent",
         "awaiting_payment",
         "payment_pending",
+        "paid",
+        "payment_confirmed",
         "approved"
       ]);
       const activeWorkspaceStates = new Set([
-        "quote_paid",
-        "quote_accepted_paid",
+        "workspace_ready",
         "workspace_unlocking",
         "workspace_active",
-        "execution_active"
+        "execution_active",
+        "delivered",
+        "revision_requested"
       ]);
-      const reference = safe(
+      let reference = safe(
         params.get("task_id") ||
         params.get("operational_id") ||
         params.get("reference_id") ||
@@ -579,8 +591,8 @@
         params.get("reference"),
         80
       );
-      const quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
-      const quoteUrl = (() => {
+      let quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
+      let quoteUrl = (() => {
         try {
           const url = new URL(quoteUrlRaw);
           return ["https:", "http:"].includes(url.protocol) ? url.toString() : "";
@@ -590,7 +602,18 @@
       })();
 
       if (reference) {
+        requested = "request_received";
+        state = "review";
+        quoteUrl = "";
+      }
+
+      if (reference) {
         document.querySelector("[data-reference]").textContent = reference;
+      }
+
+      function setText(selector, value) {
+        const element = document.querySelector(selector);
+        if (element) element.textContent = value;
       }
 
       function buildWorkspaceHref() {
@@ -609,26 +632,56 @@
         });
       }
 
-      if (state === "quote" || state === "quote_ready") {
-        document.querySelector("[data-state-label]").textContent = state === "quote_ready" ? "Quote ready" : "Quote pending";
-        document.querySelector("[data-state-copy]").textContent = state === "quote_ready"
-          ? "Your request has been reviewed. The quote is ready for the next step."
-          : "Your request has been reviewed. DONEOVERNIGHT is preparing the quote and next step.";
+      function renderReviewState() {
+        if (reference) {
+          setText("[data-reference]", reference);
+        }
+
+        if (state === "quote" || state === "quote_ready") {
+          const copyByState = {
+            awaiting_payment: "Your quote is ready. Payment confirmation is the next step before workspace access opens.",
+            payment_pending: "Your quote is ready. Payment confirmation is the next step before workspace access opens.",
+            paid: "Payment is confirmed. Workspace access is preparing.",
+            payment_confirmed: "Payment is confirmed. Workspace access is preparing.",
+            quote_sent: "Your request has been reviewed. The quote is ready for the next step.",
+            quote_ready: "Your request has been reviewed. The quote is ready for the next step."
+          };
+          setText("[data-state-label]", ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : state === "quote_ready" ? "Quote ready" : "Quote pending");
+          setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
+            ? "Your request has been reviewed. The quote is ready for the next step."
+            : "Your request has been reviewed. DONEOVERNIGHT is preparing the quote and next step."));
+          setStep("received", "complete");
+          setStep("review", "complete");
+          setStep("quote", ["paid", "payment_confirmed"].includes(requested) ? "complete" : "active");
+          const quoteChip = document.querySelector("[data-chip='quote']");
+          if (quoteChip) quoteChip.textContent = ["awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting payment" : ["paid", "payment_confirmed"].includes(requested) ? "Payment confirmed" : state === "quote_ready" ? "Quote ready" : "Quote pending";
+        }
+
+        if (state === "workspace_ready") {
+          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : "Workspace ready");
+          setText("[data-state-copy]", ["delivered"].includes(requested)
+            ? "Delivery is prepared in your workspace."
+            : ["revision_requested"].includes(requested)
+              ? "Your revision request is visible to operations."
+              : "Your workspace is ready for updates, approvals, delivery tracking, and communication.");
         setStep("received", "complete");
         setStep("review", "complete");
-        setStep("quote", "active");
-        document.querySelector("[data-chip='quote']").textContent = state === "quote_ready" ? "Quote ready" : "Quote pending";
-      }
+          setStep("quote", "complete");
+          setStep("workspace", "active");
+          const quoteChip = document.querySelector("[data-chip='quote']");
+          if (quoteChip) quoteChip.textContent = "Payment confirmed";
+        }
 
-      if (state === "quote_ready" && quoteUrl) {
-        const cta = document.querySelector("[data-quote-cta]");
-        cta.href = quoteUrl;
-        cta.classList.add("is-visible");
+        if (state === "quote_ready" && quoteUrl) {
+          const cta = document.querySelector("[data-quote-cta]");
+          cta.href = quoteUrl;
+          cta.classList.add("is-visible");
+        }
       }
 
       function configureWorkspaceAccess() {
         const workspace = document.querySelector("[data-workspace-unlock]");
-        const cta = document.querySelector("[data-workspace-cta]");
+        let cta = document.querySelector("[data-workspace-cta]");
         const copy = document.querySelector("[data-workspace-copy]");
         const status = document.querySelector("[data-workspace-status]");
         const message = document.querySelector("[data-workspace-message]");
@@ -638,6 +691,11 @@
         if (!workspace || (!isActive && !isLocked)) return;
 
         workspace.removeAttribute("hidden");
+        if (cta) {
+          const freshCta = cta.cloneNode(true);
+          cta.replaceWith(freshCta);
+          cta = freshCta;
+        }
 
         if (isActive) {
           copy.textContent = "Your workspace is ready.";
@@ -675,7 +733,46 @@
         cta.addEventListener("animationend", () => cta.classList.remove("is-shaking"));
       }
 
+      renderReviewState();
       configureWorkspaceAccess();
+
+      async function hydrateSecureReviewState() {
+        if (!reference || !token) return;
+        try {
+          const url = new URL("/api/task-submit", window.location.origin);
+          url.searchParams.set("intent", "review_state");
+          url.searchParams.set("task_id", reference);
+          url.searchParams.set("token", token);
+          const response = await fetch(url.toString(), {
+            headers: { Accept: "application/json" },
+            cache: "no-store"
+          });
+          const data = await response.json().catch(() => null);
+          if (!response.ok || data?.authorized !== true || !data.review) {
+            requested = "request_received";
+            state = "review";
+            quoteUrl = "";
+            renderReviewState();
+            configureWorkspaceAccess();
+            return;
+          }
+
+          requested = safe(data.review.state || data.review.status).toLowerCase() || "request_received";
+          state = stateAliases[requested] || "review";
+          reference = safe(data.review.task_id || reference, 80);
+          quoteUrl = safe(data.review.quote?.payment_link || "", 500);
+          renderReviewState();
+          configureWorkspaceAccess();
+        } catch (error) {
+          requested = "request_received";
+          state = "review";
+          quoteUrl = "";
+          renderReviewState();
+          configureWorkspaceAccess();
+        }
+      }
+
+      hydrateSecureReviewState();
     })();
   </script>
 </body>

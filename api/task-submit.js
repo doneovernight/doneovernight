@@ -1,18 +1,22 @@
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
-const { dispatchWebhook, getWebhookUrls } = require("../lib/ops");
+const { dispatchWebhook, getWebhookUrls, supabaseFetch } = require("../lib/ops");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
+const { attachReviewSecurity, buildSecureReviewUrl, verifyReviewToken } = require("../lib/review-token");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
+const TASK_ID_PATTERN = /^DON-\d{4}-\d{5}$/i;
 
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 function buildClientReviewUrl(task) {
+  const secureUrl = buildSecureReviewUrl(task);
+  if (secureUrl) return secureUrl;
   const reviewUrl = new URL("https://portal.doneovernight.com/review");
   reviewUrl.searchParams.set("state", "request_received");
   if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
@@ -64,6 +68,125 @@ function resolveClientBudget(task = {}) {
   return "";
 }
 
+function formatClientBudgetForOps(value) {
+  const cleaned = clean(value);
+  if (!cleaned) return "Not provided";
+  return /^€/.test(cleaned) ? cleaned : `€${cleaned}`;
+}
+
+function firstClean(...values) {
+  for (const value of values) {
+    const cleaned = clean(value);
+    if (cleaned) return cleaned;
+  }
+  return "";
+}
+
+function buildTaskFilter(taskId) {
+  const encoded = encodeURIComponent(taskId);
+  if (TASK_ID_PATTERN.test(taskId)) return `task_id=eq.${encoded}`;
+  return `or=(task_id.eq.${encoded},id.eq.${encoded})`;
+}
+
+async function loadReviewTask(taskId) {
+  const rows = await supabaseFetch([
+    `task_requests?${buildTaskFilter(taskId)}`,
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+function normalizeTaskStatus(value) {
+  return clean(value).toLowerCase();
+}
+
+function getLinkedReviewState(task = {}) {
+  const rawState = normalizeTaskStatus(task.review_state || task.raw_payload?.review_state || task.raw_payload?.state);
+  const status = normalizeTaskStatus(task.status);
+  const paymentStatus = normalizeTaskStatus(task.payment_status);
+  const deliveryStatus = normalizeTaskStatus(task.delivery_status || task.raw_payload?.delivery_status);
+  const workspaceStatus = normalizeTaskStatus(task.workspace_status || task.raw_payload?.workspace_status);
+
+  if (["revision_requested", "awaiting_revision"].includes(status) || ["revision_requested", "awaiting_revision"].includes(deliveryStatus)) return "revision_requested";
+  if (["delivered", "completed", "delivery_complete", "delivered_ready"].includes(status) || ["delivered", "completed", "delivery_complete", "delivered_ready"].includes(deliveryStatus)) return "delivered";
+  if (["workspace_active", "execution_active"].includes(status) || ["workspace_active", "execution_active"].includes(workspaceStatus)) return "workspace_active";
+  if (["workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "workspace_ready";
+  if (["paid", "payment_confirmed", "quote_paid"].includes(paymentStatus) || ["paid", "payment_confirmed", "quote_paid"].includes(status)) return "paid";
+  if (["awaiting_payment", "payment_pending"].includes(paymentStatus) || ["awaiting_payment", "payment_pending"].includes(status)) return "awaiting_payment";
+  if (["quote_ready", "quote_sent", "quoted"].includes(rawState) || ["quote_ready", "quote_sent", "quoted"].includes(status) || task.quote_amount || task.payment_link) return "quote_ready";
+  if (["quote_preparation", "quote_preparing"].includes(rawState) || ["quote_preparation", "quote_preparing"].includes(status)) return "quote_preparation";
+  if (["review_pending", "under_review"].includes(status) || ["under_review", "review_active"].includes(rawState)) return "under_review";
+  return "request_received";
+}
+
+function getReviewWorkspaceState(reviewState) {
+  if (["workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState)) return "available";
+  if (reviewState === "paid") return "preparing";
+  return "locked";
+}
+
+function publicTaskSnapshot(task = {}, reviewState) {
+  return {
+    task_id: firstClean(task.task_id, task.taskId, task.id),
+    operational_id: firstClean(task.task_id, task.taskId, task.id),
+    state: reviewState,
+    status: reviewState,
+    client: firstClean(task.name, task.raw_payload?.name, task.email, "Client"),
+    source: firstClean(task.source, task.raw_payload?.source, "ask"),
+    deadline: firstClean(task.deadline, task.raw_payload?.deadline, "Not provided"),
+    client_budget: firstClean(task.client_budget, task.raw_payload?.client_budget, task.raw_payload?.budget, ""),
+    submitted_at: firstClean(task.created_at, task.raw_payload?.created_at, ""),
+    updated_at: firstClean(task.updated_at, task.created_at, ""),
+    task_summary: firstClean(task.task_summary, task.task_description, task.raw_payload?.task_summary, task.raw_payload?.task_description, ""),
+    quote: {
+      ready: ["quote_ready", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
+      payment_required: reviewState === "awaiting_payment",
+      payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
+      payment_link: reviewState === "awaiting_payment" ? firstClean(task.payment_link, "") : ""
+    },
+    workspace: {
+      state: getReviewWorkspaceState(reviewState)
+    }
+  };
+}
+
+function safeReviewFallback(reason = "review_token_required") {
+  return {
+    success: false,
+    authorized: false,
+    reason,
+    review: {
+      state: "request_received",
+      status: "request_received",
+      workspace: { state: "locked" }
+    }
+  };
+}
+
+async function handleReviewStateRequest(req, res) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "portal.doneovernight.com"}`);
+    const taskId = clean(url.searchParams.get("task_id") || url.searchParams.get("id"));
+    const token = clean(url.searchParams.get("token"));
+
+    if (!taskId || !token) return send(res, 200, safeReviewFallback("review_token_required"));
+
+    const task = await loadReviewTask(taskId);
+    if (!task) return send(res, 200, safeReviewFallback("review_not_found"));
+    if (!verifyReviewToken(task, token)) return send(res, 200, safeReviewFallback("invalid_review_token"));
+
+    const state = getLinkedReviewState(task);
+    return send(res, 200, {
+      success: true,
+      authorized: true,
+      review: publicTaskSnapshot(task, state)
+    });
+  } catch (error) {
+    return send(res, 200, safeReviewFallback("review_unavailable"));
+  }
+}
+
 async function notifyOperations(task) {
   const webhookUrl = process.env.TASK_SUBMIT_WEBHOOK_URL;
   if (!webhookUrl) {
@@ -88,7 +211,7 @@ async function notifyOperations(task) {
     `Reference: ${task.taskId}`,
     `Name: ${task.name || "Unknown"}`,
     `Email: ${task.email || "Unknown"}`,
-    `Client budget: ${clientBudget || "Not provided"}`,
+    `💸 Client budget: ${formatClientBudgetForOps(clientBudget)}`,
     suggestedPrice ? `Suggested: ${suggestedPrice}` : null,
     `Deadline: ${task.deadline || "Not provided"}`,
     `Source: ${task.source || "task_intake"}`,
@@ -123,7 +246,7 @@ async function notifyOperations(task) {
         budget: clientBudget,
         client_budget: clientBudget,
         clientBudget,
-        client_budget_display: clientBudget ? `Client budget: ${clientBudget}` : "Client budget: Not provided",
+        client_budget_display: `💸 Client budget: ${formatClientBudgetForOps(clientBudget)}`,
         client_submitted_budget: clientBudget,
         submitted_budget: clientBudget,
         user_submitted_budget: clientBudget,
@@ -340,6 +463,10 @@ function parseBody(req) {
 }
 
 module.exports = async function handler(req, res) {
+  if (req.method === "GET") {
+    return handleReviewStateRequest(req, res);
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, { success: false, error: "Method not allowed" });
@@ -368,7 +495,7 @@ module.exports = async function handler(req, res) {
 
     const now = new Date();
     const taskId = createTaskId(now);
-    const task = buildTaskPayload(input, taskId, now);
+    const { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
 
     // Future operational handoffs: quote generation, payment session generation,
     // portal linking, operator assignment, and realtime client status updates.
