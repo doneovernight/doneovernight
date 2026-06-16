@@ -4,6 +4,7 @@ const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
+const { buildClientEmail } = require("../lib/email/client-template");
 const { attachReviewSecurity, buildSecureReviewUrl, verifyReviewToken } = require("../lib/review-token");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
@@ -351,15 +352,6 @@ async function notifyOperations(task) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function getClientConfirmationEmailUrls() {
   return getWebhookUrls([
     "TASK_CONFIRMATION_EMAIL_WEBHOOK_URL",
@@ -374,18 +366,17 @@ function buildClientConfirmationEmailPayload(task) {
   const reference = task.taskId;
   const reviewUrl = buildClientReviewUrl(task);
   const clientBudget = resolveClientBudget(task);
-  const text = [
-    `Hi ${name},`,
-    "",
-    "Request received.",
-    `Reference: ${reference}`,
-    "",
-    "We will review scope, timing, and the execution path, then reply with the next step.",
-    "",
-    "Human-reviewed. AI-assisted. Built for founders, creatives, and operators.",
-    "",
-    "DONEOVERNIGHT"
-  ].join("\n");
+  const email = buildClientEmail({
+    subject,
+    preheader: `Ask received. Reference: ${reference}`,
+    title: "Ask received.",
+    intro: `Hi ${name}, we have received your request and will review scope, timing, and the execution path before replying with the next step.`,
+    rows: [["Reference", reference]],
+    body: ["Human-reviewed. AI-assisted. Built for founders, creatives, and operators."],
+    ctaLabel: reviewUrl ? "Track review" : "",
+    ctaUrl: reviewUrl,
+    replyTo: "ask@doneovernight.com"
+  });
 
   return {
     event: "task_confirmation_email",
@@ -411,24 +402,8 @@ function buildClientConfirmationEmailPayload(task) {
     task_summary: task.taskSummary,
     review_url: reviewUrl,
     client_review_url: reviewUrl,
-    text,
-    html: `
-      <div style="margin:0;padding:0;background:#050608;color:#f5f1ea;font-family:Inter,Arial,sans-serif">
-        <div style="max-width:560px;margin:0 auto;padding:40px 24px">
-          <div style="border:1px solid rgba(233,196,138,.22);border-radius:8px;background:rgba(245,241,234,.035);padding:30px 28px">
-            <p style="margin:0 0 18px;color:#e9c48a;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">DONEOVERNIGHT</p>
-            <h1 style="margin:0 0 18px;color:#f5f1ea;font-size:28px;line-height:1.2;font-weight:400">Request received.</h1>
-            <p style="margin:0 0 18px;color:rgba(245,241,234,.78);font-size:15px;line-height:1.7">Hi ${escapeHtml(name)}, we have received your request and will review scope, timing, and the execution path before replying with the next step.</p>
-            <div style="margin:22px 0;padding:16px 18px;border:1px solid rgba(245,241,234,.12);border-radius:6px;background:rgba(0,0,0,.18)">
-              <p style="margin:0;color:rgba(245,241,234,.52);font-size:11px;letter-spacing:.14em;text-transform:uppercase">Reference</p>
-              <p style="margin:6px 0 0;color:#f5f1ea;font-size:18px;letter-spacing:.04em">${escapeHtml(reference)}</p>
-            </div>
-            <p style="margin:0 0 18px"><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:13px 18px;border:1px solid rgba(233,196,138,.4);border-radius:999px;color:#e9c48a;text-decoration:none;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">Track review</a></p>
-            <p style="margin:0;color:rgba(245,241,234,.58);font-size:13px;line-height:1.6">Human-reviewed. AI-assisted. Built for founders, creatives, and operators.</p>
-          </div>
-        </div>
-      </div>
-    `
+    text: email.text,
+    html: email.html
   };
 }
 
