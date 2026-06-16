@@ -1742,42 +1742,20 @@ body.is-admin .admin-dashboard { display: block; }
   flex-wrap: wrap;
 }
 
-.admin-task-action-menu {
-  position: relative;
-}
-
-.admin-task-action-menu summary {
-  list-style: none;
-}
-
-.admin-task-action-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.admin-task-action-panel {
-  position: fixed;
-  top: var(--task-action-menu-top, 0);
-  left: var(--task-action-menu-left, 0);
-  z-index: 10000;
-  display: grid;
-  gap: 6px;
-  min-width: 190px;
-  max-width: min(260px, calc(100vw - 24px));
-  margin-top: 0;
-  padding: 8px;
-  border: 1px solid rgba(245, 241, 234, 0.12);
-  border-radius: 8px;
-  background: rgba(6, 7, 9, 0.96);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
-}
-
-.admin-task-action-menu[data-placement="top"] .admin-task-action-panel {
-  margin-top: 0;
-}
-
-.admin-task-action-panel .admin-task-action {
-  justify-content: flex-start;
-  width: 100%;
+.admin-task-action-rail {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid rgba(245, 241, 234, 0.08);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(233, 196, 138, 0.045), rgba(245, 241, 234, 0.012)),
+    rgba(5, 6, 8, 0.28);
+  padding: 6px;
+  animation: softRise 0.18s ease both;
 }
 
 .admin-task-action,
@@ -1794,6 +1772,12 @@ body.is-admin .admin-dashboard { display: block; }
   cursor: pointer;
   box-shadow: 0 0 18px rgba(233, 196, 138, 0.08);
   transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.admin-task-action-toggle[aria-expanded="true"] {
+  background: rgba(233, 196, 138, 0.13);
+  border-color: rgba(233, 196, 138, 0.58);
+  color: #ffe3ad;
 }
 
 .admin-task-action:hover,
@@ -2412,8 +2396,15 @@ body.is-admin .admin-dashboard { display: block; }
   .admin-recovery-card {
     grid-template-columns: 1fr;
   }
-  .admin-task-action-panel {
-    width: min(240px, calc(100vw - 24px));
+  .admin-task-action-rail {
+    align-items: stretch;
+    border-radius: 8px;
+    display: grid;
+    width: 100%;
+  }
+  .admin-task-action-rail .admin-task-action {
+    width: 100%;
+    text-align: left;
   }
   .admin-activity {
     grid-template-columns: 16px minmax(0, 1fr);
@@ -3088,6 +3079,7 @@ let activeMetricTarget = '';
 let activeRevenueDrawer = null;
 let adminActivityExpanded = false;
 let adminTaskRenderSignature = '';
+let openTaskActionRailTaskId = '';
 let adminStatsSnapshot = {
   totalTasks: 0,
   pendingReviewTasks: 0,
@@ -4994,6 +4986,7 @@ function renderTasks(tasks) {
     if (task.id && isSaiUniversityBrandingTask(task) && !task.delivery_link) {
       actions.push({ type: 'send-branding', label: 'Send full branding link' });
     }
+    const isActionRailOpen = String(openTaskActionRailTaskId || '') === String(task.id || '');
     const status = normalizeStatus(task.status);
     const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
     const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
@@ -5033,9 +5026,15 @@ function renderTasks(tasks) {
     ` : '';
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
-        <details class="admin-task-action-menu">
-          <summary class="admin-task-action admin-task-action-menu-toggle" aria-label="Task actions">Actions</summary>
-          <div class="admin-task-action-panel">
+        <button
+          class="admin-task-action admin-task-action-toggle"
+          type="button"
+          data-task-action-toggle="true"
+          data-task-id="${escapeHTML(task.id)}"
+          aria-expanded="${isActionRailOpen ? 'true' : 'false'}"
+        >Actions</button>
+        ${isActionRailOpen ? `
+          <div class="admin-task-action-rail" role="group" aria-label="Task actions for ${escapeHTML(getTaskId(task))}">
             ${actions.map((action) => `
               <button
                 class="admin-task-action"
@@ -5047,7 +5046,7 @@ function renderTasks(tasks) {
               >${action.label}</button>
             `).join('')}
           </div>
-        </details>
+        ` : ''}
         <span class="admin-task-message" aria-live="polite"></span>
       </div>
     ` : '';
@@ -5104,6 +5103,7 @@ function renderTasks(tasks) {
 
   const nextSignature = JSON.stringify([
     adminTaskFilter,
+    openTaskActionRailTaskId,
     filterCounts,
     groups.map((group) => [
     group.slug,
@@ -6299,66 +6299,31 @@ function buildBunqPaymentLinkFromQuote(value, reference = '', taskReference = ''
   return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }
 
-function closeTaskActionMenus(exceptMenu = null) {
-  if (!adminTasksList) return;
-  adminTasksList.querySelectorAll('.admin-task-action-menu[open]').forEach((menu) => {
-    if (menu === exceptMenu) return;
-    menu.removeAttribute('open');
-    menu.removeAttribute('data-placement');
-  });
-}
-
-function positionTaskActionMenu(menu) {
-  const toggle = menu?.querySelector('.admin-task-action-menu-toggle');
-  const panel = menu?.querySelector('.admin-task-action-panel');
-  if (!menu?.open || !toggle || !panel) return;
-
-  const gap = 8;
-  const viewportMargin = 12;
-  const toggleRect = toggle.getBoundingClientRect();
-  const panelRect = panel.getBoundingClientRect();
-  const panelWidth = Math.min(
-    Math.max(panelRect.width || 190, 190),
-    Math.max(190, window.innerWidth - viewportMargin * 2)
-  );
-  const panelHeight = panelRect.height || 220;
-  const spaceBelow = window.innerHeight - toggleRect.bottom - gap - viewportMargin;
-  const spaceAbove = toggleRect.top - gap - viewportMargin;
-  const opensAbove = spaceBelow < panelHeight && spaceAbove > spaceBelow;
-  const rawTop = opensAbove
-    ? toggleRect.top - panelHeight - gap
-    : toggleRect.bottom + gap;
-  const top = Math.min(
-    Math.max(viewportMargin, rawTop),
-    Math.max(viewportMargin, window.innerHeight - panelHeight - viewportMargin)
-  );
-  const left = Math.min(
-    Math.max(viewportMargin, toggleRect.right - panelWidth),
-    Math.max(viewportMargin, window.innerWidth - panelWidth - viewportMargin)
-  );
-
-  menu.style.setProperty('--task-action-menu-top', `${Math.round(top)}px`);
-  menu.style.setProperty('--task-action-menu-left', `${Math.round(left)}px`);
-  menu.dataset.placement = opensAbove ? 'top' : 'bottom';
-}
-
 adminTasksList.addEventListener('click', async (e) => {
   const filterButton = e.target.closest('[data-task-filter]');
   if (filterButton) {
     adminTaskFilter = filterButton.dataset.taskFilter || 'all';
+    openTaskActionRailTaskId = '';
     adminTaskRenderSignature = '';
     renderAdminTasks(adminTasks);
     return;
   }
 
-  const menuToggle = e.target.closest('.admin-task-action-menu-toggle');
-  if (menuToggle) {
-    const menu = menuToggle.closest('.admin-task-action-menu');
-    window.requestAnimationFrame(() => {
-      if (!menu?.open) return;
-      closeTaskActionMenus(menu);
-      positionTaskActionMenu(menu);
-    });
+  const actionToggle = e.target.closest('[data-task-action-toggle]');
+  if (actionToggle) {
+    const toggleTaskId = actionToggle.dataset.taskId || '';
+    openTaskActionRailTaskId = openTaskActionRailTaskId === toggleTaskId ? '' : toggleTaskId;
+    adminTaskRenderSignature = '';
+    renderAdminTasks(adminTasks);
+    if (openTaskActionRailTaskId) {
+      window.requestAnimationFrame(() => {
+        const openedToggle = [...adminTasksList.querySelectorAll('[data-task-action-toggle]')]
+          .find((toggle) => toggle.dataset.taskId === openTaskActionRailTaskId);
+        const openedRail = openedToggle?.closest('.admin-task-row')?.querySelector('.admin-task-action-rail');
+        openedRail?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
+    }
+    return;
   }
 
   const button = e.target.closest('.admin-task-action');
@@ -6366,7 +6331,6 @@ adminTasksList.addEventListener('click', async (e) => {
 
   const taskId = button.dataset.taskId;
   if (!taskId) return;
-  closeTaskActionMenus();
 
   if (button.dataset.action === 'quote') {
     const task = (adminTasks || []).find(t => t.id === taskId);
@@ -6404,7 +6368,6 @@ adminTasksList.addEventListener('click', async (e) => {
       testimonial: 'Testimonial email automation is not configured yet.'
     };
     if (message) message.textContent = labels[button.dataset.intent] || 'Follow-up automation is not configured yet.';
-    button.closest('details')?.removeAttribute('open');
     return;
   }
 
@@ -6456,7 +6419,6 @@ adminTasksList.addEventListener('click', async (e) => {
           message.textContent = 'Information request stored. Email delivery not confirmed.';
         }
       }
-      button.closest('details')?.removeAttribute('open');
       return;
     }
     await moveTaskToStage(button, taskId, button.dataset.status);
@@ -6491,19 +6453,6 @@ adminTasksList.addEventListener('click', async (e) => {
     }
   }
 });
-
-document.addEventListener('click', (event) => {
-  if (event.target.closest('.admin-task-action-menu')) return;
-  closeTaskActionMenus();
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeTaskActionMenus();
-});
-
-adminTasksList.addEventListener('scroll', () => closeTaskActionMenus(), { passive: true });
-window.addEventListener('resize', () => closeTaskActionMenus(), { passive: true });
-window.addEventListener('scroll', () => closeTaskActionMenus(), { passive: true });
 
 /* ── Revenue Drawer ─────────────────────────────────────── */
 
