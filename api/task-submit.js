@@ -315,8 +315,8 @@ async function notifyOperations(task) {
         confirmation_email_name: task.name,
         confirmation_email_required: true,
         confirmation_email_template: "task_received",
-        confirmation_email_subject: "Task received | DONEOVERNIGHT",
-        confirmation_email_preview: "Task received. We'll review it and reply shortly.",
+        confirmation_email_subject: "Request received | DONEOVERNIGHT",
+        confirmation_email_preview: "Request received. We'll review it and reply shortly.",
         raw_payload: task.rawPayload
       })
     });
@@ -354,17 +354,17 @@ function getClientConfirmationEmailUrls() {
 
 function buildClientConfirmationEmailPayload(task) {
   const name = task.name || "there";
-  const subject = "Task received — DONEOVERNIGHT";
+  const subject = "Request received — DONEOVERNIGHT";
   const reference = task.taskId;
   const reviewUrl = buildClientReviewUrl(task);
   const clientBudget = resolveClientBudget(task);
   const text = [
     `Hi ${name},`,
     "",
-    "Task received.",
+    "Request received.",
     `Reference: ${reference}`,
     "",
-    "We will review scope, quote, and timing, then reply with the next step.",
+    "We will review scope, timing, and the execution path, then reply with the next step.",
     "",
     "Human-reviewed. AI-assisted. Built for founders, creatives, and operators.",
     "",
@@ -401,8 +401,8 @@ function buildClientConfirmationEmailPayload(task) {
         <div style="max-width:560px;margin:0 auto;padding:40px 24px">
           <div style="border:1px solid rgba(233,196,138,.22);border-radius:8px;background:rgba(245,241,234,.035);padding:30px 28px">
             <p style="margin:0 0 18px;color:#e9c48a;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase">DONEOVERNIGHT</p>
-            <h1 style="margin:0 0 18px;color:#f5f1ea;font-size:28px;line-height:1.2;font-weight:400">Task received.</h1>
-            <p style="margin:0 0 18px;color:rgba(245,241,234,.78);font-size:15px;line-height:1.7">Hi ${escapeHtml(name)}, we have received your request and will review scope, quote, and timing before replying with the next step.</p>
+            <h1 style="margin:0 0 18px;color:#f5f1ea;font-size:28px;line-height:1.2;font-weight:400">Request received.</h1>
+            <p style="margin:0 0 18px;color:rgba(245,241,234,.78);font-size:15px;line-height:1.7">Hi ${escapeHtml(name)}, we have received your request and will review scope, timing, and the execution path before replying with the next step.</p>
             <div style="margin:22px 0;padding:16px 18px;border:1px solid rgba(245,241,234,.12);border-radius:6px;background:rgba(0,0,0,.18)">
               <p style="margin:0;color:rgba(245,241,234,.52);font-size:11px;letter-spacing:.14em;text-transform:uppercase">Reference</p>
               <p style="margin:6px 0 0;color:#f5f1ea;font-size:18px;letter-spacing:.04em">${escapeHtml(reference)}</p>

@@ -309,6 +309,71 @@
       border-top: 1px solid rgba(248,244,236,0.08);
     }
 
+    .confidence-note {
+      display: none;
+      max-width: 620px;
+      margin-top: 16px;
+      color: rgba(147, 227, 174, 0.82);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .confidence-note.is-visible {
+      display: block;
+    }
+
+    .start-now {
+      display: none;
+      max-width: 640px;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid rgba(147,227,174,0.16);
+      border-radius: 10px;
+      background: rgba(147,227,174,0.04);
+    }
+
+    .start-now.is-visible {
+      display: block;
+    }
+
+    .start-now h2 {
+      margin: 0 0 14px;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .start-now-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .start-now-item span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--gold);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .start-now-item strong {
+      display: block;
+      color: rgba(248,244,236,0.76);
+      font-size: 0.94rem;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
     .workspace-unlock {
       width: 100%;
       margin: calc(clamp(42px, 8vh, 78px) * -0.55) 0 clamp(42px, 8vh, 78px);
@@ -496,6 +561,10 @@
         grid-template-columns: 1fr;
       }
 
+      .start-now-grid {
+        grid-template-columns: 1fr;
+      }
+
       .step {
         min-height: 82px;
       }
@@ -578,6 +647,26 @@
         </div>
       </div>
 
+      <p class="confidence-note" data-confidence-note>Execution begins immediately after approval.</p>
+
+      <section class="start-now" data-start-now hidden aria-labelledby="start-now-title">
+        <h2 id="start-now-title">Why Start Now</h2>
+        <div class="start-now-grid">
+          <div class="start-now-item">
+            <span>Current Bottleneck</span>
+            <strong data-start-bottleneck></strong>
+          </div>
+          <div class="start-now-item">
+            <span>Expected Outcome</span>
+            <strong data-start-outcome></strong>
+          </div>
+          <div class="start-now-item">
+            <span>Timeline</span>
+            <strong data-start-timeline></strong>
+          </div>
+        </div>
+      </section>
+
       <a class="quote-cta" data-quote-cta href="#">Approve &amp; Start</a>
     </section>
 
@@ -589,7 +678,7 @@
       <div class="workspace-grid">
         <ul class="workspace-list" aria-label="Workspace access includes">
           <li>Live updates</li>
-          <li>Quote approvals</li>
+          <li>Plan approvals</li>
           <li>Delivery tracking</li>
           <li>Revision flow</li>
           <li>Realtime communication</li>
@@ -726,6 +815,8 @@
       function renderQuoteDetails() {
         const summary = document.querySelector("[data-quote-summary]");
         const cta = document.querySelector("[data-quote-cta]");
+        const confidence = document.querySelector("[data-confidence-note]");
+        const startNow = document.querySelector("[data-start-now]");
         const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
@@ -745,6 +836,24 @@
           if (shouldShowQuote && quoteUrl) {
             cta.href = quoteUrl;
             cta.classList.add("is-visible");
+          }
+        }
+
+        if (confidence) {
+          confidence.classList.toggle("is-visible", shouldShowQuote);
+          confidence.textContent = ["paid", "payment_confirmed"].includes(requested)
+            ? "Operators are assigned after approval."
+            : "Execution begins immediately after approval.";
+        }
+
+        if (startNow) {
+          const visible = shouldShowQuote;
+          startNow.hidden = !visible;
+          startNow.classList.toggle("is-visible", visible);
+          if (visible) {
+            setText("[data-start-bottleneck]", quoteDetails.note || quoteDetails.deliverables || "Execution is waiting on approval to begin.");
+            setText("[data-start-outcome]", quoteDetails.deliverables || "The agreed scope moves into execution with less manual follow-up.");
+            setText("[data-start-timeline]", quoteDetails.delivery_eta || "Execution starts after approval.");
           }
         }
       }
@@ -815,13 +924,16 @@
         }
 
         if (state === "workspace_ready") {
-          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : "Project active");
-          setText("#review-title", ["delivered"].includes(requested) ? "Delivered." : ["revision_requested"].includes(requested) ? "Revision requested." : "Project active.");
+          const executionStarted = ["workspace_ready", "workspace_unlocking"].includes(requested);
+          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : executionStarted ? "Execution started" : "Project active");
+          setText("#review-title", ["delivered"].includes(requested) ? "Delivered." : ["revision_requested"].includes(requested) ? "Revision requested." : executionStarted ? "Execution started." : "Project active.");
           setText("[data-state-copy]", ["delivered"].includes(requested)
             ? "Delivery is prepared in your workspace."
             : ["revision_requested"].includes(requested)
               ? "Your revision request is visible to operations."
-              : "Your project is active for updates, approvals, delivery tracking, and communication.");
+              : executionStarted
+                ? "Operators are assigned and execution is being scheduled."
+                : "Your project is active for updates, approvals, delivery tracking, and communication.");
         setStep("received", "complete");
         setStep("review", "complete");
           setStep("quote", "complete");
@@ -829,7 +941,7 @@
           const quoteChip = document.querySelector("[data-chip='quote']");
           if (quoteChip) quoteChip.textContent = "Execution approved";
           const workspaceChip = document.querySelector("[data-chip='workspace']");
-          if (workspaceChip) workspaceChip.textContent = "Project active";
+          if (workspaceChip) workspaceChip.textContent = executionStarted ? "Execution started" : "Project active";
         }
 
         if (state === "quote_ready" && quoteUrl) {

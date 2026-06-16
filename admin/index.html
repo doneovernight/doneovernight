@@ -1620,6 +1620,45 @@ body.is-admin .admin-dashboard { display: block; }
   font-size: 12px;
 }
 
+.admin-recovery-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(244, 210, 138, 0.16);
+  border-radius: 8px;
+  background: rgba(244, 210, 138, 0.04);
+}
+
+.admin-recovery-title {
+  grid-column: 1 / -1;
+  color: #f4d28a;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.admin-recovery-item span {
+  display: block;
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-recovery-item strong {
+  display: block;
+  margin-top: 5px;
+  color: rgba(245, 241, 234, 0.76);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .admin-payment-link {
   flex-shrink: 0;
   border: 1px solid rgba(244,210,138,.32);
@@ -1700,6 +1739,38 @@ body.is-admin .admin-dashboard { display: block; }
   gap: 10px;
   margin-top: 12px;
   flex-wrap: wrap;
+}
+
+.admin-task-action-menu {
+  position: relative;
+}
+
+.admin-task-action-menu summary {
+  list-style: none;
+}
+
+.admin-task-action-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-task-action-panel {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgba(245, 241, 234, 0.12);
+  border-radius: 8px;
+  background: rgba(6, 7, 9, 0.96);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+.admin-task-action-panel .admin-task-action {
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .admin-task-action,
@@ -2221,6 +2292,13 @@ body.is-admin .admin-dashboard { display: block; }
     align-items: stretch;
     flex-direction: column;
   }
+  .admin-recovery-card {
+    grid-template-columns: 1fr;
+  }
+  .admin-task-action-panel {
+    left: 0;
+    right: auto;
+  }
   .revenue-center-head {
     align-items: start;
     flex-direction: column;
@@ -2649,7 +2727,7 @@ body.is-admin .admin-dashboard { display: block; }
         <div class="workspace-control-head">
           <div>
             <h2>Workspaces</h2>
-            <p>Workspace access stays locked until quote/payment is confirmed. Manage updates, quotes, and linked review state here.</p>
+            <p>Workspace access stays locked until execution is approved and released. Manage updates, plans, and linked review state here.</p>
           </div>
           <button class="admin-client-action" id="workspaceRecordsRefresh" type="button">Refresh</button>
         </div>
@@ -2972,7 +3050,7 @@ function getStatusLabel(status) {
     awaiting_payment: 'Awaiting start',
     payment_confirmed: 'Operators assigned',
     paid: 'Operators assigned',
-    workspace_ready: 'Execution scheduled',
+    workspace_ready: 'Execution started',
     workspace_active: 'Project active',
     execution_active: 'Project active',
     verification_pending: 'Verification pending',
@@ -3070,69 +3148,58 @@ function getPaymentStatusLabel(status) {
   return labels[normalizeStatus(status)] || 'Not required yet';
 }
 
-function getTaskActions(status) {
+function getTaskOperationalBucket(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  if (['completed'].includes(status)) return 'completed';
+  if (['archived', 'cancelled', 'rejected'].includes(status)) return 'archived';
+  if (isDeliveredTask(task)) return 'delivered';
+  if (['workspace_ready', 'workspace_active', 'execution_active', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return 'active';
+  if (status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid') return 'awaiting_start';
+  if (['review_pending', 'quote_preparation', 'quoted', 'quote_sent'].includes(status)) return 'review_complete';
+  if (status === 'needs_info') return 'needs_info';
+  return 'new';
+}
+
+function getTaskActions(task = {}) {
+  const bucket = getTaskOperationalBucket(task);
   const actions = {
-    request_received: [
-      { type: 'move', label: 'Mark under review', status: 'review_pending' },
-      { type: 'move', label: 'Needs info', status: 'needs_info' },
-      { type: 'quote', label: 'Prepare plan' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    review_pending: [
-      { type: 'quote', label: 'Prepare plan' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
     new: [
-      { type: 'move', label: 'Mark under review', status: 'review_pending' },
-      { type: 'move', label: 'Needs info', status: 'needs_info' },
-      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Review', status: 'review_pending' },
+      { type: 'move', label: 'Request Information', status: 'needs_info' },
       { type: 'move', label: 'Archive', status: 'archived' }
     ],
     needs_info: [
-      { type: 'move', label: 'Mark under review', status: 'review_pending' },
-      { type: 'quote', label: 'Prepare plan' },
+      { type: 'move', label: 'Review', status: 'review_pending' },
+      { type: 'quote', label: 'Prepare Plan' },
       { type: 'move', label: 'Archive', status: 'archived' }
     ],
-    quoted: [
-      { type: 'quote', label: 'Edit plan' },
-      { type: 'move', label: 'Awaiting start', status: 'awaiting_payment' }
+    review_complete: [
+      { type: 'quote', label: 'Prepare Plan' },
+      { type: 'move', label: 'Request Information', status: 'needs_info' },
+      { type: 'move', label: 'Archive', status: 'archived' }
     ],
-    quote_sent: [
-      { type: 'quote', label: 'Edit plan' },
-      { type: 'move', label: 'Awaiting start', status: 'awaiting_payment' },
-      { type: 'move', label: 'Confirm start', status: 'payment_confirmed' }
+    awaiting_start: [
+      { type: 'followup', label: 'Send Reminder', intent: 'reminder' },
+      { type: 'quote', label: 'Alternative Scope' },
+      { type: 'followup', label: 'Request Referral', intent: 'referral' },
+      { type: 'move', label: 'Archive', status: 'archived' }
     ],
-    awaiting_payment: [
-      { type: 'move', label: 'Confirm start', status: 'payment_confirmed' }
-    ],
-    payment_confirmed: [
-      { type: 'move', label: 'Schedule execution', status: 'workspace_ready' }
-    ],
-    workspace_ready: [
-      { type: 'move', label: 'Start execution', status: 'workspace_active' }
-    ],
-    verification_pending: [
-      { type: 'move', label: 'Queue task', status: 'queued' }
-    ],
-    queued: [
-      { type: 'move', label: 'Start work', status: 'in_progress' }
-    ],
-    in_progress: [
-      { type: 'move', label: 'Delivery prep', status: 'delivery_prep' }
-    ],
-    delivery_prep: [
-      { type: 'deliver', label: 'Deliver' }
+    active: [
+      { type: 'workspace-update', label: 'Update Client' },
+      { type: 'deliver', label: 'Mark Delivered' }
     ],
     delivered: [
-      { type: 'complete', label: 'Complete' },
-      { type: 'revision', label: 'Revision requested' }
-    ],
-    revision_requested: [
-      { type: 'move', label: 'Resume work', status: 'in_progress' },
+      { type: 'followup', label: 'Request Testimonial', intent: 'testimonial' },
+      { type: 'followup', label: 'Request Referral', intent: 'referral' },
       { type: 'move', label: 'Archive', status: 'archived' }
-    ]
+    ],
+    completed: [
+      { type: 'followup', label: 'Request Referral', intent: 'referral' }
+    ],
+    archived: []
   };
-  return actions[normalizeStatus(status)] || [];
+  return actions[bucket] || [];
 }
 
 function getTaskPriority(task) {
@@ -3377,6 +3444,50 @@ function getTaskActivityLabel(task) {
   if (status === 'queued') return 'Queued for execution';
   if (task.updated_at) return getRelativeTime(task.updated_at);
   return 'Realtime connected';
+}
+
+function getDaysSince(value) {
+  const date = new Date(value || 0);
+  if (Number.isNaN(date.getTime()) || !value) return 0;
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+}
+
+function getRevenueRecovery(task = {}) {
+  const waitingSince = task.quoted_at || task.updated_at || task.created_at;
+  const days = getDaysSince(waitingSince);
+  if (days < 2) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: days === 0 ? 'Day 2' : 'Tomorrow',
+      suggestedAction: 'Send Reminder'
+    };
+  }
+  if (days < 5) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: 'Day 5',
+      suggestedAction: 'Alternative Scope'
+    };
+  }
+  if (days < 10) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: 'Day 10',
+      suggestedAction: 'New Solution Recommendation'
+    };
+  }
+  if (days < 21) {
+    return {
+      daysWaiting: `${days}`,
+      nextFollowup: 'Day 21',
+      suggestedAction: 'Referral Opportunity'
+    };
+  }
+  return {
+    daysWaiting: `${days}`,
+    nextFollowup: 'Ready to archive',
+    suggestedAction: 'Referral or Archive'
+  };
 }
 
 function updateStats(tasks = adminTasks, clients = adminClients) {
@@ -4710,8 +4821,7 @@ function renderTasks(tasks) {
     const actions = task.id
       ? [
           { type: 'open-review', label: 'Open review' },
-          ...getTaskActions(task.status),
-          { type: 'workspace-update', label: 'Post update' },
+          ...getTaskActions(task),
           ...(workspaceIsActive ? [{ type: 'open-workspace', label: 'Open workspace' }] : [])
         ]
       : [];
@@ -4720,12 +4830,13 @@ function renderTasks(tasks) {
     }
     const status = normalizeStatus(task.status);
     const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
-    const isActive = ['queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+    const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
     const isAwaitingPayment = normalizeStatus(task.payment_status) === 'awaiting_payment' || status === 'awaiting_payment';
     const isDelivered = status === 'delivered';
     const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
     const priority = getTaskPriority(task);
     const activityLabel = getTaskActivityLabel(task);
+    const recovery = isAwaitingPayment ? getRevenueRecovery(task) : null;
     const paymentCallout = isAwaitingPayment ? `
       <div class="admin-payment-callout">
         <div>
@@ -4737,17 +4848,40 @@ function renderTasks(tasks) {
           : '<span class="admin-payment-link" aria-disabled="true">Link pending</span>'}
       </div>
     ` : '';
+    const recoveryCard = recovery ? `
+      <div class="admin-recovery-card">
+        <div class="admin-recovery-title">Revenue Recovery</div>
+        <div class="admin-recovery-item">
+          <span>Days waiting</span>
+          <strong>${escapeHTML(recovery.daysWaiting)}</strong>
+        </div>
+        <div class="admin-recovery-item">
+          <span>Next follow-up</span>
+          <strong>${escapeHTML(recovery.nextFollowup)}</strong>
+        </div>
+        <div class="admin-recovery-item">
+          <span>Suggested action</span>
+          <strong>${escapeHTML(recovery.suggestedAction)}</strong>
+        </div>
+      </div>
+    ` : '';
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
-        ${actions.map((action) => `
-          <button
-            class="admin-task-action"
-            type="button"
-            data-action="${action.type}"
-            ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
-            data-task-id="${escapeHTML(task.id)}"
-          >${action.label}</button>
-        `).join('')}
+        <details class="admin-task-action-menu">
+          <summary class="admin-task-action">Actions</summary>
+          <div class="admin-task-action-panel">
+            ${actions.map((action) => `
+              <button
+                class="admin-task-action"
+                type="button"
+                data-action="${action.type}"
+                ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
+                ${action.intent ? `data-intent="${escapeHTML(action.intent)}"` : ''}
+                data-task-id="${escapeHTML(task.id)}"
+              >${action.label}</button>
+            `).join('')}
+          </div>
+        </details>
         <span class="admin-task-message" aria-live="polite"></span>
       </div>
     ` : '';
@@ -4790,6 +4924,7 @@ function renderTasks(tasks) {
           </div>
         ` : ''}
         ${paymentCallout}
+        ${recoveryCard}
         ${actionMarkup}
       </article>
     `;
@@ -5975,6 +6110,19 @@ adminTasksList.addEventListener('click', async (e) => {
     }).catch(() => {});
   }
 
+  if (button.dataset.action === 'followup') {
+    const row = button.closest('.admin-task-row');
+    const message = row?.querySelector('.admin-task-message');
+    const labels = {
+      reminder: 'Reminder email automation is not configured yet.',
+      referral: 'Referral email automation is not configured yet.',
+      testimonial: 'Testimonial email automation is not configured yet.'
+    };
+    if (message) message.textContent = labels[button.dataset.intent] || 'Follow-up automation is not configured yet.';
+    button.closest('details')?.removeAttribute('open');
+    return;
+  }
+
   if (button.dataset.action === 'open-review') {
     const task = (adminTasks || []).find(t => t.id === taskId);
     const state = getReviewState(task);
@@ -6006,6 +6154,18 @@ adminTasksList.addEventListener('click', async (e) => {
   }
 
   if (button.dataset.action === 'move') {
+    if (button.dataset.status === 'needs_info') {
+      const question = window.prompt('What information is needed from the client?');
+      if (!question || !question.trim()) return;
+      await moveTaskToStage(button, taskId, button.dataset.status, {
+        delivery_note: `Information requested: ${question.trim()}`
+      });
+      const row = button.closest('.admin-task-row');
+      const message = row?.querySelector('.admin-task-message');
+      if (message) message.textContent = 'Information request stored. Client email automation is not configured yet.';
+      button.closest('details')?.removeAttribute('open');
+      return;
+    }
     await moveTaskToStage(button, taskId, button.dataset.status);
   }
 
@@ -6054,11 +6214,11 @@ function getBlockingReason(status) {
 
 function renderPaidDrawerContent(tasks) {
   const paidTasks = tasks.filter(isPaidRevenueTask);
-  if (!paidTasks.length) return '<div class="revenue-empty">No paid transactions yet.</div>';
+  if (!paidTasks.length) return '<div class="revenue-empty">No confirmed starts yet.</div>';
   const total = paidTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
-      <span class="revenue-drawer-title">Paid quotes</span>
+      <span class="revenue-drawer-title">Confirmed Starts</span>
       <span class="revenue-drawer-total" style="color:var(--green)">${formatRevenue(total)}</span>
     </div>
     ${paidTasks.map((t) => `
@@ -6070,7 +6230,7 @@ function renderPaidDrawerContent(tasks) {
         </div>
         <div>
           <div class="revenue-item-stage">Task status<strong>${escapeHTML(getStatusLabel(t.status))}</strong></div>
-          <div class="revenue-item-date">Paid ${escapeHTML(formatTaskDate(t.paid_at || t.updated_at || t.created_at) || 'recently')}</div>
+          <div class="revenue-item-date">Confirmed ${escapeHTML(formatTaskDate(t.paid_at || t.updated_at || t.created_at) || 'recently')}</div>
         </div>
         <div class="revenue-item-meta">
           <span class="revenue-item-amount revenue-paid-amount">${escapeHTML(String(t.quote_amount))}</span>
