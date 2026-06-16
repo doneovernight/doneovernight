@@ -197,6 +197,11 @@ async function handleTrackEventRequest(req, res, input = {}) {
       event_type: eventType
     });
   } catch (error) {
+    console.warn("[ANALYTICS_EVENT_STORE_FAILED]", {
+      event_type: eventType,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
     return send(res, 202, {
       success: true,
       accepted: true,
