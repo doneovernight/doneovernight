@@ -1,0 +1,170 @@
+{
+  "name": "DONEOVERNIGHT — Admin Quote Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-quote-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0b74b79a-4658-4f68-ae2e-63ddce2f2b31",
+      "name": "Webhook — Admin Quote Email",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        520,
+        420
+      ],
+      "webhookId": "admin-quote-email"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json || {};\nconst payload = source.body || source;\n\nfunction clean(value) {\n  return value === undefined || value === null ? \"\" : String(value).trim();\n}\n\nfunction escapeHtml(value) {\n  return String(value || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\\\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n}\n\nconst taskId = clean(payload.task_id || payload.taskId || payload.task_reference || payload.reference_id);\nconst clientEmail = clean(payload.client_email || payload.email || payload.to).toLowerCase();\nconst clientName = clean(payload.client_name || payload.name) || \"there\";\nconst quoteAmount = clean(payload.quote_amount);\nconst deliveryEta = clean(payload.delivery_eta);\nconst quoteNote = clean(payload.quote_note || payload.note || payload.scope);\nconst paymentLink = clean(payload.payment_link);\nconst secureReviewUrl = clean(payload.secure_review_url || payload.client_review_url || payload.review_url);\nconst sourceLabel = clean(payload.source) || \"admin_quote\";\nconst ctaUrl = clean(payload.cta_url || payload.primary_cta_url) || secureReviewUrl || paymentLink;\nconst subject = \"DONEOVERNIGHT — Quote ready\";\n\nconst html = clean(payload.html) || `\n  <!doctype html>\n  <html>\n    <body style=\"margin:0;padding:0;background:#050608;color:#f5f1ea;font-family:Inter,Arial,sans-serif\">\n      <main style=\"max-width:560px;margin:0 auto;padding:44px 24px\">\n        <section style=\"border:1px solid rgba(233,196,138,.22);border-radius:8px;background:rgba(245,241,234,.035);padding:32px 28px\">\n          <p style=\"margin:0 0 24px;color:#e9c48a;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase\">DONEOVERNIGHT</p>\n          <h1 style=\"margin:0 0 18px;color:#f5f1ea;font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.12;font-weight:400\">Quote ready.</h1>\n          <p style=\"margin:0 0 22px;color:rgba(245,241,234,.78);font-size:15px;line-height:1.7\">Hi ${escapeHtml(clientName)}, your DONEOVERNIGHT quote is ready for approval and payment.</p>\n          <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"margin:22px 0;border-top:1px solid rgba(245,241,234,.12);border-bottom:1px solid rgba(245,241,234,.12)\">\n            <tr><td style=\"padding:8px 0;color:rgba(245,241,234,.54);font-size:12px;letter-spacing:.12em;text-transform:uppercase\">Reference</td><td style=\"padding:8px 0;color:#f5f1ea;font-size:14px;text-align:right\">${escapeHtml(taskId)}</td></tr>\n            <tr><td style=\"padding:8px 0;color:rgba(245,241,234,.54);font-size:12px;letter-spacing:.12em;text-transform:uppercase\">Quote</td><td style=\"padding:8px 0;color:#f5f1ea;font-size:14px;text-align:right\">${escapeHtml(quoteAmount)}</td></tr>\n            <tr><td style=\"padding:8px 0;color:rgba(245,241,234,.54);font-size:12px;letter-spacing:.12em;text-transform:uppercase\">Delivery ETA</td><td style=\"padding:8px 0;color:#f5f1ea;font-size:14px;text-align:right\">${escapeHtml(deliveryEta)}</td></tr>\n          </table>\n          ${quoteNote ? `<div style=\"margin:0 0 22px;padding:16px 18px;border:1px solid rgba(245,241,234,.12);border-radius:6px;background:rgba(0,0,0,.18)\"><p style=\"margin:0 0 8px;color:rgba(245,241,234,.52);font-size:11px;letter-spacing:.14em;text-transform:uppercase\">Scope note</p><p style=\"margin:0;color:#f5f1ea;font-size:15px;line-height:1.65\">${escapeHtml(quoteNote)}</p></div>` : \"\"}\n          ${ctaUrl ? `<p style=\"margin:0 0 14px\"><a href=\"${escapeHtml(ctaUrl)}\" style=\"display:inline-block;padding:13px 18px;border:1px solid rgba(233,196,138,.44);border-radius:999px;background:rgba(233,196,138,.08);color:#e9c48a;text-decoration:none;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase\">Approve &amp; Pay</a></p>` : \"\"}\n          ${paymentLink ? `<p style=\"margin:0 0 24px;color:rgba(245,241,234,.7);font-size:13px;line-height:1.7\">Payment link fallback:<br><a href=\"${escapeHtml(paymentLink)}\" style=\"color:#e9c48a;text-decoration:underline;text-underline-offset:4px\">${escapeHtml(paymentLink)}</a></p>` : \"\"}\n          <p style=\"margin:0;color:rgba(245,241,234,.58);font-size:13px;line-height:1.7\">Workspace access opens after payment is confirmed.</p>\n        </section>\n      </main>\n    </body>\n  </html>\n`;\n\nconst text = clean(payload.text) || [\n  \"DONEOVERNIGHT\",\n  \"\",\n  `Hi ${clientName},`,\n  \"\",\n  \"Quote ready.\",\n  `Reference: ${taskId}`,\n  quoteAmount ? `Quote: ${quoteAmount}` : null,\n  deliveryEta ? `Delivery ETA: ${deliveryEta}` : null,\n  quoteNote ? `Scope: ${quoteNote}` : null,\n  ctaUrl ? `Approve & Pay: ${ctaUrl}` : null,\n  paymentLink ? `Payment link: ${paymentLink}` : null,\n  \"\",\n  \"Workspace access opens after payment is confirmed.\",\n  \"\",\n  \"DONEOVERNIGHT\"\n].filter(Boolean).join(\"\\n\");\n\nreturn [{\n  json: {\n    task_id: taskId,\n    client_email: clientEmail,\n    client_name: clientName,\n    quote_amount: quoteAmount,\n    delivery_eta: deliveryEta,\n    quote_note: quoteNote,\n    payment_link: paymentLink,\n    secure_review_url: secureReviewUrl,\n    source: sourceLabel,\n    cta_url: ctaUrl,\n    subject,\n    html,\n    text,\n    should_send: Boolean(clientEmail && clientEmail.includes(\"@\")),\n    provider: \"n8n_outlook\"\n  }\n}];"
+      },
+      "id": "6d6bdf50-d7d5-4eda-bbfa-a078987034ef",
+      "name": "Normalize Quote Email Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_send }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4679d9f8-92a5-4053-8f29-77274e166ea1",
+      "name": "Has Client Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "toRecipients": "={{ $json.client_email }}",
+        "subject": "={{ $json.subject }}",
+        "bodyContent": "={{ $json.html }}",
+        "additionalFields": {}
+      },
+      "id": "1240711d-dc77-47e8-a2d0-9804e2437411",
+      "name": "Email — Client Quote",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        320
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "uN91YqqKRfL3GaJp",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, delivered: true, provider: \"n8n_outlook\", task_id: $(\"Normalize Quote Email Payload\").item.json.task_id } }}",
+        "options": {}
+      },
+      "id": "c0e9afe6-51ca-46e1-b98f-7aa3da2c07a5",
+      "name": "Respond — Quote Email Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, delivered: false, provider: \"n8n_outlook\", reason: \"missing_client_email\", task_id: $(\"Normalize Quote Email Payload\").item.json.task_id } }}",
+        "options": {}
+      },
+      "id": "514dc744-a1a1-49d3-aa25-7395beb0e85d",
+      "name": "Respond — Quote Email Skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1240,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook — Admin Quote Email": {
+      "main": [
+        [
+          {
+            "node": "Normalize Quote Email Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Quote Email Payload": {
+      "main": [
+        [
+          {
+            "node": "Has Client Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Client Email?": {
+      "main": [
+        [
+          {
+            "node": "Email — Client Quote",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond — Quote Email Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email — Client Quote": {
+      "main": [
+        [
+          {
+            "node": "Respond — Quote Email Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "doneovernight-admin-quote-email-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}
