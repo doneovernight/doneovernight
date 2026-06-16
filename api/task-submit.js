@@ -6,7 +6,7 @@ const { handleNotificationPreference } = require("../lib/notification-preference
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { buildClientEmail } = require("../lib/email/client-template");
-const { attachReviewSecurity, buildSecureReviewUrl, verifyReviewToken } = require("../lib/review-token");
+const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -19,6 +19,8 @@ const ALLOWED_ANALYTICS_EVENTS = new Set([
   "review_opened",
   "execution_plan_viewed",
   "approve_start_clicked",
+  "secure_checkout_viewed",
+  "secure_checkout_started",
   "payment_link_clicked",
   "workspace_opened"
 ]);
@@ -30,6 +32,8 @@ const ANALYTICS_EVENT_ALIASES = {
   "task submitted": "ask_submitted",
   "review opened": "review_opened",
   "approve start clicked": "approve_start_clicked",
+  "secure checkout viewed": "secure_checkout_viewed",
+  "secure checkout started": "secure_checkout_started",
   "payment link opened": "payment_link_clicked",
   "workspace opened": "workspace_opened"
 };
@@ -46,6 +50,17 @@ function buildClientReviewUrl(task) {
   if (task?.taskId) reviewUrl.searchParams.set("task_id", task.taskId);
   if (task?.createdAt) reviewUrl.searchParams.set("submitted", task.createdAt);
   return reviewUrl.toString();
+}
+
+function buildSecureCheckoutUrl(task) {
+  const taskId = firstClean(task?.task_id, task?.taskId, task?.id);
+  if (!taskId) return "";
+  const token = createReviewToken(task);
+  if (!token) return "";
+  const checkoutUrl = new URL("https://pay.doneovernight.com/");
+  checkoutUrl.searchParams.set("task_id", taskId);
+  checkoutUrl.searchParams.set("token", token);
+  return checkoutUrl.toString();
 }
 
 function send(res, statusCode, payload) {
@@ -248,6 +263,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
   const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
   const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
   const paymentLink = firstClean(task.payment_link, task.raw_payload?.payment_link, "");
+  const checkoutUrl = paymentLink ? buildSecureCheckoutUrl(task) : "";
   const informationRequest = extractInformationRequest(
     task.information_request,
     task.info_request,
@@ -283,13 +299,47 @@ function publicTaskSnapshot(task = {}, reviewState) {
       quote_note: quoteNote,
       payment_required: paymentIsOpen,
       payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
-      payment_reference: firstClean(task.task_id, task.taskId, task.id),
-      payment_link: paymentIsOpen ? paymentLink : ""
+      reference: firstClean(task.task_id, task.taskId, task.id),
+      secure_checkout_url: paymentIsOpen ? checkoutUrl : "",
+      checkout_url: paymentIsOpen ? checkoutUrl : "",
+      payment_link: ""
     },
     workspace: {
       state: getReviewWorkspaceState(reviewState)
     }
   };
+}
+
+async function handlePaymentStartRequest(req, res) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    const taskId = clean(url.searchParams.get("task_id") || url.searchParams.get("id"));
+    const token = clean(url.searchParams.get("token"));
+
+    if (!taskId || !token) {
+      return send(res, 403, { success: false, authorized: false, reason: "review_token_required" });
+    }
+
+    const task = await loadReviewTask(taskId);
+    if (!task || !verifyReviewToken(task, token)) {
+      return send(res, 403, { success: false, authorized: false, reason: "invalid_review_token" });
+    }
+
+    const state = getLinkedReviewState(task);
+    const paymentIsOpen = ["quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment"].includes(state);
+    const paymentLink = firstClean(task.payment_link, task.raw_payload?.payment_link, "");
+
+    if (!paymentIsOpen || !paymentLink) {
+      return send(res, 409, { success: false, authorized: true, reason: "checkout_not_available" });
+    }
+
+    res.statusCode = 302;
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Location", paymentLink);
+    res.end();
+  } catch (error) {
+    return send(res, 500, { success: false, authorized: false, reason: "checkout_unavailable" });
+  }
 }
 
 function safeReviewFallback(reason = "review_token_required") {
@@ -579,6 +629,10 @@ function parseBody(req) {
 
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("payment_start") === "1") {
+      return handlePaymentStartRequest(req, res);
+    }
     return handleReviewStateRequest(req, res);
   }
 

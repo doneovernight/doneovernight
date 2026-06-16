@@ -2684,7 +2684,7 @@ body.is-admin .admin-dashboard { display: block; }
           </div>
           <p class="revenue-center-note">Only real task, plan, and manual start states are shown.</p>
         </div>
-        <div class="section-kicker" id="adminPaymentStatusNote">Payment system status loading...</div>
+        <div class="section-kicker" id="adminPaymentStatusNote">Secure checkout status loading...</div>
 
         <div class="revenue-cards-grid">
           <div class="revenue-card revenue-potential" id="potentialRevenueCard" tabindex="0" role="button" aria-expanded="false" aria-controls="revenueDrawer">
@@ -3949,11 +3949,12 @@ function renderStatusPanels(status = adminSystemStatus) {
   adminSystemHealth.textContent = integrations.supabase ? 'Connected' : 'Unavailable';
   adminHeartbeatStatus.textContent = integrations.heartbeat ? 'Ready' : 'Not connected';
   if (adminPaymentStatusNote) {
+    const manualSecureCheckout = integrations.manualSecureCheckout || integrations.manualBunqLinks;
     adminPaymentStatusNote.textContent = integrations.payments
-      ? 'Payment system connected'
-      : integrations.manualBunqLinks
-        ? 'Manual Bunq Links Active'
-        : 'Payment provider unavailable.';
+      ? 'Secure checkout connected'
+      : manualSecureCheckout
+        ? 'Manual Secure Checkout Active'
+        : 'Secure checkout unavailable.';
   }
   if (adminSettingsList) {
     adminSettingsList.innerHTML = [
@@ -4238,7 +4239,7 @@ function renderHeartbeatResult(data = {}) {
         ${renderHeartbeatStatusCard('Last heartbeat', statusLayer.lastHeartbeat)}
         ${renderHeartbeatStatusCard('Telegram status', statusLayer.telegram)}
         ${renderHeartbeatStatusCard('Vercel deployment', statusLayer.vercel)}
-        ${renderHeartbeatStatusCard('Payment system', statusLayer.payments)}
+        ${renderHeartbeatStatusCard('Secure checkout', statusLayer.payments)}
         ${renderHeartbeatStatusCard('Funnel Tracking', statusLayer.analytics)}
         ${renderHeartbeatStatusCard('Supabase', statusLayer.supabase)}
       </div>
@@ -5814,9 +5815,9 @@ function _openOpModal(type, task) {
           <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
         </div>
         <div class="op-modal-field">
-          <label for="omQLink">Custom payment link — optional</label>
+          <label for="omQLink">Custom secure checkout link — optional</label>
           <input id="omQLink" name="payment_link" type="url" placeholder="https://checkout.example.com/session" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
-          <p class="field-opt">Optional. Leave empty to auto-generate a Bunq payment link. Use only when sending a custom checkout link.</p>
+          <p class="field-opt">Optional. Leave empty to auto-generate the internal checkout destination. Clients only see DONEOVERNIGHT Secure Checkout.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';
@@ -6099,11 +6100,14 @@ adminActivity?.addEventListener('click', (event) => {
   renderAdminActivity(adminTasks);
 });
 
-function buildBunqPaymentLinkFromQuote(value, reference = '') {
+function buildBunqPaymentLinkFromQuote(value, reference = '', taskReference = '') {
   const amount = String(value || '').replace(/[^\d]/g, '');
   if (!amount) return '';
   const cleanReference = String(reference || '').trim();
-  const description = cleanReference ? `${cleanReference} Execution Plan` : 'DONEOVERNIGHT Execution Plan';
+  const cleanTaskReference = String(taskReference || '').trim();
+  const description = cleanReference
+    ? [cleanReference, cleanTaskReference || 'Execution Plan'].filter(Boolean).join(' ')
+    : 'DONEOVERNIGHT Execution Plan';
   return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }
 
@@ -6127,7 +6131,8 @@ adminTasksList.addEventListener('click', async (e) => {
     const quote = await promptForQuote(task);
     if (!quote) return;
     const paymentReference = task?.task_id || task?.taskId || task?.id || taskId;
-    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount, paymentReference);
+    const taskReference = task?.task_summary || task?.task_description || task?.raw_payload?.task_summary || task?.raw_payload?.task_description || quote.quote_note || '';
+    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount, paymentReference, taskReference);
 
     await updateTask(button, {
       id: taskId,

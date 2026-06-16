@@ -850,21 +850,12 @@
         params.get("reference"),
         80
       );
-      let quoteUrlRaw = safe(params.get("quote_url") || params.get("quoteUrl") || params.get("approval_url"), 500);
-      let quoteUrl = (() => {
-        try {
-          const url = new URL(quoteUrlRaw);
-          return ["https:", "http:"].includes(url.protocol) ? url.toString() : "";
-        } catch (error) {
-          return "";
-        }
-      })();
+      let quoteUrl = "";
       let quoteDetails = {
         amount: "",
         delivery_eta: "",
         note: "",
         deliverables: "",
-        payment_reference: "",
         payment_link: ""
       };
       let informationRequest = "";
@@ -931,7 +922,7 @@
                 state: requested,
                 reference
               });
-              window.trackEvent?.("payment_link_opened", {
+              window.trackEvent?.("secure_checkout_started", {
                 state: requested,
                 reference
               });
@@ -940,9 +931,8 @@
         }
 
         if (paymentReference) {
-          const visible = shouldShowQuote && quoteDetails.payment_reference;
-          paymentReference.classList.toggle("is-visible", Boolean(visible));
-          paymentReference.textContent = visible ? `Payment reference: ${quoteDetails.payment_reference}` : "";
+          paymentReference.classList.remove("is-visible");
+          paymentReference.textContent = "";
         }
 
         if (confidence) {
@@ -1148,7 +1138,7 @@
             state = "review";
             quoteUrl = "";
             informationRequest = "";
-            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
+            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
             renderReviewState();
             configureWorkspaceAccess();
             return;
@@ -1158,13 +1148,17 @@
           state = stateAliases[requested] || "review";
           reference = safe(data.review.task_id || reference, 80);
           informationRequest = safe(data.review.information_request || data.review.requested_information || "", 500);
-          quoteUrl = safe(data.review.quote?.payment_link || "", 500);
+          quoteUrl = safe(
+            data.review.quote?.secure_checkout_url ||
+              data.review.quote?.checkout_url ||
+              "",
+            500
+          );
           quoteDetails = {
             amount: safe(data.review.quote?.quote_amount || data.review.quote?.amount || "", 80),
             delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
             note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
             deliverables: safe(data.review.task_summary || data.review.quote?.deliverables || "", 260),
-            payment_reference: safe(data.review.quote?.payment_reference || data.review.task_id || reference, 120),
             payment_link: quoteUrl
           };
           window.trackEvent?.("review_opened", {
@@ -1185,7 +1179,7 @@
           state = "review";
           quoteUrl = "";
           informationRequest = "";
-          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_reference: "", payment_link: "" };
+          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
           renderReviewState();
           configureWorkspaceAccess();
         }

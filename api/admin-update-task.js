@@ -75,12 +75,13 @@ function extractQuoteAmountDigits(value) {
   return String(value).replace(/[^\d]/g, "");
 }
 
-function buildBunqPaymentLink(value, reference = "") {
+function buildBunqPaymentLink(value, reference = "", taskReference = "") {
   const amount = extractQuoteAmountDigits(value);
   if (!amount) return "";
   const cleanReference = clean(reference);
+  const cleanTaskReference = clean(taskReference);
   const description = cleanReference
-    ? `${cleanReference} Execution Plan`
+    ? [cleanReference, cleanTaskReference || "Execution Plan"].filter(Boolean).join(" ")
     : "DONEOVERNIGHT Execution Plan";
   const encodedAmount = encodeURIComponent(amount);
   const encodedDescription = encodeURIComponent(description);
@@ -310,7 +311,13 @@ function finalizeQuotePatch(patch, existingTask = {}) {
   if (!hasSubmittedPaymentLink && !existingPaymentLink) {
     const generatedPaymentLink = buildBunqPaymentLink(
       patch.quote_amount || existingTask.quote_amount || existingTask.raw_payload?.quote_amount,
-      existingTask.task_id || existingTask.taskId || existingTask.id
+      existingTask.task_id || existingTask.taskId || existingTask.id,
+      existingTask.task_summary ||
+        existingTask.task_description ||
+        existingTask.raw_payload?.task_summary ||
+        existingTask.raw_payload?.task_description ||
+        patch.quote_note ||
+        existingTask.raw_payload?.quote_note
     );
     if (generatedPaymentLink) patch.payment_link = generatedPaymentLink;
   }

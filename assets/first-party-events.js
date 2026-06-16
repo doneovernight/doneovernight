@@ -8,6 +8,8 @@
     "task submitted": "ask_submitted",
     "review opened": "review_opened",
     "approve_start_clicked": "approve_start_clicked",
+    "secure_checkout_viewed": "secure_checkout_viewed",
+    "secure_checkout_started": "secure_checkout_started",
     "payment_link_opened": "payment_link_clicked",
     "workspace opened": "workspace_opened"
   };

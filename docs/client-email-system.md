@@ -62,12 +62,12 @@ Required content:
 
 Do not show payment links, raw payment fallback links, giant quote tables, technical details, internal statuses, or operator information in the email.
 
-## Review And Payment Flow
+## Review And Secure Checkout Flow
 
 The client journey is:
 
 ```txt
-Email -> Review Execution Plan -> Approve & Start -> Payment
+Email -> Review Execution Plan -> Approve & Start -> Secure Checkout -> Workspace Activation
 ```
 
 The review page contains scope, timeline, deliverables, investment, and why-start-now content. The email does not.

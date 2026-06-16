@@ -14,7 +14,16 @@ Client-facing language should use:
 - Delivered
 - Completed
 
-Avoid client-facing `Quote`, `Pay Now`, and `Payment Request` wording unless a third-party payment provider makes the term unavoidable.
+Avoid client-facing `Quote`, `Pay Now`, and `Payment Request` wording.
+
+Client-facing payment provider names are not part of the product language. Clients should only see:
+
+```txt
+Review Execution Plan
+Approve & Start
+Secure Checkout
+Workspace Activation
+```
 
 ## Current Lifecycle
 
@@ -34,23 +43,23 @@ Archived
 
 Compatibility states still exist in code for older records, including `quote_sent`, `quoted`, `awaiting_payment`, `payment_confirmed`, `workspace_active`, and `execution_active`. These must map into the client-facing lifecycle without changing the underlying historical record.
 
-## Execution Plan And Payment
+## Execution Plan And Secure Checkout
 
 Admin Send Plan must:
 
-- save the execution plan amount, ETA, note, and payment link
+- save the execution plan amount, ETA, note, and internal checkout destination
 - preserve the secure review token flow
 - set the task into `execution_plan_ready` / awaiting-start compatible state
-- send the client back to the secure review page, not directly to payment
+- send the client back to the secure review page, not directly to payment infrastructure
 - keep workspace locked until payment/start is confirmed
 
-If no custom payment link is provided, DONEOVERNIGHT generates:
+If no custom checkout destination is provided, DONEOVERNIGHT generates an internal infrastructure destination and keeps it behind DONEOVERNIGHT Secure Checkout.
 
 ```txt
-https://bunq.me/doneovernight?amount=<amount>&description=<DON reference> Execution Plan
+https://pay.doneovernight.com/?task_id=<DON reference>&token=<review token>
 ```
 
-The DON reference is included in the encoded description so manual payment matching is possible.
+The underlying infrastructure destination must include the DON reference and task reference in its encoded description so manual payment matching is possible. Client-facing email and review pages must never show raw provider names or raw provider URLs.
 
 ## Revenue Recovery Architecture
 
