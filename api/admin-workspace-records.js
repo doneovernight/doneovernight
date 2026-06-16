@@ -102,13 +102,17 @@ function getDispatchNotificationReadiness() {
   const webhookConfigured = [
     "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"
   ].some(hasEnv);
+  const doneovernightOpsBotConfigured =
+    hasEnv("DONEOVERNIGHT_OPS_BOT_TOKEN") && hasEnv("DONEOVERNIGHT_OPS_CHAT_ID");
   const doneovernightBotConfigured =
     hasEnv("DONEOVERNIGHT_BOT_TOKEN") && hasEnv("DONEOVERNIGHT_CHAT_ID");
 
   return {
-    configured: webhookConfigured || doneovernightBotConfigured,
+    configured: webhookConfigured || doneovernightOpsBotConfigured || doneovernightBotConfigured,
     method: webhookConfigured
       ? "DONEOVERNIGHT Ops webhook"
+      : doneovernightOpsBotConfigured
+        ? "DONEOVERNIGHT Ops bot"
       : doneovernightBotConfigured
         ? "DONEOVERNIGHT bot"
         : "Not configured"
