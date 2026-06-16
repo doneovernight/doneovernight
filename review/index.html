@@ -997,6 +997,7 @@
           };
           setText("[data-state-label]", requested === "needs_info" ? "Needs information" : requested === "on_hold" ? "On hold" : requested === "archived" ? "Archived" : requested === "request_received" ? "Request received" : "Review in progress");
           setText("#review-title", requested === "needs_info" ? "Needs information." : requested === "on_hold" ? "On hold." : requested === "archived" ? "Request archived." : requested === "request_received" ? "Request received." : "Request under review.");
+          document.title = `${requested === "needs_info" ? "Needs Information" : requested === "on_hold" ? "On Hold" : requested === "archived" ? "Request Archived" : requested === "request_received" ? "Request Received" : "Request Under Review"} | DONEOVERNIGHT`;
           setText("[data-state-copy]", reviewCopy[requested] || reviewCopy.request_received);
           setStep("received", "complete");
           setStep("review", requested === "request_received" ? "" : "active");
@@ -1020,6 +1021,7 @@
           };
           setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Operators assigned" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan");
           setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
+          document.title = `${["paid", "payment_confirmed"].includes(requested) ? "Execution Scheduled" : "Execution Plan Ready"} | DONEOVERNIGHT`;
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
             ? "Your request has been reviewed. The execution plan is ready for the next step."
             : "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step."));
@@ -1037,6 +1039,7 @@
           const executionStarted = ["workspace_ready", "workspace_unlocking"].includes(requested);
           setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : executionStarted ? "Execution started" : "Project active");
           setText("#review-title", ["delivered"].includes(requested) ? "Delivered." : ["revision_requested"].includes(requested) ? "Revision requested." : executionStarted ? "Execution started." : "Project active.");
+          document.title = `${["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision Requested" : executionStarted ? "Execution Started" : "Project Active"} | DONEOVERNIGHT`;
           setText("[data-state-copy]", ["delivered"].includes(requested)
             ? "Delivery is prepared in your workspace."
             : ["revision_requested"].includes(requested)
