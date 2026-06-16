@@ -412,6 +412,26 @@ module.exports = async function handler(req, res) {
       };
     }
 
+    if (
+      clientEmail.configured === false &&
+      notification.delivered === true &&
+      task.email &&
+      process.env.TASK_SUBMIT_WEBHOOK_URL
+    ) {
+      clientEmail = {
+        configured: true,
+        sent: true,
+        delivered: false,
+        reason: "handoff_to_n8n",
+        provider: "n8n_outlook",
+        recipient: task.email,
+        status: {
+          taskSubmitWebhook: notification.status || null,
+          finalDeliveryTelemetry: false
+        }
+      };
+    }
+
     return send(res, 200, {
       success: true,
       taskId,

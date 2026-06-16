@@ -3305,7 +3305,6 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const pendingRevenue = pendingTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
 
   const potentialTasks = tasks.filter(isPotentialRevenueTask);
-  const potentialRevenue = potentialTasks.reduce((sum, task) => sum + parseMoney(task.quote_amount), 0);
 
   adminStatsSnapshot = {
     totalTasks: tasks.length,
@@ -3327,7 +3326,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   adminHeartbeatStatus.textContent = adminSystemStatus?.integrations?.heartbeat ? 'Ready' : 'Not connected';
   adminPaidRevenue.textContent = formatRevenue(paidRevenue);
   adminPendingRevenue.textContent = formatRevenue(pendingRevenue);
-  adminPotentialRevenue.textContent = formatRevenue(potentialRevenue);
+  adminPotentialRevenue.textContent = String(potentialTasks.length);
   adminNewTasksStat.title = `${tasks.length} total tasks · ${activeClients} active clients`;
 
   const paidCountEl = document.getElementById('paidRevenueCount');
@@ -3335,7 +3334,7 @@ function updateStats(tasks = adminTasks, clients = adminClients) {
   const potentialCountEl = document.getElementById('potentialRevenueCount');
   if (paidCountEl) paidCountEl.textContent = `${paidTasks.length} transaction${paidTasks.length !== 1 ? 's' : ''}`;
   if (pendingCountEl) pendingCountEl.textContent = `${pendingTasks.length} awaiting`;
-  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} pending`;
+  if (potentialCountEl) potentialCountEl.textContent = `${potentialTasks.length} quote${potentialTasks.length !== 1 ? 's' : ''} pending`;
 
   if (activeRevenueDrawer) {
     const drawerContent = document.getElementById('revenueDrawerContent');
@@ -3823,22 +3822,26 @@ function renderTrafficSignalCard(label, item = {}, options = {}) {
 
 function renderTrafficSignals(analytics = adminTrafficSignalsData) {
   if (!adminTrafficSignals) return;
-  if (!analytics || analytics.status !== 'Connected') {
-    adminTrafficSignals.innerHTML = '<div class="placeholder">Analytics unavailable.</div>';
+  if (!analytics) {
+    adminTrafficSignals.innerHTML = '<div class="placeholder">Traffic / Signals unavailable.</div>';
     return;
   }
   const signals = analytics.signals || {};
   const traffic = analytics.traffic || {};
   const vercel = analytics.vercel || {};
   const dispatchTotal = Number(signals.dispatchSignupsTotal?.value);
+  const askTotal = Number(signals.askSubmissionsTotal?.value);
+  const analyticsReason = analytics.vercel?.connection?.reason || analytics.source || 'Vercel Analytics unavailable';
 
   adminTrafficSignals.innerHTML = `
     ${renderTrafficSignalCard('Today visits', traffic.todayVisits || vercel.todayVisits)}
     ${renderTrafficSignalCard('Homepage visits', traffic.homepageVisits || vercel.homepageVisits)}
     ${renderTrafficSignalCard('Ask visits', traffic.askVisits || vercel.askVisits)}
     ${renderTrafficSignalCard('Review visits', traffic.reviewVisits || vercel.reviewVisits)}
+    ${renderTrafficSignalCard('Ask submissions', signals.askSubmissionsToday, { total: Number.isFinite(askTotal) ? askTotal : undefined })}
     ${renderTrafficSignalCard('Dispatch signups', signals.dispatchSignupsToday, { total: Number.isFinite(dispatchTotal) ? dispatchTotal : undefined })}
     ${renderTrafficSignalCard('Top page', signals.topPage || traffic.topPublicRoute)}
+    <div class="placeholder">${escapeHTML(analyticsReason)}</div>
   `;
 }
 
@@ -3936,15 +3939,17 @@ function renderHeartbeatResult(data = {}) {
   const totalOperatorCount = Number(operations.operators?.total?.value || 0);
   const operatorsCount = makeHeartbeatCountCard('Operators', `${activeOperatorCount} Active`, `${pendingOperatorCount} Pending · ${totalOperatorCount} Total`);
   const deliveredTasksCount = makeHeartbeatCountCard('Delivered Tasks', operations.asks?.delivered?.value, 'Delivered task records');
-  const trafficCards = analytics?.status === 'Connected'
+  const trafficCards = analytics
     ? `
         ${renderTrafficSignalCard('Homepage visits', analytics?.traffic?.homepageVisits || analytics?.vercel?.homepageVisits)}
         ${renderTrafficSignalCard('Ask visits', analytics?.traffic?.askVisits || analytics?.vercel?.askVisits)}
         ${renderTrafficSignalCard('Review visits', analytics?.traffic?.reviewVisits || analytics?.vercel?.reviewVisits)}
-        ${renderTrafficSignalCard('Dispatch signups', analytics?.traffic?.dispatchSignups || analytics?.vercel?.dispatchSignups)}
-        ${renderTrafficSignalCard('Top route', analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute)}
+        ${renderTrafficSignalCard('Ask submissions', analytics?.signals?.askSubmissionsToday, { total: Number(analytics?.signals?.askSubmissionsTotal?.value) })}
+        ${renderTrafficSignalCard('Dispatch signups', analytics?.signals?.dispatchSignupsToday || analytics?.traffic?.dispatchSignups || analytics?.vercel?.dispatchSignups, { total: Number(analytics?.signals?.dispatchSignupsTotal?.value) })}
+        ${renderTrafficSignalCard('Top route', analytics?.signals?.topPage || analytics?.traffic?.topPublicRoute || analytics?.vercel?.topPublicRoute)}
+        <div class="placeholder">${escapeHTML(analytics?.vercel?.connection?.reason || analytics?.source || 'Vercel Analytics unavailable')}</div>
       `
-    : '<div class="placeholder">Analytics unavailable.</div>';
+    : '<div class="placeholder">Traffic / Signals unavailable.</div>';
 
   adminHeartbeatResult.innerHTML = `
     <div class="admin-heartbeat-layer">
@@ -4882,7 +4887,7 @@ function renderAdminActivity(tasks) {
     return;
   }
 
-  const visibleEvents = adminActivityExpanded ? recentEvents : recentEvents.slice(0, 5);
+  const visibleEvents = recentEvents.slice(0, 5);
 
   adminActivity.innerHTML = `
     <div class="admin-activity-feed">
@@ -4894,7 +4899,6 @@ function renderAdminActivity(tasks) {
         </div>
       `).join('')}
     </div>
-    ${recentEvents.length > 5 ? `<button class="admin-activity-view-all" type="button" data-activity-view-all>${adminActivityExpanded ? 'Show Latest 5' : `View All ${recentEvents.length}`}</button>` : ''}
   `;
 }
 
@@ -5953,11 +5957,10 @@ function renderPendingDrawerContent(tasks) {
 function renderPotentialDrawerContent(tasks) {
   const potentialTasks = tasks.filter(isPotentialRevenueTask);
   if (!potentialTasks.length) return '<div class="revenue-empty">No pipeline tasks.</div>';
-  const total = potentialTasks.reduce((sum, t) => sum + parseMoney(t.quote_amount), 0);
   return `
     <div class="revenue-drawer-head">
       <span class="revenue-drawer-title">Pending Quotes</span>
-      <span class="revenue-drawer-total" style="color:#e6d3a3">${formatRevenue(total)}</span>
+      <span class="revenue-drawer-total" style="color:#e6d3a3">${potentialTasks.length} pending</span>
     </div>
     ${potentialTasks.map((t) => `
       <div class="revenue-item">
