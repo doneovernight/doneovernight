@@ -2,7 +2,7 @@
 
 This is a permanent operating rule for DONEOVERNIGHT.
 
-DONEOVERNIGHT has one client-facing email design system. The Ask/Task confirmation email is the source of truth, and every client-facing lifecycle email must use the shared renderer in `lib/email/client-template.js`.
+DONEOVERNIGHT has one client-facing email design system. The Ask/Task confirmation email is the source of truth, and every client-facing lifecycle email must use the shared renderer in `lib/email/client-template.js`. The renderer mirrors the production n8n Task Received HTML shell: dark `#050505` background, centered 640px card, rounded outer container, production logo picture block, hero card, status label, task/reference block, two status cards, gold CTA, and footer.
 
 Client email variants include:
 
@@ -50,17 +50,20 @@ https://doneovernight.com/brand/doneovernight-neutral.png
 
 ## Execution Plan Email
 
-The execution plan email must be short. Its purpose is to get the client back to the secure review page.
+The execution plan email must be short. Its purpose is only to get the client back to the secure review page. Execution plan details live on Review.
 
 Required content:
 
+- Status label: `EXECUTION PLAN READY`
 - Headline: `Execution plan ready.`
-- Body: `We reviewed your request and prepared your execution plan.`
+- Greeting: `Hi <client_name>,`
+- Intro: `Your execution plan is ready to review.`
+- Lead: `Review the scope, timing, investment, and start step inside your secure review page.`
 - Reference: DON reference
 - CTA: `Review Execution Plan`
 - CTA destination: `secure_review_url`
 
-Do not show payment links, raw payment fallback links, giant quote tables, technical details, internal statuses, or operator information in the email.
+Do not show investment amounts, timelines/ETAs, scope text, deliverables, payment links, raw payment fallback links, secure checkout links, provider names, giant quote tables, technical details, internal statuses, or operator information in the email.
 
 ## Review And Secure Checkout Flow
 

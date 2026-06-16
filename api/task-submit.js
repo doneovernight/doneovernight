@@ -530,9 +530,24 @@ function buildClientConfirmationEmailPayload(task) {
   const email = buildClientEmail({
     subject,
     preheader: `Ask received. Reference: ${reference}`,
+    statusLabel: "REQUEST RECEIVED",
     title: "Ask received.",
-    intro: `Hi ${name}, we have received your request and will review scope, timing, and the execution path before replying with the next step.`,
+    greetingName: name,
+    intro: "We have received your request.",
+    lead: "A human operator will review scope, timing, and the execution path before replying with the next step.",
+    bullets: [
+      "Scope review",
+      "Timing check",
+      "Execution path",
+      "Secure review"
+    ],
+    taskLabel: "Submitted Task",
+    taskDescription: task.taskSummary || reference,
     rows: [["Reference", reference]],
+    infoCards: [
+      ["Timing", task.deadline || "Not provided"],
+      ["Review Window", "Human review"]
+    ],
     body: ["Human-reviewed. AI-assisted. Built for founders, creatives, and operators."],
     ctaLabel: reviewUrl ? "Track review" : "",
     ctaUrl: reviewUrl,
