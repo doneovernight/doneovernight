@@ -529,25 +529,73 @@ function appendAdminActivity(rawPayload = {}, event = {}) {
 }
 
 function assertReminderAllowed(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
   const status = clean(task.status).toLowerCase();
   const paymentStatus = clean(task.payment_status).toLowerCase();
-  const active = ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
-    ["paid", "payment_confirmed"].includes(paymentStatus);
-  const allowed = ["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned"].includes(status) ||
-    ["awaiting_payment", "verification_pending"].includes(paymentStatus);
-  if (!allowed || active) {
-    const error = new Error("Reminder is not available for this task state");
-    error.code = "REMINDER_NOT_ALLOWED";
+  const workspaceStatus = clean(task.workspace_status || rawPayload.workspace_status).toLowerCase();
+  const projectStatus = clean(task.project_status || rawPayload.project_status).toLowerCase();
+  const secureReviewUrl = buildSecureReviewUrl(task);
+  const fallbackReviewUrl = clean(task.client_review_url || task.review_url || rawPayload.secure_review_url || rawPayload.client_review_url || rawPayload.review_url);
+  const reviewUrl = secureReviewUrl || fallbackReviewUrl;
+  const tokenizedReviewUrl = Boolean(reviewUrl && /task_id=/.test(reviewUrl) && /token=/.test(reviewUrl));
+  const allowedStatusMatch = ["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned", "verification_pending"].includes(status);
+  const allowedPaymentStatusMatch = ["awaiting_payment", "verification_pending"].includes(paymentStatus);
+  const isPaid = ["paid", "payment_confirmed"].includes(status) || ["paid", "payment_confirmed"].includes(paymentStatus);
+  const isProjectActive = ["workspace_ready", "workspace_active", "execution_active", "project_active", "queued", "in_progress", "delivery_prep", "delivered", "completed"].includes(status) ||
+    ["workspace_ready", "workspace_active", "active"].includes(workspaceStatus) ||
+    ["project_active", "execution_active", "active"].includes(projectStatus);
+  const debug = {
+    task_id: task.task_id || task.taskId || task.id || "",
+    status,
+    payment_status: paymentStatus,
+    workspace_status: workspaceStatus,
+    project_status: projectStatus,
+    has_secure_review_url: Boolean(reviewUrl),
+    has_tokenized_review_url: tokenizedReviewUrl,
+    is_paid: isPaid,
+    is_project_active: isProjectActive,
+    allowed_status_match: allowedStatusMatch,
+    allowed_payment_status_match: allowedPaymentStatusMatch,
+    final_reason: ""
+  };
+
+  if (isPaid || isProjectActive) {
+    const error = new Error("Reminder is not available because the task is already active or paid");
+    error.code = "REMINDER_NOT_ALLOWED_ALREADY_ACTIVE";
     error.statusCode = 409;
+    error.reminderDebug = {
+      ...debug,
+      final_reason: error.code
+    };
     throw error;
   }
-  const reviewUrl = buildSecureReviewUrl(task) || clean(task.client_review_url || task.review_url || task.raw_payload?.client_review_url || task.raw_payload?.review_url);
-  if (!reviewUrl || !/task_id=/.test(reviewUrl) || !/token=/.test(reviewUrl)) {
+
+  if (!allowedStatusMatch && !allowedPaymentStatusMatch) {
+    const error = new Error("Reminder is not available for this lifecycle status");
+    error.code = "REMINDER_NOT_ALLOWED_STATUS";
+    error.statusCode = 409;
+    error.reminderDebug = {
+      ...debug,
+      final_reason: error.code
+    };
+    throw error;
+  }
+
+  if (!tokenizedReviewUrl) {
     const error = new Error("Secure review URL is required for reminder");
     error.code = "SECURE_REVIEW_URL_REQUIRED";
     error.statusCode = 409;
+    error.reminderDebug = {
+      ...debug,
+      final_reason: error.code
+    };
     throw error;
   }
+
+  return {
+    ...debug,
+    final_reason: "REMINDER_ALLOWED"
+  };
 }
 
 function assertReferralAllowed(task = {}) {
@@ -573,8 +621,9 @@ async function sendClientAdminAction(taskId, input = {}) {
   }
 
   const action = clientEmailActionType(input);
+  let reminderDebug = null;
   if (action === "referral") assertReferralAllowed(task);
-  else assertReminderAllowed(task);
+  else reminderDebug = assertReminderAllowed(task);
 
   const emailResult = await sendClientActionEmail(task, action);
   if (!emailResult?.delivered) {
@@ -604,7 +653,8 @@ async function sendClientAdminAction(taskId, input = {}) {
   return {
     action,
     task: updatedTask,
-    emailResult
+    emailResult,
+    ...(reminderDebug ? { reminderDebug } : {})
   };
 }
 
@@ -731,6 +781,7 @@ module.exports = async function handler(req, res) {
           provider: actionResult.emailResult.provider,
           status: actionResult.emailResult.status || null
         },
+        ...(actionResult.reminderDebug ? { reminderDebug: actionResult.reminderDebug } : {}),
         message: actionResult.action === "referral" ? "Referral request sent" : "Reminder sent"
       });
     }
@@ -803,7 +854,9 @@ module.exports = async function handler(req, res) {
     return send(res, error.statusCode || 500, {
       success: false,
       error: "Could not update task",
-      code: error.code || "ADMIN_TASK_UPDATE_FAILED"
+      code: error.code || "ADMIN_TASK_UPDATE_FAILED",
+      ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
+      ...(error.emailResult ? { emailResult: error.emailResult } : {})
     });
   }
 };

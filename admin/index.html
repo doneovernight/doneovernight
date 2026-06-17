@@ -3357,7 +3357,7 @@ function canSendReminderTask(task = {}) {
   const paymentStatus = normalizeStatus(task.payment_status);
   const alreadyStarted = ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
   return !alreadyStarted && (
-    ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned'].includes(status) ||
+    ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) ||
     ['awaiting_payment', 'verification_pending'].includes(paymentStatus)
   );
 }
@@ -6054,6 +6054,7 @@ async function updateTask(button, payload) {
       const error = new Error(data?.code || data?.error || 'TASK_UPDATE_FAILED');
       error.code = data?.code || 'TASK_UPDATE_FAILED';
       error.detail = data?.error || '';
+      error.reminderDebug = data?.reminderDebug || null;
       throw error;
     }
     const updatedTask = extractUpdatedTask(data);
@@ -6066,9 +6067,12 @@ async function updateTask(button, payload) {
   } catch (error) {
     button.disabled = false;
     button.textContent = previousText;
-    if (message) message.textContent = payload.status === 'rejected'
-      ? `Could not reject task. ${error.code || error.message || ''}`.trim()
-      : `Could not update task. ${error.code || error.message || ''}`.trim();
+    if (message) {
+      const safeReason = error.reminderDebug?.final_reason || error.code || error.message || '';
+      message.textContent = payload.status === 'rejected'
+        ? `Could not reject task. ${safeReason}`.trim()
+        : `Could not update task. ${safeReason}`.trim();
+    }
     return null;
   }
 }
