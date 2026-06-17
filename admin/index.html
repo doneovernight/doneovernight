@@ -3404,6 +3404,7 @@ function getTaskActionAvailability(task = {}) {
     isWorkspaceActive;
   const isDeliveredOrCompleted = deliveredStatuses.includes(status);
   const isLockedAfterApproval = isPaid || isOperatorsAssigned || isProjectActive || isDeliveredOrCompleted;
+  const isArchived = status === 'archived';
   const hasTokenizedReviewUrl = Boolean(getTaskSecureReviewUrl(task));
   const hasPaymentReturn = Boolean(hasPaymentReturnSignal(task) || status === 'payment_returned' || paymentStatus === 'verification_pending');
   const isAwaitingPayment = paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || ['awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status);
@@ -3445,6 +3446,7 @@ function getTaskActionAvailability(task = {}) {
     canRequestNeedsInfo,
     canMarkDelivered,
     canArchive: !['archived', 'completed'].includes(status),
+    canDeleteArchived: isArchived,
     canOpenWorkspace: isWorkspaceActive || isProjectActive,
     isLockedAfterApproval,
     hasTokenizedReviewUrl
@@ -3469,6 +3471,7 @@ function getTaskActions(task = {}) {
   if (availability.canMarkDelivered) actions.push({ type: 'deliver', label: 'Mark Delivered' });
   if (availability.canRequestReferral) actions.push({ type: 'followup', label: 'Request Referral', intent: 'referral' });
   if (availability.canArchive) actions.push({ type: 'move', label: 'Archive', status: 'archived' });
+  if (availability.canDeleteArchived) actions.push({ type: 'delete-archived', label: 'Delete' });
   return actions;
 }
 
@@ -6226,6 +6229,51 @@ async function updateTask(button, payload) {
   }
 }
 
+async function deleteArchivedTask(button, taskId) {
+  const row = button.closest('.admin-task-row');
+  const actions = row?.querySelectorAll('.admin-task-action') || [];
+  const message = row?.querySelector('.admin-task-message');
+  const previousText = button.textContent;
+
+  actions.forEach((action) => { action.disabled = true; });
+  button.textContent = 'Deleting...';
+  if (message) message.textContent = '';
+
+  try {
+    const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        id: taskId,
+        action: 'delete_archived_task',
+        admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data?.success === false) {
+      const error = new Error(data?.code || data?.error || 'TASK_DELETE_FAILED');
+      error.code = data?.code || 'TASK_DELETE_FAILED';
+      throw error;
+    }
+
+    const deletedId = String(data?.deleted_task?.id || taskId);
+    const deletedTaskId = String(data?.deleted_task?.task_id || '');
+    const nextTasks = adminTasks.filter((task) => {
+      return String(task.id) !== deletedId && (!deletedTaskId || String(task.task_id || task.taskId || '') !== deletedTaskId);
+    });
+    if (message) message.textContent = 'Archived task deleted.';
+    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    renderAdminTaskState(nextTasks);
+    await loadTasks({ silent: true });
+    return data;
+  } catch (error) {
+    actions.forEach((action) => { action.disabled = false; });
+    button.textContent = previousText;
+    if (message) message.textContent = `Could not delete archived task. ${error.code || error.message || ''}`.trim();
+    return null;
+  }
+}
+
 /* ── Operator quote / delivery modal ─────────────────────── */
 
 let _opModalResolve = null;
@@ -6721,6 +6769,13 @@ adminTasksList.addEventListener('click', async (e) => {
         message.textContent = `Payment confirmed. ${activationError}`;
       }
     }
+    return;
+  }
+
+  if (button.dataset.action === 'delete-archived') {
+    const confirmed = window.confirm('Delete this archived task permanently? This cannot be undone.');
+    if (!confirmed) return;
+    await deleteArchivedTask(button, taskId);
     return;
   }
 

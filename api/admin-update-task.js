@@ -390,6 +390,10 @@ function resolveAdminAction(input = {}) {
   return clean(input.action || input.intent || input.type || input.operation).toLowerCase();
 }
 
+function isDeleteArchivedTaskRequest(input = {}) {
+  return resolveAdminAction(input) === "delete_archived_task";
+}
+
 function isClientEmailActionRequest(input = {}) {
   const action = resolveAdminAction(input);
   return action === "send_reminder" || action === "reminder" || action === "request_referral" || action === "referral";
@@ -739,6 +743,69 @@ async function patchTask(taskId, patch) {
   }
 }
 
+async function deleteTaskRow(taskId) {
+  const { url, serviceRoleKey } = getSupabaseConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+  const taskFilter = buildTaskFilter(taskId);
+
+  try {
+    const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}`, {
+      method: "DELETE",
+      signal: controller.signal,
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        Prefer: "return=representation"
+      }
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      const error = new Error("Supabase task delete failed");
+      error.code = "TASK_DELETE_FAILED";
+      error.statusCode = 502;
+      error.detail = detail.slice(0, 500);
+      throw error;
+    }
+
+    const rows = await response.json();
+    return Array.isArray(rows) ? rows[0] : null;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Supabase task delete timed out");
+      timeoutError.code = "TASK_DELETE_TIMEOUT";
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function deleteArchivedTask(taskId) {
+  const task = await loadTask(taskId);
+  if (!task) {
+    const error = new Error("Task not found");
+    error.code = "TASK_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const status = clean(task.status).toLowerCase();
+  const archived = task.archived === true || rawPayload.archived === true;
+  if (status !== "archived" && !archived) {
+    const error = new Error("Delete is only allowed for archived tasks");
+    error.code = "DELETE_NOT_ALLOWED_NOT_ARCHIVED";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return deleteTaskRow(taskId).then((deletedTask) => deletedTask || task);
+}
+
 async function patchTaskRawPayload(taskId, existingTask = {}, payloadPatch = {}) {
   const currentRawPayload = existingTask && typeof existingTask.raw_payload === "object" && existingTask.raw_payload
     ? existingTask.raw_payload
@@ -766,6 +833,20 @@ module.exports = async function handler(req, res) {
         success: false,
         error: "Missing task id",
         code: "TASK_ID_REQUIRED"
+      });
+    }
+
+    if (isDeleteArchivedTaskRequest(input)) {
+      const deletedTask = await deleteArchivedTask(taskId);
+      return send(res, 200, {
+        success: true,
+        deleted: true,
+        deleted_task: {
+          id: deletedTask.id || "",
+          task_id: deletedTask.task_id || deletedTask.taskId || taskId,
+          status: deletedTask.status || ""
+        },
+        message: "Archived task deleted."
       });
     }
 
