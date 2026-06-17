@@ -570,6 +570,17 @@ function assertReminderAllowed(task = {}) {
     throw error;
   }
 
+  if (!allowedPaymentStatusMatch && ["payment_failed", "refunded"].includes(paymentStatus)) {
+    const error = new Error("Reminder is not available for this payment status");
+    error.code = "REMINDER_NOT_ALLOWED_PAYMENT_STATUS";
+    error.statusCode = 409;
+    error.reminderDebug = {
+      ...debug,
+      final_reason: error.code
+    };
+    throw error;
+  }
+
   if (!allowedStatusMatch && !allowedPaymentStatusMatch) {
     const error = new Error("Reminder is not available for this lifecycle status");
     error.code = "REMINDER_NOT_ALLOWED_STATUS";
