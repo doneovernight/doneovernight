@@ -6354,6 +6354,16 @@ async function updateTask(button, payload) {
   }
 }
 
+function formatDeleteFailure(debug = {}) {
+  const parts = [
+    debug.delete_query_table || '',
+    debug.delete_operation || '',
+    debug.supabase_error_code || '',
+    debug.supabase_error_message_safe || ''
+  ].map((item) => String(item || '').trim()).filter(Boolean);
+  return parts.join(' · ');
+}
+
 async function deleteArchivedTask(button, taskId) {
   const row = button.closest('.admin-task-row');
   const actions = row?.querySelectorAll('.admin-task-action') || [];
@@ -6396,7 +6406,7 @@ async function deleteArchivedTask(button, taskId) {
     actions.forEach((action) => { action.disabled = false; });
     button.textContent = previousText;
     if (message) {
-      const debugReason = error.deleteDebug?.supabase_error_code || error.deleteDebug?.supabase_error_message_safe || '';
+      const debugReason = formatDeleteFailure(error.deleteDebug || {});
       message.textContent = `Could not delete archived task. ${error.code || error.message || ''}${debugReason ? ` · ${debugReason}` : ''}`.trim();
     }
     return null;

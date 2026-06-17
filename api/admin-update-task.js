@@ -1115,12 +1115,16 @@ function parseSupabaseErrorDetail(detail = "") {
     const parsed = detail ? JSON.parse(detail) : {};
     return {
       code: clean(parsed.code || parsed.error || ""),
-      message: clean(parsed.message || parsed.msg || parsed.details || parsed.hint || "")
+      message: clean(parsed.message || parsed.msg || parsed.details || parsed.hint || ""),
+      details: clean(parsed.details || ""),
+      hint: clean(parsed.hint || "")
     };
   } catch (error) {
     return {
       code: "",
-      message: clean(detail).slice(0, 300)
+      message: clean(detail).slice(0, 300),
+      details: "",
+      hint: ""
     };
   }
 }
@@ -1134,10 +1138,110 @@ function buildDeleteDiagnostic(task = {}, overrides = {}) {
     delete_guard_passed: overrides.delete_guard_passed === true,
     delete_query_table: TASK_TABLE,
     delete_query_column: clean(overrides.delete_query_column || ""),
+    delete_operation: clean(overrides.delete_operation || "DELETE"),
     supabase_error_code: clean(overrides.supabase_error_code || ""),
     supabase_error_message_safe: clean(overrides.supabase_error_message_safe || "").slice(0, 300),
+    supabase_error_details: clean(overrides.supabase_error_details || "").slice(0, 300),
+    supabase_error_hint: clean(overrides.supabase_error_hint || "").slice(0, 300),
     rows_deleted: Number.isFinite(overrides.rows_deleted) ? overrides.rows_deleted : 0
   };
+}
+
+async function deleteArchivedTaskViaRpc(task = {}, diagnosticBase = {}) {
+  const { url, serviceRoleKey } = getSupabaseDeleteConfig();
+  const rowId = clean(task.id);
+  const taskReference = clean(task.task_id || task.taskId);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${url}/rest/v1/rpc/admin_delete_archived_task`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        p_task_row_id: rowId,
+        p_task_id: taskReference
+      })
+    });
+    const text = await response.text().catch(() => "");
+    const parsed = (() => {
+      try { return text ? JSON.parse(text) : {}; } catch (error) { return {}; }
+    })();
+
+    if (!response.ok) {
+      const parsedDetail = parseSupabaseErrorDetail(text);
+      const error = new Error("Supabase archived task delete RPC failed");
+      error.code = parsedDetail.code === "42501" || response.status === 401 || response.status === 403
+        ? "DELETE_PERMISSION_DENIED"
+        : parsedDetail.code === "PGRST202" || response.status === 404
+          ? "DELETE_RPC_NOT_CONFIGURED"
+          : "TASK_DELETE_FAILED";
+      error.statusCode = error.code === "DELETE_RPC_NOT_CONFIGURED" ? 503 : 502;
+      error.deleteDebug = {
+        ...diagnosticBase,
+        delete_operation: "RPC admin_delete_archived_task",
+        supabase_error_code: parsedDetail.code || String(response.status),
+        supabase_error_message_safe: parsedDetail.message || "Supabase archived task delete RPC failed.",
+        supabase_error_details: parsedDetail.details,
+        supabase_error_hint: parsedDetail.hint,
+        rows_deleted: 0
+      };
+      throw error;
+    }
+
+    if (parsed?.success !== true) {
+      const error = new Error(parsed?.error || "Archived task was not deleted");
+      error.code = clean(parsed?.code) || "TASK_DELETE_FAILED";
+      error.statusCode = error.code === "DELETE_NOT_ALLOWED_NOT_ARCHIVED" ? 409 : 404;
+      error.deleteDebug = {
+        ...diagnosticBase,
+        delete_operation: "RPC admin_delete_archived_task",
+        supabase_error_code: error.code,
+        supabase_error_message_safe: clean(parsed?.error || "Archived task was not deleted."),
+        rows_deleted: Number(parsed?.rows_deleted || 0)
+      };
+      throw error;
+    }
+
+    return {
+      deletedTask: {
+        ...task,
+        id: parsed.deleted_task?.id || task.id,
+        task_id: parsed.deleted_task?.task_id || task.task_id || taskReference,
+        status: parsed.deleted_task?.status || task.status
+      },
+      deleteDebug: {
+        ...diagnosticBase,
+        delete_operation: "RPC admin_delete_archived_task",
+        supabase_error_code: "",
+        supabase_error_message_safe: "",
+        rows_deleted: Number(parsed.rows_deleted || 1)
+      }
+    };
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Supabase archived task delete RPC timed out");
+      timeoutError.code = "TASK_DELETE_TIMEOUT";
+      timeoutError.statusCode = 504;
+      timeoutError.deleteDebug = {
+        ...diagnosticBase,
+        delete_operation: "RPC admin_delete_archived_task",
+        supabase_error_code: "TIMEOUT",
+        supabase_error_message_safe: "Supabase archived task delete RPC timed out.",
+        rows_deleted: 0
+      };
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function deleteTaskRow(task = {}) {
@@ -1195,6 +1299,17 @@ async function deleteTaskRow(task = {}) {
     if (!response.ok) {
       const detail = await response.text();
       const parsedDetail = parseSupabaseErrorDetail(detail);
+      if (parsedDetail.code === "42501" || response.status === 401 || response.status === 403) {
+        return deleteArchivedTaskViaRpc(task, {
+          ...diagnosticBase,
+          delete_operation: "DELETE",
+          supabase_error_code: parsedDetail.code || String(response.status),
+          supabase_error_message_safe: parsedDetail.message || "Supabase task delete was permission denied.",
+          supabase_error_details: parsedDetail.details,
+          supabase_error_hint: parsedDetail.hint,
+          rows_deleted: 0
+        });
+      }
       const error = new Error("Supabase task delete failed");
       error.code = response.status === 401 || response.status === 403 || parsedDetail.code === "42501"
         ? "DELETE_PERMISSION_DENIED"
@@ -1205,6 +1320,8 @@ async function deleteTaskRow(task = {}) {
         ...diagnosticBase,
         supabase_error_code: parsedDetail.code || String(response.status),
         supabase_error_message_safe: parsedDetail.message || "Supabase task delete failed.",
+        supabase_error_details: parsedDetail.details,
+        supabase_error_hint: parsedDetail.hint,
         rows_deleted: 0
       };
       throw error;
