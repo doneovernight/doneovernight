@@ -25,6 +25,7 @@ const VALID_STATUSES = new Set([
   "payment_returned",
   "awaiting_payment",
   "payment_confirmed",
+  "operators_assigned",
   "workspace_ready",
   "workspace_active",
   "project_active",
@@ -560,7 +561,7 @@ function assertReminderAllowed(task = {}) {
   const allowedStatusMatch = ["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned", "verification_pending"].includes(status);
   const allowedPaymentStatusMatch = ["awaiting_payment", "verification_pending"].includes(paymentStatus);
   const isPaid = ["paid", "payment_confirmed"].includes(status) || ["paid", "payment_confirmed"].includes(paymentStatus);
-  const isProjectActive = ["workspace_ready", "workspace_active", "execution_active", "project_active", "queued", "in_progress", "delivery_prep", "delivered", "completed"].includes(status) ||
+  const isProjectActive = ["operators_assigned", "workspace_ready", "workspace_active", "execution_active", "project_active", "queued", "in_progress", "delivery_prep", "delivered", "completed"].includes(status) ||
     ["workspace_ready", "workspace_active", "active"].includes(workspaceStatus) ||
     ["project_active", "execution_active", "active"].includes(projectStatus);
   const debug = {
@@ -631,7 +632,7 @@ function assertReminderAllowed(task = {}) {
 function assertReferralAllowed(task = {}) {
   const status = clean(task.status).toLowerCase();
   const paymentStatus = clean(task.payment_status).toLowerCase();
-  const allowed = ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
+  const allowed = ["paid", "payment_confirmed", "operators_assigned", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
     ["paid", "payment_confirmed"].includes(paymentStatus);
   if (!allowed) {
     const error = new Error("Referral request is only available after payment or activation");

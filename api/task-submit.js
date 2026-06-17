@@ -253,15 +253,18 @@ function getLinkedReviewState(task = {}) {
   const paymentStatus = normalizeTaskStatus(task.payment_status);
   const deliveryStatus = normalizeTaskStatus(task.delivery_status || task.raw_payload?.delivery_status);
   const workspaceStatus = normalizeTaskStatus(task.workspace_status || task.raw_payload?.workspace_status);
+  const projectStatus = normalizeTaskStatus(task.project_status || task.raw_payload?.project_status);
 
   if (["revision_requested", "awaiting_revision"].includes(status) || ["revision_requested", "awaiting_revision"].includes(deliveryStatus)) return "revision_requested";
   if (["needs_info", "needs_information"].includes(status) || ["needs_info", "needs_information"].includes(rawState)) return "needs_info";
   if (["on_hold"].includes(status) || ["on_hold"].includes(rawState)) return "on_hold";
   if (["archived", "cancelled", "rejected"].includes(status) || ["archived", "cancelled", "rejected"].includes(rawState)) return "archived";
   if (["delivered", "completed", "delivery_complete", "delivered_ready"].includes(status) || ["delivered", "completed", "delivery_complete", "delivered_ready"].includes(deliveryStatus)) return "delivered";
-  if (["workspace_active", "execution_active", "project_active"].includes(status) || ["workspace_active", "execution_active", "project_active"].includes(workspaceStatus)) return "workspace_active";
-  if (["workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "workspace_ready";
-  if (["paid", "payment_confirmed", "quote_paid"].includes(paymentStatus) || ["paid", "payment_confirmed", "quote_paid"].includes(status)) return "paid";
+  if (["workspace_active", "execution_active", "project_active", "queued", "in_progress", "delivery_prep"].includes(status) ||
+    ["workspace_active", "execution_active", "project_active", "active"].includes(workspaceStatus) ||
+    ["project_active", "execution_active", "active"].includes(projectStatus)) return "project_active";
+  if (["operators_assigned", "workspace_ready", "workspace_unlocking"].includes(status) || ["workspace_ready", "workspace_unlocking"].includes(workspaceStatus)) return "operators_assigned";
+  if (["paid", "payment_confirmed", "quote_paid"].includes(paymentStatus) || ["paid", "payment_confirmed", "quote_paid"].includes(status)) return "operators_assigned";
   if (["execution_plan_ready", "quote_sent", "quoted"].includes(rawState) || ["execution_plan_ready", "quote_sent", "quoted"].includes(status) || task.quote_amount || task.payment_link) return "execution_plan_ready";
   if (["awaiting_payment", "payment_pending"].includes(paymentStatus) || ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(status)) return "awaiting_start";
   if (rawState === "quote_ready" || status === "quote_ready") return "execution_plan_ready";
@@ -271,8 +274,7 @@ function getLinkedReviewState(task = {}) {
 }
 
 function getReviewWorkspaceState(reviewState) {
-  if (["workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState)) return "available";
-  if (reviewState === "paid") return "available";
+  if (["operators_assigned", "workspace_ready", "workspace_active", "project_active", "delivered", "revision_requested"].includes(reviewState)) return "available";
   return "locked";
 }
 
@@ -290,7 +292,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
     task.raw_payload?.info_request,
     task.raw_payload?.delivery_note
   );
-  const quoteIsReady = ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState);
+  const quoteIsReady = ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment", "operators_assigned", "project_active", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState);
   const paymentIsOpen = ["quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment"].includes(reviewState);
   const hasPaymentLink = Boolean(firstClean(task.payment_link, task.raw_payload?.payment_link, ""));
 
@@ -323,7 +325,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
       deliverables: firstClean(task.quote_deliverables, task.raw_payload?.quote_deliverables, task.raw_payload?.deliverables, task.task_summary, task.task_description, task.raw_payload?.task_summary, task.raw_payload?.task_description, ""),
       deliverables_source: firstClean(task.quote_deliverables, task.raw_payload?.quote_deliverables, task.raw_payload?.deliverables, "") ? "plan" : "submitted_request",
       payment_required: paymentIsOpen,
-      payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
+      payment_confirmed: ["operators_assigned", "project_active", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
       reference: firstClean(task.task_id, task.taskId, task.id),
       checkout_url: paymentIsOpen && hasPaymentLink ? paymentStartUrl : "",
       payment_link: ""

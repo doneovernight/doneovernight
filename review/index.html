@@ -414,8 +414,9 @@
         payment_started: "quote_ready",
         awaiting_payment: "quote_ready",
         payment_pending: "quote_ready",
-        paid: "quote_ready",
-        payment_confirmed: "quote_ready",
+        paid: "workspace_ready",
+        payment_confirmed: "workspace_ready",
+        operators_assigned: "workspace_ready",
         workspace_ready: "workspace_ready",
         workspace_unlocking: "workspace_ready",
         workspace_active: "workspace_ready",
@@ -523,25 +524,29 @@
             label: {
               delivered: "Delivered",
               revision_requested: "Revision requested",
-              executionStarted: "Execution started",
+              executionScheduled: "Operators assigned",
+              executionProgress: "Execution in progress",
               default: "Project active"
             },
             title: {
               delivered: "Delivered.",
               revision_requested: "Revision requested.",
-              executionStarted: "Execution started.",
+              executionScheduled: "Execution scheduled.",
+              executionProgress: "Execution in progress.",
               default: "Project active."
             },
             documentTitle: {
               delivered: "Delivered",
               revision_requested: "Revision Requested",
-              executionStarted: "Execution Started",
+              executionScheduled: "Execution Scheduled",
+              executionProgress: "Execution In Progress",
               default: "Project Active"
             },
             copy: {
               delivered: "Delivery is prepared in your workspace.",
               revision_requested: "Your revision request is visible to operations.",
-              executionStarted: "Operators are assigned and execution is being scheduled.",
+              executionScheduled: "Operators are assigned and execution is being scheduled.",
+              executionProgress: "Execution is in progress. Your workspace is now the source of truth.",
               default: "Your project is active for updates, approvals, delivery tracking, and communication."
             }
           }
@@ -617,25 +622,29 @@
             label: {
               delivered: "Opgeleverd",
               revision_requested: "Revisie gevraagd",
-              executionStarted: "Uitvoering gestart",
+              executionScheduled: "Operators toegewezen",
+              executionProgress: "Uitvoering loopt",
               default: "Project actief"
             },
             title: {
               delivered: "Opgeleverd.",
               revision_requested: "Revisie gevraagd.",
-              executionStarted: "Uitvoering gestart.",
+              executionScheduled: "Uitvoering ingepland.",
+              executionProgress: "Uitvoering loopt.",
               default: "Project actief."
             },
             documentTitle: {
               delivered: "Opgeleverd",
               revision_requested: "Revisie Gevraagd",
-              executionStarted: "Uitvoering Gestart",
+              executionScheduled: "Uitvoering Ingepland",
+              executionProgress: "Uitvoering Loopt",
               default: "Project Actief"
             },
             copy: {
               delivered: "De oplevering staat klaar in je workspace.",
               revision_requested: "Je revisieverzoek is zichtbaar voor operations.",
-              executionStarted: "Operators zijn toegewezen en de uitvoering wordt ingepland.",
+              executionScheduled: "Operators zijn toegewezen en de uitvoering wordt ingepland.",
+              executionProgress: "De uitvoering loopt. Je workspace is nu de bron van waarheid.",
               default: "Je project is actief voor updates, goedkeuringen, delivery tracking en communicatie."
             }
           }
@@ -696,17 +705,21 @@
         const startLinkError = document.querySelector("[data-start-link-error]");
         const deliverablesLabel = document.querySelector("[data-label-deliverables]");
         const labels = copy().labels;
-        const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
+        const planDecisionStates = ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending"];
+        const scheduledStates = ["paid", "payment_confirmed", "operators_assigned", "workspace_ready", "workspace_unlocking"];
+        const activeStates = ["workspace_active", "execution_active", "project_active"];
+        const shouldShowQuote = state === "quote_ready" && planDecisionStates.includes(requested);
+        const shouldShowScheduleSummary = state === "workspace_ready" && [...scheduledStates, ...activeStates, "delivered", "revision_requested"].includes(requested);
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
-        const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
-        const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
-        const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", shouldShowQuote ? quoteDetails.deliverables : "");
+        const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", (shouldShowQuote || shouldShowScheduleSummary) ? quoteDetails.delivery_eta : "");
+        const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", (shouldShowQuote || shouldShowScheduleSummary) ? quoteDetails.note : "");
+        const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", (shouldShowQuote || shouldShowScheduleSummary) ? quoteDetails.deliverables : "");
         if (deliverablesLabel) {
           deliverablesLabel.textContent = quoteDetails.deliverables_source === "plan" ? labels.deliverables : labels.submittedRequest;
         }
 
         if (summary) {
-          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables);
+          const visible = (shouldShowQuote || shouldShowScheduleSummary) && (hasAmount || hasEta || hasNote || hasDeliverables);
           summary.hidden = !visible;
           summary.classList.toggle("is-visible", visible);
         }
@@ -781,8 +794,17 @@
 
         if (state === "workspace_ready") {
           const workspaceCopy = copy().workspace;
-          const executionStarted = ["workspace_ready", "workspace_unlocking"].includes(requested);
-          const copyKey = ["delivered"].includes(requested) ? "delivered" : ["revision_requested"].includes(requested) ? "revision_requested" : executionStarted ? "executionStarted" : "default";
+          const executionScheduled = ["paid", "payment_confirmed", "operators_assigned", "workspace_ready", "workspace_unlocking"].includes(requested);
+          const executionProgress = ["workspace_active", "execution_active", "project_active"].includes(requested);
+          const copyKey = ["delivered"].includes(requested)
+            ? "delivered"
+            : ["revision_requested"].includes(requested)
+              ? "revision_requested"
+              : executionScheduled
+                ? "executionScheduled"
+                : executionProgress
+                  ? "executionProgress"
+                  : "default";
           setText("[data-state-label]", workspaceCopy.label[copyKey]);
           setText("#review-title", workspaceCopy.title[copyKey]);
           document.title = `${workspaceCopy.documentTitle[copyKey]} | DONEOVERNIGHT`;

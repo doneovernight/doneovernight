@@ -3234,6 +3234,7 @@ function getStatusLabel(status) {
     payment_returned: 'Payment returned',
     awaiting_payment: 'Awaiting start',
     payment_confirmed: 'Operators assigned',
+    operators_assigned: 'Operators assigned',
     paid: 'Operators assigned',
     workspace_ready: 'Execution started',
     workspace_active: 'Project active',
@@ -3359,8 +3360,8 @@ function getTaskOperationalBucket(task = {}) {
   if (['completed'].includes(status)) return 'completed';
   if (['archived', 'cancelled', 'rejected'].includes(status)) return 'archived';
   if (isDeliveredTask(task)) return 'delivered';
-  if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return 'active';
-  if (status === 'awaiting_start' || status === 'payment_started' || status === 'payment_returned' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid') return 'awaiting_start';
+  if (['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus)) return 'active';
+  if (status === 'awaiting_start' || status === 'payment_started' || status === 'payment_returned' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending') return 'awaiting_start';
   if (['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status)) return 'review_complete';
   if (status === 'needs_info') return 'needs_info';
   return 'new';
@@ -3435,6 +3436,7 @@ function getTaskActionAvailability(task = {}) {
     ['project_active', 'execution_active', 'active'].includes(projectStatus);
 
   return {
+    canOpenReview: !isLockedAfterApproval && hasTokenizedReviewUrl,
     canSendReminder,
     canConfirmPayment,
     canRequestReferral,
@@ -4017,6 +4019,7 @@ function getReviewState(task = {}) {
     'awaiting_payment',
     'payment_pending',
     'quote_paid',
+    'operators_assigned',
     'needs_info',
     'on_hold',
     'archived',
@@ -4035,8 +4038,7 @@ function getReviewState(task = {}) {
   if (status === 'review_pending' || status === 'review_in_progress') return 'under_review';
   if (status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready') return task.quote_amount || task.payment_link ? 'execution_plan_ready' : 'quote_preparation';
   if (paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || status === 'payment_returned' || status === 'awaiting_payment' || status === 'awaiting_start' || status === 'payment_started') return 'awaiting_start';
-  if (paymentStatus === 'payment_confirmed' || status === 'payment_confirmed') return 'paid';
-  if (paymentStatus === 'paid') return 'paid';
+  if (status === 'operators_assigned' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed' || paymentStatus === 'paid') return 'operators_assigned';
   if (status === 'workspace_ready') return 'workspace_ready';
   if (status === 'workspace_active' || status === 'project_active') return 'workspace_active';
   if (['queued', 'in_progress', 'delivery_prep'].includes(status)) return 'execution_active';
@@ -5249,10 +5251,12 @@ function renderTasks(tasks) {
     const invoiceAmount = task.invoice_amount || task.raw_payload?.invoice_amount || '';
     const referral = getTaskReferral(task);
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
-    const workspaceIsActive = ['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
+    const availability = getTaskActionAvailability(task);
+    const normalizedPaymentStatus = normalizeStatus(task.payment_status);
+    const workspaceIsActive = ['operators_assigned', 'payment_confirmed', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status)) || ['paid', 'payment_confirmed'].includes(normalizedPaymentStatus);
     const actions = task.id
       ? [
-          { type: 'open-review', label: 'Open review' },
+          ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
           ...getTaskActions(task),
           ...(workspaceIsActive ? [{ type: 'open-workspace', label: 'Open workspace' }] : [])
         ]
