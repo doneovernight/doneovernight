@@ -358,26 +358,26 @@
       <div class="quote-summary" data-quote-summary hidden>
         <div class="quote-summary-grid">
           <div class="quote-summary-item quote-summary-note" data-quote-note-wrap hidden>
-            <span class="quote-summary-label">Scope</span>
+            <span class="quote-summary-label" data-label-scope>Scope</span>
             <span class="quote-summary-value" data-quote-note></span>
           </div>
           <div class="quote-summary-item" data-quote-eta-wrap hidden>
-            <span class="quote-summary-label">Timeline</span>
+            <span class="quote-summary-label" data-label-timeline>Timeline</span>
             <span class="quote-summary-value" data-quote-eta></span>
           </div>
           <div class="quote-summary-item" data-quote-deliverables-wrap hidden>
-            <span class="quote-summary-label">Deliverables</span>
+            <span class="quote-summary-label" data-label-deliverables>Deliverables</span>
             <span class="quote-summary-value" data-quote-deliverables></span>
           </div>
           <div class="quote-summary-item" data-quote-amount-wrap hidden>
-            <span class="quote-summary-label">Investment</span>
+            <span class="quote-summary-label" data-label-investment>Investment</span>
             <span class="quote-summary-value" data-quote-amount></span>
           </div>
         </div>
       </div>
 
       <div class="info-request" data-info-request hidden>
-        <span class="info-request-label">Requested information</span>
+        <span class="info-request-label" data-label-requested-info>Requested information</span>
         <p class="info-request-text" data-info-request-text></p>
       </div>
 
@@ -385,7 +385,7 @@
       <p class="activation-note" data-activation-note>Your workspace is activated automatically after approval and start confirmation.</p>
       <p class="start-link-error" data-start-link-error hidden>Start link is not ready yet. Please reply to the email and we’ll resend it.</p>
       <div class="review-reference" aria-label="Reference">
-        <span>Reference</span>
+        <span data-label-reference>Reference</span>
         <strong data-reference>Reference pending</strong>
       </div>
     </section>
@@ -443,6 +443,7 @@
         delivery_eta: "",
         note: "",
         deliverables: "",
+        deliverables_source: "submitted_request",
         payment_link: ""
       };
       let informationRequest = "";
@@ -450,6 +451,201 @@
       reviewLanguage = reviewLanguage.startsWith("nl") ? "nl" : "en";
       window.doneovernightReviewLanguage = reviewLanguage;
       document.documentElement.lang = reviewLanguage;
+
+      const localeCopy = {
+        en: {
+          labels: {
+            scope: "Scope",
+            timeline: "Timeline",
+            deliverables: "Deliverables",
+            submittedRequest: "Submitted request",
+            investment: "Investment",
+            requestedInfo: "Requested information",
+            reference: "Reference",
+            referencePending: "Reference pending",
+            approveStart: "Approve & Start",
+            activationNote: "Your workspace is activated automatically after approval and start confirmation.",
+            startLinkError: "Start link is not ready yet. Please reply to the email and we’ll resend it."
+          },
+          review: {
+            label: {
+              needs_info: "Needs information",
+              on_hold: "On hold",
+              archived: "Archived",
+              request_received: "Request received",
+              default: "Review in progress"
+            },
+            title: {
+              needs_info: "Needs information.",
+              on_hold: "On hold.",
+              archived: "Request archived.",
+              request_received: "Request received.",
+              default: "Request under review."
+            },
+            documentTitle: {
+              needs_info: "Needs Information",
+              on_hold: "On Hold",
+              archived: "Request Archived",
+              request_received: "Request Received",
+              default: "Request Under Review"
+            },
+            copy: {
+              needs_info: "One final item is needed before execution can begin. Reply with the requested detail and DONEOVERNIGHT will continue the review.",
+              on_hold: "This request is on hold. DONEOVERNIGHT will continue as soon as the next operational input is available.",
+              archived: "This request is archived. Reply to the email if you need it reopened.",
+              under_review: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+              review_in_progress: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+              review_active: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
+              request_received: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step."
+            }
+          },
+          quote: {
+            label: "EXECUTION PLAN",
+            paidLabel: "OPERATORS ASSIGNED",
+            title: "Execution plan ready.",
+            paidTitle: "Execution scheduled.",
+            documentTitle: "Execution Plan Ready",
+            paidDocumentTitle: "Execution Scheduled",
+            preparingCopy: "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step.",
+            defaultCopy: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+            copy: {
+              awaiting_payment: "Your execution plan is ready. Approve the plan to start execution.",
+              awaiting_start: "Your execution plan is ready. Approve the plan to start execution.",
+              payment_started: "Your execution plan is ready. Approve the plan to start execution.",
+              payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
+              paid: "Operators are being assigned and execution is being scheduled.",
+              payment_confirmed: "Operators are being assigned and execution is being scheduled.",
+              execution_plan_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+              quote_sent: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+              quote_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
+            }
+          },
+          workspace: {
+            label: {
+              delivered: "Delivered",
+              revision_requested: "Revision requested",
+              executionStarted: "Execution started",
+              default: "Project active"
+            },
+            title: {
+              delivered: "Delivered.",
+              revision_requested: "Revision requested.",
+              executionStarted: "Execution started.",
+              default: "Project active."
+            },
+            documentTitle: {
+              delivered: "Delivered",
+              revision_requested: "Revision Requested",
+              executionStarted: "Execution Started",
+              default: "Project Active"
+            },
+            copy: {
+              delivered: "Delivery is prepared in your workspace.",
+              revision_requested: "Your revision request is visible to operations.",
+              executionStarted: "Operators are assigned and execution is being scheduled.",
+              default: "Your project is active for updates, approvals, delivery tracking, and communication."
+            }
+          }
+        },
+        nl: {
+          labels: {
+            scope: "Scope",
+            timeline: "Planning",
+            deliverables: "Deliverables",
+            submittedRequest: "Ingediende aanvraag",
+            investment: "Investering",
+            requestedInfo: "Gevraagde informatie",
+            reference: "Referentie",
+            referencePending: "Referentie volgt",
+            approveStart: "Goedkeuren & starten",
+            activationNote: "Je workspace wordt automatisch geactiveerd na goedkeuring en startbevestiging.",
+            startLinkError: "De startlink is nog niet klaar. Reageer op de e-mail en we sturen deze opnieuw."
+          },
+          review: {
+            label: {
+              needs_info: "Informatie nodig",
+              on_hold: "On hold",
+              archived: "Gearchiveerd",
+              request_received: "Aanvraag ontvangen",
+              default: "Review in uitvoering"
+            },
+            title: {
+              needs_info: "Informatie nodig.",
+              on_hold: "On hold.",
+              archived: "Aanvraag gearchiveerd.",
+              request_received: "Aanvraag ontvangen.",
+              default: "Aanvraag in review."
+            },
+            documentTitle: {
+              needs_info: "Informatie Nodig",
+              on_hold: "On Hold",
+              archived: "Aanvraag Gearchiveerd",
+              request_received: "Aanvraag Ontvangen",
+              default: "Aanvraag In Review"
+            },
+            copy: {
+              needs_info: "Er is nog één onderdeel nodig voordat uitvoering kan beginnen. Geef het gevraagde detail door en DONEOVERNIGHT zet de review voort.",
+              on_hold: "Deze aanvraag staat on hold. DONEOVERNIGHT gaat verder zodra de volgende operationele input beschikbaar is.",
+              archived: "Deze aanvraag is gearchiveerd. Reageer op de e-mail als deze opnieuw geopend moet worden.",
+              under_review: "Je aanvraag wordt beoordeeld. DONEOVERNIGHT controleert scope, timing en de beste volgende stap.",
+              review_in_progress: "Je aanvraag wordt beoordeeld. DONEOVERNIGHT controleert scope, timing en de beste volgende stap.",
+              review_active: "Je aanvraag wordt beoordeeld. DONEOVERNIGHT controleert scope, timing en de beste volgende stap.",
+              request_received: "Je aanvraag is ontvangen. DONEOVERNIGHT beoordeelt scope, timing en de volgende stap."
+            }
+          },
+          quote: {
+            label: "UITVOERINGSPLAN",
+            paidLabel: "OPERATORS TOEGEWEZEN",
+            title: "Uitvoeringsplan klaar.",
+            paidTitle: "Uitvoering ingepland.",
+            documentTitle: "Uitvoeringsplan Klaar",
+            paidDocumentTitle: "Uitvoering Ingepland",
+            preparingCopy: "Je aanvraag is beoordeeld. DONEOVERNIGHT bereidt het uitvoeringsplan en de volgende stap voor.",
+            defaultCopy: "Je aanvraag is beoordeeld. Bevestig hieronder de scope, planning, investering en startstap.",
+            copy: {
+              awaiting_payment: "Je uitvoeringsplan is klaar. Keur het plan goed om de uitvoering te starten.",
+              awaiting_start: "Je uitvoeringsplan is klaar. Keur het plan goed om de uitvoering te starten.",
+              payment_started: "Je uitvoeringsplan is klaar. Keur het plan goed om de uitvoering te starten.",
+              payment_pending: "Je uitvoeringsplan is klaar. Keur het plan goed om de uitvoering te starten.",
+              paid: "Operators worden toegewezen en de uitvoering wordt ingepland.",
+              payment_confirmed: "Operators worden toegewezen en de uitvoering wordt ingepland.",
+              execution_plan_ready: "Je aanvraag is beoordeeld. Bevestig hieronder de scope, planning, investering en startstap.",
+              quote_sent: "Je aanvraag is beoordeeld. Bevestig hieronder de scope, planning, investering en startstap.",
+              quote_ready: "Je aanvraag is beoordeeld. Bevestig hieronder de scope, planning, investering en startstap."
+            }
+          },
+          workspace: {
+            label: {
+              delivered: "Opgeleverd",
+              revision_requested: "Revisie gevraagd",
+              executionStarted: "Uitvoering gestart",
+              default: "Project actief"
+            },
+            title: {
+              delivered: "Opgeleverd.",
+              revision_requested: "Revisie gevraagd.",
+              executionStarted: "Uitvoering gestart.",
+              default: "Project actief."
+            },
+            documentTitle: {
+              delivered: "Opgeleverd",
+              revision_requested: "Revisie Gevraagd",
+              executionStarted: "Uitvoering Gestart",
+              default: "Project Actief"
+            },
+            copy: {
+              delivered: "De oplevering staat klaar in je workspace.",
+              revision_requested: "Je revisieverzoek is zichtbaar voor operations.",
+              executionStarted: "Operators zijn toegewezen en de uitvoering wordt ingepland.",
+              default: "Je project is actief voor updates, goedkeuringen, delivery tracking en communicatie."
+            }
+          }
+        }
+      };
+
+      function copy() {
+        return localeCopy[reviewLanguage] || localeCopy.en;
+      }
 
       if (reference) {
         requested = "request_received";
@@ -464,6 +660,18 @@
       function setText(selector, value) {
         const element = document.querySelector(selector);
         if (element) element.textContent = value;
+      }
+
+      function applyLocaleLabels() {
+        const labels = copy().labels;
+        setText("[data-label-scope]", labels.scope);
+        setText("[data-label-timeline]", labels.timeline);
+        setText("[data-label-investment]", labels.investment);
+        setText("[data-label-requested-info]", labels.requestedInfo);
+        setText("[data-label-reference]", labels.reference);
+        setText("[data-activation-note]", labels.activationNote);
+        setText("[data-start-link-error]", labels.startLinkError);
+        if (!reference) setText("[data-reference]", labels.referencePending);
       }
 
       function formatQuoteAmount(value) {
@@ -487,11 +695,16 @@
         const cta = document.querySelector("[data-quote-cta]");
         const activationNote = document.querySelector("[data-activation-note]");
         const startLinkError = document.querySelector("[data-start-link-error]");
+        const deliverablesLabel = document.querySelector("[data-label-deliverables]");
+        const labels = copy().labels;
         const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
         const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
         const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", shouldShowQuote ? quoteDetails.deliverables : "");
+        if (deliverablesLabel) {
+          deliverablesLabel.textContent = quoteDetails.deliverables_source === "plan" ? labels.deliverables : labels.submittedRequest;
+        }
 
         if (summary) {
           const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables);
@@ -503,7 +716,7 @@
           cta.classList.remove("is-visible");
           cta.removeAttribute("href");
           cta.onclick = null;
-          cta.textContent = "Approve & Start";
+          cta.textContent = copy().labels.approveStart;
           if (shouldShowQuote && quoteUrl) {
             cta.href = quoteUrl;
             cta.classList.add("is-visible");
@@ -542,58 +755,39 @@
       }
 
       function renderReviewState() {
+        applyLocaleLabels();
+
         if (reference) {
           setText("[data-reference]", reference);
         }
 
         if (state === "review") {
-          const reviewCopy = {
-            needs_info: "One final item is needed before execution can begin. Reply with the requested detail and DONEOVERNIGHT will continue the review.",
-            on_hold: "This request is on hold. DONEOVERNIGHT will continue as soon as the next operational input is available.",
-            archived: "This request is archived. Reply to the email if you need it reopened.",
-            under_review: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
-            review_in_progress: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
-            review_active: "Your request is being reviewed. DONEOVERNIGHT is checking scope, timing, and the best next step.",
-            request_received: "Your request has been received. DONEOVERNIGHT is reviewing the scope, timing, and next step."
-          };
-          setText("[data-state-label]", requested === "needs_info" ? "Needs information" : requested === "on_hold" ? "On hold" : requested === "archived" ? "Archived" : requested === "request_received" ? "Request received" : "Review in progress");
-          setText("#review-title", requested === "needs_info" ? "Needs information." : requested === "on_hold" ? "On hold." : requested === "archived" ? "Request archived." : requested === "request_received" ? "Request received." : "Request under review.");
-          document.title = `${requested === "needs_info" ? "Needs Information" : requested === "on_hold" ? "On Hold" : requested === "archived" ? "Request Archived" : requested === "request_received" ? "Request Received" : "Request Under Review"} | DONEOVERNIGHT`;
-          setText("[data-state-copy]", reviewCopy[requested] || reviewCopy.request_received);
+          const reviewCopy = copy().review;
+          setText("[data-state-label]", reviewCopy.label[requested] || reviewCopy.label.default);
+          setText("#review-title", reviewCopy.title[requested] || reviewCopy.title.default);
+          document.title = `${reviewCopy.documentTitle[requested] || reviewCopy.documentTitle.default} | DONEOVERNIGHT`;
+          setText("[data-state-copy]", reviewCopy.copy[requested] || reviewCopy.copy.request_received);
         }
 
         if (state === "quote" || state === "quote_ready") {
-          const copyByState = {
-            awaiting_payment: "Your execution plan is ready. Approve the plan to start execution.",
-            awaiting_start: "Your execution plan is ready. Approve the plan to start execution.",
-            payment_started: "Your execution plan is ready. Approve the plan to start execution.",
-            payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
-            paid: "Operators are being assigned and execution is being scheduled.",
-            payment_confirmed: "Operators are being assigned and execution is being scheduled.",
-            execution_plan_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
-            quote_sent: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
-            quote_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
-          };
-          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "EXECUTION PLAN" : ["paid", "payment_confirmed"].includes(requested) ? "OPERATORS ASSIGNED" : "EXECUTION PLAN");
-          setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
-          document.title = `${["paid", "payment_confirmed"].includes(requested) ? "Execution Scheduled" : "Execution Plan Ready"} | DONEOVERNIGHT`;
-          setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
-            ? "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
-            : "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step."));
+          const quoteCopy = copy().quote;
+          const isPaidState = ["paid", "payment_confirmed"].includes(requested);
+          setText("[data-state-label]", isPaidState ? quoteCopy.paidLabel : quoteCopy.label);
+          setText("#review-title", isPaidState ? quoteCopy.paidTitle : quoteCopy.title);
+          document.title = `${isPaidState ? quoteCopy.paidDocumentTitle : quoteCopy.documentTitle} | DONEOVERNIGHT`;
+          setText("[data-state-copy]", quoteCopy.copy[requested] || (state === "quote_ready"
+            ? quoteCopy.defaultCopy
+            : quoteCopy.preparingCopy));
         }
 
         if (state === "workspace_ready") {
+          const workspaceCopy = copy().workspace;
           const executionStarted = ["workspace_ready", "workspace_unlocking"].includes(requested);
-          setText("[data-state-label]", ["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision requested" : executionStarted ? "Execution started" : "Project active");
-          setText("#review-title", ["delivered"].includes(requested) ? "Delivered." : ["revision_requested"].includes(requested) ? "Revision requested." : executionStarted ? "Execution started." : "Project active.");
-          document.title = `${["delivered"].includes(requested) ? "Delivered" : ["revision_requested"].includes(requested) ? "Revision Requested" : executionStarted ? "Execution Started" : "Project Active"} | DONEOVERNIGHT`;
-          setText("[data-state-copy]", ["delivered"].includes(requested)
-            ? "Delivery is prepared in your workspace."
-            : ["revision_requested"].includes(requested)
-              ? "Your revision request is visible to operations."
-              : executionStarted
-                ? "Operators are assigned and execution is being scheduled."
-                : "Your project is active for updates, approvals, delivery tracking, and communication.");
+          const copyKey = ["delivered"].includes(requested) ? "delivered" : ["revision_requested"].includes(requested) ? "revision_requested" : executionStarted ? "executionStarted" : "default";
+          setText("[data-state-label]", workspaceCopy.label[copyKey]);
+          setText("#review-title", workspaceCopy.title[copyKey]);
+          document.title = `${workspaceCopy.documentTitle[copyKey]} | DONEOVERNIGHT`;
+          setText("[data-state-copy]", workspaceCopy.copy[copyKey]);
         }
 
         if (state === "quote_ready" && quoteUrl) {
@@ -625,7 +819,7 @@
             state = "review";
             quoteUrl = "";
             informationRequest = "";
-            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
+            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request", payment_link: "" };
             renderReviewState();
             return;
           }
@@ -646,7 +840,8 @@
             amount: safe(data.review.quote?.quote_amount || data.review.quote?.amount || "", 80),
             delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
             note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
-            deliverables: safe(data.review.task_summary || data.review.quote?.deliverables || "", 260),
+            deliverables: safe(data.review.quote?.deliverables || data.review.task_summary || "", 260),
+            deliverables_source: safe(data.review.quote?.deliverables_source || "", 40) === "plan" ? "plan" : "submitted_request",
             payment_link: quoteUrl
           };
           window.trackEvent?.("review_opened", {
@@ -666,7 +861,7 @@
           state = "review";
           quoteUrl = "";
           informationRequest = "";
-          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", payment_link: "" };
+          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request", payment_link: "" };
           renderReviewState();
         }
       }
