@@ -1857,6 +1857,21 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-client-action:active { transform: scale(0.98); }
 .admin-client-action:disabled { cursor: wait; opacity: 0.66; }
 
+.admin-task-action.is-destructive {
+  border-color: rgba(173, 68, 68, 0.78);
+  background: rgba(142, 40, 40, 0.88);
+  color: #fff7f2;
+  box-shadow: 0 0 20px rgba(173, 68, 68, 0.18);
+}
+
+.admin-task-action.is-destructive:hover,
+.admin-task-action.is-destructive:focus-visible {
+  border-color: rgba(214, 92, 92, 0.9);
+  background: rgba(164, 48, 48, 0.95);
+  color: #ffffff;
+  box-shadow: 0 0 28px rgba(173, 68, 68, 0.28);
+}
+
 .workspace-control-head,
 .workspace-record-head {
   display: flex;
@@ -3416,7 +3431,7 @@ function getTaskActionAvailability(task = {}) {
     isWorkspaceActive;
   const isDeliveredOrCompleted = deliveredStatuses.includes(status);
   const isLockedAfterApproval = isPaid || isOperatorsAssigned || isProjectActive || isDeliveredOrCompleted;
-  const isArchived = status === 'archived';
+  const isArchived = status === 'archived' || task.archived === true || rawPayload.archived === true;
   const hasTokenizedReviewUrl = Boolean(getTaskSecureReviewUrl(task));
   const hasPaymentReturn = Boolean(hasPaymentReturnSignal(task) || status === 'payment_returned' || paymentStatus === 'verification_pending');
   const isAwaitingPayment = paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || ['awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status);
@@ -5381,12 +5396,12 @@ function renderTasks(tasks) {
         <span class="admin-task-actions-label">Actions</span>
         ${actions.map((action) => `
           <button
-            class="admin-task-action"
+            class="admin-task-action ${action.type === 'delete-archived' ? 'is-destructive' : ''}"
             type="button"
             data-action="${action.type}"
             ${action.status ? `data-status="${escapeHTML(action.status)}"` : ''}
             ${action.intent ? `data-intent="${escapeHTML(action.intent)}"` : ''}
-            data-task-id="${escapeHTML(task.id)}"
+            data-task-id="${escapeHTML(task.id || task.task_id || task.taskId || '')}"
           >${action.label}</button>
         `).join('')}
         <span class="admin-task-message" aria-live="polite"></span>
@@ -6298,6 +6313,7 @@ async function deleteArchivedTask(button, taskId) {
     if (!response.ok || data?.success === false) {
       const error = new Error(data?.code || data?.error || 'TASK_DELETE_FAILED');
       error.code = data?.code || 'TASK_DELETE_FAILED';
+      error.deleteDebug = data?.deleteDebug || null;
       throw error;
     }
 
@@ -6314,7 +6330,10 @@ async function deleteArchivedTask(button, taskId) {
   } catch (error) {
     actions.forEach((action) => { action.disabled = false; });
     button.textContent = previousText;
-    if (message) message.textContent = `Could not delete archived task. ${error.code || error.message || ''}`.trim();
+    if (message) {
+      const debugReason = error.deleteDebug?.supabase_error_code || error.deleteDebug?.supabase_error_message_safe || '';
+      message.textContent = `Could not delete archived task. ${error.code || error.message || ''}${debugReason ? ` · ${debugReason}` : ''}`.trim();
+    }
     return null;
   }
 }
