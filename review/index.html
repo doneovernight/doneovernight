@@ -566,15 +566,15 @@
             payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
             paid: "Operators are being assigned and execution is being scheduled.",
             payment_confirmed: "Operators are being assigned and execution is being scheduled.",
-            execution_plan_ready: "Your execution plan is ready.",
-            quote_sent: "Your execution plan is ready.",
-            quote_ready: "Your execution plan is ready."
+            execution_plan_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+            quote_sent: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+            quote_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
           };
-          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "AWAITING START" : ["paid", "payment_confirmed"].includes(requested) ? "OPERATORS ASSIGNED" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "EXECUTION PLAN READY" : state === "quote_ready" ? "EXECUTION PLAN READY" : "EXECUTION PLAN");
+          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "EXECUTION PLAN" : ["paid", "payment_confirmed"].includes(requested) ? "OPERATORS ASSIGNED" : "EXECUTION PLAN");
           setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
           document.title = `${["paid", "payment_confirmed"].includes(requested) ? "Execution Scheduled" : "Execution Plan Ready"} | DONEOVERNIGHT`;
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
-            ? "Your execution plan is ready."
+            ? "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
             : "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step."));
         }
 

@@ -6362,7 +6362,7 @@ adminTasksList.addEventListener('click', async (e) => {
     if (!quote) return;
     const paymentReference = task?.task_id || task?.taskId || task?.id || taskId;
     const taskReference = task?.task_summary || task?.task_description || task?.raw_payload?.task_summary || task?.raw_payload?.task_description || quote.quote_note || '';
-    const paymentLink = quote.payment_link || task?.payment_link || buildBunqPaymentLinkFromQuote(quote.quote_amount, paymentReference, taskReference);
+    const paymentLink = buildBunqPaymentLinkFromQuote(quote.quote_amount, paymentReference, taskReference) || quote.payment_link || task?.payment_link || '';
 
     const result = await updateTask(button, {
       id: taskId,

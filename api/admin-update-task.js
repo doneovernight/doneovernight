@@ -93,6 +93,23 @@ function buildBunqPaymentLink(value, reference = "", taskReference = "") {
   return `https://bunq.me/doneovernight?amount=${encodedAmount}&description=${encodedDescription}`;
 }
 
+function extractPaymentLinkAmount(paymentLink = "") {
+  const link = clean(paymentLink);
+  if (!link) return "";
+  try {
+    const url = new URL(link);
+    return extractQuoteAmountDigits(url.searchParams.get("amount") || "");
+  } catch (error) {
+    const match = link.match(/[?&]amount=([^&]+)/i);
+    return match ? extractQuoteAmountDigits(decodeURIComponent(match[1] || "")) : "";
+  }
+}
+
+function buildPaymentReference(existingTask = {}) {
+  const reference = clean(existingTask.task_id || existingTask.taskId || existingTask.id);
+  return reference ? `🌙 ${reference}` : "🌙 DONEOVERNIGHT";
+}
+
 function getSupabaseConfig() {
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -304,34 +321,56 @@ async function loadTask(taskId) {
 }
 
 function finalizeQuotePatch(patch, existingTask = {}) {
-  if (!["quote_sent", "execution_plan_ready", "awaiting_start"].includes(patch.status)) return patch;
+  if (!["quote_sent", "execution_plan_ready", "awaiting_start"].includes(patch.status)) return {};
 
   const existingPaymentLink = clean(existingTask.payment_link || existingTask.raw_payload?.payment_link || "");
-  const hasSubmittedPaymentLink = Boolean(clean(patch.payment_link));
+  const currentAmount = extractQuoteAmountDigits(
+    patch.quote_amount !== undefined
+      ? patch.quote_amount
+      : existingTask.quote_amount || existingTask.raw_payload?.quote_amount || ""
+  );
+  const generatedPaymentLink = currentAmount
+    ? buildBunqPaymentLink(
+        currentAmount,
+        existingTask.task_id || existingTask.taskId || existingTask.id,
+        existingTask.task_summary ||
+          existingTask.task_description ||
+          existingTask.raw_payload?.task_summary ||
+          existingTask.raw_payload?.task_description ||
+          patch.quote_note ||
+          existingTask.raw_payload?.quote_note
+      )
+    : "";
 
-  if (!hasSubmittedPaymentLink && existingPaymentLink) {
+  if (generatedPaymentLink) {
+    patch.payment_link = generatedPaymentLink;
+  } else if (!clean(patch.payment_link) && existingPaymentLink) {
     delete patch.payment_link;
-  }
-
-  if (!hasSubmittedPaymentLink && !existingPaymentLink) {
-    const generatedPaymentLink = buildBunqPaymentLink(
-      patch.quote_amount || existingTask.quote_amount || existingTask.raw_payload?.quote_amount,
-      existingTask.task_id || existingTask.taskId || existingTask.id,
-      existingTask.task_summary ||
-        existingTask.task_description ||
-        existingTask.raw_payload?.task_summary ||
-        existingTask.raw_payload?.task_description ||
-        patch.quote_note ||
-        existingTask.raw_payload?.quote_note
-    );
-    if (generatedPaymentLink) patch.payment_link = generatedPaymentLink;
   }
 
   if ((patch.payment_link || existingPaymentLink) && !["payment_confirmed", "paid"].includes(patch.payment_status)) {
     patch.payment_status = "awaiting_payment";
   }
 
-  return patch;
+  if (!generatedPaymentLink) return {};
+
+  const existingAmount = extractPaymentLinkAmount(existingPaymentLink);
+  const submittedAmount = extractPaymentLinkAmount(patch.payment_link);
+  const staleReason = existingPaymentLink && (
+    existingAmount !== currentAmount ||
+    submittedAmount !== currentAmount ||
+    existingPaymentLink !== generatedPaymentLink
+  )
+    ? "regenerated_for_current_execution_plan"
+    : "";
+
+  return {
+    payment_reference: buildPaymentReference(existingTask),
+    payment_link_amount: currentAmount,
+    payment_link_generated_at: new Date().toISOString(),
+    payment_link_status: "active",
+    payment_link_stale_reason: staleReason
+  };
 }
 
 async function patchTask(taskId, patch) {
@@ -424,7 +463,7 @@ module.exports = async function handler(req, res) {
         code: "TASK_NOT_FOUND"
       });
     }
-    finalizeQuotePatch(patch, existingTask || {});
+    const paymentLinkMetadata = finalizeQuotePatch(patch, existingTask || {});
     let updatedTask = await patchTask(taskId, patch);
     let quoteEmail;
     let needsInfoEmail;
@@ -447,7 +486,8 @@ module.exports = async function handler(req, res) {
         execution_plan_email_provider: quoteEmail?.provider || "none",
         secure_review_url: secureReviewUrl || updatedTask.raw_payload?.secure_review_url || updatedTask.client_review_url || "",
         client_review_url: secureReviewUrl || updatedTask.raw_payload?.client_review_url || updatedTask.client_review_url || "",
-        execution_plan_status: "execution_plan_ready"
+        execution_plan_status: "execution_plan_ready",
+        ...paymentLinkMetadata
       }).catch(() => updatedTask);
     }
     if (isNeedsInfoUpdate(patch)) {
