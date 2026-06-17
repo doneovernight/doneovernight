@@ -2055,6 +2055,18 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
+.admin-task-message.is-success {
+  color: rgba(139, 224, 173, 0.78);
+}
+
+.admin-task-message.is-warning {
+  color: rgba(233, 196, 138, 0.78);
+}
+
+.admin-task-message.is-error {
+  color: rgba(229, 112, 112, 0.78);
+}
+
 .admin-task-price {
   color: #e6d3a3;
   font-weight: 600;
@@ -3160,6 +3172,7 @@ let activeMetricTarget = '';
 let activeRevenueDrawer = null;
 let adminActivityExpanded = false;
 let adminTaskRenderSignature = '';
+const adminTaskFlashMessages = new Map();
 let adminStatsSnapshot = {
   totalTasks: 0,
   pendingReviewTasks: 0,
@@ -5355,6 +5368,7 @@ function renderTasks(tasks) {
     const invoicePdfUrl = task.invoice_pdf_url || task.raw_payload?.invoice_pdf_url || '';
     const invoiceAmount = task.invoice_amount || task.raw_payload?.invoice_amount || '';
     const referral = getTaskReferral(task);
+    const flashMessage = getTaskFlashMessage(task);
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const availability = getTaskActionAvailability(task);
     const workspaceSlug = getTaskWorkspaceSlug(task);
@@ -5461,7 +5475,7 @@ function renderTasks(tasks) {
             data-task-id="${escapeHTML(task.id || task.task_id || task.taskId || '')}"
           >${action.label}</button>
         `).join('')}
-        <span class="admin-task-message" aria-live="polite"></span>
+        <span class="admin-task-message ${flashMessage ? `is-${escapeHTML(flashMessage.type || 'success')}` : ''}" aria-live="polite">${flashMessage ? escapeHTML(flashMessage.text || '') : ''}</span>
       </div>
     ` : '';
 
@@ -6084,6 +6098,49 @@ function extractUpdatedTask(data) {
   return candidates.find((candidate) => candidate && typeof candidate === 'object' && candidate.id) || null;
 }
 
+function getTaskFlashKey(taskOrId = {}) {
+  if (taskOrId && typeof taskOrId === 'object') {
+    return String(taskOrId.id || taskOrId.task_id || taskOrId.taskId || '').trim();
+  }
+  return String(taskOrId || '').trim();
+}
+
+function setTaskFlashMessage(taskOrId, text, type = 'success') {
+  const key = getTaskFlashKey(taskOrId);
+  if (!key || !text) return;
+  adminTaskFlashMessages.set(key, { text, type });
+}
+
+function getTaskFlashMessage(task = {}) {
+  const keys = [task.id, task.task_id, task.taskId].map(getTaskFlashKey).filter(Boolean);
+  for (const key of keys) {
+    if (adminTaskFlashMessages.has(key)) return adminTaskFlashMessages.get(key);
+  }
+  return null;
+}
+
+function mergeUpdatedTaskIntoAdminState(updatedTask) {
+  if (!updatedTask?.id) return null;
+  const updatedId = String(updatedTask.id);
+  const updatedTaskId = String(updatedTask.task_id || updatedTask.taskId || '');
+  const nextTasks = adminTasks.map((task) => {
+    const sameId = String(task.id) === updatedId;
+    const sameTaskId = updatedTaskId && String(task.task_id || task.taskId || '') === updatedTaskId;
+    return sameId || sameTaskId ? { ...task, ...updatedTask } : task;
+  });
+  renderAdminTaskState(nextTasks);
+  return nextTasks.find((task) => String(task.id) === updatedId) || updatedTask;
+}
+
+function getWorkspaceSlugUpdateWarning(data = {}) {
+  const sessionUpdate = data.workspaceSessionUpdate || data.workspace_session_update || data.task?.raw_payload?.workspace_slug_session_update;
+  if (sessionUpdate && sessionUpdate.updated === false) {
+    return sessionUpdate.warning || sessionUpdate.code || 'workspace_session_update_warning';
+  }
+  if (data.warning) return String(data.warning);
+  return '';
+}
+
 function getStageTimestampPatch(stage, now = new Date().toISOString()) {
   const patches = {
     quoted: { quoted_at: now },
@@ -6306,7 +6363,28 @@ async function updateClient(button, payload) {
   }
 }
 
-async function updateTask(button, payload) {
+async function requestTaskUpdate(payload) {
+  const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      ...payload,
+      admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.success === false) {
+    const error = new Error(data?.code || data?.error || 'TASK_UPDATE_FAILED');
+    error.code = data?.code || 'TASK_UPDATE_FAILED';
+    error.detail = data?.error || '';
+    error.reminderDebug = data?.reminderDebug || null;
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
+async function updateTask(button, payload, options = {}) {
   const row = button.closest('.admin-task-row');
   const message = row?.querySelector('.admin-task-message');
   const previousText = button.textContent;
@@ -6316,28 +6394,14 @@ async function updateTask(button, payload) {
   if (message) message.textContent = '';
 
   try {
-    const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        ...payload,
-        admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
-      })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data?.success === false) {
-      const error = new Error(data?.code || data?.error || 'TASK_UPDATE_FAILED');
-      error.code = data?.code || 'TASK_UPDATE_FAILED';
-      error.detail = data?.error || '';
-      error.reminderDebug = data?.reminderDebug || null;
-      throw error;
-    }
+    const data = await requestTaskUpdate(payload);
     const updatedTask = extractUpdatedTask(data);
     if (updatedTask) {
-      const nextTasks = adminTasks.map((task) => String(task.id) === String(updatedTask.id) ? { ...task, ...updatedTask } : task);
-      renderAdminTaskState(nextTasks);
+      mergeUpdatedTaskIntoAdminState(updatedTask);
     }
-    await loadTasks();
+    if (options.reload !== false) {
+      await loadTasks();
+    }
     return data;
   } catch (error) {
     button.disabled = false;
@@ -6417,6 +6481,7 @@ async function deleteArchivedTask(button, taskId) {
 
 let _opModalResolve = null;
 let _opModalEl = null;
+let _opModalSubmitHandler = null;
 
 function _getOpModal() {
   if (_opModalEl) return _opModalEl;
@@ -6445,23 +6510,55 @@ function _getOpModal() {
   const backdrop = document.getElementById('opModalBackdrop');
   const form     = document.getElementById('opModalForm');
   const errLine  = document.getElementById('opModalError');
+  const submit   = document.getElementById('opModalSubmit');
+  const cancel   = document.getElementById('opModalCancel');
+  const close    = document.getElementById('opModalClose');
+
+  function setModalPending(isPending, label = 'Saving...') {
+    backdrop.dataset.pending = isPending ? 'true' : 'false';
+    submit.disabled = isPending;
+    cancel.disabled = isPending;
+    close.disabled = isPending;
+    if (isPending) {
+      submit.dataset.previousText = submit.textContent;
+      submit.textContent = label;
+    } else if (submit.dataset.previousText) {
+      submit.textContent = submit.dataset.previousText;
+      delete submit.dataset.previousText;
+    }
+  }
+
+  function showModalError(message) {
+    errLine.textContent = message || 'Could not save this change.';
+    errLine.classList.add('is-shown');
+  }
 
   function _closeModal(result) {
+    setModalPending(false);
     backdrop.classList.remove('is-open');
     backdrop.setAttribute('aria-hidden', 'true');
     form.reset();
     errLine.classList.remove('is-shown');
+    _opModalSubmitHandler = null;
     if (_opModalResolve) { _opModalResolve(result); _opModalResolve = null; }
   }
 
-  document.getElementById('opModalClose').addEventListener('click', () => _closeModal(null));
-  document.getElementById('opModalCancel').addEventListener('click', () => _closeModal(null));
-  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) _closeModal(null); });
+  close.addEventListener('click', () => {
+    if (backdrop.dataset.pending === 'true') return;
+    _closeModal(null);
+  });
+  cancel.addEventListener('click', () => {
+    if (backdrop.dataset.pending === 'true') return;
+    _closeModal(null);
+  });
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop && backdrop.dataset.pending !== 'true') _closeModal(null);
+  });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && backdrop.classList.contains('is-open')) _closeModal(null);
+    if (e.key === 'Escape' && backdrop.classList.contains('is-open') && backdrop.dataset.pending !== 'true') _closeModal(null);
   });
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errLine.classList.remove('is-shown');
     const fields = document.getElementById('opModalFields');
@@ -6501,6 +6598,19 @@ function _getOpModal() {
 
     const result = {};
     new FormData(form).forEach((v, k) => { result[k] = String(v).trim(); });
+    if (_opModalSubmitHandler) {
+      try {
+        await _opModalSubmitHandler(result, {
+          close: _closeModal,
+          setPending: setModalPending,
+          showError: showModalError
+        });
+      } catch (error) {
+        setModalPending(false);
+        showModalError(error?.message || 'Could not save this change.');
+      }
+      return;
+    }
     _closeModal(result);
   });
 
@@ -6508,9 +6618,10 @@ function _getOpModal() {
   return backdrop;
 }
 
-function _openOpModal(type, task) {
+function _openOpModal(type, task, options = {}) {
   return new Promise((resolve) => {
     _opModalResolve = resolve;
+    _opModalSubmitHandler = typeof options.onSubmit === 'function' ? options.onSubmit : null;
     const backdrop = _getOpModal();
     const fields   = document.getElementById('opModalFields');
     const title    = document.getElementById('opModalTitle');
@@ -6571,8 +6682,8 @@ async function promptForDelivery(task) {
   return _openOpModal('delivery', task);
 }
 
-async function promptForWorkspaceSlug(task) {
-  return _openOpModal('workspace-slug', task);
+async function promptForWorkspaceSlug(task, options = {}) {
+  return _openOpModal('workspace-slug', task, options);
 }
 
 function showAdminDashboard() {
@@ -6983,18 +7094,42 @@ adminTasksList.addEventListener('click', async (e) => {
 
   if (button.dataset.action === 'edit-workspace-slug') {
     const task = (adminTasks || []).find(t => t.id === taskId);
-    const slugResult = await promptForWorkspaceSlug(task);
-    if (!slugResult) return;
-    const data = await updateTask(button, {
-      id: taskId,
-      action: 'update_workspace_slug',
-      workspace_slug: slugResult.workspace_slug
+    await promptForWorkspaceSlug(task, {
+      onSubmit: async (slugResult, controls) => {
+        const previousText = button.textContent;
+        controls.setPending(true, 'Saving...');
+        button.disabled = true;
+        button.textContent = 'Saving...';
+        let data;
+        try {
+          data = await requestTaskUpdate({
+            id: taskId,
+            action: 'update_workspace_slug',
+            workspace_slug: slugResult.workspace_slug
+          });
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = previousText;
+          const code = error?.code || error?.data?.code || error?.message || 'WORKSPACE_SLUG_UPDATE_FAILED';
+          throw new Error(`Could not update workspace slug. ${code}`);
+        }
+
+        const updatedTask = extractUpdatedTask(data);
+        if (!updatedTask) {
+          button.disabled = false;
+          button.textContent = previousText;
+          throw new Error('Could not update workspace slug. TASK_RESPONSE_MISSING');
+        }
+        const warning = getWorkspaceSlugUpdateWarning(data);
+        const flashText = warning
+          ? `Workspace slug updated. Warning: ${warning}`
+          : 'Workspace slug updated.';
+        setTaskFlashMessage(updatedTask || task || taskId, flashText, warning ? 'warning' : 'success');
+        mergeUpdatedTaskIntoAdminState(updatedTask);
+        controls.setPending(false);
+        controls.close(data);
+      }
     });
-    if (message && data?.success) {
-      message.textContent = 'Workspace slug updated.';
-    } else if (message && data?.code) {
-      message.textContent = `Could not update workspace slug. ${data.code}`;
-    }
     return;
   }
 
