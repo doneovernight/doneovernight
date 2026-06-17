@@ -1,0 +1,618 @@
+{
+  "name": "DONEOVERNIGHT — [PORTAL] Submit Task (HTTP)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "portal-task",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6bad1316-412d-4064-9af6-70cb0ed66443",
+      "name": "Webhook — Portal Task Submit5",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        816,
+        6800
+      ],
+      "webhookId": "portal-task"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "access_key",
+              "value": "={{ $json.body.access_key }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "task_description",
+              "value": "={{ $json.body.task_description }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "deadline",
+              "value": "={{ $json.body.deadline }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "source",
+              "value": "={{ $json.body.source || \"portal_dashboard\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "created_at",
+              "value": "={{ $json.body.created_at || $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "21120c49-e2df-4027-a3c5-2d9a9840c28d",
+              "name": "files_link",
+              "value": "={{ $json.body.files_link || $json.body.link || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "b6141c9e-587f-4a50-badb-bf498ad9c72f",
+              "name": "context",
+              "value": "={{ $json.body.context }}",
+              "type": "string"
+            },
+            {
+              "id": "7aab53fb-6af1-40ea-b132-96a8ceb7b491",
+              "name": "tone",
+              "value": "={{ $json.body.tone }}",
+              "type": "string"
+            },
+            {
+              "id": "e750320f-5035-4f46-a946-b33e57163caf",
+              "name": "goal",
+              "value": "={{ $json.body.goal }}",
+              "type": "string"
+            },
+            {
+              "id": "ebac4070-797b-4b78-9368-69667ff6794b",
+              "name": "name",
+              "value": "={{ $json.body.name || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "550e3807-6308-4abe-b95d-5359153e624b",
+              "name": "company",
+              "value": "={{ $json.body.company || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5ba50182-4460-45f0-b2d9-a20aa21bcee4",
+              "name": "links",
+              "value": "={{ JSON.stringify($json.body.links || []) }}",
+              "type": "string"
+            },
+            {
+              "id": "4db73d50-fb05-4240-9a34-d7ed78f0ff89",
+              "name": "attachments",
+              "value": "={{ JSON.stringify($json.body.attachments || []) }}",
+              "type": "string"
+            },
+            {
+              "id": "3b50b7c8-0906-43db-a3ce-c79d322195e3",
+              "name": "task_id",
+              "value": "={{ $json.body.task_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "preferred-language-runtime",
+              "name": "preferred_language",
+              "value": "={{ (($json.body.preferred_language || $json.body.lang || $json.body.language || \"en\") + \"\").toLowerCase().startsWith(\"nl\") ? \"nl\" : \"en\" }}",
+              "type": "string"
+            },
+            {
+              "id": "client_budget-runtime",
+              "name": "client_budget",
+              "value": "={{ $json.body.client_budget || $json.body.budget || $json.body.clientBudget || $json.body.project_budget || $json.body.estimatedBudget || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "budget-runtime",
+              "name": "budget",
+              "value": "={{ $json.body.budget || $json.body.client_budget || $json.body.clientBudget || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "clientBudget-runtime",
+              "name": "clientBudget",
+              "value": "={{ $json.body.clientBudget || $json.body.client_budget || $json.body.budget || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "review_token-runtime",
+              "name": "review_token",
+              "value": "={{ $json.body.review_token || $json.body.reviewToken || $json.body.token || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "client_review_url-runtime",
+              "name": "client_review_url",
+              "value": "={{ $json.body.client_review_url || $json.body.review_url || $json.body.reviewUrl || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "47802717-30d2-42fd-a3ee-11e9532a1291",
+      "name": "Extract Fields5",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        6800
+      ]
+    },
+    {
+      "parameters": {
+        "toRecipients": "ask@doneovernight.com",
+        "subject": "=New portal task — {{ $('Extract Fields5').item.json.deadline }}",
+        "bodyContent": "=New portal task received.\n\nEmail: {{ $('Extract Fields5').item.json.email }}\nDeadline: {{ $('Extract Fields5').item.json.deadline }}\n\nTask:\n{{ $('Extract Fields5').item.json.task_description }}\n\nSource: {{ $('Extract Fields5').item.json.source }}",
+        "additionalFields": {}
+      },
+      "id": "54bb1f0c-f564-440c-8b2b-e888d3b61a71",
+      "name": "Email — Internal Task Alert5",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        6976
+      ],
+      "webhookId": "548fadfa-3178-4747-8c2b-643e122c74c5",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "uN91YqqKRfL3GaJp",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Task received\",\n  \"status\": \"new\"\n}",
+        "options": {}
+      },
+      "id": "df92ffa8-a934-49b9-a6d2-ccc04f1baf82",
+      "name": "Respond to Webhook5",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2112,
+        7184
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "8615489344",
+        "text": "={{ $json.telegram_message }} \n",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2112,
+        6784
+      ],
+      "id": "2b3f7227-ec1f-493c-b8ec-132ece1fcdfc",
+      "name": "NEW TASK Telegram5",
+      "webhookId": "a59498ae-89e1-4fdb-9e19-a500394f3d8d",
+      "credentials": {
+        "telegramApi": {
+          "id": "2OVy2DJ7nIrQHmcx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const extract = $('Extract Fields5').item.json || {};\n\nconst taskId =\n  $json.task_id ||\n  $json.taskId ||\n  $json.operational_id ||\n  $json.id ||\n  \"UNKNOWN-ID\";\n\nconst rawTask =\n  $json.task_summary ||\n  $json.task_description ||\n  extract.task_description ||\n  $json.raw_payload?.task_description ||\n  \"\";\n\nconst deadlineRaw =\n  $json.deadline ||\n  extract.deadline ||\n  \"\";\n\nconst deadline = String(deadlineRaw).toLowerCase();\n\nconst clientName =\n  $json.name ||\n  $json.client_name ||\n  $json.raw_payload?.name ||\n  $json.body?.name ||\n  \"Unknown client\";\n\nconst clientEmail =\n  $json.client_email ||\n  $json.email ||\n  $json.to ||\n  $json.raw_payload?.client_email ||\n  $json.raw_payload?.email ||\n  $json.body?.client_email ||\n  $json.body?.email ||\n  \"\";\n\nconst company =\n  $json.company ||\n  $json.raw_payload?.company ||\n  $json.body?.company ||\n  \"\";\n\nconst source =\n  $json.source ||\n  $json.raw_payload?.source ||\n  $json.body?.source ||\n  \"unknown\";\n\n/* --------------------------\n   CLIENT BUDGET\n   user-submitted budget only\n-------------------------- */\n\nconst clientBudgetRaw =\n  $json.client_budget ||\n  $json.budget ||\n  $json.clientBudget ||\n  $json.project_budget ||\n  $json.estimatedBudget ||\n  extract.client_budget ||\n  extract.budget ||\n  extract.clientBudget ||\n  extract.project_budget ||\n  extract.estimatedBudget ||\n  $json.raw_payload?.client_budget ||\n  $json.raw_payload?.budget ||\n  $json.raw_payload?.clientBudget ||\n  $json.raw_payload?.project_budget ||\n  $json.raw_payload?.estimatedBudget ||\n  $json.body?.client_budget ||\n  $json.body?.budget ||\n  $json.body?.clientBudget ||\n  $json.body?.project_budget ||\n  $json.body?.estimatedBudget ||\n  \"\";\n\nconst clientBudget = String(clientBudgetRaw || \"\").trim();\n\nfunction formatClientBudget(value) {\n  const raw = String(value || \"\").trim();\n  if (!raw) return \"Not provided\";\n\n  const cleaned = raw\n    .replace(/^€\\s*/i, \"\")\n    .replace(/\\s+/g, \" \")\n    .trim();\n\n  if (!cleaned) return \"Not provided\";\n\n  if (/^\\d+([.,]\\d+)?$/.test(cleaned)) {\n    return `€${cleaned}`;\n  }\n\n  return cleaned;\n}\n\nconst clientBudgetDisplay = formatClientBudget(clientBudget);\n\nlet links = \"\";\n\nif (Array.isArray($json.links)) {\n  links = $json.links.join(\"\\n\");\n} else if (typeof $json.links === \"string\") {\n  links = $json.links.replace(/\"/g, \"\");\n} else if (extract.files_link) {\n  links = extract.files_link.replace(/\"/g, \"\");\n}\n\nfunction normalizeAttachmentNames(value) {\n  if (!value) return [];\n\n  let parsed = value;\n\n  if (typeof parsed === \"string\") {\n    const trimmed = parsed.trim();\n\n    if (!trimmed || trimmed === \"[]\") return [];\n\n    try {\n      parsed = JSON.parse(trimmed);\n    } catch (error) {\n      parsed = trimmed.split(/[,\\n]/);\n    }\n  }\n\n  if (!Array.isArray(parsed)) {\n    parsed = [parsed];\n  }\n\n  return parsed\n    .map((item) => {\n      if (!item) return \"\";\n\n      if (typeof item === \"string\") {\n        const trimmed = item.trim();\n\n        if (!trimmed) return \"\";\n\n        try {\n          const nested = JSON.parse(trimmed);\n\n          if (nested && typeof nested === \"object\") {\n            return (\n              nested.name ||\n              nested.filename ||\n              nested.fileName ||\n              \"\"\n            );\n          }\n        } catch (error) {\n          return trimmed.replace(/^['\"]|['\"]$/g, \"\");\n        }\n\n        return trimmed.replace(/^['\"]|['\"]$/g, \"\");\n      }\n\n      if (typeof item === \"object\") {\n        return (\n          item.name ||\n          item.filename ||\n          item.fileName ||\n          \"\"\n        );\n      }\n\n      return \"\";\n    })\n    .map((name) => String(name).trim())\n    .filter(Boolean);\n}\n\nconst attachmentsDisplay = Array.from(\n  new Set([\n    ...normalizeAttachmentNames($json.attachments),\n    ...normalizeAttachmentNames(extract.attachments),\n    ...normalizeAttachmentNames($json.raw_payload?.attachments),\n    ...normalizeAttachmentNames($json.body?.attachments)\n  ])\n).join(\", \");\n\nfunction getSection(label) {\n  const regex = new RegExp(\n    `${label}:\\\\s*([\\\\s\\\\S]*?)(?=\\\\n\\\\s*(Context|Tone|Goal|Files):|$)`,\n    \"i\"\n  );\n\n  const match = rawTask.match(regex);\n\n  if (!match) return \"\";\n\n  return match[1].trim();\n}\n\nconst cleanTask = rawTask\n  .split(/\\n\\s*Context:|\\n\\s*Tone:|\\n\\s*Goal:|\\n\\s*Files:/i)[0]\n  .trim();\n\nconst clientEmailTaskDescription =\n  cleanTask || String(rawTask || \"\").trim();\n\nconst context = getSection(\"Context\");\nconst tone = getSection(\"Tone\");\nconst goal = getSection(\"Goal\");\n\nconst task = cleanTask.toLowerCase();\n\nlet task_type = \"general_task\";\nlet suggested_quote = 99;\nlet priority = \"Normal\";\nlet complexity = \"small\";\n\nconst has = (words) =>\n  words.some((w) => task.includes(w));\n\n/* --------------------------\n   TASK TYPE\n-------------------------- */\n\nif (\n  has([\n    \"website\",\n    \"web\",\n    \"landing page\",\n    \"framer\",\n    \"seo\",\n    \"shopify\",\n    \"products\",\n    \"webshop\",\n    \"ecommerce\"\n  ])\n) {\n  task_type = \"web_update\";\n  suggested_quote = 249;\n}\n\nelse if (\n  has([\n    \"automation\",\n    \"workflow\",\n    \"n8n\",\n    \"zapier\",\n    \"api\"\n  ])\n) {\n  task_type = \"automation\";\n  suggested_quote = 299;\n}\n\nelse if (\n  has([\n    \"presentation\",\n    \"deck\",\n    \"slides\",\n    \"pitch\"\n  ])\n) {\n  task_type = \"presentation\";\n  suggested_quote = 199;\n}\n\nelse if (\n  has([\n    \"research\",\n    \"analyse\",\n    \"analysis\",\n    \"market\",\n    \"competitor\"\n  ])\n) {\n  task_type = \"research\";\n  suggested_quote = 149;\n}\n\nelse if (\n  has([\n    \"pdf\",\n    \"proposal\",\n    \"document\",\n    \"rewrite\",\n    \"proofread\"\n  ])\n) {\n  task_type = \"document\";\n  suggested_quote = 129;\n}\n\nelse if (\n  has([\n    \"social\",\n    \"caption\",\n    \"tiktok\",\n    \"instagram\",\n    \"linkedin\"\n  ])\n) {\n  task_type = \"social_content\";\n  suggested_quote = 149;\n}\n\n/* --------------------------\n   COMPLEXITY\n-------------------------- */\n\nif (cleanTask.length > 500) {\n  complexity = \"medium\";\n  suggested_quote += 75;\n}\n\nif (cleanTask.length > 1200) {\n  complexity = \"large\";\n  suggested_quote += 150;\n}\n\n/* --------------------------\n   PRIORITY\n-------------------------- */\n\nif (\n  deadline.includes(\"tonight\") ||\n  deadline.includes(\"today\") ||\n  deadline.includes(\"urgent\") ||\n  deadline.includes(\"rush\") ||\n  deadline.includes(\"4 hours\") ||\n  deadline.includes(\"4h\")\n) {\n  priority = \"High\";\n  suggested_quote += 50;\n}\n\nsuggested_quote =\n  Math.round(suggested_quote / 10) * 10 - 1;\n\nconst prettySource =\n  source.replace(/_/g, \" \");\n\nconst prettyType =\n  task_type.replace(/_/g, \" \");\n\n/* --------------------------\n   LANGUAGE STABILIZATION\n   explicit locale always wins\n-------------------------- */\n\nfunction normalizeExplicitLocale(value) {\n  const locale = String(value || \"\").trim().toLowerCase();\n  if (!locale) return \"\";\n  if (locale.startsWith(\"en\")) return \"en\";\n  if (locale.startsWith(\"nl\")) return \"nl\";\n  return \"\";\n}\n\nconst explicitLocaleCandidates = [\n  extract.preferred_language,\n  extract.client_locale,\n  extract.language,\n  extract.lang,\n  extract.source_language,\n\n  $json.preferred_language,\n  $json.client_locale,\n  $json.language,\n  $json.lang,\n  $json.source_language,\n\n  $json.raw_payload?.preferred_language,\n  $json.raw_payload?.client_locale,\n  $json.raw_payload?.language,\n  $json.raw_payload?.lang,\n  $json.raw_payload?.source_language,\n\n  $json.body?.preferred_language,\n  $json.body?.client_locale,\n  $json.body?.language,\n  $json.body?.lang,\n  $json.body?.source_language\n];\n\nlet explicitLanguage = \"\";\nfor (const candidate of explicitLocaleCandidates) {\n  explicitLanguage = normalizeExplicitLocale(candidate);\n  if (explicitLanguage) break;\n}\n\nconst inferredDutch =\n  /\\b(ik|mijn|uw|jouw)\\b/.test(task) ||\n  task.includes(\"aanvraag\") ||\n  task.includes(\"offerte\") ||\n  task.includes(\"website laten maken\") ||\n  task.includes(\"automatisering\") ||\n  task.includes(\"automatiser\") ||\n  task.includes(\"spoed\") ||\n  task.includes(\"vandaag\") ||\n  task.includes(\"morgen\");\n\nconst inferredEnglish =\n  /\\b(my|business|client)\\b/.test(task) ||\n  task.includes(\"website\") ||\n  task.includes(\"landing page\") ||\n  task.includes(\"automation\") ||\n  task.includes(\"onboarding\") ||\n  task.includes(\"before tomorrow\") ||\n  task.includes(\"next week\");\n\nconst preferredLanguage =\n  explicitLanguage ||\n  (inferredDutch ? \"nl\" : inferredEnglish ? \"en\" : \"en\");\n\n/* --------------------------\n   EMAIL COPY\n-------------------------- */\n\nconst clientEmailCopy = {\n  en: {\n    subject: \"DONEOVERNIGHT — Task received\",\n    status_label: \"● OPERATIONS ACTIVE\",\n    hero_title: \"Task received.\",\n    greeting: \"Hi\",\n    review_intro: \"Your request is now under review.\",\n    review_lead: \"We’re currently reviewing:\",\n    scope_label: \"scope\",\n    timeline_label: \"timeline\",\n    complexity_label: \"complexity\",\n    deliverables_label: \"deliverables\",\n    submitted_task_label: \"Submitted Task\",\n    attachments_label: \"Attachments\",\n    no_attachments: \"No attachments included\",\n    deadline_label: \"Deadline\",\n    review_window_label: \"Review Window\",\n    review_window_value: \"< 60 min\",\n    cta: \"Track Review\",\n    footer: \"PRIVATE OPERATING LAYER\"\n  },\n\n  nl: {\n    subject: \"DONEOVERNIGHT — Aanvraag ontvangen\",\n    status_label: \"● INTAKE ACTIEF\",\n    hero_title: \"Aanvraag ontvangen.\",\n    greeting: \"Hallo\",\n    review_intro: \"Uw aanvraag wordt beoordeeld.\",\n    review_lead: \"We bekijken op dit moment:\",\n    scope_label: \"scope\",\n    timeline_label: \"planning\",\n    complexity_label: \"complexiteit\",\n    deliverables_label: \"oplevering\",\n    submitted_task_label: \"Ingediende aanvraag\",\n    attachments_label: \"Bijlagen\",\n    no_attachments: \"Geen bestanden toegevoegd\",\n    deadline_label: \"Deadline\",\n    review_window_label: \"Review\",\n    review_window_value: \"< 60 min\",\n    cta: \"Voortgang bekijken\",\n    footer: \"PRIVATE UITVOERING\"\n  }\n};\n\nconst clientEmailText =\n  clientEmailCopy[preferredLanguage] ||\n  clientEmailCopy.en;\n\nconst reviewToken =\n  $json.review_token ||\n  $json.reviewToken ||\n  extract.review_token ||\n  extract.reviewToken ||\n  $json.raw_payload?.review_token ||\n  $json.raw_payload?.reviewToken ||\n  $json.body?.review_token ||\n  $json.body?.reviewToken ||\n  \"\";\n\nconst providedReviewUrl =\n  $json.client_review_url ||\n  $json.review_url ||\n  $json.reviewUrl ||\n  extract.client_review_url ||\n  extract.review_url ||\n  extract.reviewUrl ||\n  $json.raw_payload?.client_review_url ||\n  $json.raw_payload?.review_url ||\n  $json.raw_payload?.reviewUrl ||\n  $json.body?.client_review_url ||\n  $json.body?.review_url ||\n  $json.body?.reviewUrl ||\n  \"\";\n\nfunction buildQuery(params) {\n  return Object.entries(params)\n    .filter(([_, value]) =>\n      value !== undefined &&\n      value !== null &&\n      String(value).trim() !== \"\"\n    )\n    .map(([key, value]) =>\n      `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`\n    )\n    .join(\"&\");\n}\n\nconst reviewParams = {\n  lang: preferredLanguage,\n  state: \"request_received\",\n  task_id: taskId\n};\n\nif (reviewToken) {\n  reviewParams.token = reviewToken;\n}\n\nconst generatedReviewUrl =\n  `https://portal.doneovernight.com/review?${buildQuery(reviewParams)}`;\n\nconst clientReviewUrl =\n  providedReviewUrl || generatedReviewUrl;\n\n/* --------------------------\n   TELEGRAM\n-------------------------- */\n\nconst parts = [];\n\nparts.push(\"🟡 NEW TASK INTAKE\");\n\nparts.push(`📝 Task:\n${cleanTask}`);\n\nif (context) {\n  parts.push(`📚 Context:\n${context}`);\n}\n\nif (tone) {\n  parts.push(`🎨 Tone:\n${tone}`);\n}\n\nif (goal) {\n  parts.push(`🎯 Goal:\n${goal}`);\n}\n\nif (links) {\n  parts.push(`🔗 Links:\n${links}`);\n}\n\nif (attachmentsDisplay) {\n  parts.push(`📎 Attachments:\n${attachmentsDisplay}`);\n}\n\nparts.push(`—\n👤 Client: ${clientName}\n📧 ${clientEmail || \"Unknown email\"}`);\n\nif (company) {\n  parts.push(`🏢 ${company}`);\n}\n\nparts.push(`⏳ Deadline: ${$json.deadline || deadlineRaw || \"Not provided\"}\n⚡ Priority: ${priority}\n📡 Source: ${prettySource}\n💸 Client budget: ${clientBudgetDisplay}\n\n📁 Type: ${prettyType.toUpperCase()} · ${complexity.toUpperCase()}\n💰 Internal estimate: €${suggested_quote}\n\n—\n🆔 Operational ID: ${taskId}\nCreated: ${$json.created_at || $json.createdAt || new Date().toISOString()}\n\nActions:\nAccept → /accept ${taskId}\nReject → /reject ${taskId}\nQuote → /quote ${suggested_quote} ${taskId}`);\n\nreturn {\n  json: {\n    ...$json,\n\n    preferred_language: preferredLanguage,\n    client_locale: preferredLanguage,\n    language: preferredLanguage,\n    lang: preferredLanguage,\n\n    client_budget: clientBudget,\n    client_budget_display: clientBudgetDisplay,\n\n    attachments_display:\n      attachmentsDisplay ||\n      clientEmailText.no_attachments,\n\n    client_email_task_description:\n      clientEmailTaskDescription,\n\n    client_email_subject:\n      clientEmailText.subject,\n\n    client_email_copy: {\n      ...clientEmailText\n    },\n\n    review_token: reviewToken,\n\n    client_review_url:\n      clientReviewUrl,\n\n    telegram_message:\n      parts.filter(Boolean).join(\"\\n\\n\")\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        6800
+      ],
+      "id": "c26ad159-f14b-4989-9f69-01d9aeac9073",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6441355-4054-4d9f-a996-6af3f02f9d69",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "portal_dashboard",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2112,
+        7344
+      ],
+      "id": "1793996e-c92f-408f-839e-dceddd723f98",
+      "name": "Check Source5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ee195d38-862e-45e0-ae9c-fdae8471b8e3",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "homepage_cta",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        7456
+      ],
+      "id": "0c77ebef-e6ee-40c4-8d40-494c43fac2dc",
+      "name": "Check Homepage CTA5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "00d8aa88-af88-454c-b9a8-77024acf56d8",
+              "name": "route",
+              "value": "homepage_cta",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        7168
+      ],
+      "id": "f99eb869-22cc-4200-a0f4-bdebb6609427",
+      "name": "homepage route5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f18460a3-5608-4fc9-b10d-284ee07400af",
+              "name": "route",
+              "value": "portal_dashboard",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        7008
+      ],
+      "id": "0fd98e8a-079e-4293-8e06-c1d624c058e5",
+      "name": "portal5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8a771aaf-ca1c-48f4-b514-aeee610f63b8",
+              "name": "route",
+              "value": "task_intake",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        7328
+      ],
+      "id": "2108f03f-b971-4438-8fb2-04b959df7485",
+      "name": "task5"
+    },
+    {
+      "parameters": {
+        "toRecipients": "={{ $('Code in JavaScript5').item.json.client_email || $('Code in JavaScript5').item.json.email }}",
+        "subject": "={{ $('Code in JavaScript5').item.json.client_email_subject }}",
+        "bodyContent": "=<html>\n  <body style=\"margin:0;padding:0;background:#050505;font-family:Arial,sans-serif;color:#f5f5f5;\">\n\n    <!-- PREHEADER -->\n    <div style=\"\n      display:none;\n      max-height:0;\n      overflow:hidden;\n      opacity:0;\n      color:transparent;\n      mso-hide:all;\n    \">\n      {{ $('Code in JavaScript5').item.json.client_email_copy.review_intro }}\n    </div>\n\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"\n      background:#050505;\n      padding:40px 20px;\n    \">\n      <tr>\n        <td align=\"center\">\n\n          <table width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"\n            width:640px;\n            max-width:640px;\n            background:#0b0b0b;\n            border:1px solid #1a1a1a;\n            border-radius:28px;\n            overflow:hidden;\n          \">\n\n            <!-- HEADER -->\n            <tr>\n              <td align=\"center\" style=\"\n                padding:52px 42px 20px 42px;\n                background:#0b0b0b;\n              \">\n\n                <picture>\n                  <source\n                    srcset=\"https://doneovernight.com/brand/doneovernight-white.png\"\n                    media=\"(prefers-color-scheme: dark)\"\n                  />\n\n                  <source\n                    srcset=\"https://doneovernight.com/brand/doneovernight-black.png\"\n                    media=\"(prefers-color-scheme: light)\"\n                  />\n\n                  <img \n                    src=\"https://doneovernight.com/brand/doneovernight-neutral.png\"\n                    alt=\"DONEOVERNIGHT\"\n                    width=\"240\"\n                    style=\"\n                      display:block;\n                      width:240px;\n                      max-width:100%;\n                      height:auto;\n                      border:0;\n                      outline:none;\n                      text-decoration:none;\n                      -ms-interpolation-mode:bicubic;\n                    \"\n                  />\n                </picture>\n\n              </td>\n            </tr>\n\n            <!-- HERO -->\n            <tr>\n              <td style=\"padding:0 52px;\">\n\n                <div style=\"\n                  background:#111111;\n                  border:1px solid rgba(255,255,255,0.06);\n                  border-radius:22px;\n                  padding:34px;\n                \">\n\n                  <div style=\"\n                    color:#7ee2b8;\n                    font-size:11px;\n                    letter-spacing:4px;\n                    text-transform:uppercase;\n                    margin-bottom:18px;\n                    font-weight:600;\n                  \">\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.status_label }}\n                  </div>\n\n                  <div style=\"\n                    font-size:46px;\n                    line-height:1.05;\n                    font-weight:700;\n                    color:#ffffff;\n                    letter-spacing:-1px;\n                    margin-bottom:22px;\n                  \">\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.hero_title }}\n                  </div>\n\n                  <div style=\"\n                    font-size:18px;\n                    line-height:1.9;\n                    color:#b7b7b7;\n                  \">\n\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.greeting }}\n                    {{ $('Extract Fields5').item.json.name }},\n\n                    <br><br>\n\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.review_intro }}\n\n                    <br><br>\n\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.review_lead }}\n\n                    <ul style=\"\n                      padding-left:22px;\n                      margin-top:18px;\n                      margin-bottom:0;\n                      color:#d0d0d0;\n                      line-height:2;\n                    \">\n                      <li>{{ $('Code in JavaScript5').item.json.client_email_copy.scope_label }}</li>\n                      <li>{{ $('Code in JavaScript5').item.json.client_email_copy.timeline_label }}</li>\n                      <li>{{ $('Code in JavaScript5').item.json.client_email_copy.complexity_label }}</li>\n                      <li>{{ $('Code in JavaScript5').item.json.client_email_copy.deliverables_label }}</li>\n                    </ul>\n\n                  </div>\n\n                </div>\n\n              </td>\n            </tr>\n\n            <!-- TASK -->\n            <tr>\n              <td style=\"padding:42px 52px 0 52px;\">\n\n                <div style=\"\n                  border-top:1px solid rgba(255,255,255,0.06);\n                  padding-top:36px;\n                \">\n\n                  <div style=\"\n                    color:#7d7d7d;\n                    font-size:11px;\n                    letter-spacing:4px;\n                    text-transform:uppercase;\n                    margin-bottom:18px;\n                    font-weight:600;\n                  \">\n                    {{ $('Code in JavaScript5').item.json.client_email_copy.submitted_task_label }}\n                  </div>\n\n                  <div style=\"\n                    background:#111111;\n                    border:1px solid rgba(255,255,255,0.06);\n                    border-radius:18px;\n                    padding:26px;\n                    color:#f5f5f5;\n                    font-size:17px;\n                    line-height:1.9;\n                    white-space:pre-wrap;\n                    word-break:break-word;\n                  \">\n                    {{ $('Code in JavaScript5').item.json.client_email_task_description }}\n                  </div>\n\n                </div>\n\n              </td>\n            </tr>\n\n            <!-- ATTACHMENTS -->\n            {{ $('Code in JavaScript5').item.json.attachments_display ? `\n            <tr>\n              <td style=\"padding:24px 52px 0 52px;\">\n\n                <div style=\"\n                  background:#101010;\n                  border:1px solid rgba(255,255,255,0.06);\n                  border-radius:18px;\n                  padding:22px;\n                \">\n\n                  <div style=\"\n                    color:#7d7d7d;\n                    font-size:11px;\n                    letter-spacing:3px;\n                    text-transform:uppercase;\n                    margin-bottom:12px;\n                    font-weight:600;\n                  \">\n                    Attachments\n                  </div>\n\n                  <div style=\"\n                    color:#ffffff;\n                    font-size:15px;\n                    line-height:1.8;\n                    word-break:break-word;\n                  \">\n                    ${$('Code in JavaScript5').item.json.attachments_display}\n                  </div>\n\n                </div>\n\n              </td>\n            </tr>\n            ` : '' }}\n\n            <!-- DEADLINE -->\n            <tr>\n              <td style=\"padding:32px 52px 0 52px;\">\n\n                <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n\n                  <tr>\n\n                    <td width=\"50%\" style=\"\n                      padding-right:10px;\n                      vertical-align:top;\n                    \">\n\n                      <div style=\"\n                        background:#101010;\n                        border:1px solid rgba(255,255,255,0.06);\n                        border-radius:18px;\n                        padding:22px;\n                      \">\n\n                        <div style=\"\n                          color:#7d7d7d;\n                          font-size:11px;\n                          letter-spacing:3px;\n                          text-transform:uppercase;\n                          margin-bottom:12px;\n                          font-weight:600;\n                        \">\n                          {{ $('Code in JavaScript5').item.json.client_email_copy.deadline_label }}\n                        </div>\n\n                        <div style=\"\n                          color:#ffffff;\n                          font-size:24px;\n                          font-weight:600;\n                        \">\n                          {{ $('Extract Fields5').item.json.deadline }}\n                        </div>\n\n                      </div>\n\n                    </td>\n\n                    <td width=\"50%\" style=\"\n                      padding-left:10px;\n                      vertical-align:top;\n                    \">\n\n                      <div style=\"\n                        background:#101010;\n                        border:1px solid rgba(255,255,255,0.06);\n                        border-radius:18px;\n                        padding:22px;\n                      \">\n\n                        <div style=\"\n                          color:#7d7d7d;\n                          font-size:11px;\n                          letter-spacing:3px;\n                          text-transform:uppercase;\n                          margin-bottom:12px;\n                          font-weight:600;\n                        \">\n                          {{ $('Code in JavaScript5').item.json.client_email_copy.review_window_label }}\n                        </div>\n\n                        <div style=\"\n                          color:#ffffff;\n                          font-size:24px;\n                          font-weight:600;\n                        \">\n                          {{ $('Code in JavaScript5').item.json.client_email_copy.review_window_value }}\n                        </div>\n\n                      </div>\n\n                    </td>\n\n                  </tr>\n\n                </table>\n\n              </td>\n            </tr>\n\n            <!-- CTA -->\n            <tr>\n              <td style=\"padding:42px 52px;\">\n\n                <a \n                  href=\"{{ $('Code in JavaScript5').item.json.client_review_url }}\"\n                  style=\"\n                    display:block;\n                    background:#d6b36a;\n                    color:#050505;\n                    text-decoration:none;\n                    text-align:center;\n                    padding:20px;\n                    border-radius:999px;\n                    font-size:14px;\n                    font-weight:700;\n                    letter-spacing:3px;\n                    text-transform:uppercase;\n                  \"\n                >\n                  {{ $('Code in JavaScript5').item.json.client_email_copy.cta }}\n                </a>\n\n              </td>\n            </tr>\n\n            <!-- FOOTER -->\n            <tr>\n              <td style=\"\n                border-top:1px solid rgba(255,255,255,0.06);\n                padding:28px 52px 42px 52px;\n                color:#707070;\n                font-size:12px;\n                line-height:2;\n                letter-spacing:2px;\n                text-transform:uppercase;\n                background:#0b0b0b;\n              \">\n\n                {{ $('Code in JavaScript5').item.json.client_email_copy.footer }}\n\n              </td>\n            </tr>\n\n          </table>\n\n        </td>\n      </tr>\n    </table>\n\n  </body>\n</html>",
+        "additionalFields": {
+          "bodyContentType": "html"
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        6592
+      ],
+      "id": "604be8b6-fd3c-4110-be9b-aa12a963ba6a",
+      "name": "Email — Client Confirmation5",
+      "webhookId": "564c2e9e-3494-4f0f-84aa-a8080dee89e7",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "uN91YqqKRfL3GaJp",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://xvctqtcjhcmjlesbfbmj.supabase.co/rest/v1/task_requests",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y3RxdGNqaGNtamxlc2JmYm1qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzUwODM2NSwiZXhwIjoyMDkzMDg0MzY1fQ.3hKkwH-dRSVhw9f4Fkc3oFX1ZNVl6YxfLaDRvXwAL_M"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y3RxdGNqaGNtamxlc2JmYm1qIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzUwODM2NSwiZXhwIjoyMDkzMDg0MzY1fQ.3hKkwH-dRSVhw9f4Fkc3oFX1ZNVl6YxfLaDRvXwAL_M"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "access_key",
+              "value": "={{$json.access_key}}"
+            },
+            {
+              "name": "task_description",
+              "value": "={{$json.task_description}}"
+            },
+            {
+              "name": "deadline",
+              "value": "={{$json.deadline}}"
+            },
+            {
+              "name": "status",
+              "value": "new"
+            },
+            {
+              "name": "source",
+              "value": "={{$json.source}}"
+            },
+            {
+              "name": "name",
+              "value": "={{$json.name}}"
+            },
+            {
+              "name": "company",
+              "value": "={{$json.company}}"
+            },
+            {
+              "name": "links",
+              "value": "={{$json.links}}"
+            },
+            {
+              "name": "attachments",
+              "value": "={{$json.attachments}}"
+            },
+            {
+              "name": "task_summary",
+              "value": "={{$json.task_description}}"
+            },
+            {
+              "name": "created_at",
+              "value": "={{$now.toISO()}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "95167283-56c5-428b-9085-559794d5fa5d",
+      "name": "HTTP Request — Insert task_requests5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        6800
+      ],
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook — Portal Task Submit5": {
+      "main": [
+        [
+          {
+            "node": "Extract Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Fields5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Insert task_requests5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "NEW TASK Telegram5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email — Internal Task Alert5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Source5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email — Client Confirmation5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Source5": {
+      "main": [
+        [
+          {
+            "node": "portal5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Homepage CTA5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Homepage CTA5": {
+      "main": [
+        [
+          {
+            "node": "homepage route5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "task5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Insert task_requests5": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "5PllJApSbCOOx7t4",
+    "timezone": "Europe/Amsterdam",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "doneovernight-portal-task-submit-locale-fixed-v3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ff8ec0e81256ee6b750c322b3307f2cefddc8e1f233007ffdd44f7c8bc385baf"
+  },
+  "id": "fr92W0Sjj7Lk9Eu5",
+  "tags": []
+}
