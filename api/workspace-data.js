@@ -168,7 +168,7 @@ async function createWorkspaceSession(req, input) {
     })
   });
 
-  const path = `/workspace/@${workspaceSlug}?token=${encodeURIComponent(rawToken)}`;
+  const path = `${getCleanWorkspacePath(req, workspaceSlug)}?token=${encodeURIComponent(rawToken)}`;
   return {
     session: Array.isArray(rows) ? rows[0] : rows,
     link: path,
