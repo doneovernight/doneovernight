@@ -1818,6 +1818,7 @@
       const deadlineButtons = [...document.querySelectorAll("[data-deadline]")];
       const runtimeHandoff = document.querySelector("#runtimeHandoff");
       const MAX_ATTACHMENT_METADATA = 12;
+      const referralAttribution = getReferralAttribution();
 
       if (!form || !message || !submitButton) return;
 
@@ -1893,6 +1894,44 @@
         }));
       }
 
+      function normalizeReferralTaskId(value) {
+        const match = String(value || "").trim().match(/\bDON-\d{4}-\d{3,8}\b/i);
+        return match ? match[0].toUpperCase() : "";
+      }
+
+      function getReferralAttribution() {
+        const storageKey = "doneovernight_referral_attribution";
+        const urlReferral = normalizeReferralTaskId(new URLSearchParams(window.location.search).get("ref"));
+
+        if (urlReferral) {
+          const attribution = {
+            referral_task_id: urlReferral,
+            referred_by_task_id: urlReferral,
+            referral_source: "referral_email",
+            referral_created_at: new Date().toISOString()
+          };
+          try {
+            sessionStorage.setItem(storageKey, JSON.stringify(attribution));
+          } catch (error) {}
+          return attribution;
+        }
+
+        try {
+          const stored = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+          const storedReferral = normalizeReferralTaskId(stored?.referral_task_id || stored?.referred_by_task_id);
+          if (storedReferral) {
+            return {
+              referral_task_id: storedReferral,
+              referred_by_task_id: storedReferral,
+              referral_source: "referral_email",
+              referral_created_at: stored?.referral_created_at || new Date().toISOString()
+            };
+          }
+        } catch (error) {}
+
+        return null;
+      }
+
       function getPayload() {
         return {
           task_description: readField("#taskDescription"),
@@ -1904,7 +1943,8 @@
           links: readField("#taskLinks"),
           attachments: getAttachmentMetadata(),
           source: "task_intake",
-          intakeVersion: "homepage_intake_v1"
+          intakeVersion: "homepage_intake_v1",
+          ...(referralAttribution || {})
         };
       }
 

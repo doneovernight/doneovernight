@@ -3456,6 +3456,31 @@ function getTaskTitle(task) {
   return task.task_summary || task.task_description || 'Untitled task';
 }
 
+function getTaskReferral(task) {
+  const raw = task.raw_payload || {};
+  const referralTaskId = String(
+    raw.referral_task_id ||
+    raw.referred_by_task_id ||
+    task.referral_task_id ||
+    task.referred_by_task_id ||
+    ''
+  ).trim();
+
+  if (!referralTaskId) return null;
+
+  return {
+    taskId: referralTaskId,
+    source: String(raw.referral_source || task.referral_source || 'referral_email').trim(),
+    createdAt: raw.referral_created_at || task.referral_created_at || ''
+  };
+}
+
+function formatReferralSource(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'referral_email') return 'Email Referral';
+  return normalized ? normalized.replace(/_/g, ' ') : 'Referral';
+}
+
 function isSaiUniversityBrandingTask(task) {
   const signal = [
     task.task_summary,
@@ -3518,6 +3543,9 @@ function getTaskRenderSignature(task) {
     task.payment_link,
     task.deadline,
     task.source,
+    task.raw_payload?.referral_task_id,
+    task.raw_payload?.referred_by_task_id,
+    task.raw_payload?.referral_source,
     task.updated_at,
     task.created_at
   ].map((value) => String(value ?? '')).join('::');
@@ -5090,6 +5118,7 @@ function renderTasks(tasks) {
     const invoiceStatus = task.invoice_status || task.raw_payload?.invoice_status || (invoiceNumber ? 'paid' : '');
     const invoicePdfUrl = task.invoice_pdf_url || task.raw_payload?.invoice_pdf_url || '';
     const invoiceAmount = task.invoice_amount || task.raw_payload?.invoice_amount || '';
+    const referral = getTaskReferral(task);
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const workspaceIsActive = ['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
     const actions = task.id
@@ -5212,6 +5241,13 @@ function renderTasks(tasks) {
             <div><strong>${escapeHTML(invoiceNumber)}</strong> · ${escapeHTML(invoiceStatus || 'paid')}</div>
             ${invoiceAmount ? `<div>Amount · ${escapeHTML(invoiceAmount)}</div>` : ''}
             ${invoicePdfUrl ? `<a class="admin-payment-link" href="${escapeHTML(invoicePdfUrl)}" target="_blank" rel="noopener noreferrer">Download invoice →</a>` : ''}
+          </div>
+        ` : ''}
+        ${referral ? `
+          <div class="admin-task-detail">
+            <span class="admin-task-detail-label">Referral Source</span>
+            <div>${escapeHTML(formatReferralSource(referral.source))}</div>
+            <div class="admin-task-eta">Referred By: ${escapeHTML(referral.taskId)}</div>
           </div>
         ` : ''}
         ${paymentCallout}
