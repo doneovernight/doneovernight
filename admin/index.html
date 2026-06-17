@@ -3287,6 +3287,24 @@ function getStatusClass(status) {
   return `status-${normalizeStatus(status).replace(/_/g, '-') || 'pending'}`;
 }
 
+function getTaskCardStatusLabel(task = {}) {
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const status = normalizeStatus(task.status);
+  if (hasPaymentReturnSignal(task) && !['paid', 'payment_confirmed'].includes(paymentStatus) && !['payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active'].includes(status)) {
+    return 'Payment returned';
+  }
+  return getStatusLabel(task.status);
+}
+
+function getTaskCardStatusClass(task = {}) {
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const status = normalizeStatus(task.status);
+  if (hasPaymentReturnSignal(task) && !['paid', 'payment_confirmed'].includes(paymentStatus) && !['payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active'].includes(status)) {
+    return 'status-payment-returned';
+  }
+  return getStatusClass(task.status);
+}
+
 function getPaymentStatusLabel(status) {
   const labels = {
     not_required_yet: 'Not required yet',
@@ -3311,6 +3329,27 @@ function getTaskOperationalBucket(task = {}) {
   if (['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status)) return 'review_complete';
   if (status === 'needs_info') return 'needs_info';
   return 'new';
+}
+
+function hasPaymentReturnSignal(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  return Boolean(
+    rawPayload.payment_returned_at ||
+    rawPayload.payment_return ||
+    (Array.isArray(rawPayload.payment_return_signals) && rawPayload.payment_return_signals.length)
+  );
+}
+
+function canConfirmPaymentTask(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const rawPayload = task.raw_payload || {};
+  const hasPaymentReturn = Boolean(hasPaymentReturnSignal(task) || status === 'payment_returned' || paymentStatus === 'verification_pending');
+  const isAwaitingPayment = paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || ['awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned'].includes(status);
+  const hasInvestment = parseMoney(task.quote_amount || rawPayload.quote_amount || rawPayload.investment_amount) > 0;
+  const hasPaymentReference = Boolean(task.payment_link || rawPayload.payment_link || task.payment_reference || rawPayload.payment_reference || task.task_id || task.taskId);
+  const alreadyConfirmed = paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || ['payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active'].includes(status);
+  return !alreadyConfirmed && (hasPaymentReturn || isAwaitingPayment) && hasInvestment && hasPaymentReference;
 }
 
 function getTaskActions(task = {}) {
@@ -3351,7 +3390,14 @@ function getTaskActions(task = {}) {
     ],
     archived: []
   };
-  return actions[bucket] || [];
+  const baseActions = actions[bucket] || [];
+  if (canConfirmPaymentTask(task)) {
+    return [
+      { type: 'confirm-payment', label: 'Confirm Payment' },
+      ...baseActions
+    ];
+  }
+  return baseActions;
 }
 
 function getTaskPriority(task) {
@@ -3591,7 +3637,7 @@ function getRelativeTime(value) {
 function getTaskActivityLabel(task) {
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  if (paymentStatus === 'verification_pending' || status === 'payment_returned') return 'Payment returned · needs verification';
+  if (hasPaymentReturnSignal(task) || paymentStatus === 'verification_pending' || status === 'payment_returned') return 'Payment returned · needs verification';
   if (task.quoted_at) return `Execution plan generated ${getRelativeTime(task.quoted_at)}`;
   if (status === 'needs_info') return 'Waiting for client information';
   if (status === 'review_pending' || status === 'new') return 'Operator reviewing';
@@ -5039,7 +5085,7 @@ function renderTasks(tasks) {
     const status = normalizeStatus(task.status);
     const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
     const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
-    const isPaymentVerificationPending = normalizeStatus(task.payment_status) === 'verification_pending' || status === 'payment_returned';
+    const isPaymentVerificationPending = hasPaymentReturnSignal(task) || normalizeStatus(task.payment_status) === 'verification_pending' || status === 'payment_returned';
     const isAwaitingPayment = isPaymentVerificationPending || normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(status);
     const isDelivered = status === 'delivered';
     const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
@@ -5114,7 +5160,7 @@ function renderTasks(tasks) {
             <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
           </div>
           <div class="admin-task-actions" style="margin-top:0">
-            <span class="admin-status-pill ${getStatusClass(task.status)}">${getStatusLabel(task.status)}</span>
+            <span class="admin-status-pill ${getTaskCardStatusClass(task)}">${getTaskCardStatusLabel(task)}</span>
             <span class="admin-status-pill payment-${(normalizeStatus(task.payment_status) || 'not_required_yet').replace(/_/g, '-')}">${escapeHTML(paymentStatus)}</span>
           </div>
         </div>
@@ -6428,6 +6474,31 @@ adminTasksList.addEventListener('click', async (e) => {
       testimonial: 'Testimonial email automation is not configured yet.'
     };
     if (message) message.textContent = labels[button.dataset.intent] || 'Follow-up automation is not configured yet.';
+    return;
+  }
+
+  if (button.dataset.action === 'confirm-payment') {
+    const confirmed = window.confirm('Confirm that this payment has been verified in Bunq?');
+    if (!confirmed) return;
+    const data = await updateTask(button, {
+      id: taskId,
+      action: 'confirm_payment'
+    });
+    const row = button.closest('.admin-task-row');
+    const message = row?.querySelector('.admin-task-message');
+    if (message && data) {
+      if (data?.workspaceActivation?.success) {
+        const reused = data.workspaceActivation.workspace?.reused ? 'Existing workspace reused.' : 'Workspace activated.';
+        const invoice = data.workspaceActivation.invoice?.created
+          ? ` Invoice ${data.workspaceActivation.invoice.invoice_number} generated.`
+          : data.workspaceActivation.invoice?.configured === false
+            ? ' Invoice system not ready; workspace activation continued.'
+            : '';
+        message.textContent = `Payment confirmed. ${reused}${invoice}`;
+      } else {
+        message.textContent = 'Payment confirmed, but activation result was not returned.';
+      }
+    }
     return;
   }
 

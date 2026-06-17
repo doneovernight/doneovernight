@@ -4,6 +4,10 @@ const SUPABASE_TIMEOUT_MS = 10_000;
 const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
 const { buildSecureReviewUrl } = require("../lib/review-token");
+const {
+  activateWorkspaceAfterVerifiedPayment,
+  buildWorkspaceActivationResponse
+} = require("../lib/workspace-activation");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -375,6 +379,93 @@ function finalizeQuotePatch(patch, existingTask = {}) {
   };
 }
 
+function isConfirmPaymentRequest(input = {}) {
+  const action = clean(input.action || input.intent || input.type || input.operation).toLowerCase();
+  return action === "confirm_payment" || action === "payment_confirmed" || action === "manual_payment_confirmation";
+}
+
+function resolveManualPaymentAmount(task = {}) {
+  return extractQuoteAmountDigits(
+    task.quote_amount ||
+      task.raw_payload?.quote_amount ||
+      task.payment_link_amount ||
+      task.raw_payload?.payment_link_amount ||
+      task.raw_payload?.investment_amount ||
+      ""
+  );
+}
+
+function resolveManualPaymentReference(task = {}, taskId = "") {
+  const reference = clean(
+    task.payment_reference ||
+      task.raw_payload?.payment_reference ||
+      task.raw_payload?.payment_return?.task_id ||
+      task.task_id ||
+      task.taskId ||
+      taskId
+  );
+  return reference || taskId;
+}
+
+function assertManualPaymentConfirmationAllowed(task = {}, taskId = "") {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const status = clean(task.status).toLowerCase();
+  const paymentStatus = clean(task.payment_status).toLowerCase();
+  const amount = resolveManualPaymentAmount(task);
+  const paymentReference = resolveManualPaymentReference(task, taskId);
+  const hasPaymentReturn = Boolean(rawPayload.payment_returned_at || rawPayload.payment_return || rawPayload.payment_return_signals?.length || status === "payment_returned" || paymentStatus === "verification_pending");
+  const isAwaitingPayment = ["awaiting_payment", "payment_pending", "verification_pending"].includes(paymentStatus) || ["awaiting_start", "payment_started", "awaiting_payment", "payment_returned"].includes(status);
+  const hasPaymentLinkOrReference = Boolean(clean(task.payment_link || rawPayload.payment_link || paymentReference));
+
+  if (!hasPaymentReturn && !isAwaitingPayment) {
+    const error = new Error("Task is not awaiting payment verification");
+    error.code = "PAYMENT_NOT_AWAITING_VERIFICATION";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (!amount) {
+    const error = new Error("Quote amount is required before confirming payment");
+    error.code = "QUOTE_AMOUNT_REQUIRED";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (!hasPaymentLinkOrReference) {
+    const error = new Error("Payment reference or payment link is required");
+    error.code = "PAYMENT_REFERENCE_OR_LINK_REQUIRED";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return {
+    amount,
+    paymentReference
+  };
+}
+
+async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
+  const existingTask = await loadTask(taskId);
+  if (!existingTask) {
+    const error = new Error("Task not found");
+    error.code = "TASK_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const confirmation = assertManualPaymentConfirmationAllowed(existingTask, taskId);
+  const result = await activateWorkspaceAfterVerifiedPayment({
+    task_id: existingTask.task_id || taskId,
+    client_email: existingTask.email || existingTask.raw_payload?.email || input.client_email || input.email || "",
+    payment_reference: confirmation.paymentReference,
+    amount_paid: confirmation.amount,
+    manual_confirmation: true,
+    confirmation_source: "admin_manual",
+    confirmed_by: "admin"
+  });
+  return result;
+}
+
 async function patchTask(taskId, patch) {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
@@ -452,6 +543,27 @@ module.exports = async function handler(req, res) {
         success: false,
         error: "Missing task id",
         code: "TASK_ID_REQUIRED"
+      });
+    }
+
+    if (isConfirmPaymentRequest(input)) {
+      const activationResult = await confirmPaymentAndActivateWorkspace(taskId, input);
+      const activationResponse = buildWorkspaceActivationResponse(activationResult);
+      return send(res, 200, {
+        success: true,
+        task: activationResult.task,
+        updated_task: activationResult.task,
+        data: activationResult.task,
+        paymentConfirmation: {
+          confirmed: true,
+          source: "admin_manual",
+          payment_status: activationResponse.payment_status,
+          paid_at: activationResult.task?.paid_at || activationResult.task?.raw_payload?.payment_confirmed_at || ""
+        },
+        workspaceActivation: activationResponse,
+        invoice: activationResponse.invoice,
+        activationEmail: activationResponse.activationEmail,
+        paymentEmail: activationResponse.paymentEmail
       });
     }
 
