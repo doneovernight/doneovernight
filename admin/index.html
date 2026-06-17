@@ -3357,9 +3357,8 @@ function canSendReminderTask(task = {}) {
   const paymentStatus = normalizeStatus(task.payment_status);
   const alreadyStarted = ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
   return !alreadyStarted && (
-    ['execution_plan_ready', 'quote_sent', 'quoted', 'awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned'].includes(status) ||
-    ['awaiting_payment', 'verification_pending'].includes(paymentStatus) ||
-    Boolean(task.quote_amount || task.payment_link)
+    ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned'].includes(status) ||
+    ['awaiting_payment', 'verification_pending'].includes(paymentStatus)
   );
 }
 

@@ -533,9 +533,8 @@ function assertReminderAllowed(task = {}) {
   const paymentStatus = clean(task.payment_status).toLowerCase();
   const active = ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
     ["paid", "payment_confirmed"].includes(paymentStatus);
-  const allowed = ["execution_plan_ready", "quote_sent", "quoted", "awaiting_start", "payment_started", "awaiting_payment", "payment_returned"].includes(status) ||
-    ["awaiting_payment", "verification_pending"].includes(paymentStatus) ||
-    Boolean(task.quote_amount || task.payment_link);
+  const allowed = ["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned"].includes(status) ||
+    ["awaiting_payment", "verification_pending"].includes(paymentStatus);
   if (!allowed || active) {
     const error = new Error("Reminder is not available for this task state");
     error.code = "REMINDER_NOT_ALLOWED";
