@@ -12,6 +12,7 @@ const {
   buildWorkspaceActivationError,
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
+const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -652,6 +653,17 @@ function parseBody(req) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("invoice_download") === "1") {
+      try {
+        return await handleInvoiceDownloadRequest(req, res);
+      } catch (error) {
+        return send(res, error.statusCode || 404, {
+          success: false,
+          error: error.statusCode && error.statusCode < 500 ? error.message : "Invoice unavailable",
+          code: error.code || "INVOICE_DOWNLOAD_FAILED"
+        });
+      }
+    }
     if (url.searchParams.get("payment_start") === "1") {
       return handlePaymentStartRequest(req, res);
     }

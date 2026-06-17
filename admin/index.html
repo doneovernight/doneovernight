@@ -5013,6 +5013,10 @@ function renderTasks(tasks) {
     const quoteAmount = task.quote_amount ? `<span class="admin-task-price">${escapeHTML(task.quote_amount)}</span>` : '<span>Plan pending</span>';
     const deliveryEta = task.delivery_eta ? `<span class="admin-task-eta">${escapeHTML(task.delivery_eta)}</span>` : '';
     const quoteNoteText = task.quote_note ? escapeHTML(task.quote_note) : '';
+    const invoiceNumber = task.invoice_number || task.raw_payload?.invoice_number || '';
+    const invoiceStatus = task.invoice_status || task.raw_payload?.invoice_status || (invoiceNumber ? 'paid' : '');
+    const invoicePdfUrl = task.invoice_pdf_url || task.raw_payload?.invoice_pdf_url || '';
+    const invoiceAmount = task.invoice_amount || task.raw_payload?.invoice_amount || '';
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const workspaceIsActive = ['workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status));
     const actions = task.id
@@ -5126,6 +5130,14 @@ function renderTasks(tasks) {
             ${deliveryEta ? `<div><strong>Timeline</strong> · ${deliveryEta}</div>` : ''}
             <div><strong>Investment</strong> · ${quoteAmount}</div>
             ${task.payment_link ? `<div class="admin-task-eta">${escapeHTML(task.payment_link)}</div>` : ''}
+          </div>
+        ` : ''}
+        ${invoiceNumber ? `
+          <div class="admin-task-detail">
+            <span class="admin-task-detail-label">Invoice</span>
+            <div><strong>${escapeHTML(invoiceNumber)}</strong> · ${escapeHTML(invoiceStatus || 'paid')}</div>
+            ${invoiceAmount ? `<div>Amount · ${escapeHTML(invoiceAmount)}</div>` : ''}
+            ${invoicePdfUrl ? `<a class="admin-payment-link" href="${escapeHTML(invoicePdfUrl)}" target="_blank" rel="noopener noreferrer">Download invoice →</a>` : ''}
           </div>
         ` : ''}
         ${paymentCallout}

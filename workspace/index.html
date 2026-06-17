@@ -3017,6 +3017,45 @@
         `;
       }
 
+      function getTaskInvoices(task = {}) {
+        const rawInvoices = Array.isArray(task.raw_payload?.invoices) ? task.raw_payload.invoices : [];
+        const directInvoice = task.invoice_number || task.raw_payload?.invoice_number
+          ? [{
+              invoice_number: task.invoice_number || task.raw_payload?.invoice_number,
+              invoice_pdf_url: task.invoice_pdf_url || task.raw_payload?.invoice_pdf_url,
+              invoice_amount: task.invoice_amount || task.raw_payload?.invoice_amount,
+              invoice_created_at: task.invoice_created_at || task.raw_payload?.invoice_created_at,
+              status: task.invoice_status || task.raw_payload?.invoice_status || 'paid'
+            }]
+          : [];
+        const seen = new Set();
+        return [...directInvoice, ...rawInvoices].filter((invoice) => {
+          const number = invoice?.invoice_number || '';
+          if (!number || seen.has(number)) return false;
+          seen.add(number);
+          return true;
+        });
+      }
+
+      function renderInvoices(task) {
+        const invoices = getTaskInvoices(task);
+        if (!invoices.length) return '';
+        return `
+          <section class="quote-panel" aria-label="Invoices">
+            <h4>Invoices</h4>
+            ${invoices.map((invoice) => `
+              <div class="quote-line">
+                <span class="quote-amount">${escapeHTML(invoice.invoice_number || 'Invoice')}</span>
+                ${invoice.invoice_amount ? `<span>${escapeHTML(invoice.invoice_amount)}</span>` : ''}
+                <span>${escapeHTML(invoice.status || 'paid')}</span>
+              </div>
+              ${invoice.invoice_created_at ? `<p class="quote-note">${escapeHTML(formatDate(invoice.invoice_created_at))}</p>` : ''}
+              ${invoice.invoice_pdf_url ? `<a class="payment-cta" href="${escapeHTML(invoice.invoice_pdf_url)}" target="_blank" rel="noopener noreferrer">Download PDF →</a>` : ''}
+            `).join('')}
+          </section>
+        `;
+      }
+
       function getTaskLinks(task) {
         if (Array.isArray(task.links)) return task.links.map(String).map((link) => link.trim()).filter(Boolean);
         return String(task.links || '')
@@ -3654,6 +3693,7 @@
               ${needsPayment ? '<div class="task-payment-notice">Payment required to continue execution</div>' : ''}
               ${renderProjectAssets(task)}
               ${renderOperationalQuote(task)}
+              ${renderInvoices(task)}
               ${renderTimeline(task)}
             </article>
           `;
