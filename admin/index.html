@@ -3382,9 +3382,9 @@ function getPaymentStatusLabel(status) {
 }
 
 const ADMIN_TASK_CATEGORY_SECTIONS = {
-  new: { title: 'New / Under Review', slug: 'new' },
+  new: { title: 'Request Received', slug: 'new' },
   needs_info: { title: 'Needs Info', slug: 'needs-info' },
-  review_complete: { title: 'Review Complete', slug: 'review-complete' },
+  review_complete: { title: 'Review', slug: 'review-complete' },
   awaiting_start: { title: 'Awaiting Start', slug: 'awaiting-payment' },
   project_active: { title: 'Project Active', slug: 'in-progress' },
   delivered: { title: 'Delivered', slug: 'delivered' },
@@ -3403,7 +3403,7 @@ function resolveAdminTaskCategory(task = {}) {
   if (['project_active', 'workspace_active', 'workspace_ready', 'execution_active', 'operators_assigned', 'payment_confirmed', 'paid', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus)) return 'project_active';
   if (['execution_plan_ready', 'quote_sent', 'quoted', 'awaiting_start', 'awaiting_payment', 'payment_started', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(paymentStatus)) return 'awaiting_start';
   if (['needs_info', 'waiting_for_client_information', 'info_requested'].includes(status)) return 'needs_info';
-  if (['review_complete', 'quote_ready', 'plan_ready'].includes(status)) return 'review_complete';
+  if (['under_review', 'review_pending', 'review_in_progress', 'quote_preparation', 'review_complete', 'quote_ready', 'plan_ready'].includes(status)) return 'review_complete';
   return 'new';
 }
 
@@ -3504,7 +3504,7 @@ function getTaskActions(task = {}) {
   const status = normalizeStatus(task.status);
 
   if (['new', 'request_received', 'under_review', 'review_pending', 'needs_info'].includes(status)) {
-    actions.push({ type: 'move', label: 'Review', status: 'review_pending' });
+    actions.push({ type: 'move', label: 'Review', status: 'under_review' });
   }
   if (availability.canConfirmPayment) actions.push({ type: 'confirm-payment', label: 'Confirm Payment' });
   if (availability.canSendReminder) actions.push({ type: 'followup', label: 'Send Reminder', intent: 'reminder' });
@@ -3667,6 +3667,7 @@ function getLifecycleIndex(status) {
   const stages = ['new', 'review_pending', 'execution_plan_ready', 'awaiting_start', 'payment_confirmed', 'in_progress', 'delivery_prep', 'delivered', 'completed'];
   const normalized = normalizeStatus(status);
   if (normalized === 'request_received') return stages.indexOf('new');
+  if (['under_review', 'review_in_progress', 'quote_preparation'].includes(normalized)) return stages.indexOf('review_pending');
   if (normalized === 'needs_info') return stages.indexOf('review_pending');
   if (normalized === 'quoted' || normalized === 'quote_sent') return stages.indexOf('execution_plan_ready');
   if (normalized === 'awaiting_payment' || normalized === 'payment_started' || normalized === 'payment_returned' || normalized === 'verification_pending') return stages.indexOf('awaiting_start');
@@ -3690,7 +3691,7 @@ function renderLifecycle(status) {
   ];
   const currentIndex = getLifecycleIndex(status);
   const normalizedStatus = normalizeStatus(status);
-  const current = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'revision_requested'].includes(normalizedStatus) ? 'in_progress' : normalizedStatus === 'quoted' || normalizedStatus === 'quote_sent' ? 'execution_plan_ready' : normalizedStatus === 'awaiting_payment' || normalizedStatus === 'payment_started' || normalizedStatus === 'payment_returned' || normalizedStatus === 'verification_pending' ? 'awaiting_start' : normalizedStatus === 'request_received' ? 'new' : normalizedStatus;
+  const current = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'revision_requested'].includes(normalizedStatus) ? 'in_progress' : normalizedStatus === 'quoted' || normalizedStatus === 'quote_sent' ? 'execution_plan_ready' : normalizedStatus === 'awaiting_payment' || normalizedStatus === 'payment_started' || normalizedStatus === 'payment_returned' || normalizedStatus === 'verification_pending' ? 'awaiting_start' : ['under_review', 'review_in_progress', 'quote_preparation'].includes(normalizedStatus) ? 'review_pending' : normalizedStatus === 'request_received' ? 'new' : normalizedStatus;
   return `
     <div class="admin-lifecycle" aria-label="Lifecycle">
       ${stages.map(([key, label], index) => {
@@ -3713,7 +3714,7 @@ const TASK_FILTERS = [
   ['all', 'All'],
   ['new', 'New'],
   ['needs_info', 'Needs Info'],
-  ['review_complete', 'Review Complete'],
+  ['review_complete', 'Review'],
   ['awaiting_start', 'Awaiting Start'],
   ['project_active', 'Project Active'],
   ['delivered', 'Delivered'],
@@ -3793,7 +3794,8 @@ function getTaskActivityLabel(task) {
   if (hasPaymentReturnSignal(task) || paymentStatus === 'verification_pending' || status === 'payment_returned') return 'Payment returned · needs verification';
   if (task.quoted_at) return `Execution plan generated ${getRelativeTime(task.quoted_at)}`;
   if (status === 'needs_info') return 'Waiting for client information';
-  if (status === 'review_pending' || status === 'new') return 'Operator reviewing';
+  if (['under_review', 'review_pending', 'review_in_progress'].includes(status)) return 'Operator reviewing';
+  if (status === 'request_received' || status === 'new') return 'Request received';
   if (status === 'in_progress') return 'Execution active';
   if (status === 'queued') return 'Queued for execution';
   if (task.updated_at) return getRelativeTime(task.updated_at);
@@ -3957,7 +3959,7 @@ function getRevenueRecovery(task = {}) {
 
 function updateStats(tasks = adminTasks, clients = adminClients) {
   const newTasksCount = tasks.filter((task) => ['new', 'request_received'].includes(normalizeStatus(task.status))).length;
-  const pendingReviewCount = tasks.filter((task) => ['review_pending', 'review_in_progress', 'quote_preparation'].includes(normalizeStatus(task.status))).length;
+  const pendingReviewCount = tasks.filter((task) => ['under_review', 'review_pending', 'review_in_progress', 'quote_preparation'].includes(normalizeStatus(task.status))).length;
   const quoteNeededCount = tasks.filter((task) => ['quote_sent', 'quoted', 'execution_plan_ready', 'awaiting_start', 'payment_returned', 'awaiting_payment'].includes(normalizeStatus(task.status)) || ['awaiting_payment', 'verification_pending'].includes(normalizeStatus(task.payment_status))).length;
   const awaitingPaymentCount = tasks.filter((task) => ['awaiting_payment', 'verification_pending'].includes(normalizeStatus(task.payment_status)) || ['awaiting_start', 'payment_started', 'payment_returned', 'awaiting_payment'].includes(normalizeStatus(task.status))).length;
   const workspaceReadyCount = tasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status))).length;

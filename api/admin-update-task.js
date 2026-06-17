@@ -12,6 +12,7 @@ const {
 
 const VALID_STATUSES = new Set([
   "review_pending",
+  "under_review",
   "request_received",
   "review_in_progress",
   "new",
