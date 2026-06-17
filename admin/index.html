@@ -3326,6 +3326,9 @@ function getStatusClass(status) {
 function getTaskCardStatusLabel(task = {}) {
   const paymentStatus = normalizeStatus(task.payment_status);
   const status = normalizeStatus(task.status);
+  if (task.raw_payload?.reopened_at && ['under_review', 'review_pending', 'review_in_progress'].includes(status)) {
+    return 'Reopened / Under review';
+  }
   if (hasPaymentReturnSignal(task) && !['paid', 'payment_confirmed'].includes(paymentStatus) && !['payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active'].includes(status)) {
     return 'Payment returned';
   }
@@ -3446,6 +3449,7 @@ function getTaskActionAvailability(task = {}) {
     canRequestNeedsInfo,
     canMarkDelivered,
     canArchive: !['archived', 'completed'].includes(status),
+    canReopenArchived: isArchived,
     canDeleteArchived: isArchived,
     canOpenWorkspace: isWorkspaceActive || isProjectActive,
     isLockedAfterApproval,
@@ -3471,6 +3475,7 @@ function getTaskActions(task = {}) {
   if (availability.canMarkDelivered) actions.push({ type: 'deliver', label: 'Mark Delivered' });
   if (availability.canRequestReferral) actions.push({ type: 'followup', label: 'Request Referral', intent: 'referral' });
   if (availability.canArchive) actions.push({ type: 'move', label: 'Archive', status: 'archived' });
+  if (availability.canReopenArchived) actions.push({ type: 'reopen-archived', label: 'Reopen' });
   if (availability.canDeleteArchived) actions.push({ type: 'delete-archived', label: 'Delete' });
   return actions;
 }
@@ -6769,6 +6774,19 @@ adminTasksList.addEventListener('click', async (e) => {
         message.textContent = `Payment confirmed. ${activationError}`;
       }
     }
+    return;
+  }
+
+  if (button.dataset.action === 'reopen-archived') {
+    const confirmed = window.confirm('Reopen this archived task and move it back to review?');
+    if (!confirmed) return;
+    const data = await updateTask(button, {
+      id: taskId,
+      action: 'reopen_archived_task'
+    });
+    const row = button.closest('.admin-task-row');
+    const message = row?.querySelector('.admin-task-message');
+    if (message && data?.success) message.textContent = 'Archived task reopened.';
     return;
   }
 

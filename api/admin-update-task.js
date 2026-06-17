@@ -394,6 +394,10 @@ function isDeleteArchivedTaskRequest(input = {}) {
   return resolveAdminAction(input) === "delete_archived_task";
 }
 
+function isReopenArchivedTaskRequest(input = {}) {
+  return resolveAdminAction(input) === "reopen_archived_task";
+}
+
 function isClientEmailActionRequest(input = {}) {
   const action = resolveAdminAction(input);
   return action === "send_reminder" || action === "reminder" || action === "request_referral" || action === "referral";
@@ -784,7 +788,7 @@ async function deleteTaskRow(taskId) {
   }
 }
 
-async function deleteArchivedTask(taskId) {
+async function loadArchivedTaskForAction(taskId, actionCode) {
   const task = await loadTask(taskId);
   if (!task) {
     const error = new Error("Task not found");
@@ -797,13 +801,55 @@ async function deleteArchivedTask(taskId) {
   const status = clean(task.status).toLowerCase();
   const archived = task.archived === true || rawPayload.archived === true;
   if (status !== "archived" && !archived) {
-    const error = new Error("Delete is only allowed for archived tasks");
-    error.code = "DELETE_NOT_ALLOWED_NOT_ARCHIVED";
+    const error = new Error("Action is only allowed for archived tasks");
+    error.code = actionCode;
     error.statusCode = 409;
     throw error;
   }
 
+  return { task, rawPayload };
+}
+
+async function deleteArchivedTask(taskId) {
+  const { task } = await loadArchivedTaskForAction(taskId, "DELETE_NOT_ALLOWED_NOT_ARCHIVED");
   return deleteTaskRow(taskId).then((deletedTask) => deletedTask || task);
+}
+
+async function reopenArchivedTask(taskId) {
+  const { task, rawPayload } = await loadArchivedTaskForAction(taskId, "REOPEN_NOT_ALLOWED_NOT_ARCHIVED");
+  const now = new Date().toISOString();
+  const previousEvents = Array.isArray(rawPayload.admin_activity_events)
+    ? rawPayload.admin_activity_events
+    : [];
+  const nextRawPayload = {
+    ...rawPayload,
+    archived: false,
+    lifecycle_stage: "review",
+    reopened_at: now,
+    reopened_by: "admin",
+    admin_activity_events: [
+      {
+        type: "task_reopened",
+        title: "Task reopened from archive",
+        message: "Task reopened from archive",
+        at: now,
+        by: "admin"
+      },
+      ...previousEvents
+    ].slice(0, 50)
+  };
+
+  const patch = {
+    status: "under_review",
+    raw_payload: nextRawPayload,
+    updated_at: now
+  };
+
+  if (Object.prototype.hasOwnProperty.call(task, "archived")) {
+    patch.archived = false;
+  }
+
+  return patchTask(taskId, patch);
 }
 
 async function patchTaskRawPayload(taskId, existingTask = {}, payloadPatch = {}) {
@@ -833,6 +879,18 @@ module.exports = async function handler(req, res) {
         success: false,
         error: "Missing task id",
         code: "TASK_ID_REQUIRED"
+      });
+    }
+
+    if (isReopenArchivedTaskRequest(input)) {
+      const reopenedTask = await reopenArchivedTask(taskId);
+      return send(res, 200, {
+        success: true,
+        reopened: true,
+        task: reopenedTask,
+        updated_task: reopenedTask,
+        data: reopenedTask,
+        message: "Archived task reopened."
       });
     }
 
