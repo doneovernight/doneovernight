@@ -3341,83 +3341,98 @@ function hasPaymentReturnSignal(task = {}) {
 }
 
 function canConfirmPaymentTask(task = {}) {
-  const status = normalizeStatus(task.status);
-  const paymentStatus = normalizeStatus(task.payment_status);
-  const rawPayload = task.raw_payload || {};
-  const hasPaymentReturn = Boolean(hasPaymentReturnSignal(task) || status === 'payment_returned' || paymentStatus === 'verification_pending');
-  const isAwaitingPayment = paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || ['awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned'].includes(status);
-  const hasInvestment = parseMoney(task.quote_amount || rawPayload.quote_amount || rawPayload.investment_amount) > 0;
-  const hasPaymentReference = Boolean(task.payment_link || rawPayload.payment_link || task.payment_reference || rawPayload.payment_reference || task.task_id || task.taskId);
-  const alreadyConfirmed = paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || ['payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active'].includes(status);
-  return !alreadyConfirmed && (hasPaymentReturn || isAwaitingPayment) && hasInvestment && hasPaymentReference;
+  return getTaskActionAvailability(task).canConfirmPayment;
 }
 
 function canSendReminderTask(task = {}) {
-  const status = normalizeStatus(task.status);
-  const paymentStatus = normalizeStatus(task.payment_status);
-  const alreadyStarted = ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
-  return !alreadyStarted && (
-    ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) ||
-    ['awaiting_payment', 'verification_pending'].includes(paymentStatus)
-  );
+  return getTaskActionAvailability(task).canSendReminder;
 }
 
 function canRequestReferralTask(task = {}) {
+  return getTaskActionAvailability(task).canRequestReferral;
+}
+
+function getTaskActionAvailability(task = {}) {
+  const rawPayload = task.raw_payload || {};
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  return ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) ||
-    ['paid', 'payment_confirmed'].includes(paymentStatus);
+  const workspaceStatus = normalizeStatus(task.workspace_status || rawPayload.workspace_status);
+  const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
+  const activeStatuses = ['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'];
+  const deliveredStatuses = ['delivered', 'completed'];
+  const isPaid = ['paid', 'payment_confirmed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
+  const isOperatorsAssigned = ['operators_assigned', 'payment_confirmed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
+  const isWorkspaceActive = activeStatuses.includes(status) || ['workspace_ready', 'workspace_active', 'active'].includes(workspaceStatus);
+  const isProjectActive = ['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(status) ||
+    ['project_active', 'execution_active', 'active'].includes(projectStatus) ||
+    isWorkspaceActive;
+  const isDeliveredOrCompleted = deliveredStatuses.includes(status);
+  const isLockedAfterApproval = isPaid || isOperatorsAssigned || isProjectActive || isDeliveredOrCompleted;
+  const hasTokenizedReviewUrl = Boolean(getTaskSecureReviewUrl(task));
+  const hasPaymentReturn = Boolean(hasPaymentReturnSignal(task) || status === 'payment_returned' || paymentStatus === 'verification_pending');
+  const isAwaitingPayment = paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || ['awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status);
+  const hasInvestment = parseMoney(task.quote_amount || rawPayload.quote_amount || rawPayload.investment_amount) > 0;
+  const hasPaymentReference = Boolean(task.payment_link || rawPayload.payment_link || task.payment_reference || rawPayload.payment_reference || task.task_id || task.taskId);
+  const canSendReminder = !isLockedAfterApproval &&
+    hasTokenizedReviewUrl &&
+    (
+      ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned'].includes(status) ||
+      ['awaiting_payment', 'verification_pending'].includes(paymentStatus)
+    );
+  const canConfirmPayment = !isLockedAfterApproval &&
+    (hasPaymentReturn || isAwaitingPayment) &&
+    hasInvestment &&
+    hasPaymentReference;
+  const canRequestReferral = (isPaid || isProjectActive || isDeliveredOrCompleted) &&
+    !['awaiting_start', 'awaiting_payment', 'payment_returned', 'payment_started'].includes(status) &&
+    !['awaiting_payment', 'verification_pending'].includes(paymentStatus);
+  const canPreparePlan = !isLockedAfterApproval &&
+    ['new', 'request_received', 'under_review', 'review_pending', 'review_in_progress', 'quote_preparation', 'needs_info', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment'].includes(status);
+  const canAlternativeScope = !isLockedAfterApproval &&
+    (
+      ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) ||
+      ['awaiting_payment', 'verification_pending'].includes(paymentStatus)
+    );
+  const canRequestNeedsInfo = !isLockedAfterApproval &&
+    ['new', 'request_received', 'under_review', 'review_pending', 'review_in_progress', 'execution_plan_ready', 'awaiting_start'].includes(status);
+  const canMarkDelivered = ['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress'].includes(status) ||
+    ['workspace_ready', 'workspace_active', 'active'].includes(workspaceStatus) ||
+    ['project_active', 'execution_active', 'active'].includes(projectStatus);
+
+  return {
+    canSendReminder,
+    canConfirmPayment,
+    canRequestReferral,
+    canPreparePlan,
+    canAlternativeScope,
+    canRequestNeedsInfo,
+    canMarkDelivered,
+    canArchive: !['archived', 'completed'].includes(status),
+    canOpenWorkspace: isWorkspaceActive || isProjectActive,
+    isLockedAfterApproval,
+    hasTokenizedReviewUrl
+  };
 }
 
 function getTaskActions(task = {}) {
-  const bucket = getTaskOperationalBucket(task);
-  const actions = {
-    new: [
-      { type: 'move', label: 'Review', status: 'review_pending' },
-      { type: 'move', label: 'Request Information', status: 'needs_info' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    needs_info: [
-      { type: 'move', label: 'Review', status: 'review_pending' },
-      { type: 'quote', label: 'Prepare Plan' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    review_complete: [
-      { type: 'quote', label: 'Prepare Plan' },
-      { type: 'move', label: 'Request Information', status: 'needs_info' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    awaiting_start: [
-      { type: 'followup', label: 'Send Reminder', intent: 'reminder' },
-      { type: 'quote', label: 'Alternative Scope' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    active: [
-      { type: 'workspace-update', label: 'Update Client' },
-      { type: 'followup', label: 'Request Referral', intent: 'referral' },
-      { type: 'deliver', label: 'Mark Delivered' }
-    ],
-    delivered: [
-      { type: 'followup', label: 'Request Testimonial', intent: 'testimonial' },
-      { type: 'followup', label: 'Request Referral', intent: 'referral' },
-      { type: 'move', label: 'Archive', status: 'archived' }
-    ],
-    completed: [
-      { type: 'followup', label: 'Request Referral', intent: 'referral' }
-    ],
-    archived: []
-  };
-  const nextActions = [...(actions[bucket] || [])];
-  if (canSendReminderTask(task) && !nextActions.some((action) => action.intent === 'reminder')) {
-    nextActions.unshift({ type: 'followup', label: 'Send Reminder', intent: 'reminder' });
+  const availability = getTaskActionAvailability(task);
+  const actions = [];
+  const status = normalizeStatus(task.status);
+
+  if (['new', 'request_received', 'under_review', 'review_pending', 'needs_info'].includes(status)) {
+    actions.push({ type: 'move', label: 'Review', status: 'review_pending' });
   }
-  if (canRequestReferralTask(task) && !nextActions.some((action) => action.intent === 'referral')) {
-    nextActions.push({ type: 'followup', label: 'Request Referral', intent: 'referral' });
+  if (availability.canConfirmPayment) actions.push({ type: 'confirm-payment', label: 'Confirm Payment' });
+  if (availability.canSendReminder) actions.push({ type: 'followup', label: 'Send Reminder', intent: 'reminder' });
+  if (availability.canPreparePlan) {
+    const planLabel = availability.canAlternativeScope ? 'Alternative Scope' : 'Prepare Plan';
+    actions.push({ type: 'quote', label: planLabel });
   }
-  if (canConfirmPaymentTask(task)) {
-    nextActions.unshift({ type: 'confirm-payment', label: 'Confirm Payment' });
-  }
-  return nextActions;
+  if (availability.canRequestNeedsInfo) actions.push({ type: 'move', label: 'Request Information', status: 'needs_info' });
+  if (availability.canMarkDelivered) actions.push({ type: 'deliver', label: 'Mark Delivered' });
+  if (availability.canRequestReferral) actions.push({ type: 'followup', label: 'Request Referral', intent: 'referral' });
+  if (availability.canArchive) actions.push({ type: 'move', label: 'Archive', status: 'archived' });
+  return actions;
 }
 
 function getTaskPriority(task) {
@@ -3935,7 +3950,15 @@ function isTokenizedReviewUrl(value) {
 }
 
 function getTaskSecureReviewUrl(task = {}) {
-  return [task.secure_review_url, task.client_review_url, task.review_url]
+  const rawPayload = task.raw_payload || {};
+  return [
+    task.secure_review_url,
+    task.client_review_url,
+    task.review_url,
+    rawPayload.secure_review_url,
+    rawPayload.client_review_url,
+    rawPayload.review_url
+  ]
     .map((value) => String(value || '').trim())
     .find(isTokenizedReviewUrl) || '';
 }
