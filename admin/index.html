@@ -6332,11 +6332,11 @@ function buildBunqPaymentLinkFromQuote(value, reference = '', taskReference = ''
   const amount = String(value || '').replace(/[^\d]/g, '');
   if (!amount) return '';
   const cleanReference = String(reference || '').trim();
-  const descriptionReference = cleanReference ? `🌙 ${cleanReference}` : '🌙 DONEOVERNIGHT';
+  const descriptionReference = cleanReference || 'DONEOVERNIGHT';
   const description = [
     descriptionReference,
     'Execution Plan Approved',
-    'Workspace activation begins automatically after payment confirmation.'
+    'Workspace activation begins after payment confirmation.'
   ].join('\n\n');
   return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }

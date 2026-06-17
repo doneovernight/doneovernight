@@ -82,11 +82,11 @@ function buildBunqPaymentLink(value, reference = "", taskReference = "") {
   const amount = extractQuoteAmountDigits(value);
   if (!amount) return "";
   const cleanReference = clean(reference);
-  const descriptionReference = cleanReference ? `🌙 ${cleanReference}` : "🌙 DONEOVERNIGHT";
+  const descriptionReference = cleanReference || "DONEOVERNIGHT";
   const description = [
     descriptionReference,
     "Execution Plan Approved",
-    "Workspace activation begins automatically after payment confirmation."
+    "Workspace activation begins after payment confirmation."
   ].join("\n\n");
   const encodedAmount = encodeURIComponent(amount);
   const encodedDescription = encodeURIComponent(description);
@@ -107,7 +107,7 @@ function extractPaymentLinkAmount(paymentLink = "") {
 
 function buildPaymentReference(existingTask = {}) {
   const reference = clean(existingTask.task_id || existingTask.taskId || existingTask.id);
-  return reference ? `🌙 ${reference}` : "🌙 DONEOVERNIGHT";
+  return reference || "DONEOVERNIGHT";
 }
 
 function getSupabaseConfig() {
