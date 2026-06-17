@@ -3,7 +3,7 @@ const ADMIN_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
-const { buildSecureReviewUrl, createReviewToken } = require("../lib/review-token");
+const { buildSecureReviewUrl } = require("../lib/review-token");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -70,17 +70,6 @@ function send(res, statusCode, payload) {
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
-}
-
-function buildSecureCheckoutUrl(task = {}) {
-  const taskId = clean(task.task_id || task.taskId || task.id);
-  if (!taskId) return "";
-  const token = createReviewToken(task);
-  if (!token) return "";
-  const url = new URL("https://pay.doneovernight.com/");
-  url.searchParams.set("task_id", taskId);
-  url.searchParams.set("token", token);
-  return url.toString();
 }
 
 function extractQuoteAmountDigits(value) {
@@ -448,7 +437,6 @@ module.exports = async function handler(req, res) {
       const emailDelivered = quoteEmail?.delivered === true || quoteEmail?.sent === true;
       const emailStatus = emailDelivered ? "sent" : (quoteEmail?.configured === false ? "not_configured" : "failed");
       const secureReviewUrl = buildSecureReviewUrl(updatedTask);
-      const secureCheckoutUrl = buildSecureCheckoutUrl(updatedTask);
       updatedTask = await patchTaskRawPayload(taskId, updatedTask, {
         execution_plan_sent_at: patch.quoted_at || new Date().toISOString(),
         execution_plan_email_status: emailStatus,
@@ -456,7 +444,6 @@ module.exports = async function handler(req, res) {
         execution_plan_email_provider: quoteEmail?.provider || "none",
         secure_review_url: secureReviewUrl || updatedTask.raw_payload?.secure_review_url || updatedTask.client_review_url || "",
         client_review_url: secureReviewUrl || updatedTask.raw_payload?.client_review_url || updatedTask.client_review_url || "",
-        secure_checkout_url: secureCheckoutUrl || updatedTask.raw_payload?.secure_checkout_url || "",
         execution_plan_status: "execution_plan_ready"
       }).catch(() => updatedTask);
     }

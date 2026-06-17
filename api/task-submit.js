@@ -20,6 +20,7 @@ const ALLOWED_ANALYTICS_EVENTS = new Set([
   "execution_plan_sent",
   "execution_plan_viewed",
   "approve_start_clicked",
+  "payment_redirect_started",
   "secure_checkout_viewed",
   "secure_checkout_started",
   "payment_link_clicked",
@@ -34,6 +35,7 @@ const ANALYTICS_EVENT_ALIASES = {
   "review opened": "review_opened",
   "execution plan sent": "execution_plan_sent",
   "approve start clicked": "approve_start_clicked",
+  "payment redirect started": "payment_redirect_started",
   "secure checkout viewed": "secure_checkout_viewed",
   "secure checkout started": "secure_checkout_started",
   "payment link opened": "payment_link_clicked",
@@ -51,15 +53,15 @@ function buildClientReviewUrl(task) {
   return "";
 }
 
-function buildSecureCheckoutUrl(task) {
+function buildPaymentStartUrl(task) {
   const taskId = firstClean(task?.task_id, task?.taskId, task?.id);
   if (!taskId) return "";
   const token = createReviewToken(task);
   if (!token) return "";
-  const checkoutUrl = new URL("https://pay.doneovernight.com/");
-  checkoutUrl.searchParams.set("task_id", taskId);
-  checkoutUrl.searchParams.set("token", token);
-  return checkoutUrl.toString();
+  const startUrl = new URL("/api/payment-start", "https://portal.doneovernight.com");
+  startUrl.searchParams.set("task_id", taskId);
+  startUrl.searchParams.set("token", token);
+  return `${startUrl.pathname}${startUrl.search}`;
 }
 
 function send(res, statusCode, payload) {
@@ -266,7 +268,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
   const quoteAmount = firstClean(task.quote_amount, task.raw_payload?.quote_amount, "");
   const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
   const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
-  const checkoutUrl = buildSecureCheckoutUrl(task);
+  const paymentStartUrl = buildPaymentStartUrl(task);
   const informationRequest = extractInformationRequest(
     task.information_request,
     task.info_request,
@@ -277,6 +279,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
   );
   const quoteIsReady = ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment", "paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState);
   const paymentIsOpen = ["quote_sent", "execution_plan_ready", "awaiting_start", "awaiting_payment"].includes(reviewState);
+  const hasPaymentLink = Boolean(firstClean(task.payment_link, task.raw_payload?.payment_link, ""));
 
   return {
     task_id: firstClean(task.task_id, task.taskId, task.id),
@@ -304,8 +307,7 @@ function publicTaskSnapshot(task = {}, reviewState) {
       payment_required: paymentIsOpen,
       payment_confirmed: ["paid", "workspace_ready", "workspace_active", "delivered", "revision_requested"].includes(reviewState),
       reference: firstClean(task.task_id, task.taskId, task.id),
-      secure_checkout_url: paymentIsOpen ? checkoutUrl : "",
-      checkout_url: paymentIsOpen ? checkoutUrl : "",
+      checkout_url: paymentIsOpen && hasPaymentLink ? paymentStartUrl : "",
       payment_link: ""
     },
     workspace: {

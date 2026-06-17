@@ -53,13 +53,13 @@ Admin Send Plan must:
 - send the client back to the secure review page, not directly to payment infrastructure
 - keep workspace locked until payment/start is confirmed
 
-If no custom checkout destination is provided, DONEOVERNIGHT generates an internal infrastructure destination and keeps it behind DONEOVERNIGHT Secure Checkout.
+If no custom checkout destination is provided, DONEOVERNIGHT generates an internal infrastructure destination and keeps it behind the Review `Approve & Start` action.
 
 ```txt
-https://pay.doneovernight.com/?task_id=<DON reference>&token=<review token>
+/api/payment-start?task_id=<DON reference>&token=<review token>
 ```
 
-The underlying infrastructure destination must include the DON reference and task reference in its encoded description so manual payment matching is possible. Client-facing email and review pages must never show raw provider names or raw provider URLs.
+The server validates the review token before redirecting to the underlying infrastructure destination. That destination must include the DON reference and task reference in its encoded description so manual payment matching is possible. Client-facing email and review pages must never show raw provider names or raw provider URLs.
 
 ## Revenue Recovery Architecture
 

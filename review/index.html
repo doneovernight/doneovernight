@@ -296,18 +296,15 @@
       display: block;
     }
 
-    .payment-reference {
+    .start-link-error {
       display: none;
       margin-top: 12px;
-      color: rgba(248,244,236,0.5);
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      color: rgba(255,179,128,0.86);
+      font-size: 0.82rem;
       line-height: 1.6;
-      text-transform: uppercase;
     }
 
-    .payment-reference.is-visible {
+    .start-link-error.is-visible {
       display: block;
     }
 
@@ -390,71 +387,6 @@
       margin-top: 2px;
       padding-top: 14px;
       border-top: 1px solid rgba(248,244,236,0.08);
-    }
-
-    .confidence-note {
-      display: none;
-      max-width: 620px;
-      margin-top: 16px;
-      color: rgba(147, 227, 174, 0.82);
-      font-family: var(--mono);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      line-height: 1.6;
-      text-transform: uppercase;
-    }
-
-    .confidence-note.is-visible {
-      display: block;
-    }
-
-    .start-now {
-      display: none;
-      max-width: 640px;
-      margin-top: 18px;
-      padding: 18px;
-      border: 1px solid rgba(147,227,174,0.16);
-      border-radius: 10px;
-      background: rgba(147,227,174,0.04);
-    }
-
-    .start-now.is-visible {
-      display: block;
-    }
-
-    .start-now h2 {
-      margin: 0 0 14px;
-      color: var(--ink);
-      font-family: var(--serif);
-      font-size: clamp(1.8rem, 4vw, 2.7rem);
-      font-weight: 400;
-      line-height: 1;
-      letter-spacing: -0.03em;
-    }
-
-    .start-now-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .start-now-item span {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--gold);
-      font-family: var(--mono);
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .start-now-item strong {
-      display: block;
-      color: rgba(248,244,236,0.76);
-      font-size: 0.94rem;
-      font-weight: 500;
-      line-height: 1.5;
     }
 
     .workspace-unlock {
@@ -644,10 +576,6 @@
         grid-template-columns: 1fr;
       }
 
-      .start-now-grid {
-        grid-template-columns: 1fr;
-      }
-
       .step {
         min-height: 82px;
       }
@@ -723,10 +651,6 @@
             <span class="quote-summary-label">Deliverables</span>
             <span class="quote-summary-value" data-quote-deliverables></span>
           </div>
-          <div class="quote-summary-item" data-workspace-activation-wrap hidden>
-            <span class="quote-summary-label">Workspace Activation</span>
-            <span class="quote-summary-value" data-workspace-activation></span>
-          </div>
           <div class="quote-summary-item" data-quote-amount-wrap hidden>
             <span class="quote-summary-label">Investment</span>
             <span class="quote-summary-value" data-quote-amount></span>
@@ -739,29 +663,9 @@
         <p class="info-request-text" data-info-request-text></p>
       </div>
 
-      <p class="confidence-note" data-confidence-note>Execution begins immediately after approval.</p>
-
-      <section class="start-now" data-start-now hidden aria-labelledby="start-now-title">
-        <h2 id="start-now-title">Why Start Now</h2>
-        <div class="start-now-grid">
-          <div class="start-now-item">
-            <span>Current Bottleneck</span>
-            <strong data-start-bottleneck></strong>
-          </div>
-          <div class="start-now-item">
-            <span>Expected Outcome</span>
-            <strong data-start-outcome></strong>
-          </div>
-          <div class="start-now-item">
-            <span>Timeline</span>
-            <strong data-start-timeline></strong>
-          </div>
-        </div>
-      </section>
-
       <a class="quote-cta" data-quote-cta href="#">Approve &amp; Start</a>
       <p class="activation-note" data-activation-note>Your workspace is activated automatically after approval and start confirmation.</p>
-      <p class="payment-reference" data-payment-reference></p>
+      <p class="start-link-error" data-start-link-error hidden>Start link is not ready yet. Please reply to the email and we’ll resend it.</p>
     </section>
 
     <section class="workspace-unlock" data-workspace-unlock hidden aria-labelledby="workspace-title">
@@ -830,24 +734,6 @@
       const token = safe(params.get("token"), 240);
       let requested = safe(params.get("state")).toLowerCase();
       let state = stateAliases[requested] || "review";
-      const lockedWorkspaceStates = new Set([
-        "request_received",
-        "needs_info",
-        "on_hold",
-        "archived",
-        "under_review",
-        "review_in_progress",
-        "review_active",
-        "quote_preparation",
-        "quote_preparing",
-        "quote_ready",
-        "quote_sent",
-        "execution_plan_ready",
-        "awaiting_start",
-        "payment_started",
-        "awaiting_payment",
-        "payment_pending"
-      ]);
       const activeWorkspaceStates = new Set([
         "paid",
         "payment_confirmed",
@@ -913,18 +799,15 @@
         const summary = document.querySelector("[data-quote-summary]");
         const cta = document.querySelector("[data-quote-cta]");
         const activationNote = document.querySelector("[data-activation-note]");
-        const paymentReference = document.querySelector("[data-payment-reference]");
-        const confidence = document.querySelector("[data-confidence-note]");
-        const startNow = document.querySelector("[data-start-now]");
+        const startLinkError = document.querySelector("[data-start-link-error]");
         const shouldShowQuote = state === "quote_ready" && ["quote_ready", "quote_sent", "execution_plan_ready", "awaiting_start", "payment_started", "awaiting_payment", "payment_pending", "paid", "payment_confirmed"].includes(requested);
         const hasAmount = setQuoteField("[data-quote-amount-wrap]", "[data-quote-amount]", shouldShowQuote ? formatQuoteAmount(quoteDetails.amount) : "");
         const hasEta = setQuoteField("[data-quote-eta-wrap]", "[data-quote-eta]", shouldShowQuote ? quoteDetails.delivery_eta : "");
         const hasNote = setQuoteField("[data-quote-note-wrap]", "[data-quote-note]", shouldShowQuote ? quoteDetails.note : "");
         const hasDeliverables = setQuoteField("[data-quote-deliverables-wrap]", "[data-quote-deliverables]", shouldShowQuote ? quoteDetails.deliverables : "");
-        const hasWorkspaceActivation = setQuoteField("[data-workspace-activation-wrap]", "[data-workspace-activation]", shouldShowQuote ? "Secure workspace opens after approval and start confirmation." : "");
 
         if (summary) {
-          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables || hasWorkspaceActivation);
+          const visible = shouldShowQuote && (hasAmount || hasEta || hasNote || hasDeliverables);
           summary.hidden = !visible;
           summary.classList.toggle("is-visible", visible);
         }
@@ -942,7 +825,7 @@
                 state: requested,
                 reference
               });
-              window.trackEvent?.("secure_checkout_started", {
+              window.trackEvent?.("payment_redirect_started", {
                 state: requested,
                 reference
               });
@@ -954,27 +837,10 @@
           activationNote.classList.toggle("is-visible", shouldShowQuote && Boolean(quoteUrl));
         }
 
-        if (paymentReference) {
-          paymentReference.classList.remove("is-visible");
-          paymentReference.textContent = "";
-        }
-
-        if (confidence) {
-          confidence.classList.toggle("is-visible", shouldShowQuote);
-          confidence.textContent = ["paid", "payment_confirmed"].includes(requested)
-            ? "Operators are assigned after approval."
-            : "Execution begins immediately after approval.";
-        }
-
-        if (startNow) {
-          const visible = shouldShowQuote;
-          startNow.hidden = !visible;
-          startNow.classList.toggle("is-visible", visible);
-          if (visible) {
-            setText("[data-start-bottleneck]", quoteDetails.note || quoteDetails.deliverables || "Execution is waiting on approval to begin.");
-            setText("[data-start-outcome]", quoteDetails.deliverables || "The agreed scope moves into execution with less manual follow-up.");
-            setText("[data-start-timeline]", quoteDetails.delivery_eta || "Execution starts after approval.");
-          }
+        if (startLinkError) {
+          const visible = shouldShowQuote && !quoteUrl;
+          startLinkError.hidden = !visible;
+          startLinkError.classList.toggle("is-visible", visible);
         }
       }
 
@@ -1039,15 +905,15 @@
             payment_pending: "Your execution plan is ready. Approve the plan to start execution.",
             paid: "Operators are being assigned and execution is being scheduled.",
             payment_confirmed: "Operators are being assigned and execution is being scheduled.",
-            execution_plan_ready: "Your request has been reviewed. The execution plan is ready for the next step.",
-            quote_sent: "Your request has been reviewed. The execution plan is ready for the next step.",
-            quote_ready: "Your request has been reviewed. The execution plan is ready for the next step."
+            execution_plan_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+            quote_sent: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below.",
+            quote_ready: "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
           };
-          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "Awaiting start" : ["paid", "payment_confirmed"].includes(requested) ? "Operators assigned" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "Execution plan ready" : state === "quote_ready" ? "Execution plan ready" : "Execution plan");
+          setText("[data-state-label]", ["awaiting_start", "payment_started", "awaiting_payment", "payment_pending"].includes(requested) ? "AWAITING START" : ["paid", "payment_confirmed"].includes(requested) ? "OPERATORS ASSIGNED" : ["execution_plan_ready", "quote_sent"].includes(requested) ? "EXECUTION PLAN READY" : state === "quote_ready" ? "EXECUTION PLAN READY" : "EXECUTION PLAN");
           setText("#review-title", ["paid", "payment_confirmed"].includes(requested) ? "Execution scheduled." : "Execution plan ready.");
           document.title = `${["paid", "payment_confirmed"].includes(requested) ? "Execution Scheduled" : "Execution Plan Ready"} | DONEOVERNIGHT`;
           setText("[data-state-copy]", copyByState[requested] || (state === "quote_ready"
-            ? "Your request has been reviewed. The execution plan is ready for the next step."
+            ? "Your request has been reviewed. Confirm the scope, timeline, investment, and start step below."
             : "Your request has been reviewed. DONEOVERNIGHT is preparing the execution plan and next step."));
           setStep("received", "complete");
           setStep("review", "complete");
@@ -1098,9 +964,12 @@
         const status = document.querySelector("[data-workspace-status]");
         const message = document.querySelector("[data-workspace-message]");
         const isActive = activeWorkspaceStates.has(requested) && Boolean(reference);
-        const isLocked = lockedWorkspaceStates.has(requested) || !requested || state === "review" || state === "quote" || state === "quote_ready";
 
-        if (!workspace || (!isActive && !isLocked)) return;
+        if (!workspace) return;
+        if (!isActive) {
+          workspace.setAttribute("hidden", "");
+          return;
+        }
 
         workspace.removeAttribute("hidden");
         if (cta) {
@@ -1128,21 +997,6 @@
           });
           return;
         }
-
-        copy.textContent = "Your workspace opens after your execution plan is approved and the start is confirmed.";
-        cta.textContent = "Workspace locked";
-        cta.classList.add("is-locked");
-        cta.href = buildWorkspaceHref();
-        status.textContent = "Workspace locked";
-
-        cta.addEventListener("click", (event) => {
-          event.preventDefault();
-          message.textContent = "Workspace opens after execution plan approval and start confirmation.";
-          message.hidden = false;
-          cta.classList.remove("is-shaking");
-          window.requestAnimationFrame(() => cta.classList.add("is-shaking"));
-        });
-        cta.addEventListener("animationend", () => cta.classList.remove("is-shaking"));
       }
 
       renderReviewState();
@@ -1176,9 +1030,7 @@
           reference = safe(data.review.task_id || reference, 80);
           informationRequest = safe(data.review.information_request || data.review.requested_information || "", 500);
           quoteUrl = safe(
-            data.review.quote?.secure_checkout_url ||
-              data.review.quote?.checkout_url ||
-              "",
+            data.review.quote?.checkout_url || "",
             500
           );
           quoteDetails = {
