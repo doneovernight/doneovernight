@@ -4,9 +4,9 @@ const { dispatchWebhook, getWebhookUrls, supabaseFetch } = require("../lib/ops")
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
-const { sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
-const { buildClientEmail } = require("../lib/email/client-template");
+const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
+const { resolveTaskLanguage } = require("../lib/language");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -265,6 +265,7 @@ function getReviewWorkspaceState(reviewState) {
 }
 
 function publicTaskSnapshot(task = {}, reviewState) {
+  const language = resolveTaskLanguage(task);
   const quoteAmount = firstClean(task.quote_amount, task.raw_payload?.quote_amount, "");
   const deliveryEta = firstClean(task.delivery_eta, task.raw_payload?.delivery_eta, "");
   const quoteNote = firstClean(task.quote_note, task.raw_payload?.quote_note, "");
@@ -286,6 +287,9 @@ function publicTaskSnapshot(task = {}, reviewState) {
     operational_id: firstClean(task.task_id, task.taskId, task.id),
     state: reviewState,
     status: reviewState,
+    language,
+    preferred_language: language,
+    lang: language,
     client: firstClean(task.name, task.raw_payload?.name, task.email, "Client"),
     source: firstClean(task.source, task.raw_payload?.source, "ask"),
     deadline: firstClean(task.deadline, task.raw_payload?.deadline, "Not provided"),
@@ -397,9 +401,7 @@ async function notifyOperations(task) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
   const preferredLanguage =
-    task.preferredLanguage ||
-    task.rawPayload?.preferred_language ||
-    "en";
+    resolveTaskLanguage(task);
   const clientBudget = resolveClientBudget(task);
   const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
@@ -495,8 +497,8 @@ async function notifyOperations(task) {
         confirmation_email_name: task.name,
         confirmation_email_required: true,
         confirmation_email_template: "task_received",
-        confirmation_email_subject: "Request received | DONEOVERNIGHT",
-        confirmation_email_preview: "Request received. We'll review it and reply shortly.",
+        confirmation_email_subject: preferredLanguage === "nl" ? "Aanvraag ontvangen — DONEOVERNIGHT" : "Request received — DONEOVERNIGHT",
+        confirmation_email_preview: preferredLanguage === "nl" ? "Aanvraag ontvangen. We beoordelen deze en koppelen snel terug." : "Request received. We'll review it and reply shortly.",
         raw_payload: task.rawPayload
       })
     });
@@ -525,35 +527,15 @@ function getClientConfirmationEmailUrls() {
 
 function buildClientConfirmationEmailPayload(task) {
   const name = task.name || "there";
-  const subject = "Request received — DONEOVERNIGHT";
   const reference = task.taskId;
   const reviewUrl = buildClientReviewUrl(task);
   const clientBudget = resolveClientBudget(task);
-  const email = buildClientEmail({
-    subject,
-    preheader: `Ask received. Reference: ${reference}`,
-    statusLabel: "REQUEST RECEIVED",
-    title: "Ask received.",
-    greetingName: name,
-    intro: "We have received your request.",
-    lead: "A human operator will review scope, timing, and the execution path before replying with the next step.",
-    bullets: [
-      "Scope review",
-      "Timing check",
-      "Execution path",
-      "Secure review"
-    ],
-    taskLabel: "Submitted Task",
-    taskDescription: task.taskSummary || reference,
-    rows: [["Reference", reference]],
-    infoCards: [
-      ["Timing", task.deadline || "Not provided"],
-      ["Review Window", "Human review"]
-    ],
-    body: ["Human-reviewed. AI-assisted. Built for founders, creatives, and operators."],
-    ctaLabel: reviewUrl ? "Track review" : "",
-    ctaUrl: reviewUrl,
-    replyTo: "ask@doneovernight.com"
+  const language = resolveTaskLanguage(task);
+  const email = buildTaskConfirmationEmail({
+    ...task,
+    reviewUrl,
+    review_url: reviewUrl,
+    client_review_url: reviewUrl
   });
 
   return {
@@ -568,7 +550,10 @@ function buildClientConfirmationEmailPayload(task) {
     client_email: task.email,
     name: task.name,
     client_name: task.name,
-    subject,
+    subject: email.subject,
+    language,
+    preferred_language: language,
+    lang: language,
     task_id: reference,
     taskId: reference,
     task_reference: reference,

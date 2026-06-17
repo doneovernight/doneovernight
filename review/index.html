@@ -446,6 +446,10 @@
         payment_link: ""
       };
       let informationRequest = "";
+      let reviewLanguage = safe(params.get("lang") || params.get("language"), 8).toLowerCase();
+      reviewLanguage = reviewLanguage.startsWith("nl") ? "nl" : "en";
+      window.doneovernightReviewLanguage = reviewLanguage;
+      document.documentElement.lang = reviewLanguage;
 
       if (reference) {
         requested = "request_received";
@@ -629,6 +633,10 @@
           requested = safe(data.review.state || data.review.status).toLowerCase() || "request_received";
           state = stateAliases[requested] || "review";
           reference = safe(data.review.task_id || reference, 80);
+          reviewLanguage = safe(data.review.language || data.review.preferred_language || data.review.lang || reviewLanguage, 8).toLowerCase();
+          reviewLanguage = reviewLanguage.startsWith("nl") ? "nl" : "en";
+          window.doneovernightReviewLanguage = reviewLanguage;
+          document.documentElement.lang = reviewLanguage;
           informationRequest = safe(data.review.information_request || data.review.requested_information || "", 500);
           quoteUrl = safe(
             data.review.quote?.checkout_url || "",
