@@ -1619,6 +1619,38 @@ body.is-admin .admin-dashboard { display: block; }
   font-size: 12px;
 }
 
+.admin-activation-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+  border: 1px solid rgba(103, 214, 149, 0.2);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(103, 214, 149, 0.08), rgba(245, 241, 234, 0.018)),
+    rgba(5, 6, 8, 0.25);
+  padding: 11px 12px;
+}
+
+.admin-activation-status span,
+.admin-activation-status time {
+  color: rgba(245, 241, 234, 0.64);
+  font-size: 12px;
+}
+
+.admin-activation-status strong {
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.admin-activation-status .is-pending {
+  color: rgba(244, 210, 138, 0.78);
+}
+
 .admin-payment-callout {
   display: flex;
   align-items: center;
@@ -2412,6 +2444,9 @@ body.is-admin .admin-dashboard { display: block; }
   .admin-payment-callout {
     align-items: stretch;
     flex-direction: column;
+  }
+  .admin-activation-status {
+    grid-template-columns: 1fr;
   }
   .admin-recovery-card {
     grid-template-columns: 1fr;
@@ -3561,6 +3596,13 @@ function getTaskRenderSignature(task) {
     task.raw_payload?.referral_task_id,
     task.raw_payload?.referred_by_task_id,
     task.raw_payload?.referral_source,
+    task.raw_payload?.payment_confirmed_at,
+    task.raw_payload?.workspace_activated_at,
+    task.raw_payload?.project_active_at,
+    task.raw_payload?.activation_email_sent_at,
+    task.raw_payload?.activation_email_status,
+    task.raw_payload?.payment_confirmation_email_sent_at,
+    task.raw_payload?.payment_confirmation_email_status,
     task.updated_at,
     task.created_at
   ].map((value) => String(value ?? '')).join('::');
@@ -3708,6 +3750,32 @@ function getTaskActivityLabel(task) {
   if (status === 'queued') return 'Queued for execution';
   if (task.updated_at) return getRelativeTime(task.updated_at);
   return 'Realtime connected';
+}
+
+function getTaskActivationStatus(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const workspaceStatus = normalizeStatus(task.workspace_status || rawPayload.workspace_status);
+  const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
+  const paymentConfirmedAt = task.paid_at || rawPayload.payment_confirmed_at || '';
+  const workspaceActivatedAt = rawPayload.workspace_activated_at || rawPayload.project_active_at || task.started_at || '';
+  const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
+  const paymentConfirmed = ['paid', 'payment_confirmed'].includes(paymentStatus) || ['payment_confirmed', 'workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress'].includes(status);
+  const workspaceActive = ['workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status) ||
+    ['workspace_active', 'active'].includes(workspaceStatus) ||
+    ['project_active', 'execution_active', 'active'].includes(projectStatus) ||
+    Boolean(workspaceActivatedAt);
+  const activationEmailSent = Boolean(activationEmailSentAt) || rawPayload.activation_email_status === 'sent' || rawPayload.payment_confirmation_email_status === 'sent';
+
+  if (!paymentConfirmed && !workspaceActive && !activationEmailSent) return null;
+
+  return {
+    paymentConfirmed,
+    workspaceActive,
+    activationEmailSent,
+    activatedAt: activationEmailSentAt || workspaceActivatedAt || paymentConfirmedAt || task.updated_at || ''
+  };
 }
 
 function getDaysSince(value) {
@@ -5164,6 +5232,7 @@ function renderTasks(tasks) {
     const isExecutionPlanSent = status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.payment_link;
     const planEmailDelivered = task.raw_payload?.execution_plan_email_delivered === true || task.raw_payload?.execution_plan_email_status === 'sent';
     const planSentAt = task.raw_payload?.execution_plan_sent_at || task.quoted_at || task.updated_at || '';
+    const activationStatus = getTaskActivationStatus(task);
     const priority = getTaskPriority(task);
     const activityLabel = getTaskActivityLabel(task);
     const recovery = isAwaitingPayment ? getRevenueRecovery(task) : null;
@@ -5201,6 +5270,14 @@ function renderTasks(tasks) {
         <span>Awaiting client start</span>
         <span>${escapeHTML(planEmailDelivered ? 'Sent to client' : 'Plan saved')}</span>
         ${planSentAt ? `<time>${escapeHTML(formatTaskDate(planSentAt) || '')}</time>` : ''}
+      </div>
+    ` : '';
+    const activationStatusBanner = activationStatus ? `
+      <div class="admin-activation-status">
+        <strong>${activationStatus.paymentConfirmed ? '✓ Payment Confirmed' : 'Payment Pending'}</strong>
+        <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : 'Workspace Pending'}</strong>
+        <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : 'Activation Email Pending'}</strong>
+        ${activationStatus.activatedAt ? `<time>${escapeHTML(formatTaskDate(activationStatus.activatedAt) || '')}</time>` : ''}
       </div>
     ` : '';
     const actionMarkup = actions.length ? `
@@ -5249,6 +5326,7 @@ function renderTasks(tasks) {
         <div class="admin-task-activity">${escapeHTML(activityLabel)}</div>
         ${renderLifecycle(task.status)}
         ${planSentBanner}
+        ${activationStatusBanner}
         ${(task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link) ? `
           <div class="admin-task-detail">
             <span class="admin-task-detail-label">Execution Plan</span>
@@ -6584,12 +6662,17 @@ adminTasksList.addEventListener('click', async (e) => {
     if (message && data) {
       if (data?.workspaceActivation?.success) {
         const reused = data.workspaceActivation.workspace?.reused ? 'Existing workspace reused.' : 'Workspace activated.';
+        const activationEmail = data.workspaceActivation.activationEmail?.delivered || data.paymentEmail?.delivered
+          ? ' Activation email sent.'
+          : data.workspaceActivation.activationEmail?.configured === false || data.paymentEmail?.configured === false
+            ? ' Activation email not configured.'
+            : ' Activation email pending.';
         const invoice = data.workspaceActivation.invoice?.created
           ? ` Invoice ${data.workspaceActivation.invoice.invoice_number} generated.`
           : data.workspaceActivation.invoice?.configured === false
             ? ' Invoice system not ready; workspace activation continued.'
             : '';
-        message.textContent = `Payment confirmed. ${reused}${invoice}`;
+        message.textContent = `Payment confirmed. ${reused}${activationEmail}${invoice}`;
       } else {
         message.textContent = 'Payment confirmed, but activation result was not returned.';
       }
