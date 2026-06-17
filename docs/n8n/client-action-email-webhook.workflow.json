@@ -1,0 +1,172 @@
+{
+  "name": "DONEOVERNIGHT — Client Action Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "doneovernight-client-action-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8c81f996-3802-4420-b4c5-702b0e94de21",
+      "name": "Webhook — Client Action Email",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        520,
+        420
+      ],
+      "webhookId": "doneovernight-client-action-email"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json || {};\nconst payload = source.body || source;\n\nfunction clean(value) {\n  return value === undefined || value === null ? \"\" : String(value).trim();\n}\n\nconst taskId = clean(payload.task_id || payload.taskId || payload.task_reference || payload.reference_id);\nconst clientEmail = clean(payload.to || payload.client_email || payload.email).toLowerCase();\nconst subject = clean(payload.subject);\nconst html = clean(payload.html);\nconst text = clean(payload.text);\nconst clientLocale = clean(payload.client_locale || payload.language || payload.lang || payload.preferred_language) || \"en\";\nconst emailType = clean(payload.email_type || payload.type || payload.event_type) || \"client_action\";\n\nreturn [{\n  json: {\n    task_id: taskId,\n    client_email: clientEmail,\n    subject,\n    html,\n    text,\n    client_locale: clientLocale,\n    email_type: emailType,\n    should_send: Boolean(clientEmail && clientEmail.includes(\"@\") && subject && html),\n    provider: \"n8n_outlook\"\n  }\n}];"
+      },
+      "id": "3b0a67c0-3f1b-418d-8ccf-582579f2eff3",
+      "name": "Normalize Client Action Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_send }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4b9a63e9-0ffd-41b7-a25b-e71f257ad4d4",
+      "name": "Has Sendable Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "toRecipients": "={{ $json.client_email }}",
+        "subject": "={{ $json.subject }}",
+        "bodyContent": "={{ $json.html }}",
+        "additionalFields": {
+          "bodyContentType": "html"
+        }
+      },
+      "id": "5916a899-0d7c-4f62-a8a7-2c4f83ed8c6a",
+      "name": "Email — Client Action",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        320
+      ],
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "uN91YqqKRfL3GaJp",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, delivered: true, provider: \"n8n_outlook\", task_id: $(\"Normalize Client Action Email\").item.json.task_id, email_type: $(\"Normalize Client Action Email\").item.json.email_type } }}",
+        "options": {}
+      },
+      "id": "d9bd6864-2a4e-4c9a-a670-1f528e67808d",
+      "name": "Respond — Client Action Email Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, delivered: false, provider: \"n8n_outlook\", reason: \"missing_required_email_fields\", task_id: $(\"Normalize Client Action Email\").item.json.task_id, email_type: $(\"Normalize Client Action Email\").item.json.email_type } }}",
+        "options": {}
+      },
+      "id": "9e0f691e-67c2-4b56-b4e6-cd742e25802d",
+      "name": "Respond — Client Action Email Skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1240,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook — Client Action Email": {
+      "main": [
+        [
+          {
+            "node": "Normalize Client Action Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Client Action Email": {
+      "main": [
+        [
+          {
+            "node": "Has Sendable Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Sendable Email?": {
+      "main": [
+        [
+          {
+            "node": "Email — Client Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond — Client Action Email Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email — Client Action": {
+      "main": [
+        [
+          {
+            "node": "Respond — Client Action Email Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": true,
+  "versionId": "doneovernight-client-action-email-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}
