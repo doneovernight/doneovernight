@@ -480,6 +480,8 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
 
   const confirmation = assertManualPaymentConfirmationAllowed(existingTask, taskId);
   const now = new Date().toISOString();
+  const actionId = clean(input.confirm_payment_action_id || input.action_id) ||
+    `confirm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const rawPayload = existingTask.raw_payload && typeof existingTask.raw_payload === "object"
     ? existingTask.raw_payload
     : {};
@@ -489,6 +491,9 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
     paid_at: now,
     raw_payload: {
       ...rawPayload,
+      confirm_payment_attempted_at: now,
+      confirm_payment_action_id: actionId,
+      confirm_payment_admin_result: "payment_marked_confirmed",
       payment_confirmed_at: now,
       payment_confirmed_by: "admin_manual",
       payment_confirmation_source: "admin_manual",
@@ -506,7 +511,25 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
       amount_paid: confirmation.amount,
       manual_confirmation: true,
       confirmation_source: "admin_manual",
-      confirmed_by: "admin"
+      confirmed_by: "admin",
+      confirm_payment_attempted_at: now,
+      confirm_payment_action_id: actionId
+    });
+    const paymentEmail = result.paymentEmail || result.activationEmail || {};
+    const activationRawPayload = result.task?.raw_payload && typeof result.task.raw_payload === "object"
+      ? result.task.raw_payload
+      : {};
+    console.log("DONEOVERNIGHT_CONFIRM_PAYMENT_AUDIT", {
+      task_id: confirmedTask.task_id || existingTask.task_id || taskId,
+      action_id: actionId,
+      workspace_activation_status: activationRawPayload.workspace_activation_status || (result.alreadyActive ? "already_active" : "active"),
+      email_provider: paymentEmail.provider || "",
+      email_env_used: paymentEmail.env_used || "",
+      email_request_sent: paymentEmail.request_sent === true,
+      email_response_status: paymentEmail.response_status || paymentEmail.status_code || null,
+      email_response_ok: paymentEmail.response_ok === true,
+      email_status: paymentEmail.reason || paymentEmail.status || "",
+      email_error_code: paymentEmail.error || ""
     });
     return {
       confirmedTask,
@@ -521,18 +544,39 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
     const failedTask = await patchTask(taskId, {
       raw_payload: {
         ...(confirmedTask.raw_payload && typeof confirmedTask.raw_payload === "object" ? confirmedTask.raw_payload : {}),
+        confirm_payment_admin_result: "workspace_activation_failed",
+        workspace_activation_attempted_at: failedAt,
         workspace_activation_status: "failed",
         workspace_activation_error: safeActivationError,
         workspace_activation_failed_at: failedAt,
         activation_email_status: "not_sent",
         activation_email_error: "Workspace activation failed before email delivery",
+        payment_confirmed_email_attempted_at: failedAt,
+        payment_confirmed_email_provider: "none",
+        payment_confirmed_email_env_used: "",
+        payment_confirmed_email_webhook_url_present: false,
+        payment_confirmed_email_request_sent: false,
+        payment_confirmed_email_response_status: null,
+        payment_confirmed_email_response_ok: false,
+        payment_confirmed_email_response_summary: "",
         payment_confirmed_email_sent: false,
         payment_confirmed_email_status: "not_sent",
-        payment_confirmed_email_error: "Workspace activation failed before email delivery",
-        payment_confirmed_email_webhook_url_present: false
+        payment_confirmed_email_error: "Workspace activation failed before email delivery"
       },
       updated_at: failedAt
     }).catch(() => confirmedTask);
+    console.log("DONEOVERNIGHT_CONFIRM_PAYMENT_AUDIT", {
+      task_id: confirmedTask.task_id || existingTask.task_id || taskId,
+      action_id: actionId,
+      workspace_activation_status: "failed",
+      email_provider: "none",
+      email_env_used: "",
+      email_request_sent: false,
+      email_response_status: null,
+      email_response_ok: false,
+      email_status: "not_sent",
+      email_error_code: error.code || "WORKSPACE_ACTIVATION_FAILED"
+    });
     return {
       confirmedTask: failedTask,
       activationResult: null,

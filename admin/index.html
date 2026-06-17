@@ -1651,6 +1651,15 @@ body.is-admin .admin-dashboard { display: block; }
   color: rgba(244, 210, 138, 0.78);
 }
 
+.admin-payment-email-diagnostic {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(245, 241, 234, 0.08);
+}
+
 .admin-payment-callout {
   display: flex;
   align-items: center;
@@ -3778,14 +3787,19 @@ function getTaskActivationStatus(task = {}) {
   const workspaceActivatedAt = rawPayload.workspace_activated_at || rawPayload.project_active_at || task.started_at || '';
   const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmed_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
   const activationEmailStatus = normalizeStatus(rawPayload.activation_email_status || rawPayload.payment_confirmed_email_status || rawPayload.payment_confirmation_email_status || '');
+  const paymentEmailStatus = normalizeStatus(rawPayload.payment_confirmed_email_status || rawPayload.payment_confirmation_email_status || rawPayload.activation_email_status || '');
+  const paymentEmailProvider = rawPayload.payment_confirmed_email_provider || rawPayload.payment_confirmation_email_provider || rawPayload.activation_email_provider || '';
+  const paymentEmailEnv = rawPayload.payment_confirmed_email_env_used || '';
+  const paymentEmailHttp = rawPayload.payment_confirmed_email_response_status ?? '';
+  const paymentEmailError = rawPayload.payment_confirmed_email_error || rawPayload.activation_email_error || '';
   const paymentConfirmed = ['paid', 'payment_confirmed'].includes(paymentStatus) || ['payment_confirmed', 'workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress'].includes(status);
   const workspaceActive = ['workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status) ||
     ['workspace_active', 'active'].includes(workspaceStatus) ||
     ['project_active', 'execution_active', 'active'].includes(projectStatus) ||
     Boolean(workspaceActivatedAt);
-  const activationEmailSent = Boolean(activationEmailSentAt) || activationEmailStatus === 'sent';
+  const activationEmailSent = Boolean(activationEmailSentAt) || ['sent', 'delivered_to_provider'].includes(activationEmailStatus);
   const activationEmailFailed = !activationEmailSent && (
-    ['failed', 'not_configured', 'not_sent', 'payment_confirmation_email_delivery_failed'].includes(activationEmailStatus) ||
+    ['failed', 'not_configured', 'not_sent', 'delivery_failed', 'request_failed', 'blocked_workspace_url_missing', 'blocked_client_email_missing', 'payment_confirmation_email_delivery_failed'].includes(activationEmailStatus) ||
     rawPayload.payment_confirmed_email_error === 'PAYMENT_CONFIRMATION_EMAIL_DELIVERY_FAILED'
   );
   const activationEmailNotConfigured = activationEmailStatus === 'not_configured' ||
@@ -3804,8 +3818,25 @@ function getTaskActivationStatus(task = {}) {
     activationEmailFailed,
     activationEmailNotConfigured,
     activationEmailError: rawPayload.activation_email_error || rawPayload.payment_confirmed_email_error || '',
+    paymentEmailStatus,
+    paymentEmailProvider,
+    paymentEmailEnv,
+    paymentEmailHttp,
+    paymentEmailError,
     activatedAt: activationEmailSentAt || workspaceActivatedAt || paymentConfirmedAt || task.updated_at || ''
   };
+}
+
+function getPaymentEmailDiagnosticLabel(status = '', error = '') {
+  const safeStatus = normalizeStatus(status);
+  if (safeStatus === 'delivered_to_provider' || safeStatus === 'sent') return 'Sent to provider';
+  if (safeStatus === 'not_configured') return 'Not configured';
+  if (safeStatus === 'delivery_failed') return `Delivery failed${error ? `: ${error}` : ''}`;
+  if (safeStatus === 'request_failed') return `Request failed${error ? `: ${error}` : ''}`;
+  if (safeStatus === 'blocked_workspace_url_missing') return 'Blocked: workspace URL missing';
+  if (safeStatus === 'blocked_client_email_missing') return 'Blocked: client email missing';
+  if (safeStatus === 'not_sent') return `Not sent${error ? `: ${error}` : ''}`;
+  return safeStatus ? safeStatus.replace(/_/g, ' ') : 'Pending';
 }
 
 function getTaskInformationRequestStatus(task = {}) {
@@ -5321,12 +5352,21 @@ function renderTasks(tasks) {
         ${planSentAt ? `<time>${escapeHTML(formatTaskDate(planSentAt) || '')}</time>` : ''}
       </div>
     ` : '';
+    const paymentEmailDiagnostic = activationStatus ? `
+      <span class="admin-payment-email-diagnostic">
+        <span>Payment email: ${escapeHTML(getPaymentEmailDiagnosticLabel(activationStatus.paymentEmailStatus, activationStatus.paymentEmailError))}</span>
+        <span>Provider: ${escapeHTML(activationStatus.paymentEmailProvider || 'none')}</span>
+        <span>Env: ${escapeHTML(activationStatus.paymentEmailEnv || 'none')}</span>
+        <span>HTTP: ${escapeHTML(activationStatus.paymentEmailHttp || 'n/a')}</span>
+      </span>
+    ` : '';
     const activationStatusBanner = activationStatus ? `
       <div class="admin-activation-status">
         <strong>${activationStatus.paymentConfirmed ? '✓ Payment Confirmed' : 'Payment Pending'}</strong>
         <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : activationStatus.workspaceActivationFailed ? `Workspace Activation Failed${activationStatus.workspaceActivationError ? `: ${escapeHTML(activationStatus.workspaceActivationError)}` : ''}` : 'Workspace Pending'}</strong>
         <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : activationStatus.activationEmailNotConfigured ? 'Activation Email Not Configured' : activationStatus.activationEmailFailed ? `Activation Email Failed${activationStatus.activationEmailError ? `: ${escapeHTML(activationStatus.activationEmailError)}` : ''}` : activationStatus.paymentConfirmed ? 'Activation Email Not Sent' : 'Activation Email Pending'}</strong>
         ${activationStatus.activatedAt ? `<time>${escapeHTML(formatTaskDate(activationStatus.activatedAt) || '')}</time>` : ''}
+        ${paymentEmailDiagnostic}
       </div>
     ` : '';
     const informationRequestBanner = informationRequestStatus ? `
