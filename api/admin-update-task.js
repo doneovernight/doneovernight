@@ -3,6 +3,7 @@ const ADMIN_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { sendAdminQuoteEmail } = require("../lib/email/quote-email");
 const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
+const { sendClientActionEmail } = require("../lib/email/client-action-email");
 const { buildSecureReviewUrl } = require("../lib/review-token");
 const {
   activateWorkspaceAfterVerifiedPayment,
@@ -384,6 +385,21 @@ function isConfirmPaymentRequest(input = {}) {
   return action === "confirm_payment" || action === "payment_confirmed" || action === "manual_payment_confirmation";
 }
 
+function resolveAdminAction(input = {}) {
+  return clean(input.action || input.intent || input.type || input.operation).toLowerCase();
+}
+
+function isClientEmailActionRequest(input = {}) {
+  const action = resolveAdminAction(input);
+  return action === "send_reminder" || action === "reminder" || action === "request_referral" || action === "referral";
+}
+
+function clientEmailActionType(input = {}) {
+  const action = resolveAdminAction(input);
+  if (action === "request_referral" || action === "referral") return "referral";
+  return "reminder";
+}
+
 function resolveManualPaymentAmount(task = {}) {
   return extractQuoteAmountDigits(
     task.quote_amount ||
@@ -454,16 +470,143 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
   }
 
   const confirmation = assertManualPaymentConfirmationAllowed(existingTask, taskId);
-  const result = await activateWorkspaceAfterVerifiedPayment({
-    task_id: existingTask.task_id || taskId,
-    client_email: existingTask.email || existingTask.raw_payload?.email || input.client_email || input.email || "",
-    payment_reference: confirmation.paymentReference,
-    amount_paid: confirmation.amount,
-    manual_confirmation: true,
-    confirmation_source: "admin_manual",
-    confirmed_by: "admin"
+  const now = new Date().toISOString();
+  const rawPayload = existingTask.raw_payload && typeof existingTask.raw_payload === "object"
+    ? existingTask.raw_payload
+    : {};
+  const confirmedTask = await patchTask(taskId, {
+    status: "payment_confirmed",
+    payment_status: "paid",
+    paid_at: now,
+    raw_payload: {
+      ...rawPayload,
+      payment_confirmed_at: now,
+      payment_confirmed_by: "admin_manual",
+      payment_confirmation_source: "admin_manual",
+      payment_reference: confirmation.paymentReference,
+      amount_paid: confirmation.amount
+    },
+    updated_at: now
   });
-  return result;
+
+  try {
+    const result = await activateWorkspaceAfterVerifiedPayment({
+      task_id: confirmedTask.task_id || existingTask.task_id || taskId,
+      client_email: confirmedTask.email || confirmedTask.raw_payload?.email || input.client_email || input.email || "",
+      payment_reference: confirmation.paymentReference,
+      amount_paid: confirmation.amount,
+      manual_confirmation: true,
+      confirmation_source: "admin_manual",
+      confirmed_by: "admin"
+    });
+    return {
+      confirmedTask,
+      activationResult: result,
+      activationError: null
+    };
+  } catch (error) {
+    return {
+      confirmedTask,
+      activationResult: null,
+      activationError: {
+        code: error.code || "WORKSPACE_ACTIVATION_FAILED",
+        message: error.statusCode && error.statusCode < 500 ? error.message : "Workspace activation failed after payment confirmation"
+      }
+    };
+  }
+}
+
+function appendAdminActivity(rawPayload = {}, event = {}) {
+  const current = rawPayload && typeof rawPayload === "object" ? rawPayload : {};
+  const events = Array.isArray(current.admin_activity_events) ? current.admin_activity_events : [];
+  return {
+    ...current,
+    admin_activity_events: [
+      event,
+      ...events
+    ].slice(0, 25)
+  };
+}
+
+function assertReminderAllowed(task = {}) {
+  const status = clean(task.status).toLowerCase();
+  const paymentStatus = clean(task.payment_status).toLowerCase();
+  const active = ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
+    ["paid", "payment_confirmed"].includes(paymentStatus);
+  const allowed = ["execution_plan_ready", "quote_sent", "quoted", "awaiting_start", "payment_started", "awaiting_payment", "payment_returned"].includes(status) ||
+    ["awaiting_payment", "verification_pending"].includes(paymentStatus) ||
+    Boolean(task.quote_amount || task.payment_link);
+  if (!allowed || active) {
+    const error = new Error("Reminder is not available for this task state");
+    error.code = "REMINDER_NOT_ALLOWED";
+    error.statusCode = 409;
+    throw error;
+  }
+  const reviewUrl = buildSecureReviewUrl(task) || clean(task.client_review_url || task.review_url || task.raw_payload?.client_review_url || task.raw_payload?.review_url);
+  if (!reviewUrl || !/task_id=/.test(reviewUrl) || !/token=/.test(reviewUrl)) {
+    const error = new Error("Secure review URL is required for reminder");
+    error.code = "SECURE_REVIEW_URL_REQUIRED";
+    error.statusCode = 409;
+    throw error;
+  }
+}
+
+function assertReferralAllowed(task = {}) {
+  const status = clean(task.status).toLowerCase();
+  const paymentStatus = clean(task.payment_status).toLowerCase();
+  const allowed = ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active", "delivered", "completed"].includes(status) ||
+    ["paid", "payment_confirmed"].includes(paymentStatus);
+  if (!allowed) {
+    const error = new Error("Referral request is only available after payment or activation");
+    error.code = "REFERRAL_NOT_ALLOWED";
+    error.statusCode = 409;
+    throw error;
+  }
+}
+
+async function sendClientAdminAction(taskId, input = {}) {
+  const task = await loadTask(taskId);
+  if (!task) {
+    const error = new Error("Task not found");
+    error.code = "TASK_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const action = clientEmailActionType(input);
+  if (action === "referral") assertReferralAllowed(task);
+  else assertReminderAllowed(task);
+
+  const emailResult = await sendClientActionEmail(task, action);
+  if (!emailResult?.delivered) {
+    const error = new Error("Client action email was not delivered");
+    error.code = emailResult?.configured === false ? "CLIENT_ACTION_EMAIL_NOT_CONFIGURED" : "CLIENT_ACTION_EMAIL_NOT_DELIVERED";
+    error.statusCode = emailResult?.configured === false ? 503 : 502;
+    error.emailResult = emailResult;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const rawPayload = appendAdminActivity(task.raw_payload, {
+    event_type: action === "referral" ? "referral_requested" : "reminder_sent",
+    task_id: task.task_id || taskId,
+    created_at: now,
+    provider: emailResult.provider || "",
+    source: "admin"
+  });
+  rawPayload[action === "referral" ? "last_referral_requested_at" : "last_reminder_sent_at"] = now;
+  rawPayload[action === "referral" ? "last_referral_email_provider" : "last_reminder_email_provider"] = emailResult.provider || "unknown";
+
+  const updatedTask = await patchTask(taskId, {
+    raw_payload: rawPayload,
+    updated_at: now
+  });
+
+  return {
+    action,
+    task: updatedTask,
+    emailResult
+  };
 }
 
 async function patchTask(taskId, patch) {
@@ -547,23 +690,49 @@ module.exports = async function handler(req, res) {
     }
 
     if (isConfirmPaymentRequest(input)) {
-      const activationResult = await confirmPaymentAndActivateWorkspace(taskId, input);
-      const activationResponse = buildWorkspaceActivationResponse(activationResult);
+      const confirmationResult = await confirmPaymentAndActivateWorkspace(taskId, input);
+      const activationResponse = confirmationResult.activationResult
+        ? buildWorkspaceActivationResponse(confirmationResult.activationResult)
+        : {
+            success: false,
+            warning: true,
+            code: confirmationResult.activationError?.code || "WORKSPACE_ACTIVATION_FAILED",
+            error: confirmationResult.activationError?.message || "Workspace activation failed after payment confirmation"
+          };
+      const responseTask = confirmationResult.activationResult?.task || confirmationResult.confirmedTask;
       return send(res, 200, {
         success: true,
-        task: activationResult.task,
-        updated_task: activationResult.task,
-        data: activationResult.task,
+        task: responseTask,
+        updated_task: responseTask,
+        data: responseTask,
         paymentConfirmation: {
           confirmed: true,
           source: "admin_manual",
-          payment_status: activationResponse.payment_status,
-          paid_at: activationResult.task?.paid_at || activationResult.task?.raw_payload?.payment_confirmed_at || ""
+          payment_status: responseTask?.payment_status || "paid",
+          paid_at: responseTask?.paid_at || responseTask?.raw_payload?.payment_confirmed_at || ""
         },
         workspaceActivation: activationResponse,
-        invoice: activationResponse.invoice,
-        activationEmail: activationResponse.activationEmail,
-        paymentEmail: activationResponse.paymentEmail
+        invoice: activationResponse.invoice || { configured: false, created: false, warning: activationResponse.warning === true },
+        activationEmail: activationResponse.activationEmail || null,
+        paymentEmail: activationResponse.paymentEmail || null,
+        warning: activationResponse.warning === true ? activationResponse.code : ""
+      });
+    }
+
+    if (isClientEmailActionRequest(input)) {
+      const actionResult = await sendClientAdminAction(taskId, input);
+      return send(res, 200, {
+        success: true,
+        task: actionResult.task,
+        updated_task: actionResult.task,
+        data: actionResult.task,
+        clientActionEmail: {
+          action: actionResult.action,
+          delivered: true,
+          provider: actionResult.emailResult.provider,
+          status: actionResult.emailResult.status || null
+        },
+        message: actionResult.action === "referral" ? "Referral request sent" : "Reminder sent"
       });
     }
 

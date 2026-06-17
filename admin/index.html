@@ -3352,6 +3352,24 @@ function canConfirmPaymentTask(task = {}) {
   return !alreadyConfirmed && (hasPaymentReturn || isAwaitingPayment) && hasInvestment && hasPaymentReference;
 }
 
+function canSendReminderTask(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  const alreadyStarted = ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus);
+  return !alreadyStarted && (
+    ['execution_plan_ready', 'quote_sent', 'quoted', 'awaiting_start', 'payment_started', 'awaiting_payment', 'payment_returned'].includes(status) ||
+    ['awaiting_payment', 'verification_pending'].includes(paymentStatus) ||
+    Boolean(task.quote_amount || task.payment_link)
+  );
+}
+
+function canRequestReferralTask(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status);
+  return ['paid', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'delivered', 'completed'].includes(status) ||
+    ['paid', 'payment_confirmed'].includes(paymentStatus);
+}
+
 function getTaskActions(task = {}) {
   const bucket = getTaskOperationalBucket(task);
   const actions = {
@@ -3373,11 +3391,11 @@ function getTaskActions(task = {}) {
     awaiting_start: [
       { type: 'followup', label: 'Send Reminder', intent: 'reminder' },
       { type: 'quote', label: 'Alternative Scope' },
-      { type: 'followup', label: 'Request Referral', intent: 'referral' },
       { type: 'move', label: 'Archive', status: 'archived' }
     ],
     active: [
       { type: 'workspace-update', label: 'Update Client' },
+      { type: 'followup', label: 'Request Referral', intent: 'referral' },
       { type: 'deliver', label: 'Mark Delivered' }
     ],
     delivered: [
@@ -3390,14 +3408,17 @@ function getTaskActions(task = {}) {
     ],
     archived: []
   };
-  const baseActions = actions[bucket] || [];
-  if (canConfirmPaymentTask(task)) {
-    return [
-      { type: 'confirm-payment', label: 'Confirm Payment' },
-      ...baseActions
-    ];
+  const nextActions = [...(actions[bucket] || [])];
+  if (canSendReminderTask(task) && !nextActions.some((action) => action.intent === 'reminder')) {
+    nextActions.unshift({ type: 'followup', label: 'Send Reminder', intent: 'reminder' });
   }
-  return baseActions;
+  if (canRequestReferralTask(task) && !nextActions.some((action) => action.intent === 'referral')) {
+    nextActions.push({ type: 'followup', label: 'Request Referral', intent: 'referral' });
+  }
+  if (canConfirmPaymentTask(task)) {
+    nextActions.unshift({ type: 'confirm-payment', label: 'Confirm Payment' });
+  }
+  return nextActions;
 }
 
 function getTaskPriority(task) {
@@ -5993,9 +6014,13 @@ async function updateTask(button, payload) {
         admin_key: sessionStorage.getItem('doneovernight_admin_key') || ''
       })
     });
-    if (!response.ok) throw new Error('Task update failed');
     const data = await response.json().catch(() => ({}));
-    if (data?.success === false) throw new Error('Task update denied');
+    if (!response.ok || data?.success === false) {
+      const error = new Error(data?.code || data?.error || 'TASK_UPDATE_FAILED');
+      error.code = data?.code || 'TASK_UPDATE_FAILED';
+      error.detail = data?.error || '';
+      throw error;
+    }
     const updatedTask = extractUpdatedTask(data);
     if (updatedTask) {
       const nextTasks = adminTasks.map((task) => String(task.id) === String(updatedTask.id) ? { ...task, ...updatedTask } : task);
@@ -6006,7 +6031,9 @@ async function updateTask(button, payload) {
   } catch (error) {
     button.disabled = false;
     button.textContent = previousText;
-    if (message) message.textContent = payload.status === 'rejected' ? 'Could not reject task.' : 'Could not update task.';
+    if (message) message.textContent = payload.status === 'rejected'
+      ? `Could not reject task. ${error.code || error.message || ''}`.trim()
+      : `Could not update task. ${error.code || error.message || ''}`.trim();
     return null;
   }
 }
@@ -6468,12 +6495,18 @@ adminTasksList.addEventListener('click', async (e) => {
   if (button.dataset.action === 'followup') {
     const row = button.closest('.admin-task-row');
     const message = row?.querySelector('.admin-task-message');
-    const labels = {
-      reminder: 'Reminder email automation is not configured yet.',
-      referral: 'Referral email automation is not configured yet.',
-      testimonial: 'Testimonial email automation is not configured yet.'
-    };
-    if (message) message.textContent = labels[button.dataset.intent] || 'Follow-up automation is not configured yet.';
+    const intent = button.dataset.intent || '';
+    if (intent === 'reminder' || intent === 'referral') {
+      const data = await updateTask(button, {
+        id: taskId,
+        action: intent === 'referral' ? 'request_referral' : 'send_reminder'
+      });
+      if (message && data) {
+        message.textContent = intent === 'referral' ? 'Referral request sent.' : 'Reminder sent.';
+      }
+      return;
+    }
+    if (message) message.textContent = 'Follow-up automation is not configured yet.';
     return;
   }
 
