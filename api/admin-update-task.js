@@ -69,6 +69,20 @@ const TEXT_FIELDS = new Set([
   "delivery_note"
 ]);
 
+const RESERVED_WORKSPACE_SLUGS = new Set([
+  "admin",
+  "ask",
+  "review",
+  "workspace",
+  "api",
+  "start",
+  "task",
+  "portal",
+  "settings",
+  "login",
+  "logout"
+]);
+
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json");
@@ -79,6 +93,54 @@ function send(res, statusCode, payload) {
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeWorkspaceSlug(value = "") {
+  return clean(value)
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function validateWorkspaceSlug(value = "") {
+  const raw = clean(value);
+  const withoutAt = raw.replace(/^@+/, "");
+  const slug = normalizeWorkspaceSlug(raw);
+  if (
+    !slug ||
+    slug.length < 3 ||
+    slug.length > 50 ||
+    RESERVED_WORKSPACE_SLUGS.has(slug) ||
+    withoutAt.toLowerCase() !== slug ||
+    !/^[a-z0-9-]+$/.test(slug)
+  ) {
+    const error = new Error("Workspace slug is invalid");
+    error.code = "INVALID_WORKSPACE_SLUG";
+    error.statusCode = 400;
+    throw error;
+  }
+  return slug;
+}
+
+function extractWorkspaceToken(workspaceUrl = "") {
+  const value = clean(workspaceUrl);
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    return clean(url.searchParams.get("token") || "");
+  } catch (error) {
+    const match = value.match(/[?&]token=([^&]+)/i);
+    return match ? clean(decodeURIComponent(match[1] || "")) : "";
+  }
+}
+
+function buildCanonicalWorkspaceUrl(slug = "", token = "") {
+  const workspaceSlug = normalizeWorkspaceSlug(slug);
+  if (!workspaceSlug) return "";
+  const suffix = token ? `?token=${encodeURIComponent(token)}` : "";
+  return `https://portal.doneovernight.com/@${workspaceSlug}${suffix}`;
 }
 
 function extractQuoteAmountDigits(value) {
@@ -353,6 +415,231 @@ async function loadTask(taskId) {
   }
 }
 
+async function supabaseRest(path, options = {}) {
+  const { url, serviceRoleKey } = getSupabaseConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${url}/rest/v1/${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+    const text = await response.text().catch(() => "");
+    if (!response.ok) {
+      const parsed = (() => {
+        try { return text ? JSON.parse(text) : {}; } catch (error) { return {}; }
+      })();
+      const error = new Error(`Supabase ${options.method || "GET"} failed`);
+      error.code = parsed.code || "SUPABASE_REQUEST_FAILED";
+      error.statusCode = response.status === 401 || response.status === 403 ? 403 : 502;
+      error.detail = text.slice(0, 500);
+      error.supabase = {
+        status: response.status,
+        code: parsed.code || "",
+        message: parsed.message || text.slice(0, 240),
+        details: parsed.details || "",
+        hint: parsed.hint || ""
+      };
+      throw error;
+    }
+    return text ? JSON.parse(text) : null;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const timeoutError = new Error("Supabase request timed out");
+      timeoutError.code = "SUPABASE_TIMEOUT";
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getTaskRawPayload(task = {}) {
+  return task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+}
+
+function resolveTaskWorkspaceSlug(task = {}) {
+  const rawPayload = getTaskRawPayload(task);
+  return normalizeWorkspaceSlug(
+    task.workspace_slug ||
+      rawPayload.workspace_slug ||
+      task.slug ||
+      rawPayload.slug ||
+      task.username ||
+      rawPayload.username ||
+      ""
+  );
+}
+
+function resolveTaskWorkspaceUrl(task = {}) {
+  const rawPayload = getTaskRawPayload(task);
+  return clean(task.workspace_url || task.workspaceUrl || rawPayload.workspace_url || rawPayload.workspaceUrl || "");
+}
+
+function resolveTaskWorkspaceId(task = {}) {
+  const rawPayload = getTaskRawPayload(task);
+  return clean(
+    task.workspace_id ||
+      task.portal_request_id ||
+      rawPayload.workspace_id ||
+      rawPayload.portal_request_id ||
+      rawPayload.workspace?.id ||
+      ""
+  );
+}
+
+function isTaskWorkspaceActive(task = {}) {
+  const rawPayload = getTaskRawPayload(task);
+  const workspaceActive = task.workspace_active === true ||
+    rawPayload.workspace_active === true ||
+    clean(task.workspace_active).toLowerCase() === "true" ||
+    clean(rawPayload.workspace_active).toLowerCase() === "true";
+  const activationStatus = clean(task.workspace_activation_status || rawPayload.workspace_activation_status).toLowerCase();
+  return workspaceActive && activationStatus === "active";
+}
+
+function workspaceRecordMatchesTask(record = {}, task = {}) {
+  const rawPayload = getTaskRawPayload(task);
+  const workspaceId = resolveTaskWorkspaceId(task);
+  const currentSlug = resolveTaskWorkspaceSlug(task);
+  const email = clean(task.email || rawPayload.email).toLowerCase();
+  if (workspaceId && String(record.id || "") === workspaceId) return true;
+  if (email && clean(record.email).toLowerCase() !== email) return false;
+  if (currentSlug) {
+    const recordSlug = normalizeWorkspaceSlug(record.workspace_slug || record.slug || record.username || record.raw_payload?.workspace_slug || "");
+    return recordSlug === currentSlug;
+  }
+  return Boolean(email && clean(record.email).toLowerCase() === email);
+}
+
+async function loadWorkspaceForTask(task = {}) {
+  const workspaceId = resolveTaskWorkspaceId(task);
+  if (workspaceId) {
+    const rows = await supabaseRest([
+      `portal_requests?id=eq.${encodeURIComponent(workspaceId)}`,
+      "select=*",
+      "limit=1"
+    ].join("&"));
+    const workspace = Array.isArray(rows) ? rows[0] : null;
+    if (workspace) return workspace;
+  }
+
+  const rawPayload = getTaskRawPayload(task);
+  const email = clean(task.email || rawPayload.email).toLowerCase();
+  if (!email) return null;
+  const rows = await supabaseRest([
+    `portal_requests?email=eq.${encodeURIComponent(email)}`,
+    "select=*",
+    "order=created_at.desc",
+    "limit=20"
+  ].join("&"));
+  return (Array.isArray(rows) ? rows : []).find((record) => workspaceRecordMatchesTask(record, task)) || null;
+}
+
+async function ensureWorkspaceSlugAvailable(newSlug = "", workspaceId = "") {
+  const rows = await supabaseRest("portal_requests?select=*&order=created_at.desc&limit=500");
+  const conflict = (Array.isArray(rows) ? rows : []).find((record) => {
+    if (String(record.id || "") === String(workspaceId || "")) return false;
+    const candidates = [
+      record.workspace_slug,
+      record.slug,
+      record.username,
+      record.raw_payload?.workspace_slug,
+      record.raw_payload?.slug
+    ].map(normalizeWorkspaceSlug).filter(Boolean);
+    return candidates.includes(newSlug);
+  });
+  if (conflict) {
+    const error = new Error("Workspace slug is already in use");
+    error.code = "SLUG_ALREADY_EXISTS";
+    error.statusCode = 409;
+    throw error;
+  }
+}
+
+function appendWorkspaceSlugAlias(rawPayload = {}, previousSlug = "") {
+  const aliases = Array.isArray(rawPayload.workspace_slug_aliases) ? rawPayload.workspace_slug_aliases : [];
+  const alias = normalizeWorkspaceSlug(previousSlug);
+  return alias ? [...new Set([alias, ...aliases.map(normalizeWorkspaceSlug).filter(Boolean)])].slice(0, 12) : aliases;
+}
+
+async function patchWorkspaceSlug(workspace = {}, payload = {}) {
+  const workspaceId = clean(workspace.id);
+  if (!workspaceId) {
+    const error = new Error("Workspace was not found");
+    error.code = "WORKSPACE_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+  const attempts = [
+    payload,
+    Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "slug")),
+    {
+      username: payload.username,
+      workspace_slug: payload.workspace_slug,
+      raw_payload: payload.raw_payload
+    },
+    {
+      workspace_slug: payload.workspace_slug,
+      raw_payload: payload.raw_payload
+    },
+    {
+      raw_payload: payload.raw_payload
+    }
+  ];
+  let lastError;
+  const seen = new Set();
+  for (const attempt of attempts) {
+    const keys = Object.keys(attempt || {}).sort().join(",");
+    if (!keys || seen.has(keys)) continue;
+    seen.add(keys);
+    try {
+      const rows = await supabaseRest(`portal_requests?id=eq.${encodeURIComponent(workspaceId)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(attempt)
+      });
+      const updated = Array.isArray(rows) ? rows[0] : rows;
+      if (updated) return updated;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  const error = new Error("Workspace slug update failed");
+  error.code = "WORKSPACE_SLUG_UPDATE_FAILED";
+  error.statusCode = 502;
+  error.supabase = lastError?.supabase || null;
+  throw error;
+}
+
+async function updateWorkspaceSessionSlugs(workspaceId = "", newSlug = "") {
+  if (!workspaceId || !newSlug) return { updated: false, warning: "workspace_session_identity_missing" };
+  try {
+    await supabaseRest(`workspace_sessions?portal_request_id=eq.${encodeURIComponent(workspaceId)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ workspace_slug: newSlug })
+    });
+    return { updated: true };
+  } catch (error) {
+    return {
+      updated: false,
+      warning: "workspace_sessions_update_failed",
+      code: error.supabase?.code || error.code || "WORKSPACE_SESSIONS_UPDATE_FAILED",
+      message: error.supabase?.message || error.message || ""
+    };
+  }
+}
+
 function finalizeQuotePatch(patch, existingTask = {}) {
   if (!["quote_sent", "execution_plan_ready", "awaiting_start"].includes(patch.status)) return {};
 
@@ -421,6 +708,10 @@ function isDeleteArchivedTaskRequest(input = {}) {
 
 function isReopenArchivedTaskRequest(input = {}) {
   return resolveAdminAction(input) === "reopen_archived_task";
+}
+
+function isUpdateWorkspaceSlugRequest(input = {}) {
+  return resolveAdminAction(input) === "update_workspace_slug";
 }
 
 function isClientEmailActionRequest(input = {}) {
@@ -1031,6 +1322,82 @@ async function patchTaskRawPayload(taskId, existingTask = {}, payloadPatch = {})
   });
 }
 
+async function updateWorkspaceSlug(taskId, input = {}) {
+  const newSlug = validateWorkspaceSlug(input.workspace_slug || input.workspaceSlug || input.slug);
+  const task = await loadTask(taskId);
+  if (!task) {
+    const error = new Error("Task not found");
+    error.code = "TASK_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+  if (!isTaskWorkspaceActive(task)) {
+    const error = new Error("Workspace is not active");
+    error.code = "WORKSPACE_NOT_ACTIVE";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const workspace = await loadWorkspaceForTask(task);
+  if (!workspace?.id) {
+    const error = new Error("Workspace was not found");
+    error.code = "WORKSPACE_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+
+  await ensureWorkspaceSlugAvailable(newSlug, workspace.id);
+
+  const now = new Date().toISOString();
+  const rawPayload = getTaskRawPayload(task);
+  const workspaceRawPayload = workspace.raw_payload && typeof workspace.raw_payload === "object" ? workspace.raw_payload : {};
+  const previousSlug = normalizeWorkspaceSlug(
+    workspace.workspace_slug ||
+      workspace.slug ||
+      workspace.username ||
+      workspaceRawPayload.workspace_slug ||
+      rawPayload.workspace_slug ||
+      ""
+  );
+  const token = extractWorkspaceToken(resolveTaskWorkspaceUrl(task));
+  const workspaceUrl = buildCanonicalWorkspaceUrl(newSlug, token);
+  const workspaceRawUpdate = {
+    ...workspaceRawPayload,
+    workspace_slug: newSlug,
+    workspace_url: workspaceUrl,
+    workspace_slug_previous: previousSlug,
+    workspace_slug_aliases: appendWorkspaceSlugAlias(workspaceRawPayload, previousSlug),
+    workspace_slug_updated_at: now
+  };
+  const updatedWorkspace = await patchWorkspaceSlug(workspace, {
+    username: newSlug,
+    workspace_slug: newSlug,
+    slug: newSlug,
+    raw_payload: workspaceRawUpdate
+  });
+  const sessionUpdate = await updateWorkspaceSessionSlugs(String(workspace.id), newSlug);
+  const updatedTask = await patchTaskRawPayload(taskId, task, {
+    workspace_id: String(workspace.id),
+    workspace_slug: newSlug,
+    workspace_url: workspaceUrl,
+    workspace_updated_at: now,
+    workspace_slug_updated_at: now,
+    workspace_slug_previous: previousSlug,
+    workspace_slug_aliases: appendWorkspaceSlugAlias(rawPayload, previousSlug),
+    workspace_slug_session_update: sessionUpdate,
+    workspace_slug_update_status: "updated"
+  });
+
+  return {
+    task: updatedTask,
+    workspace: updatedWorkspace,
+    workspaceSlug: newSlug,
+    workspaceUrl,
+    previousSlug,
+    sessionUpdate
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "PATCH") {
     res.setHeader("Allow", "POST, PATCH");
@@ -1074,6 +1441,22 @@ module.exports = async function handler(req, res) {
         },
         deleteDebug: deleteResult.deleteDebug,
         message: "Archived task deleted."
+      });
+    }
+
+    if (isUpdateWorkspaceSlugRequest(input)) {
+      const slugResult = await updateWorkspaceSlug(taskId, input);
+      return send(res, 200, {
+        success: true,
+        action: "update_workspace_slug",
+        workspace_slug: slugResult.workspaceSlug,
+        workspace_url: slugResult.workspaceUrl,
+        previous_slug: slugResult.previousSlug,
+        workspaceSessionUpdate: slugResult.sessionUpdate,
+        task: slugResult.task,
+        updated_task: slugResult.task,
+        data: slugResult.task,
+        message: "Workspace slug updated."
       });
     }
 
@@ -1212,7 +1595,8 @@ module.exports = async function handler(req, res) {
       code: error.code || "ADMIN_TASK_UPDATE_FAILED",
       ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
       ...(error.emailResult ? { emailResult: error.emailResult } : {}),
-      ...(error.deleteDebug ? { deleteDebug: error.deleteDebug } : {})
+      ...(error.deleteDebug ? { deleteDebug: error.deleteDebug } : {}),
+      ...(error.supabase ? { supabaseError: error.supabase } : {})
     });
   }
 };

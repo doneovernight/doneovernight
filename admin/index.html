@@ -3493,6 +3493,7 @@ function getTaskActionAvailability(task = {}) {
     canReopenArchived: isArchived,
     canDeleteArchived: isArchived,
     canOpenWorkspace: canOpenWorkspace(task),
+    canEditWorkspaceSlug: canOpenWorkspace(task),
     isLockedAfterApproval,
     hasTokenizedReviewUrl
   };
@@ -3518,6 +3519,7 @@ function getTaskActions(task = {}) {
   if (availability.canArchive) actions.push({ type: 'move', label: 'Archive', status: 'archived' });
   if (availability.canReopenArchived) actions.push({ type: 'reopen-archived', label: 'Reopen' });
   if (availability.canDeleteArchived) actions.push({ type: 'delete-archived', label: 'Delete' });
+  if (availability.canEditWorkspaceSlug) actions.push({ type: 'edit-workspace-slug', label: 'Edit workspace slug' });
   return actions;
 }
 
@@ -3811,6 +3813,22 @@ function getTaskWorkspaceUrl(task = {}) {
     rawPayload.workspaceUrl ||
     ''
   ).trim();
+}
+
+function getTaskWorkspaceSlug(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  const explicitSlug = task.workspace_slug || task.slug || rawPayload.workspace_slug || rawPayload.slug || rawPayload.workspaceSlug || '';
+  if (explicitSlug) return String(explicitSlug).trim().replace(/^@+/, '').toLowerCase();
+  const workspaceUrl = getTaskWorkspaceUrl(task);
+  if (!workspaceUrl) return '';
+  try {
+    const url = new URL(workspaceUrl);
+    const match = url.pathname.match(/\/@([^/]+)/);
+    return match ? decodeURIComponent(match[1] || '').replace(/^@+/, '').toLowerCase() : '';
+  } catch (error) {
+    const match = workspaceUrl.match(/\/@([^/?#]+)/);
+    return match ? decodeURIComponent(match[1] || '').replace(/^@+/, '').toLowerCase() : '';
+  }
 }
 
 function canOpenWorkspace(task = {}) {
@@ -5339,6 +5357,7 @@ function renderTasks(tasks) {
     const referral = getTaskReferral(task);
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const availability = getTaskActionAvailability(task);
+    const workspaceSlug = getTaskWorkspaceSlug(task);
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
@@ -5498,6 +5517,12 @@ function renderTasks(tasks) {
             <span class="admin-task-detail-label">Referral Source</span>
             <div>${escapeHTML(formatReferralSource(referral.source))}</div>
             <div class="admin-task-eta">Referred By: ${escapeHTML(referral.taskId)}</div>
+          </div>
+        ` : ''}
+        ${availability.canOpenWorkspace && workspaceSlug ? `
+          <div class="admin-task-detail">
+            <span class="admin-task-detail-label">Workspace</span>
+            <div><strong>@${escapeHTML(workspaceSlug)}</strong></div>
           </div>
         ` : ''}
         ${paymentCallout}
@@ -6321,6 +6346,8 @@ async function updateTask(button, payload) {
       const safeReason = error.reminderDebug?.final_reason || error.code || error.message || '';
       message.textContent = payload.status === 'rejected'
         ? `Could not reject task. ${safeReason}`.trim()
+        : payload.action === 'update_workspace_slug'
+          ? `Could not update workspace slug. ${safeReason}`.trim()
         : `Could not update task. ${safeReason}`.trim();
     }
     return null;
@@ -6446,6 +6473,21 @@ function _getOpModal() {
     if (!requireField('quote_amount', 'Investment amount is required.')) return;
     if (!requireField('delivery_eta', 'Timeline / ETA is required.')) return;
     if (!requireField('delivery_link', 'Delivery link is required.')) return;
+    if (!requireField('workspace_slug', 'Workspace slug is required.')) return;
+
+    const slugEl = fields.querySelector('[name="workspace_slug"]');
+    if (slugEl) {
+      const slug = slugEl.value.trim();
+      const reserved = new Set(['admin', 'ask', 'review', 'workspace', 'api', 'start', 'task', 'portal', 'settings', 'login', 'logout']);
+      if (!/^[a-z0-9-]{3,50}$/.test(slug) || reserved.has(slug)) {
+        errLine.textContent = 'Use 3-50 lowercase letters, numbers, or hyphens. Reserved routes are not allowed.';
+        errLine.classList.add('is-shown');
+        slugEl.classList.add('is-required-error');
+        slugEl.focus();
+        return;
+      }
+      slugEl.classList.remove('is-required-error');
+    }
 
     const result = {};
     new FormData(form).forEach((v, k) => { result[k] = String(v).trim(); });
@@ -6482,6 +6524,15 @@ function _openOpModal(type, task) {
           <label for="omQNote">Scope note <span class="field-opt">optional</span></label>
           <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
         </div>`;
+    } else if (type === 'workspace-slug') {
+      title.textContent  = 'Edit Workspace Slug';
+      submit.textContent = 'Save slug';
+      const currentSlug = getTaskWorkspaceSlug(task);
+      fields.innerHTML = `
+        <div class="op-modal-field">
+          <label for="omWorkspaceSlug">Workspace slug</label>
+          <input id="omWorkspaceSlug" name="workspace_slug" type="text" placeholder="donovan" value="${escapeHTML(currentSlug || '')}" autocomplete="off" inputmode="latin" autocapitalize="none" spellcheck="false">
+        </div>`;
     } else {
       title.textContent  = 'Deliver';
       submit.textContent = 'Mark delivered';
@@ -6508,6 +6559,10 @@ async function promptForQuote(task) {
 
 async function promptForDelivery(task) {
   return _openOpModal('delivery', task);
+}
+
+async function promptForWorkspaceSlug(task) {
+  return _openOpModal('workspace-slug', task);
 }
 
 function showAdminDashboard() {
@@ -6913,6 +6968,23 @@ adminTasksList.addEventListener('click', async (e) => {
       return;
     }
     window.open(workspaceUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (button.dataset.action === 'edit-workspace-slug') {
+    const task = (adminTasks || []).find(t => t.id === taskId);
+    const slugResult = await promptForWorkspaceSlug(task);
+    if (!slugResult) return;
+    const data = await updateTask(button, {
+      id: taskId,
+      action: 'update_workspace_slug',
+      workspace_slug: slugResult.workspace_slug
+    });
+    if (message && data?.success) {
+      message.textContent = 'Workspace slug updated.';
+    } else if (message && data?.code) {
+      message.textContent = `Could not update workspace slug. ${data.code}`;
+    }
     return;
   }
 
