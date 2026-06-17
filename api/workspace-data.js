@@ -320,6 +320,51 @@ function taskId(task = {}) {
   return clean(task.task_id || task.taskId || task.id);
 }
 
+function firstClean(...values) {
+  for (const value of values) {
+    const cleaned = clean(value);
+    if (cleaned) return cleaned;
+  }
+  return "";
+}
+
+function formatInvestment(value = "") {
+  const cleaned = clean(value);
+  if (!cleaned) return "";
+  if (/€|eur/i.test(cleaned)) return cleaned;
+  const normalized = cleaned.replace(/\s+/g, "");
+  if (/^\d+([.,]\d{1,2})?$/.test(normalized)) return `€${normalized}`;
+  return cleaned;
+}
+
+function projectDisplayTitle(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const explicit = firstClean(
+    task.project_title,
+    rawPayload.project_title,
+    task.execution_plan_title,
+    rawPayload.execution_plan_title,
+    task.title,
+    rawPayload.title
+  );
+  if (explicit) return explicit;
+
+  const source = clean(
+    task.task_summary ||
+      task.task_description ||
+      rawPayload.task_summary ||
+      rawPayload.task_description ||
+      rawPayload.submitted_request
+  ).toLowerCase();
+
+  if (/landing|landings?page|conversion|conversie/.test(source)) return "Landing Page Optimization";
+  if (/crm|hubspot|pipedrive|client|klant/.test(source) && /automation|automatisering|workflow|flow/.test(source)) return "CRM & Automation Build";
+  if (/automation|automatisering|onboarding|workflow|flow/.test(source)) return "Automation System Build";
+  if (/brand|branding|identity|logo/.test(source)) return "Brand System Build";
+  if (/website|site|web/.test(source)) return "Website Conversion Upgrade";
+  return "Active Execution Project";
+}
+
 function taskTitle(task = {}) {
   return clean(
     task.task_summary ||
@@ -355,7 +400,7 @@ function clientStatus(task = {}) {
   if (status === "delivered") return "Delivered";
   if (["project_active", "execution_active", "queued", "in_progress", "delivery_prep"].includes(status)) return "Project active";
   if (status === "operators_assigned") return "Execution scheduled";
-  if (workspaceActive || paymentStatus === "paid" || paymentStatus === "payment_confirmed" || status === "payment_confirmed") return "Workspace active";
+  if (workspaceActive || paymentStatus === "paid" || paymentStatus === "payment_confirmed" || status === "payment_confirmed") return "Project active";
   if (status === "needs_info" || status === "waiting_for_client_information") return "Waiting for client information";
   if (["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned", "verification_pending"].includes(status)) return "Execution plan ready";
   return "Request received";
@@ -366,7 +411,7 @@ function currentNextStep(task = {}) {
   if (status === "Delivered") return "Review the delivered work when it is ready in your workspace.";
   if (status === "Completed") return "This project is complete.";
   if (status === "Execution scheduled") return "DONEOVERNIGHT is preparing the execution pass.";
-  if (status === "Project active" || status === "Workspace active") return "Execution is active. Updates will appear in this workspace.";
+  if (status === "Project active") return "Execution is underway. This workspace remains synchronized with DONEOVERNIGHT Operations.";
   if (status === "Waiting for client information") return "Reply by email with the requested information.";
   return "DONEOVERNIGHT is reviewing the project details.";
 }
@@ -417,11 +462,36 @@ function lifecycleEventsForTask(task = {}) {
 function safeUpdatesForTask(task = {}) {
   const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
   const events = Array.isArray(rawPayload.admin_activity_events) ? rawPayload.admin_activity_events : [];
-  return events.slice(0, 8).map((event) => ({
+  const clientFacingPattern = /(payment|workspace|project|started|information|delivery|delivered|message|file|invoice|operator|assigned)/i;
+  const blockedPattern = /(execution plan sent|quote|review|webhook|test|debug|token|payment link|bunq|provider)/i;
+  const fromAdmin = events.map((event) => ({
     title: clean(event.title || event.message || event.event_type || "Workspace updated"),
     timestamp: clean(event.created_at || event.at || event.timestamp),
     type: clean(event.event_type || event.type || "activity")
-  })).filter((event) => event.title);
+  })).filter((event) => {
+    if (!event.title || blockedPattern.test(event.title)) return false;
+    return clientFacingPattern.test(`${event.title} ${event.type}`);
+  });
+
+  const fromLifecycle = lifecycleEventsForTask(task)
+    .filter((event) => !["Review started", "Execution plan sent"].includes(event.label))
+    .map((event) => ({
+      title: event.label,
+      timestamp: event.timestamp,
+      type: "lifecycle"
+    }));
+
+  const seen = new Set();
+  return [...fromAdmin, ...fromLifecycle]
+    .filter((event) => event.title && event.timestamp)
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+    .filter((event) => {
+      const key = `${event.title}:${event.timestamp}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 7);
 }
 
 function safeTaskSnapshot(task = {}) {
@@ -430,6 +500,7 @@ function safeTaskSnapshot(task = {}) {
     id: clean(task.id),
     task_id: taskId(task),
     task_summary: taskTitle(task),
+    display_title: projectDisplayTitle(task),
     task_description: clean(task.task_description || rawPayload.task_description || rawPayload.submitted_request),
     status: normalizeTaskStatus(task.status || rawPayload.status),
     client_status: clientStatus(task),
@@ -443,7 +514,18 @@ function safeTaskSnapshot(task = {}) {
     started_at: clean(task.started_at || rawPayload.started_at),
     delivered_at: clean(task.delivered_at || rawPayload.delivered_at),
     completed_at: clean(task.completed_at || rawPayload.completed_at),
-    quote_amount: clean(task.quote_amount || rawPayload.quote_amount || rawPayload.investment_amount),
+    quote_amount: formatInvestment(firstClean(
+      task.quote_amount,
+      rawPayload.quote_amount,
+      rawPayload.investment_amount,
+      rawPayload.investment,
+      rawPayload.approved_amount,
+      rawPayload.amount_paid,
+      task.invoice_amount,
+      rawPayload.invoice_amount,
+      rawPayload.payment_link_amount,
+      rawPayload.payment_amount
+    )),
     quote_note: clean(task.quote_note || rawPayload.quote_note || rawPayload.scope_note),
     delivery_eta: clean(task.delivery_eta || rawPayload.delivery_eta || rawPayload.timeline),
     delivery_link: ["delivered", "completed"].includes(normalizeTaskStatus(task.status)) ? clean(task.delivery_link || rawPayload.delivery_link) : "",

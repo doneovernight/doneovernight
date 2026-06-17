@@ -313,7 +313,7 @@
       grid-template-columns: minmax(0, 1.05fr) minmax(300px, .55fr);
       gap: clamp(22px, 5vw, 68px);
       align-items: stretch;
-      padding: clamp(38px, 7vh, 78px) 0 clamp(28px, 5vw, 44px);
+      padding: clamp(48px, 7vh, 86px) 0 clamp(34px, 5vw, 54px);
     }
 
     .hero-panel {
@@ -360,9 +360,9 @@
     }
 
     .workspace-signal {
-      min-height: 78px;
-      border-top: 1px solid rgba(233,196,138,.18);
-      padding-top: 13px;
+      min-height: 70px;
+      border-top: 1px solid rgba(233,196,138,.16);
+      padding-top: 15px;
     }
 
     .workspace-signal span {
@@ -645,8 +645,8 @@
 
     .workspace-os {
       display: none;
-      gap: 18px;
-      margin: 28px 0 42px;
+      gap: 22px;
+      margin: 34px 0 54px;
     }
 
     .workspace-shell.is-authenticated .workspace-os {
@@ -656,20 +656,23 @@
     .workspace-os-card {
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(233,196,138,.13);
-      border-radius: 10px;
+      border: 1px solid rgba(233,196,138,.10);
+      border-radius: 8px;
       background:
-        radial-gradient(circle at 12% 0%, rgba(233,196,138,.06), transparent 34%),
-        rgba(245,241,234,.018);
-      padding: clamp(18px, 2.8vw, 28px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 26px 90px -54px rgba(0,0,0,.9);
+        linear-gradient(180deg, rgba(255,255,255,.026), transparent 38%),
+        rgba(245,241,234,.012);
+      padding: clamp(22px, 3vw, 34px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 30px 90px -62px rgba(0,0,0,.92);
     }
 
     .workspace-os-card::before {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background: linear-gradient(110deg, rgba(255,255,255,.035), transparent 44%);
+      background:
+        linear-gradient(90deg, rgba(233,196,138,.14), transparent 18%),
+        linear-gradient(110deg, rgba(255,255,255,.025), transparent 44%);
+      opacity: .55;
       content: "";
     }
 
@@ -683,7 +686,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
-      margin-bottom: 18px;
+      margin-bottom: 24px;
     }
 
     .workspace-os-eyebrow {
@@ -733,14 +736,17 @@
     .workspace-os-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+      gap: 1px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.035);
     }
 
     .workspace-os-kv {
-      border: 1px solid rgba(255,255,255,.075);
-      border-radius: 8px;
-      background: rgba(0,0,0,.13);
-      padding: 13px;
+      border: none;
+      border-radius: 0;
+      background: rgba(5,6,8,.72);
+      padding: 16px 14px;
       min-width: 0;
     }
 
@@ -764,10 +770,11 @@
     }
 
     .workspace-os-scope {
-      margin: 18px 0 0;
+      margin: 24px 0 0;
       color: rgba(255,255,255,.62);
       font-size: 14px;
-      line-height: 1.7;
+      line-height: 1.78;
+      max-width: 76ch;
     }
 
     .workspace-os-scope strong {
@@ -783,7 +790,7 @@
     .workspace-os-two {
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
-      gap: 18px;
+      gap: 22px;
     }
 
     .workspace-os-list {
@@ -799,9 +806,16 @@
       grid-template-columns: 13px minmax(0, 1fr);
       gap: 12px;
       align-items: start;
+      border-bottom: 1px solid rgba(255,255,255,.055);
       color: rgba(255,255,255,.62);
       font-size: 13px;
       line-height: 1.55;
+      padding-bottom: 11px;
+    }
+
+    .workspace-os-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
     }
 
     .workspace-os-dot {
@@ -2641,13 +2655,13 @@
 
     <section class="workspace-hero" aria-labelledby="workspaceTitle">
       <div class="hero-panel">
-        <p class="eyebrow">Private execution portal</p>
+        <p class="eyebrow">Private operations room</p>
         <h1 id="workspaceTitle">Private workspace</h1>
         <p class="hero-copy" id="workspaceHeroCopy">This operating environment is protected. Verify through the portal before requests, quotes, files, updates, and delivery movement are revealed.</p>
         <div class="workspace-signal-grid" aria-label="Workspace operating state">
-          <div class="workspace-signal"><span>Workspace state</span><strong>Live</strong></div>
-          <div class="workspace-signal"><span>Review window</span><strong>&lt; 60 min</strong></div>
-          <div class="workspace-signal"><span>Execution layer</span><strong>Online</strong></div>
+          <div class="workspace-signal"><span>Project Status</span><strong>Active</strong></div>
+          <div class="workspace-signal"><span>Workspace</span><strong>Synchronized</strong></div>
+          <div class="workspace-signal"><span>Next Milestone</span><strong>In motion</strong></div>
         </div>
       </div>
 
@@ -3355,7 +3369,7 @@
       }
 
       function getTaskSummary(task) {
-        return task.task_summary || task.task_description || task.taskSummary || 'Untitled request';
+        return task.display_title || task.project_title || task.task_summary || task.task_description || task.taskSummary || 'Active Execution Project';
       }
 
       function getTaskId(task) {
@@ -3370,7 +3384,7 @@
         if (status === 'delivered') return 'Delivered';
         if (['project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status)) return 'Project active';
         if (status === 'operators_assigned') return 'Execution scheduled';
-        if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed' || workspaceStatus === 'active' || workspaceStatus === 'workspace_active' || task.raw_payload?.workspace_active === true) return 'Workspace active';
+        if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed' || workspaceStatus === 'active' || workspaceStatus === 'workspace_active' || task.raw_payload?.workspace_active === true) return 'Project active';
         if (status === 'needs_info' || status === 'waiting_for_client_information') return 'Waiting for client information';
         if (['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending', 'quoted'].includes(status)) return 'Execution plan ready';
         return 'Request received';
@@ -3388,6 +3402,40 @@
           ['Delivery preparing', raw.delivery_preparing_at || (normalizeTaskStatus(task.status) === 'delivery_prep' ? task.updated_at : '')],
           ['Delivered', task.delivered_at || raw.delivered_at]
         ].filter((item) => item[1]).map(([label, timestamp]) => ({ label, timestamp }));
+      }
+
+      function getProjectInvestment(project = {}) {
+        const raw = project.raw_payload || {};
+        const value = project.quote_amount ||
+          project.investment ||
+          project.investment_amount ||
+          raw.quote_amount ||
+          raw.investment_amount ||
+          raw.investment ||
+          raw.approved_amount ||
+          raw.amount_paid ||
+          project.invoice_amount ||
+          raw.invoice_amount ||
+          raw.payment_link_amount ||
+          raw.payment_amount ||
+          '';
+        const cleaned = String(value || '').trim();
+        if (!cleaned) return 'Investment confirmed';
+        if (/€|eur/i.test(cleaned)) return cleaned;
+        if (/^\d+([.,]\d{1,2})?$/.test(cleaned.replace(/\s+/g, ''))) return `€${cleaned.replace(/\s+/g, '')}`;
+        return cleaned;
+      }
+
+      function isClientFacingWorkspaceMessage(message = {}) {
+        if (isInternalValidationMessage(message)) return false;
+        const text = [
+          message.message,
+          message.message_type,
+          message.metadata?.source,
+          message.metadata?.note
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (/execution plan sent|quote|review|payment link|bunq|provider|webhook|debug|token|test/.test(text)) return false;
+        return /payment confirmed|workspace activated|project started|information requested|delivery|delivered|operator|message|client_reply|file|invoice/.test(text);
       }
 
       function getPrimaryProject(tasks = workspaceTasks) {
@@ -3433,7 +3481,7 @@
         const reference = getTaskId(project);
         const scope = project.quote_note || project.task_description || project.task_summary || 'Project scope is attached to this workspace.';
         const timeline = project.delivery_eta || 'Timeline will update here.';
-        const investment = project.quote_amount || 'Not shown yet';
+        const investment = getProjectInvestment(project);
         const paymentDate = project.raw_payload?.payment_confirmed_at || project.paid_at || '';
         const activatedDate = project.raw_payload?.workspace_activated_at || '';
         const nextStep = project.current_next_step || (status === 'Delivered' ? 'Review the delivered work.' : 'Execution is active. Updates will appear in this workspace.');
@@ -3443,7 +3491,7 @@
           <div class="workspace-os-head">
             <div>
               <p class="workspace-os-eyebrow">Active Project</p>
-              <h2 class="workspace-os-title">${escapeHTML(project.task_summary || 'Active project')}</h2>
+              <h2 class="workspace-os-title">${escapeHTML(project.display_title || project.task_summary || 'Active Execution Project')}</h2>
             </div>
             <span class="workspace-os-status">${escapeHTML(status)}</span>
           </div>
@@ -3454,7 +3502,7 @@
             <div class="workspace-os-kv"><span>Workspace</span><strong>${escapeHTML(workspaceSlugLabel || 'Active')}</strong></div>
             <div class="workspace-os-kv"><span>Payment confirmed</span><strong>${escapeHTML(paymentDate ? formatDate(paymentDate) : 'Confirmed')}</strong></div>
             <div class="workspace-os-kv"><span>Workspace activated</span><strong>${escapeHTML(activatedDate ? formatDate(activatedDate) : 'Active')}</strong></div>
-            <div class="workspace-os-kv"><span>Current next step</span><strong>${escapeHTML(nextStep)}</strong></div>
+            <div class="workspace-os-kv"><span>Next milestone</span><strong>${escapeHTML(nextStep)}</strong></div>
             <div class="workspace-os-kv"><span>Status</span><strong>${escapeHTML(status)}</strong></div>
           </div>
           <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
@@ -3462,17 +3510,17 @@
 
         const timelineEvents = room.lifecycle_events?.length ? room.lifecycle_events : clientTimelineEvents(project);
         workspaceProjectTimeline.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Project Timeline</p><h3 class="workspace-os-title" style="font-size:34px">Lifecycle</h3></div></div>
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Operations Timeline</p><h3 class="workspace-os-title" style="font-size:34px">Mission Timeline</h3></div></div>
           ${renderWorkspaceRows(timelineEvents, 'No timeline events yet.')}
         `;
 
         const latestUpdates = room.latest_updates?.length ? room.latest_updates : (project.raw_payload?.admin_activity_events || []);
         workspaceLatestUpdates.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Latest Updates</p><h3 class="workspace-os-title" style="font-size:34px">Movement</h3></div></div>
-          ${renderWorkspaceRows(latestUpdates, 'No updates yet.')}
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Operations Feed</p><h3 class="workspace-os-title" style="font-size:34px">Movement</h3></div></div>
+          ${renderWorkspaceRows(latestUpdates, 'Movement will appear as operations advances.')}
         `;
 
-        const visibleMessages = workspaceMessages.filter((message) => !isInternalValidationMessage(message));
+        const visibleMessages = workspaceMessages.filter(isClientFacingWorkspaceMessage).slice(0, 7);
         workspaceMessagesPanel.innerHTML = `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Messages</p><h3 class="workspace-os-title" style="font-size:34px">Client channel</h3></div></div>
           ${renderWorkspaceRows(visibleMessages.map((message) => ({
@@ -3569,12 +3617,12 @@
         const primary = getPrimaryProject(tasks);
         const status = primary ? getWorkspaceClientStatus(primary) : '';
         workspaceTitle.textContent = `${getGreeting()}, ${name}.`;
-        if (['Workspace active', 'Project active', 'Execution scheduled'].includes(status)) {
-          workspaceHeroCopy.textContent = 'Your DONEOVERNIGHT project room is active. Scope, timeline, updates, messages, files, invoices, and delivery stay together here.';
+        if (['Project active', 'Execution scheduled'].includes(status)) {
+          workspaceHeroCopy.textContent = 'Operation active. Execution is underway, and this workspace remains synchronized with DONEOVERNIGHT Operations.';
         } else if (primary) {
-          workspaceHeroCopy.textContent = 'Your DONEOVERNIGHT workspace is active. Project details and updates will appear here as work moves forward.';
+          workspaceHeroCopy.textContent = 'Your private operations room is active. Project details and updates will appear here as work moves forward.';
         } else {
-          workspaceHeroCopy.textContent = 'Your private workspace is ready. Project activity will appear here once work starts.';
+          workspaceHeroCopy.textContent = 'Your private operations room is ready. Project activity will appear here once work starts.';
         }
       }
 
