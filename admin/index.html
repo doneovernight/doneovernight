@@ -3762,6 +3762,8 @@ function getTaskActivationStatus(task = {}) {
   const paymentStatus = normalizeStatus(task.payment_status);
   const workspaceStatus = normalizeStatus(task.workspace_status || rawPayload.workspace_status);
   const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
+  const workspaceActivationStatus = normalizeStatus(rawPayload.workspace_activation_status || '');
+  const workspaceActivationError = rawPayload.workspace_activation_error || '';
   const paymentConfirmedAt = task.paid_at || rawPayload.payment_confirmed_at || '';
   const workspaceActivatedAt = rawPayload.workspace_activated_at || rawPayload.project_active_at || task.started_at || '';
   const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmed_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
@@ -3772,15 +3774,26 @@ function getTaskActivationStatus(task = {}) {
     ['project_active', 'execution_active', 'active'].includes(projectStatus) ||
     Boolean(workspaceActivatedAt);
   const activationEmailSent = Boolean(activationEmailSentAt) || activationEmailStatus === 'sent';
-  const activationEmailFailed = !activationEmailSent && ['failed', 'not_configured', 'not_sent'].includes(activationEmailStatus);
+  const activationEmailFailed = !activationEmailSent && (
+    ['failed', 'not_configured', 'not_sent', 'payment_confirmation_email_delivery_failed'].includes(activationEmailStatus) ||
+    rawPayload.payment_confirmed_email_error === 'PAYMENT_CONFIRMATION_EMAIL_DELIVERY_FAILED'
+  );
+  const activationEmailNotConfigured = activationEmailStatus === 'not_configured' ||
+    activationEmailStatus === 'payment_confirmation_email_not_configured' ||
+    rawPayload.payment_confirmed_email_error === 'PAYMENT_CONFIRMATION_EMAIL_NOT_CONFIGURED';
+  const workspaceActivationFailed = workspaceActivationStatus === 'failed' || Boolean(workspaceActivationError);
 
-  if (!paymentConfirmed && !workspaceActive && !activationEmailSent) return null;
+  if (!paymentConfirmed && !workspaceActive && !activationEmailSent && !workspaceActivationFailed && !activationEmailFailed) return null;
 
   return {
     paymentConfirmed,
     workspaceActive,
+    workspaceActivationFailed,
+    workspaceActivationError,
     activationEmailSent,
     activationEmailFailed,
+    activationEmailNotConfigured,
+    activationEmailError: rawPayload.activation_email_error || rawPayload.payment_confirmed_email_error || '',
     activatedAt: activationEmailSentAt || workspaceActivatedAt || paymentConfirmedAt || task.updated_at || ''
   };
 }
@@ -5299,8 +5312,8 @@ function renderTasks(tasks) {
     const activationStatusBanner = activationStatus ? `
       <div class="admin-activation-status">
         <strong>${activationStatus.paymentConfirmed ? '✓ Payment Confirmed' : 'Payment Pending'}</strong>
-        <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : 'Workspace Pending'}</strong>
-        <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : activationStatus.activationEmailFailed ? 'Activation Email Failed' : 'Activation Email Pending'}</strong>
+        <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : activationStatus.workspaceActivationFailed ? `Workspace Activation Failed${activationStatus.workspaceActivationError ? `: ${escapeHTML(activationStatus.workspaceActivationError)}` : ''}` : 'Workspace Pending'}</strong>
+        <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : activationStatus.activationEmailNotConfigured ? 'Activation Email Not Configured' : activationStatus.activationEmailFailed ? `Activation Email Failed${activationStatus.activationEmailError ? `: ${escapeHTML(activationStatus.activationEmailError)}` : ''}` : activationStatus.paymentConfirmed ? 'Activation Email Not Sent' : 'Activation Email Pending'}</strong>
         ${activationStatus.activatedAt ? `<time>${escapeHTML(formatTaskDate(activationStatus.activatedAt) || '')}</time>` : ''}
       </div>
     ` : '';
@@ -6692,7 +6705,7 @@ adminTasksList.addEventListener('click', async (e) => {
           ? ' Activation email sent.'
           : data.workspaceActivation.activationEmail?.configured === false || data.paymentEmail?.configured === false
             ? ' Activation email not configured.'
-            : ' Activation email pending.';
+            : ` Activation email failed${data.workspaceActivation.activationEmail?.reason || data.paymentEmail?.reason ? `: ${data.workspaceActivation.activationEmail?.reason || data.paymentEmail?.reason}.` : '.'}`;
         const invoice = data.workspaceActivation.invoice?.created
           ? ` Invoice ${data.workspaceActivation.invoice.invoice_number} generated.`
           : data.workspaceActivation.invoice?.configured === false
@@ -6700,7 +6713,8 @@ adminTasksList.addEventListener('click', async (e) => {
             : '';
         message.textContent = `Payment confirmed. ${reused}${activationEmail}${invoice}`;
       } else {
-        message.textContent = 'Payment confirmed, but activation result was not returned.';
+        const activationError = data?.workspaceActivation?.error || data?.workspaceActivation?.code || data?.warning || 'Workspace activation failed.';
+        message.textContent = `Payment confirmed. ${activationError}`;
       }
     }
     return;

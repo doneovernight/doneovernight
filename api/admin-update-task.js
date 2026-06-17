@@ -505,12 +505,31 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
       activationError: null
     };
   } catch (error) {
+    const failedAt = new Date().toISOString();
+    const safeActivationError = error.statusCode && error.statusCode < 500
+      ? error.message
+      : "Workspace activation failed after payment confirmation";
+    const failedTask = await patchTask(taskId, {
+      raw_payload: {
+        ...(confirmedTask.raw_payload && typeof confirmedTask.raw_payload === "object" ? confirmedTask.raw_payload : {}),
+        workspace_activation_status: "failed",
+        workspace_activation_error: safeActivationError,
+        workspace_activation_failed_at: failedAt,
+        activation_email_status: "not_sent",
+        activation_email_error: "Workspace activation failed before email delivery",
+        payment_confirmed_email_sent: false,
+        payment_confirmed_email_status: "not_sent",
+        payment_confirmed_email_error: "Workspace activation failed before email delivery",
+        payment_confirmed_email_webhook_url_present: false
+      },
+      updated_at: failedAt
+    }).catch(() => confirmedTask);
     return {
-      confirmedTask,
+      confirmedTask: failedTask,
       activationResult: null,
       activationError: {
         code: error.code || "WORKSPACE_ACTIVATION_FAILED",
-        message: error.statusCode && error.statusCode < 500 ? error.message : "Workspace activation failed after payment confirmation"
+        message: safeActivationError
       }
     };
   }
