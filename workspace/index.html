@@ -631,6 +631,229 @@
       scroll-margin-top: 24px;
     }
 
+    .workspace-shell.is-authenticated .workspace-metrics,
+    .workspace-shell.is-authenticated .workspace-metric-drawer,
+    .workspace-shell.is-authenticated .runtime-engine,
+    .workspace-shell.is-authenticated .quote-center,
+    .workspace-shell.is-authenticated #taskFeedSection,
+    .workspace-shell.is-authenticated #recommendationSection,
+    .workspace-shell.is-authenticated #workspaceActivitySection,
+    .workspace-shell.is-authenticated .request-panel,
+    .workspace-shell.is-authenticated #completedHistorySection {
+      display: none;
+    }
+
+    .workspace-os {
+      display: none;
+      gap: 18px;
+      margin: 28px 0 42px;
+    }
+
+    .workspace-shell.is-authenticated .workspace-os {
+      display: grid;
+    }
+
+    .workspace-os-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(233,196,138,.13);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(233,196,138,.06), transparent 34%),
+        rgba(245,241,234,.018);
+      padding: clamp(18px, 2.8vw, 28px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 26px 90px -54px rgba(0,0,0,.9);
+    }
+
+    .workspace-os-card::before {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(110deg, rgba(255,255,255,.035), transparent 44%);
+      content: "";
+    }
+
+    .workspace-os-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .workspace-os-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .workspace-os-eyebrow {
+      margin: 0 0 8px;
+      color: rgba(233,196,138,.72);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .workspace-os-title {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(30px, 4.8vw, 54px);
+      font-weight: 400;
+      line-height: .98;
+      letter-spacing: -.02em;
+    }
+
+    .workspace-os-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(139,224,173,.22);
+      border-radius: 999px;
+      background: rgba(139,224,173,.055);
+      color: rgba(139,224,173,.9);
+      padding: 7px 10px;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .workspace-os-status::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(139,224,173,.38);
+      content: "";
+    }
+
+    .workspace-os-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .workspace-os-kv {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(0,0,0,.13);
+      padding: 13px;
+      min-width: 0;
+    }
+
+    .workspace-os-kv span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .workspace-os-kv strong {
+      display: block;
+      margin-top: 7px;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-os-scope {
+      margin: 18px 0 0;
+      color: rgba(255,255,255,.62);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .workspace-os-scope strong {
+      display: block;
+      margin-bottom: 6px;
+      color: rgba(255,255,255,.88);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .workspace-os-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+      gap: 18px;
+    }
+
+    .workspace-os-list {
+      display: grid;
+      gap: 11px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .workspace-os-row {
+      display: grid;
+      grid-template-columns: 13px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      color: rgba(255,255,255,.62);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .workspace-os-dot {
+      width: 7px;
+      height: 7px;
+      margin-top: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(139,224,173,.32);
+    }
+
+    .workspace-os-row strong {
+      display: block;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .workspace-os-row span {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .workspace-os-empty {
+      color: rgba(255,255,255,.46);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .workspace-os-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      margin-top: 12px;
+      border: 1px solid rgba(233,196,138,.34);
+      border-radius: 999px;
+      background: rgba(233,196,138,.055);
+      color: #f4d28a;
+      padding: 0 14px;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
     .quote-center,
     #taskFeedSection,
     #completedHistorySection,
@@ -2148,6 +2371,9 @@
       }
       .workspace-signal-grid { grid-template-columns: 1fr; }
       .workspace-metrics { grid-template-columns: 1fr 1fr; }
+      .workspace-os-head { flex-direction: column; }
+      .workspace-os-grid { grid-template-columns: 1fr 1fr; }
+      .workspace-os-two { grid-template-columns: 1fr; }
       .quote-cards-grid { grid-template-columns: 1fr; }
       .request-panel-row { align-items: flex-start; }
       .task-top { flex-direction: column; }
@@ -2182,6 +2408,7 @@
         text-align: left;
       }
       .workspace-metrics { grid-template-columns: 1fr; }
+      .workspace-os-grid { grid-template-columns: 1fr; }
       .task-grid { grid-template-columns: 1fr; }
       .task-timeline { grid-template-columns: repeat(9, minmax(78px, 1fr)); }
     }
@@ -2432,6 +2659,36 @@
           <a class="workspace-button secondary" id="portalAccessLink" href="../portal/">Continue to Portal →</a>
         </div>
       </aside>
+    </section>
+
+    <section class="workspace-os" id="workspaceOs" aria-label="Client project workspace">
+      <div class="workspace-os-card" id="workspaceActiveProject">
+        <div class="workspace-os-empty">Workspace is syncing…</div>
+      </div>
+      <div class="workspace-os-two">
+        <div class="workspace-os-card" id="workspaceProjectTimeline">
+          <div class="workspace-os-empty">Project timeline is syncing…</div>
+        </div>
+        <div class="workspace-os-card" id="workspaceLatestUpdates">
+          <div class="workspace-os-empty">Latest updates are syncing…</div>
+        </div>
+      </div>
+      <div class="workspace-os-two">
+        <div class="workspace-os-card" id="workspaceMessagesPanel">
+          <div class="workspace-os-empty">Messages are syncing…</div>
+        </div>
+        <div class="workspace-os-card" id="workspaceFilesPanel">
+          <div class="workspace-os-empty">Files are syncing…</div>
+        </div>
+      </div>
+      <div class="workspace-os-two">
+        <div class="workspace-os-card" id="workspaceInvoicesPanel">
+          <div class="workspace-os-empty">Invoices are syncing…</div>
+        </div>
+        <div class="workspace-os-card" id="workspaceDeliveredPanel">
+          <div class="workspace-os-empty">Delivery status is syncing…</div>
+        </div>
+      </div>
     </section>
 
     <section class="workspace-metrics" aria-label="Workspace metrics">
@@ -2712,6 +2969,14 @@
       const workspaceDeliveredCount = document.getElementById('workspaceDeliveredCount');
       const workspaceHoursSaved = document.getElementById('workspaceHoursSaved');
       const workspaceActivityFeed = document.getElementById('workspaceActivityFeed');
+      const workspaceOs = document.getElementById('workspaceOs');
+      const workspaceActiveProject = document.getElementById('workspaceActiveProject');
+      const workspaceProjectTimeline = document.getElementById('workspaceProjectTimeline');
+      const workspaceLatestUpdates = document.getElementById('workspaceLatestUpdates');
+      const workspaceMessagesPanel = document.getElementById('workspaceMessagesPanel');
+      const workspaceFilesPanel = document.getElementById('workspaceFilesPanel');
+      const workspaceInvoicesPanel = document.getElementById('workspaceInvoicesPanel');
+      const workspaceDeliveredPanel = document.getElementById('workspaceDeliveredPanel');
       const completedHistoryFeed = document.getElementById('completedHistoryFeed');
       const completedHistoryMeta = document.getElementById('completedHistoryMeta');
       const requestForm = document.getElementById('workspaceRequestForm');
@@ -2740,6 +3005,7 @@
       let workspaceSlug = '';
       let workspaceMessages = [];
       let workspaceQuotes = [];
+      let workspaceProjectRoom = null;
       let selectedWorkspaceDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
       let localDeliveryState = sessionStorage.getItem('doneovernight:runtimeDeliveryState') || '';
@@ -2998,21 +3264,18 @@
       }
 
       function renderOperationalQuote(task) {
-        const hasQuote = task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link;
+        const hasQuote = task.quote_amount || task.quote_note || task.delivery_eta;
         if (!hasQuote) return '';
         const paymentStatus = paymentStatusLabel(task.payment_status || task.paymentStatus);
         return `
-          <section class="quote-panel" aria-label="Operational Quote">
-            <h4>Operational Quote</h4>
+          <section class="quote-panel" aria-label="Project scope">
+            <h4>Project scope</h4>
             <div class="quote-line">
-              ${task.quote_amount ? `<span class="quote-amount">${escapeHTML(task.quote_amount)}</span>` : '<span class="quote-amount">Quote pending</span>'}
+              ${task.quote_amount ? `<span class="quote-amount">${escapeHTML(task.quote_amount)}</span>` : '<span class="quote-amount">Investment pending</span>'}
               ${task.delivery_eta ? `<span>${escapeHTML(task.delivery_eta)}</span>` : ''}
               <span>${escapeHTML(paymentStatus)}</span>
             </div>
             ${task.quote_note ? `<p class="quote-note">${escapeHTML(task.quote_note)}</p>` : ''}
-            ${task.payment_link && String(task.payment_status || '').toLowerCase() !== 'paid'
-              ? `<a class="payment-cta" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Approve / pay quote →</a>`
-              : ''}
           </section>
         `;
       }
@@ -3099,6 +3362,167 @@
         return task.task_id || task.taskId || task.id || 'Pending ID';
       }
 
+      function getWorkspaceClientStatus(task = {}) {
+        const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
+        const paymentStatus = normalizeTaskStatus(task.payment_status || task.paymentStatus || task.raw_payload?.payment_status);
+        const workspaceStatus = normalizeTaskStatus(task.workspace_status || task.raw_payload?.workspace_status || task.raw_payload?.workspace_activation_status);
+        if (status === 'completed') return 'Completed';
+        if (status === 'delivered') return 'Delivered';
+        if (['project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status)) return 'Project active';
+        if (status === 'operators_assigned') return 'Execution scheduled';
+        if (paymentStatus === 'paid' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed' || workspaceStatus === 'active' || workspaceStatus === 'workspace_active' || task.raw_payload?.workspace_active === true) return 'Workspace active';
+        if (status === 'needs_info' || status === 'waiting_for_client_information') return 'Waiting for client information';
+        if (['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending', 'quoted'].includes(status)) return 'Execution plan ready';
+        return 'Request received';
+      }
+
+      function clientTimelineEvents(task = {}) {
+        const raw = task.raw_payload || {};
+        return [
+          ['Request received', task.created_at || task.createdAt],
+          ['Review started', raw.review_started_at || (['under_review', 'review_in_progress'].includes(normalizeTaskStatus(task.status)) ? task.updated_at : '')],
+          ['Execution plan sent', raw.execution_plan_sent_at || task.quoted_at],
+          ['Payment confirmed', raw.payment_confirmed_at || task.paid_at || raw.paid_at],
+          ['Workspace activated', raw.workspace_activated_at || raw.workspace_active_at],
+          ['Project started', raw.project_started_at || raw.workspace_activated_at || task.started_at],
+          ['Delivery preparing', raw.delivery_preparing_at || (normalizeTaskStatus(task.status) === 'delivery_prep' ? task.updated_at : '')],
+          ['Delivered', task.delivered_at || raw.delivered_at]
+        ].filter((item) => item[1]).map(([label, timestamp]) => ({ label, timestamp }));
+      }
+
+      function getPrimaryProject(tasks = workspaceTasks) {
+        if (workspaceProjectRoom?.active_project) return workspaceProjectRoom.active_project;
+        return sortTasks(tasks).sort((a, b) => {
+          const aActive = ['Workspace active', 'Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(a)) ? 1 : 0;
+          const bActive = ['Workspace active', 'Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(b)) ? 1 : 0;
+          if (aActive !== bActive) return bActive - aActive;
+          return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+        })[0] || null;
+      }
+
+      function renderWorkspaceRows(items = [], emptyText = 'No updates yet.') {
+        if (!items.length) return `<div class="workspace-os-empty">${escapeHTML(emptyText)}</div>`;
+        return `<ul class="workspace-os-list">${items.map((item) => `
+          <li class="workspace-os-row">
+            <span class="workspace-os-dot" aria-hidden="true"></span>
+            <div>
+              <strong>${escapeHTML(item.title || item.label || item.message || 'Workspace updated')}</strong>
+              <span>${escapeHTML(item.timestamp ? formatDate(item.timestamp) : (item.meta || ''))}</span>
+            </div>
+          </li>
+        `).join('')}</ul>`;
+      }
+
+      function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
+        if (!workspaceActiveProject) return;
+        const project = getPrimaryProject(tasks);
+        const room = workspaceProjectRoom || {};
+
+        if (!project) {
+          workspaceActiveProject.innerHTML = '<div class="workspace-os-empty">No active project yet.</div>';
+          workspaceProjectTimeline.innerHTML = '<div class="workspace-os-empty">Project timeline will appear when work begins.</div>';
+          workspaceLatestUpdates.innerHTML = '<div class="workspace-os-empty">No updates yet.</div>';
+          workspaceMessagesPanel.innerHTML = '<div class="workspace-os-empty">No messages yet. You can reply by email.</div><a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>';
+          workspaceFilesPanel.innerHTML = '<div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>';
+          workspaceInvoicesPanel.innerHTML = '<div class="workspace-os-empty">No invoices available yet.</div>';
+          workspaceDeliveredPanel.innerHTML = '<div class="workspace-os-empty">Delivery will appear here when ready.</div>';
+          return;
+        }
+
+        const status = project.client_status || getWorkspaceClientStatus(project);
+        const reference = getTaskId(project);
+        const scope = project.quote_note || project.task_description || project.task_summary || 'Project scope is attached to this workspace.';
+        const timeline = project.delivery_eta || 'Timeline will update here.';
+        const investment = project.quote_amount || 'Not shown yet';
+        const paymentDate = project.raw_payload?.payment_confirmed_at || project.paid_at || '';
+        const activatedDate = project.raw_payload?.workspace_activated_at || '';
+        const nextStep = project.current_next_step || (status === 'Delivered' ? 'Review the delivered work.' : 'Execution is active. Updates will appear in this workspace.');
+        const workspaceSlugLabel = workspaceSlug ? `@${workspaceSlug}` : '';
+
+        workspaceActiveProject.innerHTML = `
+          <div class="workspace-os-head">
+            <div>
+              <p class="workspace-os-eyebrow">Active Project</p>
+              <h2 class="workspace-os-title">${escapeHTML(project.task_summary || 'Active project')}</h2>
+            </div>
+            <span class="workspace-os-status">${escapeHTML(status)}</span>
+          </div>
+          <div class="workspace-os-grid">
+            <div class="workspace-os-kv"><span>Reference</span><strong>${escapeHTML(reference)}</strong></div>
+            <div class="workspace-os-kv"><span>Timeline</span><strong>${escapeHTML(timeline)}</strong></div>
+            <div class="workspace-os-kv"><span>Investment</span><strong>${escapeHTML(investment)}</strong></div>
+            <div class="workspace-os-kv"><span>Workspace</span><strong>${escapeHTML(workspaceSlugLabel || 'Active')}</strong></div>
+            <div class="workspace-os-kv"><span>Payment confirmed</span><strong>${escapeHTML(paymentDate ? formatDate(paymentDate) : 'Confirmed')}</strong></div>
+            <div class="workspace-os-kv"><span>Workspace activated</span><strong>${escapeHTML(activatedDate ? formatDate(activatedDate) : 'Active')}</strong></div>
+            <div class="workspace-os-kv"><span>Current next step</span><strong>${escapeHTML(nextStep)}</strong></div>
+            <div class="workspace-os-kv"><span>Status</span><strong>${escapeHTML(status)}</strong></div>
+          </div>
+          <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
+        `;
+
+        const timelineEvents = room.lifecycle_events?.length ? room.lifecycle_events : clientTimelineEvents(project);
+        workspaceProjectTimeline.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Project Timeline</p><h3 class="workspace-os-title" style="font-size:34px">Lifecycle</h3></div></div>
+          ${renderWorkspaceRows(timelineEvents, 'No timeline events yet.')}
+        `;
+
+        const latestUpdates = room.latest_updates?.length ? room.latest_updates : (project.raw_payload?.admin_activity_events || []);
+        workspaceLatestUpdates.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Latest Updates</p><h3 class="workspace-os-title" style="font-size:34px">Movement</h3></div></div>
+          ${renderWorkspaceRows(latestUpdates, 'No updates yet.')}
+        `;
+
+        const visibleMessages = workspaceMessages.filter((message) => !isInternalValidationMessage(message));
+        workspaceMessagesPanel.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Messages</p><h3 class="workspace-os-title" style="font-size:34px">Client channel</h3></div></div>
+          ${renderWorkspaceRows(visibleMessages.map((message) => ({
+            title: message.message || 'Workspace message',
+            timestamp: message.created_at,
+            meta: message.message_type || ''
+          })), 'No messages yet. You can reply by email.')}
+          <a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>
+        `;
+
+        workspaceFilesPanel.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Files</p><h3 class="workspace-os-title" style="font-size:34px">Attached work</h3></div></div>
+          <div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>
+        `;
+
+        const invoices = room.invoices?.length ? room.invoices : getTaskInvoices(project);
+        workspaceInvoicesPanel.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Invoices</p><h3 class="workspace-os-title" style="font-size:34px">Documents</h3></div></div>
+          ${invoices.length ? `<ul class="workspace-os-list">${invoices.map((invoice) => `
+            <li class="workspace-os-row">
+              <span class="workspace-os-dot" aria-hidden="true"></span>
+              <div>
+                <strong>${escapeHTML(invoice.invoice_number || 'Invoice')}</strong>
+                <span>${escapeHTML([invoice.invoice_amount, invoice.status, invoice.invoice_created_at ? formatDate(invoice.invoice_created_at) : ''].filter(Boolean).join(' · '))}</span>
+                ${invoice.invoice_pdf_url ? `<a class="workspace-os-link" href="${escapeHTML(invoice.invoice_pdf_url)}" target="_blank" rel="noopener noreferrer">Download PDF</a>` : ''}
+              </div>
+            </li>
+          `).join('')}</ul>` : '<div class="workspace-os-empty">No invoices available yet.</div>'}
+        `;
+
+        const delivered = room.delivered_work?.length ? room.delivered_work : (['delivered', 'completed'].includes(normalizeTaskStatus(project.status)) ? [{
+          title: project.task_summary,
+          timestamp: project.delivered_at,
+          delivery_link: project.delivery_link
+        }] : []);
+        workspaceDeliveredPanel.innerHTML = `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Delivered Work</p><h3 class="workspace-os-title" style="font-size:34px">Delivery</h3></div></div>
+          ${delivered.length ? `<ul class="workspace-os-list">${delivered.map((item) => `
+            <li class="workspace-os-row">
+              <span class="workspace-os-dot" aria-hidden="true"></span>
+              <div>
+                <strong>${escapeHTML(item.title || 'Delivered work')}</strong>
+                <span>${escapeHTML(item.delivered_at || item.timestamp ? formatDate(item.delivered_at || item.timestamp) : 'Delivered')}</span>
+                ${item.delivery_link ? `<a class="workspace-os-link" href="${escapeHTML(item.delivery_link)}" target="_blank" rel="noopener noreferrer">Open delivery</a>` : ''}
+              </div>
+            </li>
+          `).join('')}</ul>` : '<div class="workspace-os-empty">Delivery will appear here when ready.</div>'}
+        `;
+      }
+
       function sortTasks(tasks) {
         return [...tasks].sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0));
       }
@@ -3142,15 +3566,15 @@
       function updateWorkspaceHero(tasks = workspaceTasks) {
         const session = getSession();
         const name = (session.name || workspaceName.textContent || 'there').split(/\s+/)[0];
-        const pendingQuote = tasks.some((task) => ['quoted', 'awaiting_payment'].includes(normalizeTaskStatus(task.status)) || String(task.payment_status || '').toLowerCase() === 'awaiting_payment');
-        const activeTask = tasks.some((task) => !isCompletedTask(task));
+        const primary = getPrimaryProject(tasks);
+        const status = primary ? getWorkspaceClientStatus(primary) : '';
         workspaceTitle.textContent = `${getGreeting()}, ${name}.`;
-        if (pendingQuote) {
-          workspaceHeroCopy.textContent = 'A quote is waiting for review. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
-        } else if (activeTask) {
-          workspaceHeroCopy.textContent = 'Your current operation is moving through review. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
+        if (['Workspace active', 'Project active', 'Execution scheduled'].includes(status)) {
+          workspaceHeroCopy.textContent = 'Your DONEOVERNIGHT project room is active. Scope, timeline, updates, messages, files, invoices, and delivery stay together here.';
+        } else if (primary) {
+          workspaceHeroCopy.textContent = 'Your DONEOVERNIGHT workspace is active. Project details and updates will appear here as work moves forward.';
         } else {
-          workspaceHeroCopy.textContent = 'Your private workspace is ready. Track requests, quotes, payments, delivery movement, and future work from one quiet execution environment.';
+          workspaceHeroCopy.textContent = 'Your private workspace is ready. Project activity will appear here once work starts.';
         }
       }
 
@@ -3484,6 +3908,17 @@
         window.setTimeout(() => textarea.focus({ preventScroll: true }), 180);
       }
 
+      function visibleWorkspaceUrl(value = '') {
+        try {
+          const url = new URL(value || window.location.href, window.location.origin);
+          url.search = '';
+          url.hash = '';
+          return url.toString();
+        } catch (error) {
+          return window.location.origin + window.location.pathname;
+        }
+      }
+
       function showAccessCredentials() {
         let credentials = null;
         try { credentials = JSON.parse(sessionStorage.getItem('doneovernight:accessCredentials') || 'null'); }
@@ -3493,7 +3928,7 @@
         if (!modal || sessionStorage.getItem('doneovernight:accessCredentialsSeen') === credentials.accessKey) return;
         document.getElementById('credentialUsername').textContent = credentials.username;
         document.getElementById('credentialAccessKey').textContent = credentials.accessKey;
-        document.getElementById('credentialWorkspaceUrl').textContent = credentials.workspaceUrl || window.location.href;
+        document.getElementById('credentialWorkspaceUrl').textContent = visibleWorkspaceUrl(credentials.workspaceUrl);
         modal.classList.add('is-visible');
         modal.setAttribute('aria-hidden', 'false');
       }
@@ -3623,10 +4058,6 @@
           const ps = String(task.payment_status || '').toLowerCase();
           if (task.delivery_link && (s === 'delivered' || s === 'completed')) {
             cta = `<a href="${escapeHTML(task.delivery_link)}" target="_blank" rel="noopener noreferrer" class="is-delivery">Open deliverable →</a>`;
-          } else if (task.payment_link && (ps === 'awaiting_payment' || s === 'awaiting_payment')) {
-            cta = `<a href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Pay quote →</a>`;
-          } else if (s === 'quoted' && task.payment_link) {
-            cta = `<a href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Review &amp; pay →</a>`;
           }
 
           return `
@@ -3668,7 +4099,7 @@
           const normalizedStatus = normalizeTaskStatus(task.status);
           const deliveryStatus = task.delivery_link ? 'Delivery ready' : (['delivered', 'completed'].includes(normalizedStatus) ? statusLabel(normalizedStatus) : 'Pending');
           const taskState = getTaskState(task);
-          const needsPayment = taskState === 'awaiting-payment' && task.payment_link && String(task.payment_status || '').toLowerCase() !== 'paid';
+          const needsPayment = taskState === 'awaiting-payment' && String(task.payment_status || '').toLowerCase() !== 'paid';
           return `
             <article class="task-card ${taskCardClass(task.status)}" data-task-state="${escapeHTML(taskState)}">
               <div class="task-top">
@@ -3717,6 +4148,7 @@
         renderActivity(workspaceTasks);
         updateWorkspaceHero(workspaceTasks);
         updateWorkspaceRuntimeEngine(workspaceTasks);
+        renderWorkspaceProjectRoom(workspaceTasks);
 
         taskFeed.innerHTML = activeTasks.length ? renderTaskList(activeTasks) : renderEmptyState();
         completedHistoryFeed.innerHTML = completedTasks.length
@@ -3761,9 +4193,10 @@
             clientId: payload.workspace?.id || ''
           });
           workspaceName.textContent = payload.workspace?.name || payload.workspace?.company || `@${workspaceSlug}`;
-          workspaceSubcopy.textContent = `${payload.workspace?.email || `@${workspaceSlug}`}${payload.workspace?.company ? ` · ${payload.workspace.company}` : ''}`;
+          workspaceSubcopy.textContent = `${payload.workspace?.email || 'Client workspace'}${workspaceSlug ? ` · @${workspaceSlug}` : ''}${payload.workspace?.company ? ` · ${payload.workspace.company}` : ''}`;
+          workspaceProjectRoom = payload.projectRoom || null;
           tasks = payload.tasks || [];
-          await Promise.all([loadWorkspaceMessages(), loadWorkspaceQuotes()]);
+          await loadWorkspaceMessages();
         } catch (error) {
           if (!workspaceTasks.length) renderWorkspacePendingState('Enter your access key or request a fresh private workspace link.');
           return;
@@ -3775,7 +4208,7 @@
           const handoffProject = getHandoffProjectTask();
           if (handoffProject) tasks = [handoffProject];
         }
-        await Promise.all([loadWorkspaceMessages(), loadWorkspaceQuotes()]);
+        await loadWorkspaceMessages();
         if (tasks.length || !workspaceTasks.length) renderTasks(tasks);
         if (workspaceConnection) {
           workspaceConnection.textContent = 'Workspace live';
@@ -4196,7 +4629,7 @@
                 </div>
                 <div class="quote-item-meta">
                   <span class="quote-item-amount">${escapeHTML(String(t.quote_amount))}</span>
-                  ${t.payment_link ? `<a class="quote-item-link" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : '<span class="quote-item-status">Awaiting link</span>'}
+                  <span class="quote-item-status">Open your secure review link to continue.</span>
                 </div>
               </div>
             `).join('')}
@@ -4225,7 +4658,7 @@
                 </div>
                 <div class="quote-item-meta">
                   <span class="quote-item-amount is-payment">${t.quote_amount ? escapeHTML(String(t.quote_amount)) : 'TBD'}</span>
-                  ${t.payment_link ? `<a class="quote-item-link" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : '<span class="quote-item-status">Link pending</span>'}
+                  <span class="quote-item-status">Secure checkout is handled from your review flow.</span>
                 </div>
               </div>
             `).join('')}
@@ -4342,7 +4775,6 @@
                   <div class="metric-drawer-item-text">${escapeHTML(getTaskSummary(t))}</div>
                   <span class="metric-drawer-item-sub">${t.quote_amount ? escapeHTML(t.quote_amount) : 'Quote pending'} · ${escapeHTML(getTaskId(t))}</span>
                 </div>
-                ${t.payment_link ? `<a class="metric-drawer-item-action" href="${escapeHTML(t.payment_link)}" target="_blank" rel="noopener noreferrer">Pay now →</a>` : ''}
               </div>`).join('')}`;
         }
 

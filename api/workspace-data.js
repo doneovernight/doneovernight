@@ -308,6 +308,201 @@ async function accessWorkspaceWithGoogle(req, res, input) {
   return createWorkspaceSessionForPortalRequest(req, res, portalRequest);
 }
 
+function normalizeTaskStatus(status = "") {
+  const key = clean(status).toLowerCase();
+  if (key === "new") return "request_received";
+  if (key === "quoted" || key === "quote_sent") return "execution_plan_ready";
+  if (key === "paid") return "payment_confirmed";
+  return key;
+}
+
+function taskId(task = {}) {
+  return clean(task.task_id || task.taskId || task.id);
+}
+
+function taskTitle(task = {}) {
+  return clean(
+    task.task_summary ||
+      task.task_description ||
+      task.taskSummary ||
+      task.raw_payload?.task_summary ||
+      task.raw_payload?.task_description ||
+      task.raw_payload?.submitted_request ||
+      "Active project"
+  );
+}
+
+function isPaidOrActiveTask(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const status = normalizeTaskStatus(task.status || rawPayload.status);
+  const paymentStatus = normalizeTaskStatus(task.payment_status || rawPayload.payment_status);
+  const workspaceStatus = normalizeTaskStatus(task.workspace_status || rawPayload.workspace_status);
+  const projectStatus = normalizeTaskStatus(task.project_status || rawPayload.project_status);
+  return ["paid", "payment_confirmed"].includes(paymentStatus) ||
+    ["payment_confirmed", "operators_assigned", "workspace_active", "project_active", "execution_active", "queued", "in_progress", "delivery_prep", "delivered", "completed"].includes(status) ||
+    ["workspace_active", "active"].includes(workspaceStatus) ||
+    ["project_active", "execution_active", "active"].includes(projectStatus) ||
+    rawPayload.workspace_active === true;
+}
+
+function clientStatus(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const status = normalizeTaskStatus(task.status || rawPayload.status);
+  const paymentStatus = normalizeTaskStatus(task.payment_status || rawPayload.payment_status);
+  const workspaceActive = rawPayload.workspace_active === true || normalizeTaskStatus(rawPayload.workspace_activation_status) === "active";
+
+  if (status === "completed") return "Completed";
+  if (status === "delivered") return "Delivered";
+  if (["project_active", "execution_active", "queued", "in_progress", "delivery_prep"].includes(status)) return "Project active";
+  if (status === "operators_assigned") return "Execution scheduled";
+  if (workspaceActive || paymentStatus === "paid" || paymentStatus === "payment_confirmed" || status === "payment_confirmed") return "Workspace active";
+  if (status === "needs_info" || status === "waiting_for_client_information") return "Waiting for client information";
+  if (["execution_plan_ready", "awaiting_start", "awaiting_payment", "payment_returned", "verification_pending"].includes(status)) return "Execution plan ready";
+  return "Request received";
+}
+
+function currentNextStep(task = {}) {
+  const status = clientStatus(task);
+  if (status === "Delivered") return "Review the delivered work when it is ready in your workspace.";
+  if (status === "Completed") return "This project is complete.";
+  if (status === "Execution scheduled") return "DONEOVERNIGHT is preparing the execution pass.";
+  if (status === "Project active" || status === "Workspace active") return "Execution is active. Updates will appear in this workspace.";
+  if (status === "Waiting for client information") return "Reply by email with the requested information.";
+  return "DONEOVERNIGHT is reviewing the project details.";
+}
+
+function safeInvoices(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const direct = task.invoice_number || rawPayload.invoice_number
+    ? [{
+        invoice_number: clean(task.invoice_number || rawPayload.invoice_number),
+        invoice_amount: clean(task.invoice_amount || rawPayload.invoice_amount),
+        invoice_created_at: clean(task.invoice_created_at || rawPayload.invoice_created_at),
+        invoice_pdf_url: clean(task.invoice_pdf_url || rawPayload.invoice_pdf_url),
+        status: clean(task.invoice_status || rawPayload.invoice_status || "paid")
+      }]
+    : [];
+  const fromRaw = Array.isArray(rawPayload.invoices) ? rawPayload.invoices : [];
+  const seen = new Set();
+  return [...direct, ...fromRaw].map((invoice) => ({
+    invoice_number: clean(invoice.invoice_number),
+    invoice_amount: clean(invoice.invoice_amount),
+    invoice_created_at: clean(invoice.invoice_created_at),
+    invoice_pdf_url: clean(invoice.invoice_pdf_url),
+    status: clean(invoice.status || "paid")
+  })).filter((invoice) => {
+    if (!invoice.invoice_number || seen.has(invoice.invoice_number)) return false;
+    seen.add(invoice.invoice_number);
+    return true;
+  });
+}
+
+function lifecycleEventsForTask(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const events = [
+    ["Request received", task.created_at || task.createdAt || rawPayload.created_at],
+    ["Review started", rawPayload.review_started_at || (["under_review", "review_in_progress"].includes(normalizeTaskStatus(task.status)) ? task.updated_at : "")],
+    ["Execution plan sent", rawPayload.execution_plan_sent_at || task.quoted_at],
+    ["Payment confirmed", rawPayload.payment_confirmed_at || task.paid_at || rawPayload.paid_at],
+    ["Workspace activated", rawPayload.workspace_activated_at || rawPayload.workspace_active_at],
+    ["Project started", rawPayload.project_started_at || rawPayload.workspace_activated_at || task.started_at],
+    ["Delivery preparing", rawPayload.delivery_preparing_at || (normalizeTaskStatus(task.status) === "delivery_prep" ? task.updated_at : "")],
+    ["Delivered", task.delivered_at || rawPayload.delivered_at]
+  ];
+  return events
+    .filter((event) => clean(event[1]))
+    .map(([label, timestamp]) => ({ label, timestamp: clean(timestamp) }));
+}
+
+function safeUpdatesForTask(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const events = Array.isArray(rawPayload.admin_activity_events) ? rawPayload.admin_activity_events : [];
+  return events.slice(0, 8).map((event) => ({
+    title: clean(event.title || event.message || event.event_type || "Workspace updated"),
+    timestamp: clean(event.created_at || event.at || event.timestamp),
+    type: clean(event.event_type || event.type || "activity")
+  })).filter((event) => event.title);
+}
+
+function safeTaskSnapshot(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  return {
+    id: clean(task.id),
+    task_id: taskId(task),
+    task_summary: taskTitle(task),
+    task_description: clean(task.task_description || rawPayload.task_description || rawPayload.submitted_request),
+    status: normalizeTaskStatus(task.status || rawPayload.status),
+    client_status: clientStatus(task),
+    payment_status: normalizeTaskStatus(task.payment_status || rawPayload.payment_status),
+    source: clean(task.source || rawPayload.source),
+    deadline: clean(task.deadline || rawPayload.deadline),
+    created_at: clean(task.created_at || task.createdAt || rawPayload.created_at),
+    updated_at: clean(task.updated_at || rawPayload.updated_at),
+    quoted_at: clean(task.quoted_at || rawPayload.quoted_at),
+    paid_at: clean(task.paid_at || rawPayload.paid_at),
+    started_at: clean(task.started_at || rawPayload.started_at),
+    delivered_at: clean(task.delivered_at || rawPayload.delivered_at),
+    completed_at: clean(task.completed_at || rawPayload.completed_at),
+    quote_amount: clean(task.quote_amount || rawPayload.quote_amount || rawPayload.investment_amount),
+    quote_note: clean(task.quote_note || rawPayload.quote_note || rawPayload.scope_note),
+    delivery_eta: clean(task.delivery_eta || rawPayload.delivery_eta || rawPayload.timeline),
+    delivery_link: ["delivered", "completed"].includes(normalizeTaskStatus(task.status)) ? clean(task.delivery_link || rawPayload.delivery_link) : "",
+    raw_payload: {
+      invoices: safeInvoices(task),
+      admin_activity_events: safeUpdatesForTask(task),
+      workspace_active: rawPayload.workspace_active === true,
+      workspace_activation_status: clean(rawPayload.workspace_activation_status),
+      workspace_activated_at: clean(rawPayload.workspace_activated_at),
+      payment_confirmed_at: clean(rawPayload.payment_confirmed_at),
+      execution_plan_sent_at: clean(rawPayload.execution_plan_sent_at)
+    }
+  };
+}
+
+function primaryWorkspaceTask(tasks = []) {
+  const sorted = [...tasks].sort((a, b) => {
+    const aActive = isPaidOrActiveTask(a) ? 1 : 0;
+    const bActive = isPaidOrActiveTask(b) ? 1 : 0;
+    if (aActive !== bActive) return bActive - aActive;
+    return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+  });
+  return sorted[0] || null;
+}
+
+function buildProjectRoom(tasks = []) {
+  const primary = primaryWorkspaceTask(tasks);
+  if (!primary) {
+    return {
+      active_project: null,
+      lifecycle_events: [],
+      latest_updates: [],
+      invoices: [],
+      delivered_work: [],
+      other_requests: []
+    };
+  }
+  const activeProject = safeTaskSnapshot(primary);
+  activeProject.current_next_step = currentNextStep(primary);
+  return {
+    active_project: activeProject,
+    lifecycle_events: lifecycleEventsForTask(primary),
+    latest_updates: safeUpdatesForTask(primary),
+    invoices: safeInvoices(primary),
+    delivered_work: ["delivered", "completed"].includes(normalizeTaskStatus(primary.status))
+      ? [{
+          task_id: taskId(primary),
+          title: taskTitle(primary),
+          delivered_at: clean(primary.delivered_at || primary.raw_payload?.delivered_at),
+          delivery_link: clean(primary.delivery_link || primary.raw_payload?.delivery_link)
+        }]
+      : [],
+    other_requests: tasks
+      .filter((task) => taskId(task) !== taskId(primary))
+      .slice(0, 6)
+      .map(safeTaskSnapshot)
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST");
@@ -379,6 +574,8 @@ module.exports = async function handler(req, res) {
 
     const workspaceSlug = inferWorkspaceSlug(portalRequest);
     const tasks = await findTasksForWorkspace({ email: portalRequest.email, slug: workspaceSlug });
+    const safeTasks = (Array.isArray(tasks) ? tasks : []).map(safeTaskSnapshot);
+    const projectRoom = buildProjectRoom(tasks);
     return send(res, 200, {
       success: true,
       workspace: {
@@ -390,7 +587,9 @@ module.exports = async function handler(req, res) {
         company: portalRequest.company || portalRequest.raw_payload?.project_name || "",
         status: portalRequest.status || "active"
       },
-      tasks
+      activeProject: projectRoom.active_project,
+      projectRoom,
+      tasks: safeTasks
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {
