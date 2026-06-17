@@ -3798,6 +3798,9 @@ function getTaskActivationStatus(task = {}) {
   const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
   const workspaceActivationStatus = normalizeStatus(rawPayload.workspace_activation_status || '');
   const workspaceActivationError = rawPayload.workspace_activation_error || '';
+  const workspaceActivationErrorContext = rawPayload.workspace_activation_error_context && typeof rawPayload.workspace_activation_error_context === 'object'
+    ? rawPayload.workspace_activation_error_context
+    : null;
   const paymentConfirmedAt = task.paid_at || rawPayload.payment_confirmed_at || '';
   const workspaceActivatedAt = rawPayload.workspace_activated_at || rawPayload.project_active_at || task.started_at || '';
   const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmed_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
@@ -3829,6 +3832,7 @@ function getTaskActivationStatus(task = {}) {
     workspaceActive,
     workspaceActivationFailed,
     workspaceActivationError,
+    workspaceActivationErrorContext,
     activationEmailSent,
     activationEmailFailed,
     activationEmailNotConfigured,
@@ -3840,6 +3844,17 @@ function getTaskActivationStatus(task = {}) {
     paymentEmailError,
     activatedAt: activationEmailSentAt || workspaceActivatedAt || paymentConfirmedAt || task.updated_at || ''
   };
+}
+
+function getWorkspaceActivationDiagnosticLabel(context = null) {
+  if (!context) return '';
+  const parts = [
+    context.table && context.operation ? `${context.table} ${context.operation}` : '',
+    context.lookup_column ? `Lookup: ${context.lookup_column}` : '',
+    context.supabase_error_code ? `Code: ${context.supabase_error_code}` : '',
+    context.supabase_error_message ? context.supabase_error_message : ''
+  ].filter(Boolean);
+  return parts.join(' · ');
 }
 
 function getPaymentEmailDiagnosticLabel(status = '', error = '') {
@@ -5375,12 +5390,18 @@ function renderTasks(tasks) {
         <span>HTTP: ${escapeHTML(activationStatus.paymentEmailHttp || 'n/a')}</span>
       </span>
     ` : '';
+    const workspaceActivationDiagnostic = activationStatus?.workspaceActivationFailed && activationStatus.workspaceActivationErrorContext ? `
+      <span class="admin-payment-email-diagnostic">
+        <span>Workspace diagnostic: ${escapeHTML(getWorkspaceActivationDiagnosticLabel(activationStatus.workspaceActivationErrorContext))}</span>
+      </span>
+    ` : '';
     const activationStatusBanner = activationStatus ? `
       <div class="admin-activation-status">
         <strong>${activationStatus.paymentConfirmed ? '✓ Payment Confirmed' : 'Payment Pending'}</strong>
         <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : activationStatus.workspaceActivationFailed ? `Workspace Activation Failed${activationStatus.workspaceActivationError ? `: ${escapeHTML(activationStatus.workspaceActivationError)}` : ''}` : 'Workspace Pending'}</strong>
         <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : activationStatus.activationEmailNotConfigured ? 'Activation Email Not Configured' : activationStatus.activationEmailFailed ? `Activation Email Failed${activationStatus.activationEmailError ? `: ${escapeHTML(activationStatus.activationEmailError)}` : ''}` : activationStatus.paymentConfirmed ? 'Activation Email Not Sent' : 'Activation Email Pending'}</strong>
         ${activationStatus.activatedAt ? `<time>${escapeHTML(formatTaskDate(activationStatus.activatedAt) || '')}</time>` : ''}
+        ${workspaceActivationDiagnostic}
         ${paymentEmailDiagnostic}
       </div>
     ` : '';

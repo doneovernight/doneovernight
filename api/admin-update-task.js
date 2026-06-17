@@ -541,6 +541,7 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
     const safeActivationError = error.statusCode && error.statusCode < 500
       ? error.message
       : "Workspace activation failed after payment confirmation";
+    const workspaceActivationDebug = error.workspaceActivationDebug || null;
     const failedTask = await patchTask(taskId, {
       raw_payload: {
         ...(confirmedTask.raw_payload && typeof confirmedTask.raw_payload === "object" ? confirmedTask.raw_payload : {}),
@@ -548,6 +549,7 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
         workspace_activation_attempted_at: failedAt,
         workspace_activation_status: "failed",
         workspace_activation_error: safeActivationError,
+        workspace_activation_error_context: workspaceActivationDebug,
         workspace_activation_failed_at: failedAt,
         activation_email_status: "not_sent",
         activation_email_error: "Workspace activation failed before email delivery",
@@ -582,7 +584,8 @@ async function confirmPaymentAndActivateWorkspace(taskId, input = {}) {
       activationResult: null,
       activationError: {
         code: error.code || "WORKSPACE_ACTIVATION_FAILED",
-        message: safeActivationError
+        message: safeActivationError,
+        workspaceActivationDebug
       }
     };
   }
@@ -1057,7 +1060,8 @@ module.exports = async function handler(req, res) {
             success: false,
             warning: true,
             code: confirmationResult.activationError?.code || "WORKSPACE_ACTIVATION_FAILED",
-            error: confirmationResult.activationError?.message || "Workspace activation failed after payment confirmation"
+            error: confirmationResult.activationError?.message || "Workspace activation failed after payment confirmation",
+            workspaceActivationDebug: confirmationResult.activationError?.workspaceActivationDebug || null
           };
       const responseTask = confirmationResult.activationResult?.task || confirmationResult.confirmedTask;
       return send(res, 200, {
