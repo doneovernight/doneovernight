@@ -3492,7 +3492,7 @@ function getTaskActionAvailability(task = {}) {
     canArchive: !['archived', 'completed'].includes(status),
     canReopenArchived: isArchived,
     canDeleteArchived: isArchived,
-    canOpenWorkspace: isWorkspaceActive || isProjectActive,
+    canOpenWorkspace: canOpenWorkspace(task),
     isLockedAfterApproval,
     hasTokenizedReviewUrl
   };
@@ -3800,6 +3800,27 @@ function getTaskActivityLabel(task) {
   if (status === 'queued') return 'Queued for execution';
   if (task.updated_at) return getRelativeTime(task.updated_at);
   return 'Realtime connected';
+}
+
+function getTaskWorkspaceUrl(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  return String(
+    task.workspace_url ||
+    task.workspaceUrl ||
+    rawPayload.workspace_url ||
+    rawPayload.workspaceUrl ||
+    ''
+  ).trim();
+}
+
+function canOpenWorkspace(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  const workspaceActive = task.workspace_active === true ||
+    rawPayload.workspace_active === true ||
+    normalizeStatus(task.workspace_active) === 'true' ||
+    normalizeStatus(rawPayload.workspace_active) === 'true';
+  const activationStatus = normalizeStatus(task.workspace_activation_status || rawPayload.workspace_activation_status || '');
+  return workspaceActive && activationStatus === 'active' && Boolean(getTaskWorkspaceUrl(task));
 }
 
 function getTaskActivationStatus(task = {}) {
@@ -5318,13 +5339,11 @@ function renderTasks(tasks) {
     const referral = getTaskReferral(task);
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const availability = getTaskActionAvailability(task);
-    const normalizedPaymentStatus = normalizeStatus(task.payment_status);
-    const workspaceIsActive = ['operators_assigned', 'payment_confirmed', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep'].includes(normalizeStatus(task.status)) || ['paid', 'payment_confirmed'].includes(normalizedPaymentStatus);
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
           ...getTaskActions(task),
-          ...(workspaceIsActive ? [{ type: 'open-workspace', label: 'Open workspace' }] : [])
+          ...(availability.canOpenWorkspace ? [{ type: 'open-workspace', label: 'Open workspace' }] : [])
         ]
       : [];
     if (task.id && isSaiUniversityBrandingTask(task) && !task.delivery_link) {
@@ -6888,8 +6907,12 @@ adminTasksList.addEventListener('click', async (e) => {
 
   if (button.dataset.action === 'open-workspace') {
     const task = (adminTasks || []).find(t => t.id === taskId);
-    const workspaceSlug = slugifyWorkspace(task?.company || task?.name || task?.email || '');
-    window.open(`https://portal.doneovernight.com/workspace/${encodeURIComponent(workspaceSlug)}`, '_blank', 'noopener,noreferrer');
+    const workspaceUrl = getTaskWorkspaceUrl(task);
+    if (!canOpenWorkspace(task) || !workspaceUrl) {
+      if (message) message.textContent = 'Workspace is not active for this task yet.';
+      return;
+    }
+    window.open(workspaceUrl, '_blank', 'noopener,noreferrer');
     return;
   }
 
