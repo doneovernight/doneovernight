@@ -7,6 +7,11 @@ const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/s
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 const { resolveTaskLanguage } = require("../lib/language");
+const {
+  activateWorkspace,
+  buildWorkspaceActivationError,
+  buildWorkspaceActivationResponse
+} = require("../lib/workspace-activation");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -613,6 +618,13 @@ function isDispatchSubscribeRequest(req) {
     String(req.url || "").includes("/api/dispatch-subscribe");
 }
 
+function isWorkspaceActivationRequest(req, input = {}) {
+  return String(req.url || "").includes("workspace_activate=1") ||
+    String(req.url || "").includes("/api/workspace-activate") ||
+    input.action === "workspace_activate" ||
+    input.intent === "workspace_activate";
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -653,6 +665,16 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isWorkspaceActivationRequest(req, input)) {
+      try {
+        const result = await activateWorkspace(req, input);
+        return send(res, 200, buildWorkspaceActivationResponse(result));
+      } catch (activationError) {
+        const { statusCode, payload } = buildWorkspaceActivationError(activationError);
+        return send(res, statusCode, payload);
+      }
+    }
+
     if (isTrackEventRequest(req, input)) {
       return handleTrackEventRequest(req, res, input);
     }
