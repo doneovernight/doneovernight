@@ -3441,8 +3441,8 @@
       function getPrimaryProject(tasks = workspaceTasks) {
         if (workspaceProjectRoom?.active_project) return workspaceProjectRoom.active_project;
         return sortTasks(tasks).sort((a, b) => {
-          const aActive = ['Workspace active', 'Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(a)) ? 1 : 0;
-          const bActive = ['Workspace active', 'Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(b)) ? 1 : 0;
+          const aActive = ['Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(a)) ? 1 : 0;
+          const bActive = ['Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(getWorkspaceClientStatus(b)) ? 1 : 0;
           if (aActive !== bActive) return bActive - aActive;
           return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
         })[0] || null;
@@ -3729,7 +3729,7 @@
             archiveTitle: 'Archive standby',
             archiveCopy: 'Archive state activates after delivery or completion.',
             activeCards: ['execution', 'review', 'queue'],
-            signals: ['Operator reviewing assets', 'Workspace synchronized', 'Execution layer online'],
+            signals: ['Operator reviewing assets', 'Workspace synchronized', 'Operations room online'],
             feed: [
               ['Operator reviewing assets', 'Scope and references under active review'],
               ['Execution queue updated', 'Core routing layer synchronized'],
@@ -4872,7 +4872,7 @@
               <span class="metric-drawer-count" style="color:var(--green)">Live</span>
             </div>
             <div class="metric-drawer-item">
-              <div><div class="metric-drawer-item-text">Operations running</div><span class="metric-drawer-item-sub">Realtime sync active · Review window &lt; 60 min</span></div>
+              <div><div class="metric-drawer-item-text">Operations running</div><span class="metric-drawer-item-sub">Realtime sync active · Next milestone in motion</span></div>
             </div>`;
         }
 
