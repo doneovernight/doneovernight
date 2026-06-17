@@ -3381,17 +3381,34 @@ function getPaymentStatusLabel(status) {
   return labels[normalizeStatus(status)] || 'Not required yet';
 }
 
-function getTaskOperationalBucket(task = {}) {
+const ADMIN_TASK_CATEGORY_SECTIONS = {
+  new: { title: 'New / Under Review', slug: 'new' },
+  needs_info: { title: 'Needs Info', slug: 'needs-info' },
+  review_complete: { title: 'Review Complete', slug: 'review-complete' },
+  awaiting_start: { title: 'Awaiting Start', slug: 'awaiting-payment' },
+  project_active: { title: 'Project Active', slug: 'in-progress' },
+  delivered: { title: 'Delivered', slug: 'delivered' },
+  completed: { title: 'Completed', slug: 'completed' },
+  archived: { title: 'Archived', slug: 'archived' }
+};
+
+function resolveAdminTaskCategory(task = {}) {
+  const rawPayload = task.raw_payload || {};
   const status = normalizeStatus(task.status);
   const paymentStatus = normalizeStatus(task.payment_status);
-  if (['completed'].includes(status)) return 'completed';
-  if (['archived', 'cancelled', 'rejected'].includes(status)) return 'archived';
+  const archivedFlag = task.archived === true || rawPayload.archived === true || normalizeStatus(task.archived) === 'true' || normalizeStatus(rawPayload.archived) === 'true';
+  if (['archived', 'cancelled', 'rejected'].includes(status) || archivedFlag) return 'archived';
+  if (status === 'completed') return 'completed';
   if (isDeliveredTask(task)) return 'delivered';
-  if (['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus)) return 'active';
-  if (status === 'awaiting_start' || status === 'payment_started' || status === 'payment_returned' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending') return 'awaiting_start';
-  if (['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status)) return 'review_complete';
-  if (status === 'needs_info') return 'needs_info';
+  if (['project_active', 'workspace_active', 'workspace_ready', 'execution_active', 'operators_assigned', 'payment_confirmed', 'paid', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus)) return 'project_active';
+  if (['execution_plan_ready', 'quote_sent', 'quoted', 'awaiting_start', 'awaiting_payment', 'payment_started', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(paymentStatus)) return 'awaiting_start';
+  if (['needs_info', 'waiting_for_client_information', 'info_requested'].includes(status)) return 'needs_info';
+  if (['review_complete', 'quote_ready', 'plan_ready'].includes(status)) return 'review_complete';
   return 'new';
+}
+
+function getTaskOperationalBucket(task = {}) {
+  return resolveAdminTaskCategory(task);
 }
 
 function hasPaymentReturnSignal(task = {}) {
@@ -3705,30 +3722,23 @@ const TASK_FILTERS = [
 ];
 
 function taskMatchesOperationalFilter(task, filter) {
-  const status = normalizeStatus(task.status);
-  const paymentStatus = normalizeStatus(task.payment_status);
   if (filter === 'all') return true;
-  if (filter === 'new') return ['new', 'request_received'].includes(status);
-  if (filter === 'needs_info') return status === 'needs_info';
-  if (filter === 'review_complete') return ['review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(status) && !['awaiting_payment', 'verification_pending', 'payment_confirmed', 'paid'].includes(paymentStatus);
-  if (filter === 'awaiting_start') {
-    if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
-    return status === 'awaiting_start' || status === 'payment_started' || status === 'payment_returned' || status === 'awaiting_payment' || paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || status === 'payment_confirmed' || paymentStatus === 'payment_confirmed' || paymentStatus === 'paid';
-  }
-  if (filter === 'project_active') return ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
-  if (filter === 'delivered') return isDeliveredTask(task);
-  if (filter === 'completed') return status === 'completed';
-  if (filter === 'archived') return ['archived', 'cancelled', 'rejected'].includes(status);
-  return true;
+  return resolveAdminTaskCategory(task) === filter;
 }
 
 function getTaskFilterCounts(tasks = []) {
-  return TASK_FILTERS.reduce((counts, [key]) => {
-    counts[key] = key === 'all'
-      ? tasks.length
-      : tasks.filter((task) => taskMatchesOperationalFilter(task, key)).length;
+  const counts = TASK_FILTERS.reduce((counts, [key]) => {
+    counts[key] = 0;
     return counts;
   }, {});
+  counts.all = tasks.length;
+  tasks.forEach((task) => {
+    const category = resolveAdminTaskCategory(task);
+    if (Object.prototype.hasOwnProperty.call(counts, category)) {
+      counts[category] += 1;
+    }
+  });
+  return counts;
 }
 
 function renderTaskFilterChips(counts = {}) {
@@ -5269,38 +5279,23 @@ function renderTasks(tasks) {
     return;
   }
 
-  const groups = [
-    {
-      title: 'Review / Plan',
-      slug: 'active-operations',
-      tasks: visibleTasks.filter((task) => !['awaiting_payment', 'verification_pending'].includes(normalizeStatus(task.payment_status)) && ['new', 'request_received', 'needs_info', 'on_hold', 'review_pending', 'review_in_progress', 'quote_preparation', 'quoted', 'quote_sent', 'execution_plan_ready'].includes(normalizeStatus(task.status)))
-    },
-    {
-      title: 'Awaiting Start',
-      slug: 'awaiting-payment',
-      tasks: visibleTasks.filter((task) => {
-        const status = normalizeStatus(task.status);
-        const paymentStatus = normalizeStatus(task.payment_status);
-        if (['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status)) return false;
-        return paymentStatus === 'awaiting_payment' || paymentStatus === 'verification_pending' || status === 'awaiting_start' || status === 'payment_started' || status === 'payment_returned' || status === 'awaiting_payment' || paymentStatus === 'payment_confirmed' || status === 'payment_confirmed';
-      })
-    },
-    {
-      title: 'Project Active',
-      slug: 'in-progress',
-      tasks: visibleTasks.filter((task) => ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(normalizeStatus(task.status)))
-    },
-    {
-      title: 'Delivered',
-      slug: 'delivered',
-      tasks: visibleTasks.filter(isDeliveredTask)
-    },
-    {
-      title: 'Completed Archive',
-      slug: 'completed-archive',
-      tasks: visibleTasks.filter((task) => ['completed', 'archived', 'cancelled', 'rejected'].includes(normalizeStatus(task.status)))
-    }
-  ].filter((group) => group.tasks.length);
+  const categoryOrder = TASK_FILTERS
+    .map(([key]) => key)
+    .filter((key) => key !== 'all');
+  const renderedCategories = adminTaskFilter === 'all'
+    ? categoryOrder
+    : categoryOrder.filter((key) => key === adminTaskFilter);
+  const groups = renderedCategories.map((category) => {
+    const section = ADMIN_TASK_CATEGORY_SECTIONS[category] || {
+      title: category.replace(/_/g, ' '),
+      slug: category.replace(/_/g, '-')
+    };
+    return {
+      title: section.title,
+      slug: section.slug,
+      tasks: visibleTasks.filter((task) => resolveAdminTaskCategory(task) === category)
+    };
+  }).filter((group) => group.tasks.length);
 
   const renderTaskCard = (task) => {
     const domId = getTaskDomId(task);
@@ -5334,12 +5329,13 @@ function renderTasks(tasks) {
       actions.push({ type: 'send-branding', label: 'Send full branding link' });
     }
     const status = normalizeStatus(task.status);
-    const isNew = ['new', 'request_received', 'review_pending', 'needs_info'].includes(status);
-    const isActive = ['workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status);
+    const taskCategory = resolveAdminTaskCategory(task);
+    const isNew = ['new', 'needs_info', 'review_complete'].includes(taskCategory);
+    const isActive = taskCategory === 'project_active';
     const isPaymentVerificationPending = hasPaymentReturnSignal(task) || normalizeStatus(task.payment_status) === 'verification_pending' || status === 'payment_returned';
-    const isAwaitingPayment = isPaymentVerificationPending || normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(status);
-    const isDelivered = status === 'delivered';
-    const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
+    const isAwaitingPayment = taskCategory === 'awaiting_start' || isPaymentVerificationPending;
+    const isDelivered = taskCategory === 'delivered';
+    const isComplete = ['completed', 'archived'].includes(taskCategory);
     const isExecutionPlanSent = status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.quote_note || task.delivery_eta;
     const planEmailDelivered = task.raw_payload?.execution_plan_email_delivered === true || task.raw_payload?.execution_plan_email_status === 'sent';
     const planSentAt = task.raw_payload?.execution_plan_sent_at || task.quoted_at || task.updated_at || '';
