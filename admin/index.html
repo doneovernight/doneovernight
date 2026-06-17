@@ -6328,13 +6328,16 @@ adminActivity?.addEventListener('click', (event) => {
 });
 
 function buildBunqPaymentLinkFromQuote(value, reference = '', taskReference = '') {
+  void taskReference;
   const amount = String(value || '').replace(/[^\d]/g, '');
   if (!amount) return '';
   const cleanReference = String(reference || '').trim();
-  const cleanTaskReference = String(taskReference || '').trim();
-  const description = cleanReference
-    ? [cleanReference, cleanTaskReference || 'Execution Plan'].filter(Boolean).join(' ')
-    : 'DONEOVERNIGHT Execution Plan';
+  const descriptionReference = cleanReference ? `🌙 ${cleanReference}` : '🌙 DONEOVERNIGHT';
+  const description = [
+    descriptionReference,
+    'Execution Plan Approved',
+    'Workspace activation begins automatically after payment confirmation.'
+  ].join('\n\n');
   return `https://bunq.me/doneovernight?amount=${encodeURIComponent(amount)}&description=${encodeURIComponent(description)}`;
 }
 

@@ -78,13 +78,16 @@ function extractQuoteAmountDigits(value) {
 }
 
 function buildBunqPaymentLink(value, reference = "", taskReference = "") {
+  void taskReference;
   const amount = extractQuoteAmountDigits(value);
   if (!amount) return "";
   const cleanReference = clean(reference);
-  const cleanTaskReference = clean(taskReference);
-  const description = cleanReference
-    ? [cleanReference, cleanTaskReference || "Execution Plan"].filter(Boolean).join(" ")
-    : "DONEOVERNIGHT Execution Plan";
+  const descriptionReference = cleanReference ? `🌙 ${cleanReference}` : "🌙 DONEOVERNIGHT";
+  const description = [
+    descriptionReference,
+    "Execution Plan Approved",
+    "Workspace activation begins automatically after payment confirmation."
+  ].join("\n\n");
   const encodedAmount = encodeURIComponent(amount);
   const encodedDescription = encodeURIComponent(description);
   return `https://bunq.me/doneovernight?amount=${encodedAmount}&description=${encodedDescription}`;
