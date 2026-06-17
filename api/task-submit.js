@@ -70,6 +70,12 @@ function buildPaymentStartUrl(task) {
   return `${startUrl.pathname}${startUrl.search}`;
 }
 
+function hashPaymentReturnSignal(value = "") {
+  const safe = clean(value).slice(0, 500);
+  if (!safe) return "";
+  return crypto.createHash("sha256").update(safe).digest("hex").slice(0, 32);
+}
+
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json");
@@ -360,6 +366,94 @@ async function handlePaymentStartRequest(req, res) {
   }
 }
 
+async function handlePaymentReturnRequest(req, res) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    const taskId = clean(url.searchParams.get("task_id") || url.searchParams.get("taskId") || url.searchParams.get("reference") || url.searchParams.get("id"));
+    const txid = clean(url.searchParams.get("txid") || url.searchParams.get("transaction_id") || url.searchParams.get("transactionId"));
+    const redirectResultPresent = url.searchParams.has("redirectResult");
+
+    if (!taskId) {
+      return send(res, 400, { success: false, accepted: false, reason: "task_id_required" });
+    }
+
+    if (!txid && !redirectResultPresent) {
+      return send(res, 400, { success: false, accepted: false, reason: "payment_return_signal_required" });
+    }
+
+    const task = await loadReviewTask(taskId);
+    if (!task) {
+      return send(res, 404, { success: false, accepted: false, reason: "task_not_found" });
+    }
+
+    const now = new Date().toISOString();
+    const currentStatus = normalizeTaskStatus(task.status);
+    const currentPaymentStatus = normalizeTaskStatus(task.payment_status);
+    const alreadyConfirmed =
+      ["paid", "payment_confirmed"].includes(currentPaymentStatus) ||
+      ["paid", "payment_confirmed", "workspace_ready", "workspace_active", "execution_active", "project_active"].includes(currentStatus);
+    const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+    const signal = {
+      task_id: firstClean(task.task_id, task.taskId, task.id),
+      txid,
+      redirect_result_present: redirectResultPresent,
+      received_at: now,
+      query_keys: Array.from(url.searchParams.keys()).filter((key) => !/token/i.test(key)).slice(0, 12),
+      user_agent_hash: hashPaymentReturnSignal(req.headers["user-agent"] || "")
+    };
+    const previousSignals = Array.isArray(rawPayload.payment_return_signals)
+      ? rawPayload.payment_return_signals
+      : [];
+    const nextRawPayload = {
+      ...rawPayload,
+      payment_returned_at: now,
+      payment_return_requires_verification: true,
+      payment_return: signal,
+      payment_return_signals: [signal, ...previousSignals].slice(0, 10)
+    };
+
+    const patch = {
+      raw_payload: nextRawPayload,
+      updated_at: now
+    };
+
+    if (!alreadyConfirmed) {
+      patch.status = "payment_returned";
+      patch.payment_status = "verification_pending";
+    }
+
+    const updatedRows = await supabaseFetch([
+      `task_requests?${buildTaskFilter(taskId)}`,
+      "select=*"
+    ].join("&"), {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(patch)
+    });
+    const updatedTask = Array.isArray(updatedRows) ? updatedRows[0] : null;
+
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      payment_returned: true,
+      payment_confirmed: alreadyConfirmed,
+      workspace_activated: false,
+      status: normalizeTaskStatus(updatedTask?.status || task.status),
+      payment_status: normalizeTaskStatus(updatedTask?.payment_status || task.payment_status),
+      task_id: firstClean(task.task_id, task.taskId, task.id),
+      txid,
+      redirectResultPresent,
+      reason: alreadyConfirmed ? "return_signal_recorded_existing_confirmation" : "return_signal_recorded_needs_verification"
+    });
+  } catch (error) {
+    return send(res, error.statusCode || 500, {
+      success: false,
+      accepted: false,
+      reason: error.statusCode && error.statusCode < 500 ? error.message : "payment_return_unavailable"
+    });
+  }
+}
+
 function safeReviewFallback(reason = "review_token_required") {
   return {
     success: false,
@@ -626,6 +720,11 @@ function isWorkspaceActivationRequest(req, input = {}) {
     input.intent === "workspace_activate";
 }
 
+function isPaymentReturnRequest(req) {
+  return String(req.url || "").includes("payment_return=1") ||
+    String(req.url || "").includes("/api/payment-return");
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -666,6 +765,9 @@ module.exports = async function handler(req, res) {
     }
     if (url.searchParams.get("payment_start") === "1") {
       return handlePaymentStartRequest(req, res);
+    }
+    if (url.searchParams.get("payment_return") === "1" || isPaymentReturnRequest(req)) {
+      return handlePaymentReturnRequest(req, res);
     }
     return handleReviewStateRequest(req, res);
   }

@@ -17,6 +17,7 @@ const VALID_STATUSES = new Set([
   "execution_plan_ready",
   "awaiting_start",
   "payment_started",
+  "payment_returned",
   "awaiting_payment",
   "payment_confirmed",
   "workspace_ready",
@@ -38,6 +39,7 @@ const VALID_STATUSES = new Set([
 const VALID_PAYMENT_STATUSES = new Set([
   "not_required_yet",
   "awaiting_payment",
+  "verification_pending",
   "payment_confirmed",
   "paid",
   "payment_failed",
