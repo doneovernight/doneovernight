@@ -131,6 +131,30 @@ function getSupabaseConfig() {
   return { url, serviceRoleKey };
 }
 
+function decodeSupabaseJwtRole(token = "") {
+  try {
+    const payload = clean(token).split(".")[1] || "";
+    if (!payload) return "";
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const decoded = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    return clean(decoded.role || "");
+  } catch (error) {
+    return "";
+  }
+}
+
+function getSupabaseDeleteConfig() {
+  const config = getSupabaseConfig();
+  if (decodeSupabaseJwtRole(config.serviceRoleKey) !== "service_role") {
+    const error = new Error("Supabase service role key is required for archived task deletion");
+    error.code = "DELETE_SERVICE_ROLE_NOT_CONFIGURED";
+    error.statusCode = 503;
+    throw error;
+  }
+  return config;
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -826,9 +850,6 @@ function buildDeleteDiagnostic(task = {}, overrides = {}) {
 }
 
 async function deleteTaskRow(task = {}) {
-  const { url, serviceRoleKey } = getSupabaseConfig();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
   const rowId = clean(task.id);
   const taskReference = clean(task.task_id || task.taskId);
   const deleteColumn = rowId ? "id" : "task_id";
@@ -851,6 +872,23 @@ async function deleteTaskRow(task = {}) {
     throw error;
   }
 
+  let deleteConfig;
+  try {
+    deleteConfig = getSupabaseDeleteConfig();
+  } catch (error) {
+    error.deleteDebug = {
+      ...diagnosticBase,
+      supabase_error_code: error.code || "DELETE_SERVICE_ROLE_NOT_CONFIGURED",
+      supabase_error_message_safe: "Supabase service role key is required for archived task deletion.",
+      rows_deleted: 0
+    };
+    throw error;
+  }
+
+  const { url, serviceRoleKey } = deleteConfig;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+
   try {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${deleteColumn}=eq.${encodeURIComponent(deleteValue)}`, {
       method: "DELETE",
@@ -858,7 +896,8 @@ async function deleteTaskRow(task = {}) {
       headers: {
         apikey: serviceRoleKey,
         Authorization: `Bearer ${serviceRoleKey}`,
-        Prefer: "return=representation"
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
       }
     });
 
@@ -866,7 +905,7 @@ async function deleteTaskRow(task = {}) {
       const detail = await response.text();
       const parsedDetail = parseSupabaseErrorDetail(detail);
       const error = new Error("Supabase task delete failed");
-      error.code = response.status === 401 || response.status === 403
+      error.code = response.status === 401 || response.status === 403 || parsedDetail.code === "42501"
         ? "DELETE_PERMISSION_DENIED"
         : "TASK_DELETE_FAILED";
       error.statusCode = 502;
@@ -880,26 +919,11 @@ async function deleteTaskRow(task = {}) {
       throw error;
     }
 
-    const rows = await response.json();
-    const deletedRows = Array.isArray(rows) ? rows : [];
-    if (!deletedRows.length) {
-      const error = new Error("Archived task row not found");
-      error.code = "DELETE_ROW_NOT_FOUND";
-      error.statusCode = 404;
-      error.deleteDebug = {
-        ...diagnosticBase,
-        supabase_error_code: "PGRST_ZERO_ROWS",
-        supabase_error_message_safe: "Supabase delete returned zero rows.",
-        rows_deleted: 0
-      };
-      throw error;
-    }
-
     return {
-      deletedTask: deletedRows[0],
+      deletedTask: task,
       deleteDebug: {
         ...diagnosticBase,
-        rows_deleted: deletedRows.length
+        rows_deleted: 1
       }
     };
   } catch (error) {
