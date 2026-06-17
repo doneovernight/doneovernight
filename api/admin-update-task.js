@@ -843,6 +843,21 @@ module.exports = async function handler(req, res) {
         provider: "none",
         error: error.code || "ADMIN_NEEDS_INFO_EMAIL_FAILED"
       }));
+      const emailDelivered = needsInfoEmail?.delivered === true || needsInfoEmail?.sent === true;
+      const emailStatus = emailDelivered ? "sent" : (needsInfoEmail?.configured === false ? "not_configured" : "failed");
+      const informationRequestSentAt = new Date().toISOString();
+      const secureReviewUrl = buildSecureReviewUrl(updatedTask);
+      updatedTask = await patchTaskRawPayload(taskId, updatedTask, {
+        information_request_sent: emailDelivered,
+        information_request_sent_at: emailDelivered ? informationRequestSentAt : "",
+        information_request_email_status: emailStatus,
+        information_request_email_error: emailDelivered ? "" : (needsInfoEmail?.error || needsInfoEmail?.reason || "not_sent"),
+        information_request_email_provider: needsInfoEmail?.provider || "none",
+        information_request: updatedTask.information_request || updatedTask.info_request || updatedTask.delivery_note || updatedTask.raw_payload?.information_request || updatedTask.raw_payload?.delivery_note || "",
+        secure_review_url: secureReviewUrl || updatedTask.raw_payload?.secure_review_url || updatedTask.client_review_url || "",
+        client_review_url: secureReviewUrl || updatedTask.raw_payload?.client_review_url || updatedTask.client_review_url || "",
+        task_status_label: "Waiting for client information"
+      }).catch(() => updatedTask);
     }
     return send(res, 200, {
       success: true,

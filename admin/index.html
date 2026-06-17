@@ -3603,6 +3603,10 @@ function getTaskRenderSignature(task) {
     task.raw_payload?.activation_email_status,
     task.raw_payload?.payment_confirmation_email_sent_at,
     task.raw_payload?.payment_confirmation_email_status,
+    task.raw_payload?.information_request_sent,
+    task.raw_payload?.information_request_sent_at,
+    task.raw_payload?.information_request_email_status,
+    task.raw_payload?.information_request_email_error,
     task.updated_at,
     task.created_at
   ].map((value) => String(value ?? '')).join('::');
@@ -3760,13 +3764,15 @@ function getTaskActivationStatus(task = {}) {
   const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
   const paymentConfirmedAt = task.paid_at || rawPayload.payment_confirmed_at || '';
   const workspaceActivatedAt = rawPayload.workspace_activated_at || rawPayload.project_active_at || task.started_at || '';
-  const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
+  const activationEmailSentAt = rawPayload.activation_email_sent_at || rawPayload.payment_confirmed_email_sent_at || rawPayload.payment_confirmation_email_sent_at || '';
+  const activationEmailStatus = normalizeStatus(rawPayload.activation_email_status || rawPayload.payment_confirmed_email_status || rawPayload.payment_confirmation_email_status || '');
   const paymentConfirmed = ['paid', 'payment_confirmed'].includes(paymentStatus) || ['payment_confirmed', 'workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress'].includes(status);
   const workspaceActive = ['workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status) ||
     ['workspace_active', 'active'].includes(workspaceStatus) ||
     ['project_active', 'execution_active', 'active'].includes(projectStatus) ||
     Boolean(workspaceActivatedAt);
-  const activationEmailSent = Boolean(activationEmailSentAt) || rawPayload.activation_email_status === 'sent' || rawPayload.payment_confirmation_email_status === 'sent';
+  const activationEmailSent = Boolean(activationEmailSentAt) || activationEmailStatus === 'sent';
+  const activationEmailFailed = !activationEmailSent && ['failed', 'not_configured', 'not_sent'].includes(activationEmailStatus);
 
   if (!paymentConfirmed && !workspaceActive && !activationEmailSent) return null;
 
@@ -3774,7 +3780,26 @@ function getTaskActivationStatus(task = {}) {
     paymentConfirmed,
     workspaceActive,
     activationEmailSent,
+    activationEmailFailed,
     activatedAt: activationEmailSentAt || workspaceActivatedAt || paymentConfirmedAt || task.updated_at || ''
+  };
+}
+
+function getTaskInformationRequestStatus(task = {}) {
+  const rawPayload = task.raw_payload || {};
+  const status = normalizeStatus(task.status);
+  if (status !== 'needs_info' && status !== 'waiting_for_client_information') return null;
+
+  const emailStatus = normalizeStatus(rawPayload.information_request_email_status || '');
+  const sentAt = rawPayload.information_request_sent_at || '';
+  const sent = rawPayload.information_request_sent === true || emailStatus === 'sent' || Boolean(sentAt);
+  const failed = ['failed', 'not_configured', 'not_sent'].includes(emailStatus) || Boolean(rawPayload.information_request_email_error);
+
+  return {
+    sent,
+    failed: !sent && failed,
+    status: sent ? 'Information Request Sent' : failed ? 'Information Request Failed' : 'Information Request Pending',
+    sentAt
   };
 }
 
@@ -5233,6 +5258,7 @@ function renderTasks(tasks) {
     const planEmailDelivered = task.raw_payload?.execution_plan_email_delivered === true || task.raw_payload?.execution_plan_email_status === 'sent';
     const planSentAt = task.raw_payload?.execution_plan_sent_at || task.quoted_at || task.updated_at || '';
     const activationStatus = getTaskActivationStatus(task);
+    const informationRequestStatus = getTaskInformationRequestStatus(task);
     const priority = getTaskPriority(task);
     const activityLabel = getTaskActivityLabel(task);
     const recovery = isAwaitingPayment ? getRevenueRecovery(task) : null;
@@ -5276,8 +5302,15 @@ function renderTasks(tasks) {
       <div class="admin-activation-status">
         <strong>${activationStatus.paymentConfirmed ? '✓ Payment Confirmed' : 'Payment Pending'}</strong>
         <strong class="${activationStatus.workspaceActive ? '' : 'is-pending'}">${activationStatus.workspaceActive ? '✓ Workspace Active' : 'Workspace Pending'}</strong>
-        <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : 'Activation Email Pending'}</strong>
+        <strong class="${activationStatus.activationEmailSent ? '' : 'is-pending'}">${activationStatus.activationEmailSent ? '✓ Activation Email Sent' : activationStatus.activationEmailFailed ? 'Activation Email Failed' : 'Activation Email Pending'}</strong>
         ${activationStatus.activatedAt ? `<time>${escapeHTML(formatTaskDate(activationStatus.activatedAt) || '')}</time>` : ''}
+      </div>
+    ` : '';
+    const informationRequestBanner = informationRequestStatus ? `
+      <div class="admin-plan-sent-banner">
+        <strong>Waiting for client information</strong>
+        <span>${escapeHTML(informationRequestStatus.status)}</span>
+        ${informationRequestStatus.sentAt ? `<time>${escapeHTML(formatTaskDate(informationRequestStatus.sentAt) || '')}</time>` : ''}
       </div>
     ` : '';
     const actionMarkup = actions.length ? `
@@ -5327,6 +5360,7 @@ function renderTasks(tasks) {
         ${renderLifecycle(task.status)}
         ${planSentBanner}
         ${activationStatusBanner}
+        ${informationRequestBanner}
         ${(task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link) ? `
           <div class="admin-task-detail">
             <span class="admin-task-detail-label">Execution Plan</span>
