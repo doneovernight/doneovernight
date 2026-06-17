@@ -4197,7 +4197,7 @@ function renderQuotesPayments(tasks = adminTasks) {
           <div>
             <span>Amount</span>
             <strong>${task.quote_amount ? escapeHTML(String(task.quote_amount)) : 'No real amount yet'}</strong>
-            <p>${escapeHTML(task.payment_link ? 'Start link present' : 'No start link')}</p>
+            <p>${escapeHTML(getPaymentStatusLabel(task.payment_status))}</p>
           </div>
           <div>
             <span>Start status</span>
@@ -5254,7 +5254,7 @@ function renderTasks(tasks) {
     const isAwaitingPayment = isPaymentVerificationPending || normalizeStatus(task.payment_status) === 'awaiting_payment' || ['awaiting_start', 'payment_started', 'awaiting_payment'].includes(status);
     const isDelivered = status === 'delivered';
     const isComplete = ['completed', 'archived', 'cancelled', 'rejected'].includes(status);
-    const isExecutionPlanSent = status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.payment_link;
+    const isExecutionPlanSent = status === 'quoted' || status === 'quote_sent' || status === 'execution_plan_ready' || task.quoted_at || task.quote_amount || task.quote_note || task.delivery_eta;
     const planEmailDelivered = task.raw_payload?.execution_plan_email_delivered === true || task.raw_payload?.execution_plan_email_status === 'sent';
     const planSentAt = task.raw_payload?.execution_plan_sent_at || task.quoted_at || task.updated_at || '';
     const activationStatus = getTaskActivationStatus(task);
@@ -5268,9 +5268,7 @@ function renderTasks(tasks) {
           <strong>${escapeHTML(isPaymentVerificationPending ? 'Payment returned · needs verification' : 'Awaiting start')}</strong>
           <span>${escapeHTML(isPaymentVerificationPending ? 'Client returned from payment. Verify manually before confirming payment or activating workspace.' : `${task.name || task.email || 'Client'} can approve the plan and start execution.`)}</span>
         </div>
-        ${task.payment_link
-          ? `<a class="admin-payment-link" href="${escapeHTML(task.payment_link)}" target="_blank" rel="noopener noreferrer">Open start link →</a>`
-          : '<span class="admin-payment-link" aria-disabled="true">Link pending</span>'}
+        <span class="admin-payment-link" aria-disabled="true">Start metadata stored internally</span>
       </div>
     ` : '';
     const recoveryCard = recovery ? `
@@ -5361,13 +5359,12 @@ function renderTasks(tasks) {
         ${planSentBanner}
         ${activationStatusBanner}
         ${informationRequestBanner}
-        ${(task.quote_amount || task.quote_note || task.delivery_eta || task.payment_link) ? `
+        ${(task.quote_amount || task.quote_note || task.delivery_eta) ? `
           <div class="admin-task-detail">
             <span class="admin-task-detail-label">Execution Plan</span>
             ${quoteNoteText ? `<div><strong>Scope</strong> · ${quoteNoteText}</div>` : ''}
             ${deliveryEta ? `<div><strong>Timeline</strong> · ${deliveryEta}</div>` : ''}
             <div><strong>Investment</strong> · ${quoteAmount}</div>
-            ${task.payment_link ? `<div class="admin-task-eta">${escapeHTML(task.payment_link)}</div>` : ''}
           </div>
         ` : ''}
         ${invoiceNumber ? `
@@ -6317,11 +6314,6 @@ function _openOpModal(type, task) {
         <div class="op-modal-field">
           <label for="omQNote">Scope note <span class="field-opt">optional</span></label>
           <textarea id="omQNote" name="quote_note" rows="2" placeholder="Includes revisions, source files…">${escapeHTML(task?.quote_note || '')}</textarea>
-        </div>
-        <div class="op-modal-field">
-          <label for="omQLink">Custom secure checkout link — optional</label>
-          <input id="omQLink" name="payment_link" type="url" placeholder="https://checkout.example.com/session" value="${escapeHTML(task?.payment_link || '')}" autocomplete="off">
-          <p class="field-opt">Optional. Leave empty to auto-generate the internal checkout destination. Clients only see DONEOVERNIGHT Secure Checkout.</p>
         </div>`;
     } else {
       title.textContent  = 'Deliver';

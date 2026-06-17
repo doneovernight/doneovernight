@@ -443,8 +443,7 @@
         delivery_eta: "",
         note: "",
         deliverables: "",
-        deliverables_source: "submitted_request",
-        payment_link: ""
+        deliverables_source: "submitted_request"
       };
       let informationRequest = "";
       let reviewLanguage = safe(params.get("lang") || params.get("language"), 8).toLowerCase();
@@ -819,7 +818,7 @@
             state = "review";
             quoteUrl = "";
             informationRequest = "";
-            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request", payment_link: "" };
+            quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request" };
             renderReviewState();
             return;
           }
@@ -841,8 +840,7 @@
             delivery_eta: safe(data.review.quote?.delivery_eta || "", 120),
             note: safe(data.review.quote?.quote_note || data.review.quote?.note || "", 260),
             deliverables: safe(data.review.quote?.deliverables || data.review.task_summary || "", 260),
-            deliverables_source: safe(data.review.quote?.deliverables_source || "", 40) === "plan" ? "plan" : "submitted_request",
-            payment_link: quoteUrl
+            deliverables_source: safe(data.review.quote?.deliverables_source || "", 40) === "plan" ? "plan" : "submitted_request"
           };
           window.trackEvent?.("review_opened", {
             state: requested,
@@ -861,7 +859,7 @@
           state = "review";
           quoteUrl = "";
           informationRequest = "";
-          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request", payment_link: "" };
+          quoteDetails = { amount: "", delivery_eta: "", note: "", deliverables: "", deliverables_source: "submitted_request" };
           renderReviewState();
         }
       }
