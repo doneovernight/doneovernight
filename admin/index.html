@@ -1531,6 +1531,40 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
+.admin-client-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-client-workspace-item {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+  background: rgba(245, 241, 234, 0.018);
+  padding: 11px 12px;
+}
+
+.admin-client-workspace-item span {
+  display: block;
+  color: rgba(245, 241, 234, 0.34);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-client-workspace-item strong {
+  display: block;
+  margin-top: 6px;
+  color: rgba(245, 241, 234, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .admin-task-id {
   color: rgba(233, 196, 138, 0.72);
   font-family: var(--mono);
@@ -2055,15 +2089,18 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.5;
 }
 
-.admin-task-message.is-success {
+.admin-task-message.is-success,
+.admin-client-message.is-success {
   color: rgba(139, 224, 173, 0.78);
 }
 
-.admin-task-message.is-warning {
+.admin-task-message.is-warning,
+.admin-client-message.is-warning {
   color: rgba(233, 196, 138, 0.78);
 }
 
-.admin-task-message.is-error {
+.admin-task-message.is-error,
+.admin-client-message.is-error {
   color: rgba(229, 112, 112, 0.78);
 }
 
@@ -3173,6 +3210,7 @@ let activeRevenueDrawer = null;
 let adminActivityExpanded = false;
 let adminTaskRenderSignature = '';
 const adminTaskFlashMessages = new Map();
+const adminClientFlashMessages = new Map();
 let adminStatsSnapshot = {
   totalTasks: 0,
   pendingReviewTasks: 0,
@@ -3214,6 +3252,68 @@ function getTaskForClient(client = {}) {
     const taskSlug = slugifyWorkspace(task.company || task.name || task.email || '');
     return (email && taskEmail === email) || (slug && taskSlug === slug);
   }) || null;
+}
+
+function isActiveWorkspaceTask(task = {}) {
+  const status = normalizeStatus(task.status);
+  const paymentStatus = normalizeStatus(task.payment_status || task.raw_payload?.payment_status);
+  const workspaceStatus = normalizeStatus(task.workspace_status || task.raw_payload?.workspace_status || task.raw_payload?.workspace_activation_status);
+  const projectStatus = normalizeStatus(task.project_status || task.raw_payload?.project_status);
+  return canOpenWorkspace(task) ||
+    ['payment_confirmed', 'operators_assigned', 'workspace_active', 'project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep'].includes(status) ||
+    ['paid', 'payment_confirmed'].includes(paymentStatus) ||
+    ['active', 'workspace_active'].includes(workspaceStatus) ||
+    ['active', 'project_active', 'execution_active'].includes(projectStatus) ||
+    task.raw_payload?.workspace_active === true;
+}
+
+function sortClientWorkspaceTasks(tasks = []) {
+  return [...tasks].sort((a, b) => {
+    const aOpen = canOpenWorkspace(a) ? 1 : 0;
+    const bOpen = canOpenWorkspace(b) ? 1 : 0;
+    if (aOpen !== bOpen) return bOpen - aOpen;
+    const aActive = isActiveWorkspaceTask(a) ? 1 : 0;
+    const bActive = isActiveWorkspaceTask(b) ? 1 : 0;
+    if (aActive !== bActive) return bActive - aActive;
+    return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+  });
+}
+
+function getClientWorkspaceSummary(client = {}) {
+  const matches = getClientTaskMatches(client);
+  const sortedMatches = sortClientWorkspaceTasks(matches);
+  const primaryTask = sortedMatches[0] || null;
+  const activeProjectCount = matches.filter(isActiveWorkspaceTask).length;
+  const workspaceSlug = primaryTask ? getTaskWorkspaceSlug(primaryTask) : getClientWorkspaceSlug(client);
+  const workspaceActive = primaryTask ? canOpenWorkspace(primaryTask) : false;
+  const workspaceStatus = workspaceActive
+    ? 'Active'
+    : workspaceSlug
+      ? 'Pending'
+      : 'Not active';
+  const latestActivityAt = sortedMatches
+    .map((task) => task.updated_at || task.created_at)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || client.updated_at || client.created_at;
+  const paymentWorkspaceStatus = primaryTask
+    ? [
+        getPaymentStatusLabel(primaryTask.payment_status),
+        workspaceActive ? 'Workspace active' : getStatusLabel(primaryTask.status)
+      ].filter(Boolean).join(' · ')
+    : 'No active project';
+
+  return {
+    tasks: matches,
+    primaryTask,
+    activeProjectCount,
+    workspaceSlug,
+    workspaceActive,
+    workspaceStatus,
+    latestReference: primaryTask ? getTaskId(primaryTask) : '',
+    latestProjectStatus: primaryTask ? getStatusLabel(primaryTask.status) : '',
+    lastActivityAt: latestActivityAt,
+    paymentWorkspaceStatus
+  };
 }
 
 function normalizeStatus(status) {
@@ -3330,7 +3430,7 @@ function getClientActions(status) {
       { type: 'reject', label: 'Reject', status: 'revoked' }
     ],
     active: [
-      { type: 'revoke', label: 'Revoke', status: 'revoked' }
+      { type: 'revoke', label: 'Revoke access', status: 'revoked' }
     ],
     revoked: [
       { type: 'reactivate', label: 'Re-activate', status: 'active' }
@@ -4985,14 +5085,31 @@ function getClientTaskMatches(client = {}) {
 
 function renderClientRow(client) {
   const createdAt = formatTaskDate(client.created_at);
-  const matchingTasks = getClientTaskMatches(client);
-  const lastActivityAt = matchingTasks
-    .map((task) => task.updated_at || task.created_at)
-    .filter(Boolean)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || client.updated_at || client.created_at;
-  const source = client.source || client.last_source || matchingTasks[0]?.source || 'Unavailable';
-  const actions = client.email ? getClientActions(client.status) : [];
+  const workspaceSummary = getClientWorkspaceSummary(client);
+  const matchingTasks = workspaceSummary.tasks;
+  const primaryTask = workspaceSummary.primaryTask;
+  const lastActivityAt = workspaceSummary.lastActivityAt;
+  const source = client.source || client.last_source || primaryTask?.source || matchingTasks[0]?.source || 'Unavailable';
+  const clientActions = client.email ? getClientActions(client.status) : [];
+  const workspaceActions = primaryTask && workspaceSummary.workspaceActive
+    ? [
+        { type: 'open-workspace-client', label: 'Open workspace', taskId: primaryTask.id || primaryTask.task_id || primaryTask.taskId },
+        { type: 'edit-workspace-slug-client', label: 'Edit workspace slug', taskId: primaryTask.id || primaryTask.task_id || primaryTask.taskId }
+      ]
+    : [];
+  const actions = [...workspaceActions, ...clientActions];
   const group = getClientStatusGroup(client.status);
+  const flashMessage = getClientFlashMessage(client);
+  const workspaceGrid = `
+    <div class="admin-client-workspace-grid">
+      <div class="admin-client-workspace-item"><span>Workspace</span><strong>${escapeHTML(workspaceSummary.workspaceSlug ? `@${workspaceSummary.workspaceSlug}` : 'Not active')}</strong></div>
+      <div class="admin-client-workspace-item"><span>Status</span><strong>${escapeHTML(workspaceSummary.workspaceStatus)}</strong></div>
+      <div class="admin-client-workspace-item"><span>Active projects</span><strong>${escapeHTML(String(workspaceSummary.activeProjectCount))}</strong></div>
+      <div class="admin-client-workspace-item"><span>Latest project</span><strong>${escapeHTML(workspaceSummary.latestReference || 'No DON reference')}</strong></div>
+      <div class="admin-client-workspace-item"><span>Project status</span><strong>${escapeHTML(workspaceSummary.latestProjectStatus || 'No active project')}</strong></div>
+      <div class="admin-client-workspace-item"><span>Payment / workspace</span><strong>${escapeHTML(workspaceSummary.paymentWorkspaceStatus)}</strong></div>
+    </div>
+  `;
   const actionMarkup = actions.length ? `
     <div class="admin-client-actions">
       ${actions.map((action) => `
@@ -5000,11 +5117,12 @@ function renderClientRow(client) {
           class="admin-client-action"
           type="button"
           data-client-action="${action.type}"
-          data-client-status="${action.status}"
+          ${action.status ? `data-client-status="${escapeHTML(action.status)}"` : ''}
           data-client-email="${escapeHTML(client.email)}"
+          ${action.taskId ? `data-task-id="${escapeHTML(action.taskId)}"` : ''}
         >${action.label}</button>
       `).join('')}
-      <span class="admin-client-message" aria-live="polite"></span>
+      <span class="admin-client-message ${flashMessage ? `is-${escapeHTML(flashMessage.type || 'success')}` : ''}" aria-live="polite">${flashMessage ? escapeHTML(flashMessage.text || '') : ''}</span>
     </div>
   ` : '';
   return `
@@ -5019,6 +5137,7 @@ function renderClientRow(client) {
       <div class="admin-client-meta">
         Source: ${escapeHTML(source)} · Asks: ${matchingTasks.length} · Last activity: ${escapeHTML(formatTaskDate(lastActivityAt) || createdAt || 'Unavailable')}
       </div>
+      ${workspaceGrid}
       ${actionMarkup}
     </article>
   `;
@@ -5161,13 +5280,14 @@ function getWorkspaceSelectPayload(select) {
   if (!option || !option.value) return null;
   const client = (adminClients || []).find((item) => String(item.email || '') === option.value) || {};
   const task = getTaskForClient(client);
+  const workspaceSummary = getClientWorkspaceSummary(client);
   return {
     client,
-    task,
-    workspace_slug: option.dataset.workspaceSlug || getClientWorkspaceSlug(client),
+    task: workspaceSummary.primaryTask || task,
+    workspace_slug: option.dataset.workspaceSlug || workspaceSummary.workspaceSlug || getClientWorkspaceSlug(client),
     email: option.dataset.email || client.email || '',
     name: option.dataset.name || getClientDisplayName(client),
-    task_id: task?.task_id || task?.taskId || task?.id || ''
+    task_id: workspaceSummary.primaryTask?.task_id || workspaceSummary.primaryTask?.taskId || workspaceSummary.primaryTask?.id || task?.task_id || task?.taskId || task?.id || ''
   };
 }
 
@@ -5178,9 +5298,11 @@ function renderWorkspaceSelectors() {
   const clients = sortedClients(adminClients || []);
   const options = clients.map((client) => {
     const email = client.email || '';
+    const workspaceSummary = getClientWorkspaceSummary(client);
     const labelParts = [
       getClientDisplayName(client),
       email,
+      workspaceSummary.workspaceSlug ? `@${workspaceSummary.workspaceSlug}` : '',
       getClientStatusLabel(client.status)
     ].filter(Boolean);
     return `
@@ -5188,7 +5310,7 @@ function renderWorkspaceSelectors() {
         value="${escapeHTML(email)}"
         data-email="${escapeHTML(email)}"
         data-name="${escapeHTML(getClientDisplayName(client))}"
-        data-workspace-slug="${escapeHTML(getClientWorkspaceSlug(client))}"
+        data-workspace-slug="${escapeHTML(workspaceSummary.workspaceSlug || getClientWorkspaceSlug(client))}"
       >${escapeHTML(labelParts.join(' · '))}</option>
     `;
   }).join('');
@@ -6125,6 +6247,24 @@ function getTaskFlashMessage(task = {}) {
   return null;
 }
 
+function getClientFlashKey(clientOrEmail = {}) {
+  if (clientOrEmail && typeof clientOrEmail === 'object') {
+    return String(clientOrEmail.email || '').trim().toLowerCase();
+  }
+  return String(clientOrEmail || '').trim().toLowerCase();
+}
+
+function setClientFlashMessage(clientOrEmail, text, type = 'success') {
+  const key = getClientFlashKey(clientOrEmail);
+  if (!key || !text) return;
+  adminClientFlashMessages.set(key, { text, type });
+}
+
+function getClientFlashMessage(client = {}) {
+  const key = getClientFlashKey(client);
+  return key ? adminClientFlashMessages.get(key) || null : null;
+}
+
 function mergeUpdatedTaskIntoAdminState(updatedTask) {
   if (!updatedTask?.id) return null;
   const updatedId = String(updatedTask.id);
@@ -6145,6 +6285,60 @@ function getWorkspaceSlugUpdateWarning(data = {}) {
   }
   if (data.warning) return String(data.warning);
   return '';
+}
+
+async function saveWorkspaceSlugFromModal({ button, task, slugResult, controls, client }) {
+  const previousText = button.textContent;
+  const taskId = task?.id || task?.task_id || task?.taskId || '';
+  if (!taskId) throw new Error('Could not update workspace slug. TASK_ID_REQUIRED');
+
+  controls.setPending(true, 'Saving...');
+  button.disabled = true;
+  button.textContent = 'Processing...';
+
+  let data;
+  try {
+    data = await requestTaskUpdate({
+      id: taskId,
+      action: 'update_workspace_slug',
+      workspace_slug: slugResult.workspace_slug
+    });
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = previousText;
+    const code = error?.code || error?.data?.code || error?.message || 'WORKSPACE_SLUG_UPDATE_FAILED';
+    throw new Error(`Could not update workspace slug. ${code}`);
+  }
+
+  const updatedTask = extractUpdatedTask(data);
+  if (!updatedTask) {
+    button.disabled = false;
+    button.textContent = previousText;
+    throw new Error('Could not update workspace slug. TASK_RESPONSE_MISSING');
+  }
+
+  const warning = getWorkspaceSlugUpdateWarning(data);
+  const flashText = warning
+    ? `Workspace slug updated. Warning: ${warning}`
+    : 'Workspace slug updated.';
+
+  try {
+    setTaskFlashMessage(updatedTask || task || taskId, flashText, warning ? 'warning' : 'success');
+    if (client?.email) setClientFlashMessage(client, flashText, warning ? 'warning' : 'success');
+    const mergedTask = mergeUpdatedTaskIntoAdminState(updatedTask);
+    if (!mergedTask) throw new Error('TASK_UI_UPDATE_FAILED');
+  } catch (uiError) {
+    button.disabled = false;
+    button.textContent = previousText;
+    controls.setPending(false);
+    throw new Error('TASK_UI_UPDATE_FAILED');
+  }
+
+  button.disabled = false;
+  button.textContent = previousText;
+  controls.setPending(false);
+  controls.close(data);
+  return data;
 }
 
 function getStageTimestampPatch(stage, now = new Date().toISOString()) {
@@ -6750,8 +6944,39 @@ adminClientsList.addEventListener('click', async (e) => {
   const button = e.target.closest('.admin-client-action');
   if (!button || button.disabled) return;
 
+  const row = button.closest('.admin-client-row');
+  const message = row?.querySelector('.admin-client-message');
+  const action = button.dataset.clientAction || '';
+  const taskId = button.dataset.taskId || '';
   const email = button.dataset.clientEmail;
   const status = button.dataset.clientStatus;
+  const client = (adminClients || []).find((item) => String(item.email || '').toLowerCase() === String(email || '').toLowerCase()) || {};
+
+  if (action === 'open-workspace-client') {
+    const task = (adminTasks || []).find((item) => String(item.id || item.task_id || item.taskId || '') === String(taskId));
+    const workspaceUrl = getTaskWorkspaceUrl(task);
+    if (!canOpenWorkspace(task) || !workspaceUrl) {
+      if (message) message.textContent = 'Workspace is not active for this client yet.';
+      return;
+    }
+    window.open(workspaceUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (action === 'edit-workspace-slug-client') {
+    const task = (adminTasks || []).find((item) => String(item.id || item.task_id || item.taskId || '') === String(taskId));
+    if (!task) {
+      if (message) message.textContent = 'Workspace task was not found.';
+      return;
+    }
+    await promptForWorkspaceSlug(task, {
+      onSubmit: async (slugResult, controls) => {
+        await saveWorkspaceSlugFromModal({ button, task, slugResult, controls, client });
+      }
+    });
+    return;
+  }
+
   if (!email || !status) return;
 
   await updateClient(button, {
@@ -7102,48 +7327,7 @@ adminTasksList.addEventListener('click', async (e) => {
     const task = (adminTasks || []).find(t => t.id === taskId);
     await promptForWorkspaceSlug(task, {
       onSubmit: async (slugResult, controls) => {
-        const previousText = button.textContent;
-        controls.setPending(true, 'Saving...');
-        button.disabled = true;
-        button.textContent = 'Saving...';
-        let data;
-        try {
-          data = await requestTaskUpdate({
-            id: taskId,
-            action: 'update_workspace_slug',
-            workspace_slug: slugResult.workspace_slug
-          });
-        } catch (error) {
-          button.disabled = false;
-          button.textContent = previousText;
-          const code = error?.code || error?.data?.code || error?.message || 'WORKSPACE_SLUG_UPDATE_FAILED';
-          throw new Error(`Could not update workspace slug. ${code}`);
-        }
-
-        const updatedTask = extractUpdatedTask(data);
-        if (!updatedTask) {
-          button.disabled = false;
-          button.textContent = previousText;
-          throw new Error('Could not update workspace slug. TASK_RESPONSE_MISSING');
-        }
-        const warning = getWorkspaceSlugUpdateWarning(data);
-        const flashText = warning
-          ? `Workspace slug updated. Warning: ${warning}`
-          : 'Workspace slug updated.';
-        try {
-          setTaskFlashMessage(updatedTask || task || taskId, flashText, warning ? 'warning' : 'success');
-          const mergedTask = mergeUpdatedTaskIntoAdminState(updatedTask);
-          if (!mergedTask) throw new Error('TASK_UI_UPDATE_FAILED');
-        } catch (uiError) {
-          button.disabled = false;
-          button.textContent = previousText;
-          controls.setPending(false);
-          throw new Error('TASK_UI_UPDATE_FAILED');
-        }
-        button.disabled = false;
-        button.textContent = previousText;
-        controls.setPending(false);
-        controls.close(data);
+        await saveWorkspaceSlugFromModal({ button, task, slugResult, controls });
       }
     });
     return;
