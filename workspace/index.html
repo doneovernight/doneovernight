@@ -3336,6 +3336,14 @@
         if (portalAccessLink) portalAccessLink.style.display = isAuthenticated ? 'none' : 'inline-flex';
       }
 
+      function formatWorkspaceHeroIdentity({ email = '', slug = '' } = {}) {
+        const cleanEmail = String(email || '').trim();
+        const cleanSlug = normalizeSlug(slug);
+        return [cleanEmail || 'Client workspace', cleanSlug ? `@${cleanSlug}` : '']
+          .filter(Boolean)
+          .join(' · ');
+      }
+
       function renderWorkspacePendingState(message = 'Open the secure portal to verify access.') {
         const lockedMessage = /access key|private workspace access required|workspace_session_required|request a fresh/i.test(String(message || ''))
           ? 'Open the secure portal with your issued credentials to continue into the private workspace.'
@@ -4590,8 +4598,11 @@
             company: payload.workspace?.company || '',
             clientId: payload.workspace?.id || ''
           });
-          workspaceName.textContent = payload.workspace?.name || payload.workspace?.company || `@${workspaceSlug}`;
-          workspaceSubcopy.textContent = `${payload.workspace?.email || 'Client workspace'}${workspaceSlug ? ` · @${workspaceSlug}` : ''}${payload.workspace?.company ? ` · ${payload.workspace.company}` : ''}`;
+          workspaceName.textContent = payload.workspace?.name || (workspaceSlug ? `@${workspaceSlug}` : (payload.workspace?.email || 'Workspace setup'));
+          workspaceSubcopy.textContent = formatWorkspaceHeroIdentity({
+            email: payload.workspace?.email,
+            slug: workspaceSlug
+          });
           workspaceProjectRoom = payload.projectRoom || null;
           tasks = payload.tasks || [];
           await loadWorkspaceMessages();
@@ -5421,9 +5432,9 @@
         if (!shouldContinue) return;
         const session = getSession();
         storeSession(session);
-        workspaceName.textContent = session.name || session.email || 'Workspace setup';
+        workspaceName.textContent = session.name || (session.slug ? `@${session.slug}` : (session.email || 'Workspace setup'));
         workspaceSubcopy.textContent = session.email
-          ? `${session.email}${session.company ? ` · ${session.company}` : ''}`
+          ? formatWorkspaceHeroIdentity({ email: session.email, slug: session.slug })
           : 'Open portal access to complete workspace setup.';
         requestPanel.querySelector('.request-panel-row').addEventListener('click', toggleRequestPanel);
         requestPanelToggle.addEventListener('click', (event) => {
