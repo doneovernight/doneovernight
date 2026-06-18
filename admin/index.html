@@ -3657,6 +3657,12 @@ function getTaskRenderSignature(task) {
     task.quote_note,
     task.delivery_eta,
     task.payment_link,
+    task.workspace_slug,
+    task.workspace_url,
+    task.raw_payload?.workspace_slug,
+    task.raw_payload?.workspace_url,
+    task.raw_payload?.workspace_slug_updated_at,
+    task.raw_payload?.workspace_slug_update_status,
     task.deadline,
     task.source,
     task.raw_payload?.referral_task_id,
@@ -7124,8 +7130,18 @@ adminTasksList.addEventListener('click', async (e) => {
         const flashText = warning
           ? `Workspace slug updated. Warning: ${warning}`
           : 'Workspace slug updated.';
-        setTaskFlashMessage(updatedTask || task || taskId, flashText, warning ? 'warning' : 'success');
-        mergeUpdatedTaskIntoAdminState(updatedTask);
+        try {
+          setTaskFlashMessage(updatedTask || task || taskId, flashText, warning ? 'warning' : 'success');
+          const mergedTask = mergeUpdatedTaskIntoAdminState(updatedTask);
+          if (!mergedTask) throw new Error('TASK_UI_UPDATE_FAILED');
+        } catch (uiError) {
+          button.disabled = false;
+          button.textContent = previousText;
+          controls.setPending(false);
+          throw new Error('TASK_UI_UPDATE_FAILED');
+        }
+        button.disabled = false;
+        button.textContent = previousText;
         controls.setPending(false);
         controls.close(data);
       }
