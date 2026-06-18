@@ -907,6 +907,153 @@
       overflow-wrap: anywhere;
     }
 
+    .workspace-operation-meta {
+      display: block;
+      margin-top: 7px;
+      color: rgba(255,255,255,.42);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .workspace-operation-rail {
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(255,255,255,.055);
+      background: rgba(5,6,8,.82);
+      padding: 12px 14px 14px;
+    }
+
+    .workspace-progress-rail {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      align-items: start;
+    }
+
+    .workspace-progress-step {
+      position: relative;
+      min-width: 0;
+      color: rgba(255,255,255,.3);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .workspace-progress-step::before {
+      display: block;
+      width: 7px;
+      height: 7px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 999px;
+      background: rgba(255,255,255,.045);
+      box-shadow: 0 0 0 rgba(233,196,138,0);
+      content: "";
+    }
+
+    .workspace-progress-step::after {
+      position: absolute;
+      top: 3px;
+      left: 11px;
+      width: calc(100% - 6px);
+      height: 1px;
+      background: rgba(255,255,255,.08);
+      content: "";
+    }
+
+    .workspace-progress-step:last-child::after {
+      display: none;
+    }
+
+    .workspace-progress-step.is-complete,
+    .workspace-progress-step.is-current {
+      color: rgba(245,241,234,.72);
+    }
+
+    .workspace-progress-step.is-complete::before {
+      border-color: rgba(139,224,173,.35);
+      background: rgba(139,224,173,.75);
+      box-shadow: 0 0 16px rgba(139,224,173,.25);
+    }
+
+    .workspace-progress-step.is-current::before {
+      border-color: rgba(233,196,138,.65);
+      background: rgba(233,196,138,.9);
+      box-shadow: 0 0 18px rgba(233,196,138,.32);
+    }
+
+    .workspace-progress-step.is-complete::after {
+      background: rgba(139,224,173,.22);
+    }
+
+    .workspace-donbot {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      z-index: 55;
+      display: none;
+      width: 132px;
+      border: 1px solid rgba(233,196,138,.18);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(233,196,138,.08), transparent 48%),
+        rgba(5,6,8,.9);
+      box-shadow: 0 24px 64px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+      color: rgba(245,241,234,.8);
+      padding: 13px 14px;
+      text-align: left;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+    }
+
+    .workspace-donbot.is-visible {
+      display: block;
+    }
+
+    .workspace-donbot strong {
+      display: block;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .workspace-donbot span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(139,224,173,.78);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .workspace-donbot p {
+      display: none;
+      margin: 10px 0 0;
+      color: rgba(255,255,255,.54);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .workspace-donbot.is-open p {
+      display: block;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .workspace-donbot.is-visible {
+        animation: donbotStandby 32s ease-in-out infinite;
+      }
+    }
+
+    @keyframes donbotStandby {
+      0%, 92%, 100% { transform: translateY(0); border-color: rgba(233,196,138,.18); }
+      95% { transform: translateY(-2px); border-color: rgba(233,196,138,.32); }
+    }
+
     .workspace-task-drawer-backdrop {
       position: fixed;
       inset: 0;
@@ -2539,6 +2686,8 @@
       .workspace-os-two { grid-template-columns: 1fr; }
       .workspace-operation-row { grid-template-columns: 1fr 1fr; }
       .workspace-operation-cell:first-child { grid-column: 1 / -1; }
+      .workspace-progress-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 14px; }
+      .workspace-progress-step:nth-child(4)::after { display: none; }
       .quote-cards-grid { grid-template-columns: 1fr; }
       .request-panel-row { align-items: flex-start; }
       .task-top { flex-direction: column; }
@@ -2575,8 +2724,16 @@
       .workspace-metrics { grid-template-columns: 1fr; }
       .workspace-os-grid { grid-template-columns: 1fr; }
       .workspace-operation-row { grid-template-columns: 1fr; }
+      .workspace-progress-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace-progress-step:nth-child(2n)::after { display: none; }
       .workspace-link-grid { grid-template-columns: 1fr; }
       .workspace-task-drawer { border-left: none; }
+      .workspace-donbot {
+        left: 12px;
+        bottom: 12px;
+        width: 118px;
+        padding: 10px 11px;
+      }
       .task-grid { grid-template-columns: 1fr; }
       .task-timeline { grid-template-columns: repeat(9, minmax(78px, 1fr)); }
     }
@@ -3165,6 +3322,12 @@
     </aside>
   </div>
 
+  <button class="workspace-donbot" id="workspaceDonbot" type="button" aria-expanded="false">
+    <strong>DONBOT</strong>
+    <span>Operational / Standby</span>
+    <p>DONBOT will help you turn ideas into new tasks.</p>
+  </button>
+
   <div class="access-modal-backdrop" id="accessCredentialModal" aria-hidden="true">
     <div class="access-modal" role="dialog" aria-modal="true" aria-labelledby="accessCredentialTitle">
       <p class="eyebrow">Private access</p>
@@ -3234,6 +3397,7 @@
       const workspaceTaskDrawerForm = document.getElementById('workspaceTaskDrawerForm');
       const drawerRequestMessage = document.getElementById('drawerRequestMessage');
       const drawerSubmitRequestBtn = document.getElementById('drawerSubmitRequestBtn');
+      const workspaceDonbot = document.getElementById('workspaceDonbot');
       const runtimeOperationFeed = document.getElementById('runtimeOperationFeed');
       const runtimeRevisionCommand = document.getElementById('runtimeRevisionCommand');
       const runtimeDeliveryCommand = document.getElementById('runtimeDeliveryCommand');
@@ -3252,6 +3416,9 @@
       let workspaceMessages = [];
       let workspaceQuotes = [];
       let workspaceProjectRoom = null;
+      let localSubmittedWorkspaceTasks = [];
+      let localWorkspaceEvents = [];
+      let localWorkspaceMessages = [];
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -3334,6 +3501,7 @@
         workspaceShell.classList.toggle('is-private', !isAuthenticated);
         workspaceShell.classList.toggle('is-authenticated', isAuthenticated);
         if (portalAccessLink) portalAccessLink.style.display = isAuthenticated ? 'none' : 'inline-flex';
+        workspaceDonbot?.classList.toggle('is-visible', isAuthenticated);
       }
 
       function formatWorkspaceHeroIdentity({ email = '', slug = '' } = {}) {
@@ -3437,9 +3605,14 @@
 
       function statusLabel(status) {
         const labels = {
+          request_received: 'Request received',
           review_pending: 'Review pending',
-          new: 'Quote pending',
+          under_review: 'Under review',
+          review_in_progress: 'Under review',
+          new: 'Request received',
           quoted: 'Quote sent',
+          execution_plan_ready: 'Execution plan ready',
+          awaiting_start: 'Awaiting start',
           awaiting_payment: 'Awaiting payment',
           verification_pending: 'Verification pending',
           queued: 'Queued',
@@ -3477,7 +3650,7 @@
       function taskCardClass(status) {
         const key = normalizeTaskStatus(status);
         if (key === 'delivered' || key === 'completed') return 'is-complete';
-        if (['review_pending', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep'].includes(key)) return 'is-active';
+        if (['request_received', 'under_review', 'review_in_progress', 'review_pending', 'quoted', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep'].includes(key)) return 'is-active';
         return '';
       }
 
@@ -3659,6 +3832,11 @@
           raw.invoice_amount ||
           raw.payment_link_amount ||
           raw.payment_amount ||
+          project.client_budget ||
+          project.clientBudget ||
+          raw.client_budget ||
+          raw.clientBudget ||
+          raw.budget ||
           '';
         const cleaned = String(value || '').trim();
         if (!cleaned) return 'Investment confirmed';
@@ -3694,15 +3872,88 @@
         return ['Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(status);
       }
 
-      function getActiveWorkspaceProjects(tasks = workspaceTasks) {
+      function getOperationPriority(task = {}) {
+        const clientStatus = getWorkspaceClientStatus(task);
+        const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
+        const payment = normalizeTaskStatus(task.payment_status || task.raw_payload?.payment_status);
+        if (['Project active', 'Execution scheduled'].includes(clientStatus)) return 1;
+        if (['request_received', 'review_pending', 'under_review', 'review_in_progress', 'new'].includes(status)) return 2;
+        if (['Execution plan ready'].includes(clientStatus) || ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(payment)) return 3;
+        if (['Delivered', 'Completed'].includes(clientStatus)) return 4;
+        return 5;
+      }
+
+      function getWorkspaceOperationTasks(tasks = workspaceTasks) {
         const roomProjects = [
           workspaceProjectRoom?.active_project,
           ...(workspaceProjectRoom?.other_requests || [])
         ].filter(Boolean);
-        const source = roomProjects.length ? roomProjects : tasks;
-        return sortTasks(source)
-          .filter(isWorkspaceActiveProject)
+        const byId = new Map();
+        [...tasks, ...roomProjects, ...localSubmittedWorkspaceTasks].forEach((task) => {
+          if (!task) return;
+          byId.set(getTaskId(task), task);
+        });
+        return [...byId.values()]
+          .filter((task) => !isCompletedTask(task) || ['Delivered', 'Completed'].includes(getWorkspaceClientStatus(task)))
+          .sort((a, b) => {
+            const priority = getOperationPriority(a) - getOperationPriority(b);
+            if (priority !== 0) return priority;
+            return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+          })
           .slice(0, 7);
+      }
+
+      function mergeWorkspaceTasks(tasks = []) {
+        const byId = new Map();
+        [...localSubmittedWorkspaceTasks, ...tasks].forEach((task) => {
+          if (!task) return;
+          byId.set(getTaskId(task), { ...(byId.get(getTaskId(task)) || {}), ...task });
+        });
+        return [...byId.values()];
+      }
+
+      function getOperationTimeline(operation = {}) {
+        return operation.delivery_eta || operation.deadline || operation.raw_payload?.deadline || 'Timeline updating';
+      }
+
+      function getOperationInvestment(operation = {}) {
+        const status = normalizeTaskStatus(operation.status || operation.raw_payload?.status);
+        const hasClientBudget = operation.client_budget || operation.clientBudget || operation.raw_payload?.client_budget || operation.raw_payload?.clientBudget || operation.raw_payload?.budget;
+        if (!hasClientBudget && ['request_received', 'review_pending', 'under_review', 'review_in_progress', 'new'].includes(status)) return 'Not provided';
+        return getProjectInvestment(operation);
+      }
+
+      function getOperationSource(operation = {}) {
+        const source = operation.source || operation.raw_payload?.source || '';
+        if (source === 'client_workspace') return 'Client workspace';
+        return source ? source.replace(/_/g, ' ') : '';
+      }
+
+      function getLifecycleProgressIndex(task = {}) {
+        const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
+        const payment = normalizeTaskStatus(task.payment_status || task.raw_payload?.payment_status);
+        const workspaceStatus = normalizeTaskStatus(task.workspace_status || task.raw_payload?.workspace_status || task.raw_payload?.workspace_activation_status);
+        const projectStatus = normalizeTaskStatus(task.project_status || task.raw_payload?.project_status);
+        if (['delivered', 'completed'].includes(status)) return 6;
+        if (['project_active', 'execution_active', 'queued', 'in_progress', 'delivery_prep', 'operators_assigned'].includes(status) || ['project_active', 'execution_active', 'active'].includes(projectStatus)) return 5;
+        if (workspaceStatus === 'active' || workspaceStatus === 'workspace_active' || task.raw_payload?.workspace_active === true) return 4;
+        if (payment === 'paid' || payment === 'payment_confirmed' || status === 'payment_confirmed') return 4;
+        if (['awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(payment)) return 3;
+        if (['execution_plan_ready', 'awaiting_start', 'quoted', 'quote_sent'].includes(status)) return 2;
+        if (['under_review', 'review_in_progress', 'review_pending'].includes(status)) return 1;
+        return 0;
+      }
+
+      function renderWorkspaceLifecycleRail(task = {}) {
+        const labels = ['Request', 'Review', 'Plan', 'Payment', 'Workspace', 'Execution', 'Delivery'];
+        const currentIndex = getLifecycleProgressIndex(task);
+        return `
+          <div class="workspace-progress-rail" aria-label="Operation lifecycle">
+            ${labels.map((label, index) => `
+              <span class="workspace-progress-step ${index < currentIndex ? 'is-complete' : (index === currentIndex ? 'is-current' : '')}">${escapeHTML(label)}</span>
+            `).join('')}
+          </div>
+        `;
       }
 
       function collectWorkspaceItems(...sources) {
@@ -3807,25 +4058,29 @@
         const activatedDate = project.raw_payload?.workspace_activated_at || '';
         const nextStep = project.current_next_step || (status === 'Delivered' ? 'Review the delivered work.' : 'Execution is active. Updates will appear in this workspace.');
         const workspaceSlugLabel = workspaceSlug ? `@${workspaceSlug}` : '';
-        const activeProjects = getActiveWorkspaceProjects(tasks);
+        const activeProjects = getWorkspaceOperationTasks(tasks);
         const operations = activeProjects.length ? activeProjects : [project];
+        const headerStatus = operations.some(isWorkspaceActiveProject)
+          ? 'Project Active'
+          : (operations[0]?.client_status || getWorkspaceClientStatus(operations[0]) || 'Request received');
 
         workspaceActiveProject.innerHTML = `
           <div class="workspace-os-head">
             <div>
               <p class="workspace-os-eyebrow">Current Operations</p>
-              <h2 class="workspace-os-title">Operation active.</h2>
+              <h2 class="workspace-os-title">Current operations.</h2>
             </div>
-            <span class="workspace-os-status">Project Active</span>
+            <span class="workspace-os-status">${escapeHTML(headerStatus)}</span>
           </div>
           <div class="workspace-operations-list">
             ${operations.map((operation) => `
               <div class="workspace-operation-row">
-                <div class="workspace-operation-cell"><span>Project</span><strong>${escapeHTML(operation.display_title || operation.task_summary || getTaskSummary(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Project</span><strong>${escapeHTML(operation.display_title || operation.task_summary || getTaskSummary(operation))}</strong>${getOperationSource(operation) ? `<em class="workspace-operation-meta">${escapeHTML(getOperationSource(operation))}</em>` : ''}</div>
                 <div class="workspace-operation-cell"><span>Reference</span><strong>${escapeHTML(getTaskId(operation))}</strong></div>
                 <div class="workspace-operation-cell"><span>Status</span><strong>${escapeHTML(operation.client_status || getWorkspaceClientStatus(operation))}</strong></div>
-                <div class="workspace-operation-cell"><span>Timeline</span><strong>${escapeHTML(operation.delivery_eta || 'Timeline updating')}</strong></div>
-                <div class="workspace-operation-cell"><span>Investment</span><strong>${escapeHTML(getProjectInvestment(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Timeline</span><strong>${escapeHTML(getOperationTimeline(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Investment</span><strong>${escapeHTML(getOperationInvestment(operation))}</strong></div>
+                <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(operation)}</div>
               </div>
             `).join('')}
           </div>
@@ -3839,13 +4094,19 @@
           ${renderWorkspaceRows(timelineEvents, 'No timeline events yet.')}
         `;
 
-        const latestUpdates = room.latest_updates?.length ? room.latest_updates : (project.raw_payload?.admin_activity_events || []);
+        const latestUpdates = [
+          ...localWorkspaceEvents,
+          ...(room.latest_updates?.length ? room.latest_updates : (project.raw_payload?.admin_activity_events || []))
+        ];
         workspaceLatestUpdates.innerHTML = `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Operations Feed</p><h3 class="workspace-os-title" style="font-size:34px">Movement</h3></div></div>
           ${renderWorkspaceRows(latestUpdates, 'Movement will appear as operations advances.')}
         `;
 
-        const visibleMessages = workspaceMessages.filter(isClientFacingWorkspaceMessage).slice(0, 7);
+        const visibleMessages = [
+          ...localWorkspaceMessages,
+          ...workspaceMessages.filter(isClientFacingWorkspaceMessage)
+        ].slice(0, 7);
         workspaceMessagesPanel.innerHTML = `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Messages</p><h3 class="workspace-os-title" style="font-size:34px">Client channel</h3></div></div>
           ${renderWorkspaceRows(visibleMessages.map((message) => ({
@@ -3947,8 +4208,8 @@
       }
 
       function updateWorkspaceMetrics(tasks) {
-        const activeStatuses = ['review_pending', 'new', 'quoted', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'];
-        const pendingQuoteStatuses = ['review_pending', 'new', 'quoted', 'awaiting_payment'];
+        const activeStatuses = ['request_received', 'under_review', 'review_in_progress', 'review_pending', 'new', 'quoted', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'verification_pending', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'];
+        const pendingQuoteStatuses = ['request_received', 'under_review', 'review_in_progress', 'review_pending', 'new', 'quoted', 'execution_plan_ready', 'awaiting_start', 'awaiting_payment'];
         workspaceActiveCount.textContent = tasks.filter((task) => activeStatuses.includes(String(task.status || '').toLowerCase())).length;
         workspaceQuoteCount.textContent = tasks.filter((task) => pendingQuoteStatuses.includes(String(task.status || '').toLowerCase())).length;
         const deliveredCount = tasks.filter((task) => ['delivered', 'completed'].includes(String(task.status || '').toLowerCase())).length;
@@ -4021,7 +4282,7 @@
         const hasDeliveryPrep = statuses.includes('delivery_prep');
         const hasExecution = statuses.some((status) => ['queued', 'in_progress'].includes(status));
         const hasQuote = statuses.some((status) => ['quoted', 'awaiting_payment', 'verification_pending'].includes(status)) || payments.includes('awaiting_payment');
-        const hasReview = statuses.some((status) => ['review_pending', 'new'].includes(status));
+        const hasReview = statuses.some((status) => ['request_received', 'under_review', 'review_in_progress', 'review_pending', 'new'].includes(status));
         const hasTasks = tasks.length > 0;
 
         if (hasRevision) return 'revision';
@@ -4538,7 +4799,7 @@
       }
 
       function renderTasks(tasks) {
-        workspaceTasks = sortTasks(tasks);
+        workspaceTasks = sortTasks(mergeWorkspaceTasks(tasks));
         const activeTasks = workspaceTasks.filter((task) => !isCompletedTask(task));
         const completedTasks = workspaceTasks.filter(isCompletedTask);
 
@@ -4936,19 +5197,44 @@
             payment_status: 'not_required_yet',
             queue_state: 'intake',
             deadline,
-            quote_amount: budget || null,
+            quote_amount: null,
+            client_budget: budget || null,
             delivery_eta: null,
+            updated_at: createdAt,
             created_at: createdAt,
             source: 'client_workspace',
             email: session.email,
             attachments,
             raw_payload: {
               workspace_slug: workspaceSlug || session.slug,
+              source: 'client_workspace',
+              deadline,
+              client_budget: budget || null,
               attachments,
               links
             }
           };
-          renderTasks([optimisticTask, ...workspaceTasks]);
+          try {
+            localSubmittedWorkspaceTasks = [
+              optimisticTask,
+              ...localSubmittedWorkspaceTasks.filter((task) => getTaskId(task) !== getTaskId(optimisticTask))
+            ].slice(0, 5);
+            localWorkspaceEvents = [{
+              title: 'New task submitted',
+              timestamp: createdAt,
+              meta: getTaskId(optimisticTask)
+            }, ...localWorkspaceEvents].slice(0, 5);
+            localWorkspaceMessages = [{
+              message: 'Task submitted to DONEOVERNIGHT Operations.',
+              created_at: createdAt,
+              message_type: 'client_workspace'
+            }, ...localWorkspaceMessages].slice(0, 5);
+            renderTasks([optimisticTask, ...workspaceTasks]);
+          } catch (uiError) {
+            drawerRequestMessage.textContent = 'TASK_UI_UPDATE_FAILED';
+            drawerRequestMessage.classList.add('is-error');
+            return;
+          }
           drawerRequestMessage.textContent = 'Task sent to DONEOVERNIGHT Operations.';
           drawerRequestMessage.classList.add('is-success');
           workspaceTaskDrawerForm.reset();
@@ -5452,6 +5738,10 @@
         document.getElementById('drawerDeadlinePills')?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-drawer-deadline]');
           if (button) setDrawerDeadline(button.dataset.drawerDeadline);
+        });
+        workspaceDonbot?.addEventListener('click', () => {
+          const isOpen = workspaceDonbot.classList.toggle('is-open');
+          workspaceDonbot.setAttribute('aria-expanded', String(isOpen));
         });
         renderRecommendations();
         recommendationRail?.addEventListener('click', (event) => {

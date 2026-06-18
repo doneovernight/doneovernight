@@ -541,6 +541,7 @@ function safeTaskSnapshot(task = {}) {
       rawPayload.payment_link_amount,
       rawPayload.payment_amount
     )),
+    client_budget: clean(task.client_budget || rawPayload.client_budget || rawPayload.clientBudget || rawPayload.budget),
     quote_note: clean(task.quote_note || rawPayload.quote_note || rawPayload.scope_note),
     delivery_eta: clean(task.delivery_eta || rawPayload.delivery_eta || rawPayload.timeline),
     delivery_link: ["delivered", "completed"].includes(normalizeTaskStatus(task.status)) ? clean(task.delivery_link || rawPayload.delivery_link) : "",
