@@ -806,6 +806,7 @@ function safeStorageErrorText(value) {
 
 async function storageFetch(path, options = {}) {
   const { url, serviceRoleKey } = getSupabaseStorageConfig();
+  const method = options.method || "GET";
   const response = await fetch(`${url}/storage/v1/${path}`, {
     ...options,
     headers: {
@@ -819,6 +820,9 @@ async function storageFetch(path, options = {}) {
     const text = await response.text().catch(() => "");
     const error = new Error(`Supabase storage request failed: ${response.status}`);
     error.statusCode = response.status;
+    error.code = "SUPABASE_STORAGE_HTTP_ERROR";
+    error.storageOperation = method;
+    error.storagePath = String(path || "").slice(0, 220);
     error.detail = safeStorageErrorText(text);
     throw error;
   }
@@ -998,19 +1002,23 @@ async function verifyWorkspaceAttachmentUpload(req, fields) {
 }
 
 async function handleWorkspaceAttachmentUpload(req, res) {
+  let uploadStage = "read_request";
   try {
     const buffer = await readMultipartBuffer(req);
+    uploadStage = "parse_multipart";
     const { fields, files } = parseMultipartUpload(buffer, req.headers["content-type"] || "");
     if (!files.length) {
       return send(res, 400, { success: false, code: "NO_FILES", error: "No files uploaded" });
     }
 
+    uploadStage = "verify_workspace_session";
     const workspace = await verifyWorkspaceAttachmentUpload(req, fields);
     const taskId = clean(fields.task_id || fields.taskId) || createTaskId(new Date());
     if (!TASK_ID_PATTERN.test(taskId)) {
       return send(res, 400, { success: false, code: "INVALID_TASK_ID", error: "Invalid task reference" });
     }
 
+    uploadStage = "ensure_bucket";
     await ensureAttachmentBucket();
     const uploadedAt = new Date().toISOString();
     const uploaded = [];
@@ -1018,7 +1026,9 @@ async function handleWorkspaceAttachmentUpload(req, res) {
     for (const file of files) {
       const filename = sanitizeAttachmentFilename(file.name);
       const storagePath = `workspace/${workspace.workspaceSlug}/${taskId.toUpperCase()}/${Date.now()}-${filename}`;
+      uploadStage = "upload_object";
       await uploadAttachmentObject(file, storagePath);
+      uploadStage = "create_signed_url";
       const signedUrl = await createAttachmentSignedUrl(storagePath);
       uploaded.push({
         name: clean(file.name) || filename,
@@ -1045,10 +1055,21 @@ async function handleWorkspaceAttachmentUpload(req, res) {
     });
   } catch (error) {
     const statusCode = error.statusCode || 500;
+    console.warn("[WORKSPACE_ATTACHMENT_UPLOAD_FAILED]", {
+      stage: uploadStage,
+      code: error.code || "FILE_UPLOAD_FAILED",
+      statusCode,
+      storageOperation: error.storageOperation || null,
+      storagePath: error.storagePath || null,
+      detail: error.detail || null
+    });
     return send(res, statusCode, {
       success: false,
       code: error.code || "FILE_UPLOAD_FAILED",
+      stage: uploadStage,
       error: statusCode < 500 ? error.message : "File upload failed",
+      storage_operation: error.storageOperation || undefined,
+      storage_path: error.storagePath || undefined,
       detail: error.detail || undefined
     });
   }

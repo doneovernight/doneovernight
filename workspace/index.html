@@ -5185,6 +5185,8 @@
         if (!response.ok || data?.success !== true) {
           const error = new Error('FILE_UPLOAD_FAILED');
           error.code = data?.code || 'FILE_UPLOAD_FAILED';
+          error.stage = data?.stage || '';
+          error.detail = data?.detail || '';
           throw error;
         }
 
@@ -5315,7 +5317,7 @@
           window.setTimeout(closeWorkspaceTaskDrawer, 450);
         } catch (error) {
           drawerRequestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
-            ? 'FILE_UPLOAD_FAILED. Remove the file or try again before sending.'
+            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
             : 'Could not send task. Please try again.';
           drawerRequestMessage.classList.add('is-error');
         } finally {
@@ -5444,7 +5446,7 @@
           await loadTasks({ silent: true });
         } catch (error) {
           requestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
-            ? 'FILE_UPLOAD_FAILED. Remove the file or try again before sending.'
+            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
             : 'Could not send task. Please try again.';
           requestMessage.classList.add('is-error');
         } finally {
