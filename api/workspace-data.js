@@ -442,6 +442,21 @@ function safeInvoices(task = {}) {
   });
 }
 
+function safeAssetList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (!item || typeof item !== "object") return null;
+    return {
+      title: clean(item.title || item.label || item.name || item.filename || item.file_name),
+      name: clean(item.name || item.filename || item.file_name),
+      url: clean(item.url || item.href || item.file_url || item.download_url || item.delivery_link),
+      created_at: clean(item.created_at || item.uploaded_at || item.delivered_at || item.timestamp),
+      type: clean(item.type || item.file_type || item.mime_type),
+      size: clean(item.size || item.file_size)
+    };
+  }).filter((item) => item && (item.title || item.name || item.url));
+}
+
 function lifecycleEventsForTask(task = {}) {
   const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
   const events = [
@@ -536,7 +551,18 @@ function safeTaskSnapshot(task = {}) {
       workspace_activation_status: clean(rawPayload.workspace_activation_status),
       workspace_activated_at: clean(rawPayload.workspace_activated_at),
       payment_confirmed_at: clean(rawPayload.payment_confirmed_at),
-      execution_plan_sent_at: clean(rawPayload.execution_plan_sent_at)
+      execution_plan_sent_at: clean(rawPayload.execution_plan_sent_at),
+      client_locale: clean(rawPayload.client_locale || rawPayload.language || rawPayload.preferred_language || rawPayload.lang),
+      files: safeAssetList(rawPayload.files),
+      uploaded_files: safeAssetList(rawPayload.uploaded_files),
+      file_uploads: safeAssetList(rawPayload.file_uploads),
+      attachments: safeAssetList(rawPayload.attachments),
+      deliverables: safeAssetList(rawPayload.deliverables),
+      completed_outputs: safeAssetList(rawPayload.completed_outputs),
+      delivery_files: safeAssetList(rawPayload.delivery_files),
+      referral_count: clean(rawPayload.referral_count ?? rawPayload.referrals_count ?? rawPayload.referrals),
+      referral_conversions: clean(rawPayload.referral_conversions ?? rawPayload.conversions),
+      reward_balance: clean(rawPayload.reward_balance ?? rawPayload.referral_reward_balance)
     }
   };
 }

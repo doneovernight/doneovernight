@@ -868,6 +868,155 @@
       text-transform: uppercase;
     }
 
+    .workspace-operations-list {
+      display: grid;
+      gap: 1px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.04);
+    }
+
+    .workspace-operation-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.35fr) minmax(112px, .72fr) minmax(112px, .8fr) minmax(120px, .9fr) minmax(104px, .72fr);
+      gap: 1px;
+      background: rgba(5,6,8,.72);
+    }
+
+    .workspace-operation-cell {
+      min-width: 0;
+      padding: 14px;
+    }
+
+    .workspace-operation-cell span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .workspace-operation-cell strong {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.42;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-task-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: stretch;
+      justify-content: flex-end;
+      background: rgba(0,0,0,.54);
+      backdrop-filter: blur(18px);
+    }
+
+    .workspace-task-drawer-backdrop.is-open {
+      display: flex;
+    }
+
+    .workspace-task-drawer {
+      width: min(520px, 100%);
+      height: 100%;
+      overflow-y: auto;
+      border-left: 1px solid rgba(233,196,138,.18);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.035), transparent 36%),
+        #07080a;
+      box-shadow: -34px 0 100px rgba(0,0,0,.58);
+      padding: clamp(22px, 4vw, 38px);
+    }
+
+    .workspace-task-drawer-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .workspace-task-drawer-title {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+
+    .workspace-drawer-close {
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.025);
+      color: rgba(255,255,255,.7);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .workspace-drawer-close:hover,
+    .workspace-drawer-close:focus-visible {
+      border-color: rgba(233,196,138,.36);
+      color: var(--amber);
+      outline: none;
+    }
+
+    .workspace-drawer-copy {
+      margin: -8px 0 22px;
+      color: rgba(255,255,255,.52);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .workspace-link-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .workspace-readonly-grid {
+      display: grid;
+      gap: 1px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.035);
+    }
+
+    .workspace-readonly-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(5,6,8,.72);
+      padding: 13px 14px;
+    }
+
+    .workspace-readonly-row span {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .workspace-readonly-row strong {
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 650;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
     .quote-center,
     #taskFeedSection,
     #completedHistorySection,
@@ -2388,6 +2537,8 @@
       .workspace-os-head { flex-direction: column; }
       .workspace-os-grid { grid-template-columns: 1fr 1fr; }
       .workspace-os-two { grid-template-columns: 1fr; }
+      .workspace-operation-row { grid-template-columns: 1fr 1fr; }
+      .workspace-operation-cell:first-child { grid-column: 1 / -1; }
       .quote-cards-grid { grid-template-columns: 1fr; }
       .request-panel-row { align-items: flex-start; }
       .task-top { flex-direction: column; }
@@ -2423,6 +2574,9 @@
       }
       .workspace-metrics { grid-template-columns: 1fr; }
       .workspace-os-grid { grid-template-columns: 1fr; }
+      .workspace-operation-row { grid-template-columns: 1fr; }
+      .workspace-link-grid { grid-template-columns: 1fr; }
+      .workspace-task-drawer { border-left: none; }
       .task-grid { grid-template-columns: 1fr; }
       .task-timeline { grid-template-columns: repeat(9, minmax(78px, 1fr)); }
     }
@@ -2669,7 +2823,7 @@
         <div class="workspace-client">Workspace <strong id="workspaceName">Secure access required</strong></div>
         <p class="hero-copy" id="workspaceSubcopy">Open the secure portal with your issued credentials to continue into the private workspace.</p>
         <div class="workspace-actions">
-          <button class="workspace-button primary-command" id="newRequestBtn" type="button">+ New Request</button>
+          <button class="workspace-button primary-command" id="newRequestBtn" type="button">+ New Task</button>
           <a class="workspace-button secondary" id="portalAccessLink" href="../portal/">Continue to Portal →</a>
         </div>
       </aside>
@@ -2701,6 +2855,14 @@
         </div>
         <div class="workspace-os-card" id="workspaceDeliveredPanel">
           <div class="workspace-os-empty">Delivery status is syncing…</div>
+        </div>
+      </div>
+      <div class="workspace-os-two">
+        <div class="workspace-os-card" id="workspaceReferralPanel">
+          <div class="workspace-os-empty">Referral center is syncing…</div>
+        </div>
+        <div class="workspace-os-card" id="workspaceSettingsPanel">
+          <div class="workspace-os-empty">Workspace settings are syncing…</div>
         </div>
       </div>
     </section>
@@ -2939,6 +3101,70 @@
     </section>
   </main>
 
+  <div class="workspace-task-drawer-backdrop" id="workspaceTaskDrawer" aria-hidden="true">
+    <aside class="workspace-task-drawer" role="dialog" aria-modal="true" aria-labelledby="workspaceTaskDrawerTitle">
+      <div class="workspace-task-drawer-head">
+        <div>
+          <p class="eyebrow">Workspace command</p>
+          <h2 class="workspace-task-drawer-title" id="workspaceTaskDrawerTitle">New task</h2>
+        </div>
+        <button class="workspace-drawer-close" id="closeWorkspaceTaskDrawer" type="button" aria-label="Close new task drawer">×</button>
+      </div>
+      <p class="workspace-drawer-copy">Send a focused task directly from this private workspace. Your client identity and workspace context stay attached automatically.</p>
+      <form class="request-form" id="workspaceTaskDrawerForm" novalidate>
+        <div class="field-group">
+          <label for="drawerRequestSummary">Task</label>
+          <textarea id="drawerRequestSummary" name="task_description" placeholder="Describe what needs to be handled, fixed, researched, built, cleaned up, or delivered." required></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Deadline</label>
+          <div class="deadline-pills" id="drawerDeadlinePills" role="radiogroup" aria-label="Deadline">
+            <button class="deadline-pill is-active" type="button" data-drawer-deadline="Tonight" role="radio" aria-checked="true">Tonight</button>
+            <button class="deadline-pill" type="button" data-drawer-deadline="48h" role="radio" aria-checked="false">48h</button>
+            <button class="deadline-pill" type="button" data-drawer-deadline="This Week" role="radio" aria-checked="false">This Week</button>
+            <button class="deadline-pill" type="button" data-drawer-deadline="Flexible" role="radio" aria-checked="false">Flexible</button>
+            <button class="deadline-pill" type="button" data-drawer-deadline="Custom Date" role="radio" aria-checked="false">Custom Date</button>
+          </div>
+          <input id="drawerRequestDeadline" name="deadline" type="hidden" value="Tonight">
+        </div>
+
+        <div class="other-deadline" id="drawerCustomDeadlinePanel">
+          <div class="field-group">
+            <label for="drawerCustomDeadline">Custom date</label>
+            <input id="drawerCustomDeadline" type="date">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="drawerRequestBudget">Budget <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <input id="drawerRequestBudget" name="budget" type="text" inputmode="numeric" placeholder="Optional">
+        </div>
+
+        <div class="field-group">
+          <label for="drawerFileUpload">Files</label>
+          <div class="file-support">
+            <input id="drawerFileUpload" name="attachments" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
+            <p class="field-helper">Selected filenames travel with the task. Share source files through links when needed.</p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Links</label>
+          <div class="workspace-link-grid">
+            <input id="drawerWetransferLink" type="url" placeholder="WeTransfer">
+            <input id="drawerGoogleDriveLink" type="url" placeholder="Google Drive">
+            <input id="drawerIcloudLink" type="url" placeholder="iCloud">
+            <input id="drawerDropboxLink" type="url" placeholder="Dropbox">
+          </div>
+        </div>
+
+        <div class="workspace-message" id="drawerRequestMessage" aria-live="polite"></div>
+        <button class="workspace-button primary-command" id="drawerSubmitRequestBtn" type="submit">Send Task</button>
+      </form>
+    </aside>
+  </div>
+
   <div class="access-modal-backdrop" id="accessCredentialModal" aria-hidden="true">
     <div class="access-modal" role="dialog" aria-modal="true" aria-labelledby="accessCredentialTitle">
       <p class="eyebrow">Private access</p>
@@ -2991,6 +3217,8 @@
       const workspaceFilesPanel = document.getElementById('workspaceFilesPanel');
       const workspaceInvoicesPanel = document.getElementById('workspaceInvoicesPanel');
       const workspaceDeliveredPanel = document.getElementById('workspaceDeliveredPanel');
+      const workspaceReferralPanel = document.getElementById('workspaceReferralPanel');
+      const workspaceSettingsPanel = document.getElementById('workspaceSettingsPanel');
       const completedHistoryFeed = document.getElementById('completedHistoryFeed');
       const completedHistoryMeta = document.getElementById('completedHistoryMeta');
       const requestForm = document.getElementById('workspaceRequestForm');
@@ -3002,6 +3230,10 @@
       const recommendationRail = document.getElementById('recommendationRail');
       const portalAccessLink = document.getElementById('portalAccessLink');
       const workspaceLogout = document.getElementById('workspaceLogout');
+      const workspaceTaskDrawer = document.getElementById('workspaceTaskDrawer');
+      const workspaceTaskDrawerForm = document.getElementById('workspaceTaskDrawerForm');
+      const drawerRequestMessage = document.getElementById('drawerRequestMessage');
+      const drawerSubmitRequestBtn = document.getElementById('drawerSubmitRequestBtn');
       const runtimeOperationFeed = document.getElementById('runtimeOperationFeed');
       const runtimeRevisionCommand = document.getElementById('runtimeRevisionCommand');
       const runtimeDeliveryCommand = document.getElementById('runtimeDeliveryCommand');
@@ -3021,6 +3253,7 @@
       let workspaceQuotes = [];
       let workspaceProjectRoom = null;
       let selectedWorkspaceDeadline = 'Tonight';
+      let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
       let localDeliveryState = sessionStorage.getItem('doneovernight:runtimeDeliveryState') || '';
       const REQUEST_RECOMMENDATIONS = [
@@ -3448,6 +3681,84 @@
         })[0] || null;
       }
 
+      function isWorkspaceActiveProject(task = {}) {
+        const status = getWorkspaceClientStatus(task);
+        return ['Project active', 'Execution scheduled', 'Delivered', 'Completed'].includes(status);
+      }
+
+      function getActiveWorkspaceProjects(tasks = workspaceTasks) {
+        const roomProjects = [
+          workspaceProjectRoom?.active_project,
+          ...(workspaceProjectRoom?.other_requests || [])
+        ].filter(Boolean);
+        const source = roomProjects.length ? roomProjects : tasks;
+        return sortTasks(source)
+          .filter(isWorkspaceActiveProject)
+          .slice(0, 7);
+      }
+
+      function collectWorkspaceItems(...sources) {
+        const items = [];
+        sources.forEach((source) => {
+          if (Array.isArray(source)) {
+            source.forEach((item) => {
+              if (item && typeof item === 'object') items.push(item);
+            });
+          }
+        });
+        return items;
+      }
+
+      function getWorkspaceFiles(project = {}, room = {}) {
+        const raw = project.raw_payload || {};
+        return collectWorkspaceItems(
+          room.files,
+          raw.files,
+          raw.uploaded_files,
+          raw.file_uploads,
+          raw.attachments,
+          project.attachments
+        ).map((file) => ({
+          title: file.title || file.label || file.name || file.filename || file.file_name || 'Attached file',
+          timestamp: file.created_at || file.uploaded_at || file.timestamp || '',
+          href: file.url || file.href || file.file_url || file.download_url || ''
+        })).filter((file) => file.title);
+      }
+
+      function getWorkspaceDeliverables(project = {}, room = {}) {
+        const raw = project.raw_payload || {};
+        return collectWorkspaceItems(
+          room.delivered_work,
+          raw.deliverables,
+          raw.completed_outputs,
+          raw.delivery_files
+        ).map((item) => ({
+          title: item.title || item.label || item.name || item.file_name || 'Delivered output',
+          delivered_at: item.delivered_at || item.created_at || item.timestamp || '',
+          delivery_link: item.delivery_link || item.url || item.href || item.file_url || ''
+        })).filter((item) => item.title);
+      }
+
+      function getReferralStats(project = {}) {
+        const raw = project.raw_payload || {};
+        const hasReferrals = raw.referral_count !== undefined || raw.referrals_count !== undefined || raw.referrals !== undefined;
+        const hasConversions = raw.referral_conversions !== undefined || raw.conversions !== undefined;
+        const hasReward = raw.reward_balance !== undefined || raw.referral_reward_balance !== undefined;
+        return {
+          referrals: hasReferrals ? String(raw.referral_count ?? raw.referrals_count ?? raw.referrals ?? 0) : 'Not connected yet',
+          conversions: hasConversions ? String(raw.referral_conversions ?? raw.conversions ?? 0) : 'Not connected yet',
+          reward: hasReward ? String(raw.reward_balance ?? raw.referral_reward_balance ?? '—') : 'Not connected yet'
+        };
+      }
+
+      function getWorkspaceLanguage(project = {}) {
+        const raw = project.raw_payload || {};
+        const value = raw.client_locale || raw.language || raw.preferred_language || raw.lang || sessionStorage.getItem('doneovernight_client_locale') || '';
+        if (/^nl/i.test(value)) return 'Dutch';
+        if (/^en/i.test(value)) return 'English';
+        return 'Not set';
+      }
+
       function renderWorkspaceRows(items = [], emptyText = 'No updates yet.') {
         if (!items.length) return `<div class="workspace-os-empty">${escapeHTML(emptyText)}</div>`;
         return `<ul class="workspace-os-list">${items.map((item) => `
@@ -3474,6 +3785,8 @@
           workspaceFilesPanel.innerHTML = '<div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>';
           workspaceInvoicesPanel.innerHTML = '<div class="workspace-os-empty">No invoices available yet.</div>';
           workspaceDeliveredPanel.innerHTML = '<div class="workspace-os-empty">Delivery will appear here when ready.</div>';
+          if (workspaceReferralPanel) workspaceReferralPanel.innerHTML = '<div class="workspace-os-empty">Referral center will appear after the workspace is active.</div>';
+          if (workspaceSettingsPanel) workspaceSettingsPanel.innerHTML = '<div class="workspace-os-empty">Workspace settings will appear after activation.</div>';
           return;
         }
 
@@ -3486,26 +3799,30 @@
         const activatedDate = project.raw_payload?.workspace_activated_at || '';
         const nextStep = project.current_next_step || (status === 'Delivered' ? 'Review the delivered work.' : 'Execution is active. Updates will appear in this workspace.');
         const workspaceSlugLabel = workspaceSlug ? `@${workspaceSlug}` : '';
+        const activeProjects = getActiveWorkspaceProjects(tasks);
+        const operations = activeProjects.length ? activeProjects : [project];
 
         workspaceActiveProject.innerHTML = `
           <div class="workspace-os-head">
             <div>
-              <p class="workspace-os-eyebrow">Active Project</p>
-              <h2 class="workspace-os-title">${escapeHTML(project.display_title || project.task_summary || 'Active Execution Project')}</h2>
+              <p class="workspace-os-eyebrow">Current Operations</p>
+              <h2 class="workspace-os-title">Operation active.</h2>
             </div>
-            <span class="workspace-os-status">${escapeHTML(status)}</span>
+            <span class="workspace-os-status">Project Active</span>
           </div>
-          <div class="workspace-os-grid">
-            <div class="workspace-os-kv"><span>Reference</span><strong>${escapeHTML(reference)}</strong></div>
-            <div class="workspace-os-kv"><span>Timeline</span><strong>${escapeHTML(timeline)}</strong></div>
-            <div class="workspace-os-kv"><span>Investment</span><strong>${escapeHTML(investment)}</strong></div>
-            <div class="workspace-os-kv"><span>Workspace</span><strong>${escapeHTML(workspaceSlugLabel || 'Active')}</strong></div>
-            <div class="workspace-os-kv"><span>Payment confirmed</span><strong>${escapeHTML(paymentDate ? formatDate(paymentDate) : 'Confirmed')}</strong></div>
-            <div class="workspace-os-kv"><span>Workspace activated</span><strong>${escapeHTML(activatedDate ? formatDate(activatedDate) : 'Active')}</strong></div>
-            <div class="workspace-os-kv"><span>Next milestone</span><strong>${escapeHTML(nextStep)}</strong></div>
-            <div class="workspace-os-kv"><span>Status</span><strong>${escapeHTML(status)}</strong></div>
+          <div class="workspace-operations-list">
+            ${operations.map((operation) => `
+              <div class="workspace-operation-row">
+                <div class="workspace-operation-cell"><span>Project</span><strong>${escapeHTML(operation.display_title || operation.task_summary || getTaskSummary(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Reference</span><strong>${escapeHTML(getTaskId(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Status</span><strong>${escapeHTML(operation.client_status || getWorkspaceClientStatus(operation))}</strong></div>
+                <div class="workspace-operation-cell"><span>Timeline</span><strong>${escapeHTML(operation.delivery_eta || 'Timeline updating')}</strong></div>
+                <div class="workspace-operation-cell"><span>Investment</span><strong>${escapeHTML(getProjectInvestment(operation))}</strong></div>
+              </div>
+            `).join('')}
           </div>
           <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
+          <p class="workspace-os-scope" style="margin-top:14px"><strong>Next milestone</strong>${escapeHTML(nextStep)}</p>
         `;
 
         const timelineEvents = room.lifecycle_events?.length ? room.lifecycle_events : clientTimelineEvents(project);
@@ -3531,9 +3848,19 @@
           <a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>
         `;
 
+        const files = getWorkspaceFiles(project, room);
         workspaceFilesPanel.innerHTML = `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Files</p><h3 class="workspace-os-title" style="font-size:34px">Attached work</h3></div></div>
-          <div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>
+          ${files.length ? `<ul class="workspace-os-list">${files.map((file) => `
+            <li class="workspace-os-row">
+              <span class="workspace-os-dot" aria-hidden="true"></span>
+              <div>
+                <strong>${escapeHTML(file.title)}</strong>
+                <span>${escapeHTML(file.timestamp ? formatDate(file.timestamp) : 'Attached file')}</span>
+                ${file.href ? `<a class="workspace-os-link" href="${escapeHTML(file.href)}" target="_blank" rel="noopener noreferrer">Open file</a>` : ''}
+              </div>
+            </li>
+          `).join('')}</ul>` : '<div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>'}
         `;
 
         const invoices = room.invoices?.length ? room.invoices : getTaskInvoices(project);
@@ -3551,7 +3878,7 @@
           `).join('')}</ul>` : '<div class="workspace-os-empty">No invoices available yet.</div>'}
         `;
 
-        const delivered = room.delivered_work?.length ? room.delivered_work : (['delivered', 'completed'].includes(normalizeTaskStatus(project.status)) ? [{
+        const delivered = getWorkspaceDeliverables(project, room).length ? getWorkspaceDeliverables(project, room) : (['delivered', 'completed'].includes(normalizeTaskStatus(project.status)) ? [{
           title: project.task_summary,
           timestamp: project.delivered_at,
           delivery_link: project.delivery_link
@@ -3569,6 +3896,29 @@
             </li>
           `).join('')}</ul>` : '<div class="workspace-os-empty">Delivery will appear here when ready.</div>'}
         `;
+
+        if (workspaceReferralPanel) {
+          const referralStats = getReferralStats(project);
+          workspaceReferralPanel.innerHTML = `
+            <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Referral Center</p><h3 class="workspace-os-title" style="font-size:34px">Referrals</h3></div></div>
+            <div class="workspace-readonly-grid">
+              <div class="workspace-readonly-row"><span>Referrals</span><strong>${escapeHTML(referralStats.referrals)}</strong></div>
+              <div class="workspace-readonly-row"><span>Conversions</span><strong>${escapeHTML(referralStats.conversions)}</strong></div>
+              <div class="workspace-readonly-row"><span>Reward balance</span><strong>${escapeHTML(referralStats.reward)}</strong></div>
+            </div>
+          `;
+        }
+
+        if (workspaceSettingsPanel) {
+          workspaceSettingsPanel.innerHTML = `
+            <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Workspace Settings</p><h3 class="workspace-os-title" style="font-size:34px">Settings</h3></div></div>
+            <div class="workspace-readonly-grid">
+              <div class="workspace-readonly-row"><span>Workspace slug</span><strong>${escapeHTML(workspaceSlugLabel || 'Not set')}</strong></div>
+              <div class="workspace-readonly-row"><span>Language</span><strong>${escapeHTML(getWorkspaceLanguage(project))}</strong></div>
+              <div class="workspace-readonly-row"><span>Notifications</span><strong>Email updates</strong></div>
+            </div>
+          `;
+        }
       }
 
       function sortTasks(tasks) {
@@ -4454,6 +4804,155 @@
         }
       }
 
+      function openWorkspaceTaskDrawer() {
+        if (!workspaceTaskDrawer) return;
+        drawerRequestMessage.textContent = '';
+        drawerRequestMessage.className = 'workspace-message';
+        workspaceTaskDrawer.classList.add('is-open');
+        workspaceTaskDrawer.removeAttribute('aria-hidden');
+        document.body.style.overflow = 'hidden';
+        window.setTimeout(() => document.getElementById('drawerRequestSummary')?.focus({ preventScroll: true }), 120);
+      }
+
+      function closeWorkspaceTaskDrawer() {
+        if (!workspaceTaskDrawer) return;
+        workspaceTaskDrawer.classList.remove('is-open');
+        workspaceTaskDrawer.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      function setDrawerDeadline(value) {
+        selectedDrawerDeadline = value;
+        document.getElementById('drawerRequestDeadline').value = value;
+        document.querySelectorAll('[data-drawer-deadline]').forEach((pill) => {
+          const active = pill.dataset.drawerDeadline === value;
+          pill.classList.toggle('is-active', active);
+          pill.setAttribute('aria-checked', String(active));
+        });
+        document.getElementById('drawerCustomDeadlinePanel').classList.toggle('is-visible', value === 'Custom Date');
+      }
+
+      function getDrawerDeadline() {
+        if (selectedDrawerDeadline !== 'Custom Date') return selectedDrawerDeadline;
+        const custom = document.getElementById('drawerCustomDeadline').value;
+        return custom ? `Custom Date: ${custom}` : 'Custom Date';
+      }
+
+      function getDrawerLinks() {
+        return [
+          document.getElementById('drawerWetransferLink')?.value,
+          document.getElementById('drawerGoogleDriveLink')?.value,
+          document.getElementById('drawerIcloudLink')?.value,
+          document.getElementById('drawerDropboxLink')?.value
+        ].map((value) => String(value || '').trim()).filter(Boolean);
+      }
+
+      function getDrawerAttachmentMetadata() {
+        const input = document.getElementById('drawerFileUpload');
+        return Array.from(input?.files || []).map((file) => ({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size
+        }));
+      }
+
+      function shakeDrawerForm() {
+        const field = document.getElementById('drawerRequestSummary').closest('.field-group');
+        field.classList.remove('is-invalid');
+        void field.offsetWidth;
+        field.classList.add('is-invalid');
+        window.setTimeout(() => field.classList.remove('is-invalid'), 520);
+      }
+
+      async function submitWorkspaceDrawerTask(event) {
+        event.preventDefault();
+        const session = getSession();
+        const taskDescription = document.getElementById('drawerRequestSummary').value.trim();
+        const budget = document.getElementById('drawerRequestBudget').value.trim();
+        const deadline = getDrawerDeadline();
+        const links = getDrawerLinks();
+        const attachments = getDrawerAttachmentMetadata();
+
+        drawerRequestMessage.className = 'workspace-message';
+        drawerRequestMessage.textContent = '';
+        if (!taskDescription || !session.email) {
+          if (!taskDescription) shakeDrawerForm();
+          drawerRequestMessage.textContent = taskDescription ? 'Private workspace access is required before sending.' : 'Add the task so operations can route it.';
+          drawerRequestMessage.classList.add('is-error');
+          return;
+        }
+
+        drawerSubmitRequestBtn.disabled = true;
+        drawerSubmitRequestBtn.textContent = 'Sending…';
+        try {
+          const response = await fetch('../api/task-submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              taskSummary: taskDescription,
+              task_description: taskDescription,
+              deadline,
+              budget,
+              client_budget: budget,
+              name: session.name,
+              email: session.email,
+              company: session.company,
+              client_id: session.clientId,
+              workspace_slug: workspaceSlug || session.slug,
+              links,
+              files_link: links.join('\n'),
+              attachments,
+              source: 'client_workspace',
+              intakeVersion: 'workspace_os_phase_2',
+              raw_payload: {
+                workspace_slug: workspaceSlug || session.slug,
+                submitted_from: 'workspace_task_drawer',
+                attachment_names: attachments.map((file) => file.name),
+                links
+              }
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success === false) throw new Error(data?.error || 'Workspace task failed');
+
+          const createdAt = new Date().toISOString();
+          const optimisticTask = {
+            id: data.taskId || data.task_id || createdAt,
+            task_id: data.taskId || data.task_id || 'Pending ID',
+            task_summary: taskDescription,
+            task_description: taskDescription,
+            status: 'request_received',
+            payment_status: 'not_required_yet',
+            queue_state: 'intake',
+            deadline,
+            quote_amount: budget || null,
+            delivery_eta: null,
+            created_at: createdAt,
+            source: 'client_workspace',
+            email: session.email,
+            attachments,
+            raw_payload: {
+              workspace_slug: workspaceSlug || session.slug,
+              attachments,
+              links
+            }
+          };
+          renderTasks([optimisticTask, ...workspaceTasks]);
+          drawerRequestMessage.textContent = 'Task sent to DONEOVERNIGHT Operations.';
+          drawerRequestMessage.classList.add('is-success');
+          workspaceTaskDrawerForm.reset();
+          setDrawerDeadline('Tonight');
+          await loadTasks({ silent: true });
+          window.setTimeout(closeWorkspaceTaskDrawer, 450);
+        } catch (error) {
+          drawerRequestMessage.textContent = 'Could not send task. Please try again.';
+          drawerRequestMessage.classList.add('is-error');
+        } finally {
+          drawerSubmitRequestBtn.disabled = false;
+          drawerSubmitRequestBtn.textContent = 'Send Task';
+        }
+      }
+
       function setWorkspaceDeadline(value) {
         selectedWorkspaceDeadline = value;
         document.getElementById('requestDeadline').value = value;
@@ -4931,7 +5430,18 @@
           event.stopPropagation();
           toggleRequestPanel();
         });
-        document.getElementById('newRequestBtn').addEventListener('click', () => expandRequestPanel());
+        document.getElementById('newRequestBtn').addEventListener('click', openWorkspaceTaskDrawer);
+        document.getElementById('closeWorkspaceTaskDrawer')?.addEventListener('click', closeWorkspaceTaskDrawer);
+        workspaceTaskDrawer?.addEventListener('click', (event) => {
+          if (event.target === workspaceTaskDrawer) closeWorkspaceTaskDrawer();
+        });
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && workspaceTaskDrawer?.classList.contains('is-open')) closeWorkspaceTaskDrawer();
+        });
+        document.getElementById('drawerDeadlinePills')?.addEventListener('click', (event) => {
+          const button = event.target.closest('[data-drawer-deadline]');
+          if (button) setDrawerDeadline(button.dataset.drawerDeadline);
+        });
         renderRecommendations();
         recommendationRail?.addEventListener('click', (event) => {
           const item = event.target.closest('[data-recommendation-index]');
@@ -4996,9 +5506,10 @@
         });
 
         taskFeed.addEventListener('click', (event) => {
-          if (event.target.closest('[data-empty-new-request]')) expandRequestPanel();
+          if (event.target.closest('[data-empty-new-request]')) openWorkspaceTaskDrawer();
         });
         requestForm.addEventListener('submit', submitWorkspaceRequest);
+        workspaceTaskDrawerForm?.addEventListener('submit', submitWorkspaceDrawerTask);
         workspaceReplyForm.addEventListener('submit', submitWorkspaceReply);
         document.addEventListener('visibilitychange', handleVisibilityPolling);
         showAccessCredentials();
