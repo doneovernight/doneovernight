@@ -619,6 +619,147 @@ function buildProjectRoom(tasks = []) {
   };
 }
 
+function getWorkspaceProfileValue(record = {}, ...keys) {
+  const rawPayload = record.raw_payload && typeof record.raw_payload === "object" ? record.raw_payload : {};
+  for (const key of keys) {
+    const value = clean(record[key] || rawPayload[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+function buildBusinessProfile(portalRequest = {}) {
+  const fields = {
+    companyName: getWorkspaceProfileValue(portalRequest, "company", "company_name", "business_name", "project_name"),
+    website: getWorkspaceProfileValue(portalRequest, "website", "business_website", "site_url", "url"),
+    instagram: getWorkspaceProfileValue(portalRequest, "instagram", "instagram_url", "instagram_handle"),
+    tiktok: getWorkspaceProfileValue(portalRequest, "tiktok", "tiktok_url", "tiktok_handle"),
+    linkedin: getWorkspaceProfileValue(portalRequest, "linkedin", "linkedin_url", "linkedin_company"),
+    industry: getWorkspaceProfileValue(portalRequest, "industry", "sector", "business_type"),
+    location: getWorkspaceProfileValue(portalRequest, "location", "city", "country", "business_location")
+  };
+  const labels = {
+    companyName: "Company Name",
+    website: "Website",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    linkedin: "LinkedIn",
+    industry: "Industry",
+    location: "Location"
+  };
+  return {
+    ...fields,
+    missing: Object.keys(fields).filter((key) => !fields[key]).map((key) => labels[key])
+  };
+}
+
+function firstTimestamp(...values) {
+  return values.map(clean).find(Boolean) || "";
+}
+
+function buildNotificationEvents(tasks = []) {
+  const events = [];
+  const add = (title, timestamp, task = {}, meta = "") => {
+    const cleanTitle = clean(title);
+    const cleanTime = clean(timestamp);
+    if (!cleanTitle || !cleanTime) return;
+    events.push({
+      title: cleanTitle,
+      timestamp: cleanTime,
+      task_id: taskId(task),
+      meta: clean(meta || taskTitle(task))
+    });
+  };
+
+  tasks.forEach((task) => {
+    const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+    const status = normalizeTaskStatus(task.status || rawPayload.status);
+    const paymentStatus = normalizeTaskStatus(task.payment_status || rawPayload.payment_status);
+    const createdAt = firstTimestamp(task.created_at, task.createdAt, rawPayload.created_at);
+
+    add("Task received", createdAt, task);
+    add("Review started", firstTimestamp(rawPayload.review_started_at, ["under_review", "review_in_progress"].includes(status) ? task.updated_at : ""), task);
+    add("Execution plan ready", firstTimestamp(rawPayload.execution_plan_sent_at, task.quoted_at, rawPayload.quoted_at, ["execution_plan_ready", "awaiting_start", "awaiting_payment"].includes(status) ? task.updated_at : ""), task);
+    add("Payment confirmed", firstTimestamp(rawPayload.payment_confirmed_at, task.paid_at, rawPayload.paid_at, paymentStatus === "payment_confirmed" ? task.updated_at : ""), task);
+    add("Workspace activated", firstTimestamp(rawPayload.workspace_activated_at, rawPayload.workspace_active_at, rawPayload.workspace_activation_status === "active" ? task.updated_at : ""), task);
+    add("Project started", firstTimestamp(rawPayload.project_started_at, task.started_at, ["project_active", "execution_active", "queued", "in_progress"].includes(status) ? task.updated_at : ""), task);
+    add("Delivery ready", firstTimestamp(task.delivered_at, rawPayload.delivered_at, ["delivered", "completed"].includes(status) ? task.updated_at : ""), task);
+
+    const files = safeAssetList(rawPayload.files)
+      .concat(safeAssetList(rawPayload.uploaded_files))
+      .concat(safeAssetList(rawPayload.file_uploads))
+      .concat(safeAssetList(rawPayload.attachments));
+    const latestFile = files
+      .filter((file) => file.created_at)
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+    add("Files uploaded", latestFile?.created_at, task, latestFile?.title || latestFile?.name || "File attached");
+
+    const conversions = Number(rawPayload.referral_conversions ?? rawPayload.conversions ?? 0);
+    add("Referral conversion", conversions > 0 ? firstTimestamp(rawPayload.referral_converted_at, rawPayload.referral_conversion_at, rawPayload.updated_at, task.updated_at) : "", task);
+  });
+
+  const seen = new Set();
+  return events
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+    .filter((event) => {
+      const key = `${event.title}:${event.task_id}:${event.timestamp}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function buildReferralCenter(tasks = [], workspaceSlug = "") {
+  const values = tasks.map((task) => task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {});
+  const firstKnown = (...keys) => {
+    for (const raw of values) {
+      for (const key of keys) {
+        if (raw[key] !== undefined && raw[key] !== null && clean(raw[key]) !== "") return raw[key];
+      }
+    }
+    return "";
+  };
+  return {
+    invited_founders: clean(firstKnown("invited_founders", "referral_count", "referrals_count", "referrals")),
+    interested: clean(firstKnown("referral_interested", "interested_founders", "interested")),
+    converted: clean(firstKnown("referral_conversions", "conversions", "converted_founders")),
+    reward_balance: clean(firstKnown("reward_balance", "referral_reward_balance")),
+    referral_link: workspaceSlug ? `https://doneovernight.com/ask?ref=${encodeURIComponent(workspaceSlug)}` : ""
+  };
+}
+
+function buildWorkspaceMemory({ tasks = [], projectRoom = {}, businessProfile = {} } = {}) {
+  const safeTasks = tasks.map(safeTaskSnapshot);
+  const files = safeTasks.flatMap((task) => getWorkspaceFilesFromSnapshot(task));
+  const invoices = safeTasks.flatMap((task) => task.raw_payload?.invoices || []);
+  return {
+    business_profile_complete: Array.isArray(businessProfile.missing) && businessProfile.missing.length === 0,
+    missing_profile_fields: businessProfile.missing || [],
+    previous_asks: safeTasks.map((task) => ({
+      task_id: task.task_id,
+      title: task.display_title || task.task_summary,
+      status: task.client_status,
+      created_at: task.created_at
+    })),
+    active_projects: safeTasks.filter((task) => ["Project active", "Execution scheduled"].includes(task.client_status)).length,
+    completed_projects: safeTasks.filter((task) => ["Delivered", "Completed"].includes(task.client_status)).length,
+    files: files.length,
+    invoices: invoices.length,
+    active_project_id: projectRoom.active_project?.task_id || ""
+  };
+}
+
+function getWorkspaceFilesFromSnapshot(task = {}) {
+  const raw = task.raw_payload || {};
+  return []
+    .concat(raw.files || [])
+    .concat(raw.uploaded_files || [])
+    .concat(raw.file_uploads || [])
+    .concat(raw.attachments || [])
+    .filter(Boolean);
+}
+
 module.exports = async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST");
@@ -695,6 +836,10 @@ module.exports = async function handler(req, res) {
     )));
     const safeTasks = signedTasks.map(safeTaskSnapshot);
     const projectRoom = buildProjectRoom(signedTasks);
+    const businessProfile = buildBusinessProfile(portalRequest);
+    const notifications = buildNotificationEvents(signedTasks);
+    const referrals = buildReferralCenter(signedTasks, workspaceSlug);
+    const workspaceMemory = buildWorkspaceMemory({ tasks: signedTasks, projectRoom, businessProfile });
     return send(res, 200, {
       success: true,
       workspace: {
@@ -704,10 +849,15 @@ module.exports = async function handler(req, res) {
         email: portalRequest.email || "",
         username: portalRequest.username || "",
         company: portalRequest.company || portalRequest.raw_payload?.project_name || "",
-        status: portalRequest.status || "active"
+        status: portalRequest.status || "active",
+        business_profile: businessProfile
       },
       activeProject: projectRoom.active_project,
       projectRoom,
+      notifications,
+      referrals,
+      businessProfile,
+      workspaceMemory,
       tasks: safeTasks
     });
   } catch (error) {
