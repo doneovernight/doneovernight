@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const ADMIN_AUTH_TIMEOUT_MS = 10_000;
@@ -449,9 +450,15 @@ function safeAssetList(value) {
     return {
       title: clean(item.title || item.label || item.name || item.filename || item.file_name),
       name: clean(item.name || item.filename || item.file_name),
-      url: clean(item.url || item.href || item.file_url || item.download_url || item.delivery_link),
+      filename: clean(item.filename || item.file_name || item.name),
+      bucket: clean(item.bucket),
+      path: clean(item.path || item.storage_path),
+      storage_path: clean(item.storage_path || item.path),
+      url: clean(item.url || item.signed_url || item.href || item.file_url || item.download_url || item.delivery_link),
+      signed_url: clean(item.signed_url || item.url),
       created_at: clean(item.created_at || item.uploaded_at || item.delivered_at || item.timestamp),
       type: clean(item.type || item.file_type || item.mime_type),
+      mime_type: clean(item.mime_type || item.type || item.file_type),
       size: clean(item.size || item.file_size)
     };
   }).filter((item) => item && (item.title || item.name || item.url));
@@ -683,8 +690,11 @@ module.exports = async function handler(req, res) {
 
     const workspaceSlug = inferWorkspaceSlug(portalRequest);
     const tasks = await findTasksForWorkspace({ email: portalRequest.email, slug: workspaceSlug });
-    const safeTasks = (Array.isArray(tasks) ? tasks : []).map(safeTaskSnapshot);
-    const projectRoom = buildProjectRoom(tasks);
+    const signedTasks = await Promise.all((Array.isArray(tasks) ? tasks : []).map((task) => (
+      withFreshTaskAttachmentUrls(task).catch(() => task)
+    )));
+    const safeTasks = signedTasks.map(safeTaskSnapshot);
+    const projectRoom = buildProjectRoom(signedTasks);
     return send(res, 200, {
       success: true,
       workspace: {

@@ -1,6 +1,7 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { buildSecureReviewUrl } = require("../lib/review-token");
+const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -97,10 +98,11 @@ async function fetchTasks() {
   }
 }
 
-function enrichTask(task = {}) {
+async function enrichTask(task = {}) {
+  const taskWithAttachments = await withFreshTaskAttachmentUrls(task).catch(() => task);
   const secureReviewUrl = buildSecureReviewUrl(task);
   return {
-    ...task,
+    ...taskWithAttachments,
     secure_review_url: secureReviewUrl || "",
     client_review_url: secureReviewUrl || task.client_review_url || task.raw_payload?.client_review_url || "",
     review_token_configured: Boolean(secureReviewUrl)
@@ -122,7 +124,8 @@ module.exports = async function handler(req, res) {
     }
 
     const tasks = await fetchTasks();
-    return send(res, 200, { success: true, tasks: Array.isArray(tasks) ? tasks.map(enrichTask) : [] });
+    const enrichedTasks = Array.isArray(tasks) ? await Promise.all(tasks.map(enrichTask)) : [];
+    return send(res, 200, { success: true, tasks: enrichedTasks });
   } catch (error) {
     if (error.message === "Invalid JSON") {
       return send(res, 400, { success: false, error: "Invalid JSON", code: "INVALID_JSON" });

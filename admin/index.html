@@ -3778,7 +3778,7 @@ function renderTaskAttachments(task) {
       <div class="admin-attachment-list">
         ${attachments.map((attachment) => {
           const url = getAttachmentUrl(attachment);
-          const meta = [attachment.type, formatAttachmentSize(attachment.size)].filter(Boolean).join(' · ');
+          const meta = [attachment.mime_type || attachment.type, formatAttachmentSize(attachment.size)].filter(Boolean).join(' · ');
           return `
             <div class="admin-attachment-row">
               <div>

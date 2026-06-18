@@ -16,6 +16,7 @@ const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/s
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 const { resolveTaskLanguage } = require("../lib/language");
+const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const {
   activateWorkspace,
   buildWorkspaceActivationError,
@@ -523,8 +524,14 @@ async function notifyOperations(task) {
   const clientBudget = resolveClientBudget(task);
   const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
-  const attachmentLinks = Array.isArray(task.attachments)
-    ? task.attachments
+  const taskWithSignedAttachments = await withFreshTaskAttachmentUrls(task, {
+    expiresIn: ATTACHMENT_SIGNED_URL_TTL_SECONDS
+  }).catch(() => task);
+  const notificationAttachments = Array.isArray(taskWithSignedAttachments.attachments)
+    ? taskWithSignedAttachments.attachments
+    : task.attachments;
+  const attachmentLinks = Array.isArray(notificationAttachments)
+    ? notificationAttachments
         .map((attachment) => {
           const name = attachment?.name || attachment?.filename || "Attachment";
           const url = attachment?.url || attachment?.signed_url || attachment?.file_url || attachment?.download_url || attachment?.public_url || attachment?.href || "";
@@ -613,11 +620,11 @@ async function notifyOperations(task) {
         taskSummary: task.taskSummary,
         links: task.links,
         files_link: Array.isArray(task.links) ? task.links.join("\n") : "",
-        attachments: task.attachments,
-        attachment_names: Array.isArray(task.attachments)
+        attachments: notificationAttachments,
+        attachment_names: Array.isArray(notificationAttachments)
           ? (attachmentLinks.length
             ? attachmentLinks.join("\n")
-            : task.attachments.map((attachment) => attachment.name).filter(Boolean).join(", "))
+            : notificationAttachments.map((attachment) => attachment.name).filter(Boolean).join(", "))
           : "",
         attachment_links: attachmentLinks.join("\n"),
         attachments_display: attachmentLinks.length
@@ -634,7 +641,7 @@ async function notifyOperations(task) {
         confirmation_email_template: "task_received",
         confirmation_email_subject: preferredLanguage === "nl" ? "Aanvraag ontvangen — DONEOVERNIGHT" : "Request received — DONEOVERNIGHT",
         confirmation_email_preview: preferredLanguage === "nl" ? "Aanvraag ontvangen. We beoordelen deze en koppelen snel terug." : "Request received. We'll review it and reply shortly.",
-        raw_payload: task.rawPayload
+        raw_payload: taskWithSignedAttachments.rawPayload || task.rawPayload
       })
     });
 
@@ -1017,6 +1024,7 @@ async function handleWorkspaceAttachmentUpload(req, res) {
         name: clean(file.name) || filename,
         filename,
         type: file.type,
+        mime_type: file.type,
         size: file.size,
         bucket: ATTACHMENT_BUCKET,
         path: storagePath,
