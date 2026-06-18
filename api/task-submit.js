@@ -1,6 +1,15 @@
 const crypto = require("crypto");
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
-const { dispatchWebhook, getWebhookUrls, supabaseFetch } = require("../lib/ops");
+const {
+  dispatchWebhook,
+  findPortalRequest,
+  getWebhookUrls,
+  getWorkspaceSessionFromRequest,
+  isActiveClient,
+  slugify,
+  supabaseFetch,
+  workspaceSessionMatchesRequest
+} = require("../lib/ops");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
@@ -17,6 +26,11 @@ const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
 const TASK_ID_PATTERN = /^DON-\d{4}-\d{5}$/i;
+const ATTACHMENT_BUCKET = "task-attachments";
+const MAX_ATTACHMENT_UPLOAD_BYTES = 12 * 1024 * 1024;
+const MAX_ATTACHMENT_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_ATTACHMENT_FILES = 6;
+const ATTACHMENT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const ANALYTICS_EVENT_TABLE = "analytics_events";
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
@@ -509,6 +523,15 @@ async function notifyOperations(task) {
   const clientBudget = resolveClientBudget(task);
   const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
+  const attachmentLinks = Array.isArray(task.attachments)
+    ? task.attachments
+        .map((attachment) => {
+          const name = attachment?.name || attachment?.filename || "Attachment";
+          const url = attachment?.url || attachment?.signed_url || attachment?.file_url || attachment?.download_url || attachment?.public_url || attachment?.href || "";
+          return url ? `${name} — ${url}` : name;
+        })
+        .filter(Boolean)
+    : [];
   const telegramMessage = [
     "🟡 DONEOVERNIGHT ASK",
     `Reference: ${task.taskId}`,
@@ -518,6 +541,7 @@ async function notifyOperations(task) {
     suggestedPrice ? `Suggested: ${suggestedPrice}` : null,
     `Deadline: ${task.deadline || "Not provided"}`,
     `Source: ${task.source || "task_intake"}`,
+    attachmentLinks.length ? `📎 Attachments:\n${attachmentLinks.map((line) => `• ${line}`).join("\n")}` : null,
     `Review: ${reviewUrl}`
   ].filter(Boolean).join("\n");
 
@@ -591,7 +615,13 @@ async function notifyOperations(task) {
         files_link: Array.isArray(task.links) ? task.links.join("\n") : "",
         attachments: task.attachments,
         attachment_names: Array.isArray(task.attachments)
-          ? task.attachments.map((attachment) => attachment.name).filter(Boolean).join(", ")
+          ? (attachmentLinks.length
+            ? attachmentLinks.join("\n")
+            : task.attachments.map((attachment) => attachment.name).filter(Boolean).join(", "))
+          : "",
+        attachment_links: attachmentLinks.join("\n"),
+        attachments_display: attachmentLinks.length
+          ? `📎 Attachments:\n${attachmentLinks.map((line) => `• ${line}`).join("\n")}`
           : "",
         queue_state: task.queueState,
         queueState: task.queueState,
@@ -727,6 +757,295 @@ function isPaymentReturnRequest(req) {
     String(req.url || "").includes("/api/payment-return");
 }
 
+function isWorkspaceAttachmentUploadRequest(req) {
+  return String(req.url || "").includes("workspace_attachment_upload=1");
+}
+
+function getSupabaseStorageConfig() {
+  const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !serviceRoleKey) {
+    const error = new Error("Supabase storage is not configured");
+    error.statusCode = 503;
+    error.code = "SUPABASE_STORAGE_NOT_CONFIGURED";
+    throw error;
+  }
+  return { url, serviceRoleKey };
+}
+
+function encodeStoragePath(path) {
+  return String(path || "").split("/").map((part) => encodeURIComponent(part)).join("/");
+}
+
+function sanitizeAttachmentFilename(value = "") {
+  const original = clean(value) || "attachment";
+  const extensionMatch = original.match(/(\.[A-Za-z0-9]{1,12})$/);
+  const extension = extensionMatch ? extensionMatch[1].toLowerCase() : "";
+  const basename = original
+    .replace(/(\.[A-Za-z0-9]{1,12})$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "attachment";
+  return `${basename}${extension}`;
+}
+
+function safeStorageErrorText(value) {
+  return String(value || "")
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]")
+    .replace(/apikey[=:]\s*["']?[A-Za-z0-9._-]+/gi, "apikey=[redacted]")
+    .slice(0, 400);
+}
+
+async function storageFetch(path, options = {}) {
+  const { url, serviceRoleKey } = getSupabaseStorageConfig();
+  const response = await fetch(`${url}/storage/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      ...(options.headers || {})
+    }
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    const error = new Error(`Supabase storage request failed: ${response.status}`);
+    error.statusCode = response.status;
+    error.detail = safeStorageErrorText(text);
+    throw error;
+  }
+
+  const text = await response.text().catch(() => "");
+  return text ? JSON.parse(text) : null;
+}
+
+async function ensureAttachmentBucket() {
+  try {
+    await storageFetch(`bucket/${encodeURIComponent(ATTACHMENT_BUCKET)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" }
+    });
+    return;
+  } catch (error) {
+    if (error.statusCode !== 404) throw error;
+  }
+
+  try {
+    await storageFetch("bucket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        id: ATTACHMENT_BUCKET,
+        name: ATTACHMENT_BUCKET,
+        public: false,
+        file_size_limit: MAX_ATTACHMENT_FILE_BYTES,
+        allowed_mime_types: [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "image/png",
+          "image/jpeg",
+          "image/webp"
+        ]
+      })
+    });
+  } catch (error) {
+    if (error.statusCode !== 409) throw error;
+  }
+}
+
+async function uploadAttachmentObject(file, storagePath) {
+  await storageFetch(`object/${ATTACHMENT_BUCKET}/${encodeStoragePath(storagePath)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": file.type || "application/octet-stream",
+      "x-upsert": "false"
+    },
+    body: file.data
+  });
+}
+
+async function createAttachmentSignedUrl(storagePath) {
+  const { url } = getSupabaseStorageConfig();
+  const data = await storageFetch(`object/sign/${ATTACHMENT_BUCKET}/${encodeStoragePath(storagePath)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ expiresIn: ATTACHMENT_SIGNED_URL_TTL_SECONDS })
+  });
+  const signedUrl = data?.signedURL || data?.signedUrl || "";
+  if (!signedUrl) return "";
+  return signedUrl.startsWith("http") ? signedUrl : `${url}${signedUrl}`;
+}
+
+function readMultipartBuffer(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on("data", (chunk) => {
+      total += chunk.length;
+      if (total > MAX_ATTACHMENT_UPLOAD_BYTES) {
+        reject(Object.assign(new Error("Upload too large"), { statusCode: 413, code: "UPLOAD_TOO_LARGE" }));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+function splitBuffer(buffer, delimiter) {
+  const parts = [];
+  let start = 0;
+  let index = buffer.indexOf(delimiter, start);
+  while (index !== -1) {
+    parts.push(buffer.slice(start, index));
+    start = index + delimiter.length;
+    index = buffer.indexOf(delimiter, start);
+  }
+  parts.push(buffer.slice(start));
+  return parts;
+}
+
+function trimBoundaryPart(part) {
+  let output = part;
+  if (output.slice(0, 2).toString() === "\r\n") output = output.slice(2);
+  if (output.slice(0, 2).toString() === "--") return null;
+  if (output.slice(-2).toString() === "\r\n") output = output.slice(0, -2);
+  return output;
+}
+
+function parseMultipartUpload(buffer, contentType = "") {
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  const boundary = boundaryMatch?.[1] || boundaryMatch?.[2] || "";
+  if (!boundary) {
+    const error = new Error("Multipart boundary is missing");
+    error.statusCode = 400;
+    error.code = "MULTIPART_BOUNDARY_MISSING";
+    throw error;
+  }
+
+  const delimiter = Buffer.from(`--${boundary}`);
+  const fields = {};
+  const files = [];
+
+  for (const rawPart of splitBuffer(buffer, delimiter)) {
+    const part = trimBoundaryPart(rawPart);
+    if (!part || !part.length) continue;
+    const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+    if (headerEnd === -1) continue;
+    const headerText = part.slice(0, headerEnd).toString("utf8");
+    const body = part.slice(headerEnd + 4);
+    const disposition = headerText.match(/content-disposition:\s*form-data;([^\r\n]+)/i)?.[1] || "";
+    const name = disposition.match(/name="([^"]+)"/i)?.[1] || "";
+    const filename = disposition.match(/filename="([^"]*)"/i)?.[1] || "";
+    const type = headerText.match(/content-type:\s*([^\r\n]+)/i)?.[1]?.trim() || "application/octet-stream";
+    if (!name) continue;
+
+    if (filename) {
+      if (files.length >= MAX_ATTACHMENT_FILES) {
+        const error = new Error("Too many files");
+        error.statusCode = 400;
+        error.code = "TOO_MANY_FILES";
+        throw error;
+      }
+      if (body.length > MAX_ATTACHMENT_FILE_BYTES) {
+        const error = new Error("File too large");
+        error.statusCode = 413;
+        error.code = "FILE_TOO_LARGE";
+        throw error;
+      }
+      files.push({ field: name, name: filename, type, size: body.length, data: body });
+    } else {
+      fields[name] = body.toString("utf8").trim();
+    }
+  }
+
+  return { fields, files };
+}
+
+async function verifyWorkspaceAttachmentUpload(req, fields) {
+  const session = await getWorkspaceSessionFromRequest(req);
+  const requestedSlug = slugify(fields.workspace_slug || fields.workspaceSlug || fields.slug || session?.workspace_slug || "");
+  if (!session || !workspaceSessionMatchesRequest(session, { slug: requestedSlug })) {
+    const error = new Error("Private workspace session required");
+    error.statusCode = 401;
+    error.code = "WORKSPACE_SESSION_REQUIRED";
+    throw error;
+  }
+
+  const portalRequest = await findPortalRequest({ email: session.email, slug: requestedSlug });
+  if (!portalRequest || !isActiveClient(portalRequest)) {
+    const error = new Error("Workspace access is not active");
+    error.statusCode = 403;
+    error.code = "WORKSPACE_ACCESS_NOT_ACTIVE";
+    throw error;
+  }
+
+  return {
+    email: session.email,
+    workspaceSlug: requestedSlug || session.workspace_slug
+  };
+}
+
+async function handleWorkspaceAttachmentUpload(req, res) {
+  try {
+    const buffer = await readMultipartBuffer(req);
+    const { fields, files } = parseMultipartUpload(buffer, req.headers["content-type"] || "");
+    if (!files.length) {
+      return send(res, 400, { success: false, code: "NO_FILES", error: "No files uploaded" });
+    }
+
+    const workspace = await verifyWorkspaceAttachmentUpload(req, fields);
+    const taskId = clean(fields.task_id || fields.taskId) || createTaskId(new Date());
+    if (!TASK_ID_PATTERN.test(taskId)) {
+      return send(res, 400, { success: false, code: "INVALID_TASK_ID", error: "Invalid task reference" });
+    }
+
+    await ensureAttachmentBucket();
+    const uploadedAt = new Date().toISOString();
+    const uploaded = [];
+
+    for (const file of files) {
+      const filename = sanitizeAttachmentFilename(file.name);
+      const storagePath = `workspace/${workspace.workspaceSlug}/${taskId.toUpperCase()}/${Date.now()}-${filename}`;
+      await uploadAttachmentObject(file, storagePath);
+      const signedUrl = await createAttachmentSignedUrl(storagePath);
+      uploaded.push({
+        name: clean(file.name) || filename,
+        filename,
+        type: file.type,
+        size: file.size,
+        bucket: ATTACHMENT_BUCKET,
+        path: storagePath,
+        storage_path: storagePath,
+        url: signedUrl,
+        signed_url: signedUrl,
+        uploaded_at: uploadedAt,
+        expires_in_seconds: ATTACHMENT_SIGNED_URL_TTL_SECONDS
+      });
+    }
+
+    return send(res, 200, {
+      success: true,
+      task_id: taskId.toUpperCase(),
+      bucket: ATTACHMENT_BUCKET,
+      path_prefix: `workspace/${workspace.workspaceSlug}/${taskId.toUpperCase()}`,
+      files: uploaded
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return send(res, statusCode, {
+      success: false,
+      code: error.code || "FILE_UPLOAD_FAILED",
+      error: statusCode < 500 ? error.message : "File upload failed",
+      detail: error.detail || undefined
+    });
+  }
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -749,6 +1068,18 @@ function parseBody(req) {
     });
     req.on("error", reject);
   });
+}
+
+function getRequestedTaskId(input = {}) {
+  const value = clean(input.task_id || input.taskId || input.operational_id).toUpperCase();
+  if (!value) return "";
+  if (!TASK_ID_PATTERN.test(value)) {
+    const error = new Error("Invalid task reference");
+    error.statusCode = 400;
+    error.code = "INVALID_TASK_ID";
+    throw error;
+  }
+  return value;
 }
 
 module.exports = async function handler(req, res) {
@@ -777,6 +1108,10 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, { success: false, error: "Method not allowed" });
+  }
+
+  if (isWorkspaceAttachmentUploadRequest(req)) {
+    return handleWorkspaceAttachmentUpload(req, res);
   }
 
   try {
@@ -815,7 +1150,7 @@ module.exports = async function handler(req, res) {
     }
 
     const now = new Date();
-    const taskId = createTaskId(now);
+    const taskId = getRequestedTaskId(input) || createTaskId(now);
     const { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
 
     // Future operational handoffs: quote generation, payment session generation,
@@ -904,6 +1239,14 @@ module.exports = async function handler(req, res) {
         success: false,
         error: "Payload too large",
         code: "PAYLOAD_TOO_LARGE"
+      });
+    }
+
+    if (error.code === "INVALID_TASK_ID") {
+      return send(res, error.statusCode || 400, {
+        success: false,
+        error: "Invalid task reference",
+        code: "INVALID_TASK_ID"
       });
     }
 

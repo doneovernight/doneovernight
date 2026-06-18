@@ -1805,6 +1805,42 @@ body.is-admin .admin-dashboard { display: block; }
   text-transform: uppercase;
 }
 
+.admin-attachment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-attachment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid rgba(255,255,255,.055);
+  padding-top: 10px;
+}
+
+.admin-attachment-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.admin-attachment-row strong {
+  display: block;
+  color: rgba(245, 241, 234, 0.84);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.admin-attachment-row span {
+  display: block;
+  margin-top: 3px;
+  color: rgba(245, 241, 234, 0.42);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .admin-task-priority {
   display: inline-flex;
   align-items: center;
@@ -3691,6 +3727,75 @@ function getTaskReferral(task) {
   };
 }
 
+function getAttachmentUrl(attachment = {}) {
+  return String(
+    attachment.url ||
+    attachment.signed_url ||
+    attachment.file_url ||
+    attachment.download_url ||
+    attachment.public_url ||
+    attachment.href ||
+    ''
+  ).trim();
+}
+
+function formatAttachmentSize(bytes) {
+  const size = Number(bytes || 0);
+  if (!Number.isFinite(size) || size <= 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(size >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function getTaskAttachments(task = {}) {
+  const raw = task.raw_payload || task.rawPayload || {};
+  const sources = [
+    task.attachments,
+    raw.attachments,
+    raw.uploaded_files,
+    raw.files,
+    raw.file_uploads
+  ];
+  const byKey = new Map();
+  sources.flatMap((source) => Array.isArray(source) ? source : []).forEach((attachment) => {
+    if (!attachment) return;
+    const item = typeof attachment === 'string' ? { name: attachment } : attachment;
+    const name = String(item.name || item.filename || item.title || 'Attachment').trim();
+    const url = getAttachmentUrl(item);
+    const key = `${name}::${url}`;
+    if (!name || byKey.has(key)) return;
+    byKey.set(key, { ...item, name, url });
+  });
+  return Array.from(byKey.values());
+}
+
+function renderTaskAttachments(task) {
+  const attachments = getTaskAttachments(task);
+  if (!attachments.length) return '';
+  return `
+    <div class="admin-task-detail">
+      <span class="admin-task-detail-label">Attachments</span>
+      <div class="admin-attachment-list">
+        ${attachments.map((attachment) => {
+          const url = getAttachmentUrl(attachment);
+          const meta = [attachment.type, formatAttachmentSize(attachment.size)].filter(Boolean).join(' · ');
+          return `
+            <div class="admin-attachment-row">
+              <div>
+                <strong>${escapeHTML(attachment.name || 'Attachment')}</strong>
+                ${meta ? `<span>${escapeHTML(meta)}</span>` : ''}
+              </div>
+              ${url
+                ? `<a class="admin-payment-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">Open file</a>`
+                : '<span class="admin-payment-link" aria-disabled="true">No URL</span>'}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function formatReferralSource(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'referral_email') return 'Email Referral';
@@ -3768,6 +3873,7 @@ function getTaskRenderSignature(task) {
     task.raw_payload?.referral_task_id,
     task.raw_payload?.referred_by_task_id,
     task.raw_payload?.referral_source,
+    JSON.stringify(task.attachments || task.raw_payload?.attachments || []),
     task.raw_payload?.payment_confirmed_at,
     task.raw_payload?.workspace_activated_at,
     task.raw_payload?.project_active_at,
@@ -5667,6 +5773,7 @@ function renderTasks(tasks) {
             <div><strong>@${escapeHTML(workspaceSlug)}</strong></div>
           </div>
         ` : ''}
+        ${renderTaskAttachments(task)}
         ${paymentCallout}
         ${recoveryCard}
         ${actionMarkup}

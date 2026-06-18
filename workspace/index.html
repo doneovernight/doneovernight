@@ -924,6 +924,16 @@
       padding: 12px 14px 14px;
     }
 
+    .workspace-operation-files {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      border-top: 1px solid rgba(255,255,255,.045);
+      background: rgba(5,6,8,.74);
+      padding: 10px 14px 12px;
+    }
+
     .workspace-progress-rail {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3234,7 +3244,7 @@
               <label for="requestFileUpload">Attach PDF, DOC, or images</label>
               <input id="requestFileUpload" name="attachments" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple>
               <input id="requestLinks" name="files_link" type="url" placeholder="Paste a link">
-              <p class="field-helper">Files and links help us quote faster. Upload storage can be connected later.</p>
+              <p class="field-helper">Files and links are attached to the task record for Operations.</p>
             </div>
           </div>
 
@@ -3351,9 +3361,9 @@
     (() => {
       const SUPABASE_URL = 'https://xvctqtcjhcmjlesbfbmj.supabase.co';
       const SUPABASE_ANON_KEY = 'sb_publishable_GNSwoILOaU6CTNuuPFBV8w_6VgwDuu8';
-      const TASK_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-task';
       const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
       const WORKSPACE_DATA_ENDPOINT = '../api/workspace-data';
+      const WORKSPACE_ATTACHMENT_UPLOAD_ENDPOINT = '../api/task-submit?workspace_attachment_upload=1';
       const WORKSPACE_MESSAGES_ENDPOINT = '../api/workspace-messages';
       const WORKSPACE_QUOTES_ENDPOINT = '../api/workspace-quotes';
       const WORKSPACE_SESSION_ENDPOINT = '../api/workspace-data';
@@ -3980,8 +3990,31 @@
         ).map((file) => ({
           title: file.title || file.label || file.name || file.filename || file.file_name || 'Attached file',
           timestamp: file.created_at || file.uploaded_at || file.timestamp || '',
-          href: file.url || file.href || file.file_url || file.download_url || ''
+          href: file.url || file.href || file.file_url || file.download_url || file.signed_url || file.public_url || ''
         })).filter((file) => file.title);
+      }
+
+      function renderOperationAttachments(operation = {}) {
+        const files = getWorkspaceFiles(operation, {});
+        if (!files.length) return '';
+        return `
+          <div class="workspace-operation-files">
+            ${files.slice(0, 4).map((file) => file.href
+              ? `<a class="workspace-os-link" href="${escapeHTML(file.href)}" target="_blank" rel="noopener noreferrer">📎 ${escapeHTML(file.title)}</a>`
+              : `<span class="workspace-operation-meta">📎 ${escapeHTML(file.title)}</span>`
+            ).join('')}
+          </div>
+        `;
+      }
+
+      function dedupeWorkspaceFiles(files = []) {
+        const byKey = new Map();
+        files.forEach((file) => {
+          const key = `${file.title || ''}::${file.href || ''}`;
+          if (!file.title || byKey.has(key)) return;
+          byKey.set(key, file);
+        });
+        return Array.from(byKey.values());
       }
 
       function getWorkspaceDeliverables(project = {}, room = {}) {
@@ -4081,6 +4114,7 @@
                 <div class="workspace-operation-cell"><span>Timeline</span><strong>${escapeHTML(getOperationTimeline(operation))}</strong></div>
                 <div class="workspace-operation-cell"><span>Investment</span><strong>${escapeHTML(getOperationInvestment(operation))}</strong></div>
                 <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(operation)}</div>
+                ${renderOperationAttachments(operation)}
               </div>
             `).join('')}
           </div>
@@ -4117,7 +4151,10 @@
           <a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>
         `;
 
-        const files = getWorkspaceFiles(project, room);
+        const files = dedupeWorkspaceFiles([
+          ...getWorkspaceFiles(project, room),
+          ...operations.flatMap((operation) => getWorkspaceFiles(operation, {}))
+        ]);
         workspaceFilesPanel.innerHTML = `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Files</p><h3 class="workspace-os-title" style="font-size:34px">Attached work</h3></div></div>
           ${files.length ? `<ul class="workspace-os-list">${files.map((file) => `
@@ -5128,6 +5165,35 @@
         }));
       }
 
+      async function uploadWorkspaceAttachmentsFromInput(inputId, taskId = '') {
+        const input = document.getElementById(inputId);
+        const files = Array.from(input?.files || []);
+        if (!files.length) return { taskId, files: [] };
+
+        const form = new FormData();
+        const session = getSession();
+        if (taskId) form.append('task_id', taskId);
+        if (workspaceSlug || session.slug) form.append('workspace_slug', workspaceSlug || session.slug);
+        files.forEach((file) => form.append('attachments', file, file.name));
+
+        const response = await fetch(WORKSPACE_ATTACHMENT_UPLOAD_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' },
+          body: form
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success !== true) {
+          const error = new Error('FILE_UPLOAD_FAILED');
+          error.code = data?.code || 'FILE_UPLOAD_FAILED';
+          throw error;
+        }
+
+        return {
+          taskId: data.task_id || taskId,
+          files: Array.isArray(data.files) ? data.files : []
+        };
+      }
+
       function shakeDrawerForm() {
         const field = document.getElementById('drawerRequestSummary').closest('.field-group');
         field.classList.remove('is-invalid');
@@ -5143,7 +5209,7 @@
         const budget = document.getElementById('drawerRequestBudget').value.trim();
         const deadline = getDrawerDeadline();
         const links = getDrawerLinks();
-        const attachments = getDrawerAttachmentMetadata();
+        let attachments = getDrawerAttachmentMetadata();
 
         drawerRequestMessage.className = 'workspace-message';
         drawerRequestMessage.textContent = '';
@@ -5155,12 +5221,17 @@
         }
 
         drawerSubmitRequestBtn.disabled = true;
-        drawerSubmitRequestBtn.textContent = 'Sending…';
+        drawerSubmitRequestBtn.textContent = attachments.length ? 'Uploading files…' : 'Sending…';
         try {
+          const uploadResult = await uploadWorkspaceAttachmentsFromInput('drawerFileUpload');
+          const reservedTaskId = uploadResult.taskId || '';
+          attachments = uploadResult.files.length ? uploadResult.files : attachments;
+          drawerSubmitRequestBtn.textContent = 'Sending…';
           const response = await fetch('../api/task-submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
+              task_id: reservedTaskId || undefined,
               taskSummary: taskDescription,
               task_description: taskDescription,
               deadline,
@@ -5188,9 +5259,10 @@
           if (!response.ok || data?.success === false) throw new Error(data?.error || 'Workspace task failed');
 
           const createdAt = new Date().toISOString();
+          const taskId = data.taskId || data.task_id || reservedTaskId || createdAt;
           const optimisticTask = {
-            id: data.taskId || data.task_id || createdAt,
-            task_id: data.taskId || data.task_id || 'Pending ID',
+            id: taskId,
+            task_id: taskId,
             task_summary: taskDescription,
             task_description: taskDescription,
             status: 'request_received',
@@ -5242,7 +5314,9 @@
           await loadTasks({ silent: true });
           window.setTimeout(closeWorkspaceTaskDrawer, 450);
         } catch (error) {
-          drawerRequestMessage.textContent = 'Could not send task. Please try again.';
+          drawerRequestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
+            ? 'FILE_UPLOAD_FAILED. Remove the file or try again before sending.'
+            : 'Could not send task. Please try again.';
           drawerRequestMessage.classList.add('is-error');
         } finally {
           drawerSubmitRequestBtn.disabled = false;
@@ -5298,7 +5372,7 @@
         const company = session.company;
         const deadline = getWorkspaceDeadline();
         const filesLink = document.getElementById('requestLinks').value.trim();
-        const attachments = getAttachmentMetadata();
+        let attachments = getAttachmentMetadata();
 
         requestMessage.className = 'workspace-message';
         if (!taskDescription || !email) {
@@ -5309,53 +5383,39 @@
         }
 
         submitRequestBtn.disabled = true;
-        submitRequestBtn.textContent = 'Routing to operations…';
+        submitRequestBtn.textContent = attachments.length ? 'Uploading files…' : 'Sending…';
         try {
-          let response;
-          if (session.accessKey) {
-            response = await fetch(TASK_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({
-                email,
-                access_key: session.accessKey,
-                name,
-                company,
-                client_id: session.clientId,
-                task_summary: taskDescription,
-                task_description: taskDescription,
-                deadline,
-                files_link: filesLink,
-                links: filesLink ? [filesLink] : [],
-                attachments,
-                source: 'client_workspace',
-                created_at: new Date().toISOString()
-              })
-            });
-          } else {
-            response = await fetch('../api/task-submit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({
-                taskSummary: taskDescription,
-                deadline,
-                name,
-                email,
-                company,
-                links: filesLink,
-                attachments,
-                source: 'client_workspace',
-                intakeVersion: 'workspace_v1'
-              })
-            });
-          }
+          const uploadResult = await uploadWorkspaceAttachmentsFromInput('requestFileUpload');
+          const reservedTaskId = uploadResult.taskId || '';
+          attachments = uploadResult.files.length ? uploadResult.files : attachments;
+          submitRequestBtn.textContent = 'Sending…';
+          const response = await fetch('../api/task-submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              task_id: reservedTaskId || undefined,
+              taskSummary: taskDescription,
+              task_description: taskDescription,
+              deadline,
+              name,
+              email,
+              company,
+              links: filesLink,
+              files_link: filesLink,
+              attachments,
+              source: 'client_workspace',
+              intakeVersion: 'workspace_v1',
+              preferred_language: getRuntimeLanguage()
+            })
+          });
 
           if (!response.ok) throw new Error('Workspace request failed');
           const data = await response.json().catch(() => ({}));
           const createdAt = new Date().toISOString();
+          const taskId = data.taskId || data.task_id || reservedTaskId || createdAt;
           const optimisticTask = {
-            id: data.taskId || data.task_id || createdAt,
-            task_id: data.taskId || data.task_id || 'Pending ID',
+            id: taskId,
+            task_id: taskId,
             task_summary: taskDescription,
             task_description: taskDescription,
             status: 'new',
@@ -5367,17 +5427,25 @@
             created_at: createdAt,
             source: 'client_workspace',
             email,
-            attachments
+            attachments,
+            raw_payload: {
+              workspace_slug: workspaceSlug || session.slug,
+              source: 'client_workspace',
+              attachments,
+              links: filesLink ? [filesLink] : []
+            }
           };
           renderTasks([optimisticTask, ...workspaceTasks]);
-          requestMessage.textContent = 'Task received. We’ll review it and send a quote within 60 minutes.';
+          requestMessage.textContent = 'Task sent to DONEOVERNIGHT Operations.';
           requestMessage.classList.add('is-success');
           requestForm.reset();
           setWorkspaceDeadline('Tonight');
           document.getElementById('otherDeadlinePanel').classList.remove('is-visible');
           await loadTasks({ silent: true });
         } catch (error) {
-          requestMessage.textContent = 'Could not send task. Please try again.';
+          requestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
+            ? 'FILE_UPLOAD_FAILED. Remove the file or try again before sending.'
+            : 'Could not send task. Please try again.';
           requestMessage.classList.add('is-error');
         } finally {
           submitRequestBtn.disabled = false;
