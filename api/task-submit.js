@@ -135,6 +135,17 @@ function resolveClientBudget(task = {}) {
   return "";
 }
 
+function resolveWorkspaceSlug(task = {}) {
+  const rawPayload = task.rawPayload || task.raw_payload || {};
+  return firstClean(task.workspace_slug, task.workspaceSlug, rawPayload.workspace_slug, rawPayload.workspaceSlug);
+}
+
+function resolveOperationsCompany(task = {}) {
+  const workspaceSlug = resolveWorkspaceSlug(task);
+  if (clean(task.source) === "client_workspace") return workspaceSlug;
+  return firstClean(task.company, task.rawPayload?.company, task.raw_payload?.company);
+}
+
 function formatClientBudgetForOps(value) {
   const cleaned = clean(value);
   if (!cleaned) return "Not provided";
@@ -524,6 +535,8 @@ async function notifyOperations(task) {
   const clientBudget = resolveClientBudget(task);
   const suggestedPrice = task.suggestedPrice || task.rawPayload?.suggested_price || task.rawPayload?.internal_suggested_price || "";
   const reviewUrl = buildClientReviewUrl(task);
+  const workspaceSlug = resolveWorkspaceSlug(task);
+  const operationsCompany = resolveOperationsCompany(task);
   const taskWithSignedAttachments = await withFreshTaskAttachmentUrls(task, {
     expiresIn: ATTACHMENT_SIGNED_URL_TTL_SECONDS
   }).catch(() => task);
@@ -575,7 +588,8 @@ async function notifyOperations(task) {
         client_name: task.name,
         email: task.email,
         client_email: task.email,
-        company: task.company,
+        company: operationsCompany || null,
+        workspace_slug: workspaceSlug || null,
         deadline: task.deadline,
         budget: clientBudget,
         client_budget: clientBudget,
@@ -784,6 +798,16 @@ function encodeStoragePath(path) {
   return String(path || "").split("/").map((part) => encodeURIComponent(part)).join("/");
 }
 
+function buildSupabaseSignedUrl(baseUrl, signedPath) {
+  const url = String(baseUrl || "").replace(/\/+$/, "");
+  const path = clean(signedPath);
+  if (!url || !path) return "";
+  if (path.startsWith("http")) return path;
+  if (path.startsWith("/storage/v1/")) return `${url}${path}`;
+  if (path.startsWith("/object/")) return `${url}/storage/v1${path}`;
+  return `${url}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 function sanitizeAttachmentFilename(value = "") {
   const original = clean(value) || "attachment";
   const extensionMatch = original.match(/(\.[A-Za-z0-9]{1,12})$/);
@@ -903,8 +927,7 @@ async function createAttachmentSignedUrl(storagePath) {
     body: JSON.stringify({ expiresIn: ATTACHMENT_SIGNED_URL_TTL_SECONDS })
   });
   const signedUrl = data?.signedURL || data?.signedUrl || "";
-  if (!signedUrl) return "";
-  return signedUrl.startsWith("http") ? signedUrl : `${url}${signedUrl}`;
+  return buildSupabaseSignedUrl(url, signedUrl);
 }
 
 function readMultipartBuffer(req) {
