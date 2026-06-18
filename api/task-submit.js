@@ -831,6 +831,32 @@ async function storageFetch(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+function isStorageBucketMissingError(error = {}) {
+  const detail = String(error.detail || error.message || "").toLowerCase();
+  return error.statusCode === 404 ||
+    /bucket.+not.+found/.test(detail) ||
+    /not.+found.+bucket/.test(detail) ||
+    /nosuchbucket/.test(detail) ||
+    /resource.+not.+found/.test(detail);
+}
+
+function isStorageBucketAlreadyExistsError(error = {}) {
+  const detail = String(error.detail || error.message || "").toLowerCase();
+  return error.statusCode === 409 ||
+    /already.+exists/.test(detail) ||
+    /duplicate/.test(detail);
+}
+
+function createStorageBucketNotConfiguredError(sourceError = {}) {
+  const error = new Error("Attachment storage bucket is not configured");
+  error.statusCode = 500;
+  error.code = "STORAGE_BUCKET_NOT_CONFIGURED";
+  error.storageOperation = sourceError.storageOperation || "POST";
+  error.storagePath = sourceError.storagePath || "bucket";
+  error.detail = sourceError.detail || sourceError.message || "";
+  return error;
+}
+
 async function ensureAttachmentBucket() {
   try {
     await storageFetch(`bucket/${encodeURIComponent(ATTACHMENT_BUCKET)}`, {
@@ -839,7 +865,7 @@ async function ensureAttachmentBucket() {
     });
     return;
   } catch (error) {
-    if (error.statusCode !== 404) throw error;
+    if (!isStorageBucketMissingError(error)) throw error;
   }
 
   try {
@@ -849,20 +875,12 @@ async function ensureAttachmentBucket() {
       body: JSON.stringify({
         id: ATTACHMENT_BUCKET,
         name: ATTACHMENT_BUCKET,
-        public: false,
-        file_size_limit: MAX_ATTACHMENT_FILE_BYTES,
-        allowed_mime_types: [
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "image/png",
-          "image/jpeg",
-          "image/webp"
-        ]
+        public: false
       })
     });
   } catch (error) {
-    if (error.statusCode !== 409) throw error;
+    if (isStorageBucketAlreadyExistsError(error)) return;
+    throw createStorageBucketNotConfiguredError(error);
   }
 }
 
