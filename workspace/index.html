@@ -1413,16 +1413,66 @@
     }
 
     .workspace-referral-actions {
-      display: flex;
+      display: inline-flex;
       flex-wrap: wrap;
+      justify-content: center;
       gap: 10px;
-      margin-top: 18px;
+      margin-top: 22px;
     }
 
     .workspace-referral-actions .workspace-button {
       width: auto;
       min-height: 44px;
-      padding-inline: 16px;
+      padding-inline: 18px;
+    }
+
+    .workspace-referral-center {
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      padding: clamp(8px, 2vw, 18px) 0;
+    }
+
+    .workspace-referral-center .workspace-os-head {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .workspace-referral-center .workspace-os-title {
+      font-size: clamp(30px, 4vw, 42px);
+    }
+
+    .workspace-referral-copy {
+      max-width: 34ch;
+      margin: 10px auto 0;
+      color: rgba(255,255,255,.58);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .workspace-referral-link {
+      max-width: min(100%, 520px);
+      margin-top: 18px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.018);
+      color: rgba(255,255,255,.46);
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .referral-invite-preview {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      padding: 13px 14px;
+      color: rgba(255,255,255,.62);
+      font-size: 13px;
+      line-height: 1.65;
     }
 
     .workspace-os-card.is-quiet-empty {
@@ -3945,6 +3995,43 @@
     </aside>
   </div>
 
+  <div class="workspace-task-drawer-backdrop" id="referralInviteModal" aria-hidden="true">
+    <aside class="workspace-task-drawer operation-update-modal" role="dialog" aria-modal="true" aria-labelledby="referralInviteTitle">
+      <div class="workspace-task-drawer-head">
+        <div>
+          <p class="eyebrow">Private referral</p>
+          <h2 class="workspace-task-drawer-title" id="referralInviteTitle">Invite Founder</h2>
+        </div>
+        <button class="workspace-drawer-close" id="closeReferralInviteModal" type="button" aria-label="Close referral invite">×</button>
+      </div>
+      <p class="workspace-drawer-copy">Create a clean referral invitation. The link keeps your workspace attribution attached.</p>
+      <form class="request-form" id="referralInviteForm" novalidate>
+        <div class="field-group">
+          <label for="referralFounderName">Founder name <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <input id="referralFounderName" type="text" placeholder="Founder name">
+        </div>
+        <div class="field-group">
+          <label for="referralFounderEmail">Founder email <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <input id="referralFounderEmail" type="email" placeholder="founder@company.com">
+        </div>
+        <div class="field-group">
+          <label for="referralFounderCompany">Company <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <input id="referralFounderCompany" type="text" placeholder="Company">
+        </div>
+        <div class="field-group">
+          <label for="referralInviteNote">Note <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <textarea id="referralInviteNote" rows="3" placeholder="Short context for the founder."></textarea>
+        </div>
+        <div class="referral-invite-preview" id="referralInvitePreview">Your invite link will appear here.</div>
+        <div class="workspace-message" id="referralInviteMessage" aria-live="polite"></div>
+        <div class="workspace-referral-actions">
+          <button class="workspace-button secondary" id="copyReferralInviteBtn" type="button">Copy Invite Link</button>
+          <a class="workspace-button secondary" id="sendReferralInviteBtn" href="mailto:ask@doneovernight.com">Send Invite</a>
+        </div>
+      </form>
+    </aside>
+  </div>
+
   <button class="workspace-donbot" id="workspaceDonbot" type="button" aria-expanded="false">
     <strong>DONBOT</strong>
     <span>STANDBY</span>
@@ -4038,6 +4125,12 @@
       const operationUpdateContext = document.getElementById('operationUpdateContext');
       const operationUpdateStatus = document.getElementById('operationUpdateMessageStatus');
       const operationUpdateSubmit = document.getElementById('operationUpdateSubmit');
+      const referralInviteModal = document.getElementById('referralInviteModal');
+      const referralInviteForm = document.getElementById('referralInviteForm');
+      const referralInvitePreview = document.getElementById('referralInvitePreview');
+      const referralInviteMessage = document.getElementById('referralInviteMessage');
+      const copyReferralInviteBtn = document.getElementById('copyReferralInviteBtn');
+      const sendReferralInviteBtn = document.getElementById('sendReferralInviteBtn');
       const workspaceDonbot = document.getElementById('workspaceDonbot');
       const workspaceDonbotPanel = document.getElementById('workspaceDonbotPanel');
       const workspaceDonbotContent = document.getElementById('workspaceDonbotContent');
@@ -4066,6 +4159,7 @@
       let localSubmittedWorkspaceTasks = [];
       let selectedWorkspaceTaskKey = '';
       let activeOperationUpdateTaskKey = '';
+      let activeReferralLink = '';
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -4756,13 +4850,14 @@
 
       function getReferralStats(project = {}) {
         const raw = project.raw_payload || {};
+        const fallbackLink = workspaceSlug ? `https://ask.doneovernight.com?ref=${encodeURIComponent(workspaceSlug)}` : '';
         if (workspaceReferrals) {
           return {
             invited: workspaceReferrals.invited_founders || 'No referral data yet',
             interested: workspaceReferrals.interested || 'No referral data yet',
             converted: workspaceReferrals.converted || 'No referral data yet',
             reward: workspaceReferrals.reward_balance || 'No reward balance yet',
-            link: workspaceReferrals.referral_link || ''
+            link: workspaceReferrals.referral_link || fallbackLink
           };
         }
         const hasReferrals = raw.referral_count !== undefined || raw.referrals_count !== undefined || raw.referrals !== undefined;
@@ -4773,7 +4868,7 @@
           interested: 'No referral data yet',
           converted: hasConversions ? String(raw.referral_conversions ?? raw.conversions ?? 0) : 'No referral data yet',
           reward: hasReward ? String(raw.reward_balance ?? raw.referral_reward_balance ?? '—') : 'No reward balance yet',
-          link: workspaceSlug ? `https://doneovernight.com/ask?ref=${encodeURIComponent(workspaceSlug)}` : ''
+          link: fallbackLink
         };
       }
 
@@ -5385,6 +5480,72 @@
         }
       }
 
+      function getReferralInviteValues() {
+        return {
+          name: document.getElementById('referralFounderName')?.value.trim() || '',
+          email: document.getElementById('referralFounderEmail')?.value.trim() || '',
+          company: document.getElementById('referralFounderCompany')?.value.trim() || '',
+          note: document.getElementById('referralInviteNote')?.value.trim() || ''
+        };
+      }
+
+      function getReferralInviteLink() {
+        return activeReferralLink || (workspaceSlug ? `https://ask.doneovernight.com?ref=${encodeURIComponent(workspaceSlug)}` : '');
+      }
+
+      function buildReferralInviteText() {
+        const values = getReferralInviteValues();
+        const link = getReferralInviteLink();
+        return [
+          values.name ? `Hi ${values.name},` : 'Hi,',
+          '',
+          values.note || 'I thought DONEOVERNIGHT might be useful for your next execution request.',
+          '',
+          link
+        ].join('\n');
+      }
+
+      function updateReferralInvitePreview() {
+        if (!referralInvitePreview || !sendReferralInviteBtn) return;
+        const values = getReferralInviteValues();
+        const link = getReferralInviteLink();
+        referralInvitePreview.textContent = link || 'Referral link will appear when your workspace slug is available.';
+        const subjectParts = ['DONEOVERNIGHT referral', values.company].filter(Boolean);
+        const mailto = values.email
+          ? `mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent(subjectParts.join(' · '))}&body=${encodeURIComponent(buildReferralInviteText())}`
+          : `mailto:?subject=${encodeURIComponent(subjectParts.join(' · '))}&body=${encodeURIComponent(buildReferralInviteText())}`;
+        sendReferralInviteBtn.href = mailto;
+      }
+
+      function openReferralInviteModal() {
+        if (!referralInviteModal || !referralInviteForm) return;
+        referralInviteForm.reset();
+        referralInviteMessage.textContent = '';
+        referralInviteMessage.className = 'workspace-message';
+        updateReferralInvitePreview();
+        referralInviteModal.classList.add('is-open');
+        referralInviteModal.removeAttribute('aria-hidden');
+        document.body.style.overflow = 'hidden';
+        window.setTimeout(() => document.getElementById('referralFounderName')?.focus({ preventScroll: true }), 120);
+      }
+
+      function closeReferralInviteModal() {
+        if (!referralInviteModal) return;
+        referralInviteModal.classList.remove('is-open');
+        referralInviteModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      async function copyReferralInviteLink() {
+        const link = getReferralInviteLink();
+        if (!link) return;
+        await navigator.clipboard?.writeText(link).catch(() => {});
+        if (referralInviteMessage) {
+          referralInviteMessage.textContent = 'Referral invite link copied.';
+          referralInviteMessage.className = 'workspace-message is-success';
+        }
+      }
+
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
         if (!workspaceActiveProject) return;
         const project = getPrimaryProject(tasks);
@@ -5510,19 +5671,23 @@
         if (workspaceReferralPanel) {
           const referralStats = getReferralStats(project);
           const hasReferralData = hasReferralStats(project);
+          activeReferralLink = referralStats.link || '';
           workspaceReferralPanel.innerHTML = `
-            <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Private Referrals</p><h3 class="workspace-os-title" style="font-size:34px">Invite founders.</h3></div></div>
+            <div class="workspace-referral-center">
+              <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Private Referrals</p><h3 class="workspace-os-title">Invite founders.</h3></div></div>
+              <p class="workspace-referral-copy">Earn credits for successful introductions.</p>
             ${hasReferralData ? `<div class="workspace-readonly-grid">
               <div class="workspace-readonly-row"><span>Invited founders</span><strong>${escapeHTML(referralStats.invited)}</strong></div>
               <div class="workspace-readonly-row"><span>Interested</span><strong>${escapeHTML(referralStats.interested)}</strong></div>
               <div class="workspace-readonly-row"><span>Converted</span><strong>${escapeHTML(referralStats.converted)}</strong></div>
               <div class="workspace-readonly-row"><span>Reward balance</span><strong>${escapeHTML(referralStats.reward)}</strong></div>
-            </div>` : '<p class="workspace-os-scope" style="margin-top:0">Invite founders. Earn credits for successful introductions.</p>'}
-            <div class="workspace-referral-actions">
-              <button class="workspace-button secondary" type="button" data-copy-referral-link="${escapeHTML(referralStats.link)}" ${referralStats.link ? '' : 'disabled'}>Copy referral link</button>
-              <a class="workspace-button secondary" href="${referralStats.link ? `mailto:?subject=${encodeURIComponent('DONEOVERNIGHT referral')}&body=${encodeURIComponent(`Thought this might be useful: ${referralStats.link}`)}` : 'mailto:ask@doneovernight.com'}">Invite founder</a>
+            </div>` : ''}
+              ${referralStats.link ? `<div class="workspace-referral-link">${escapeHTML(referralStats.link)}</div>` : '<div class="workspace-os-empty" style="margin-top:12px">Referral link appears after the workspace slug is available.</div>'}
+              <div class="workspace-referral-actions">
+                <button class="workspace-button secondary" type="button" data-copy-referral-link="${escapeHTML(referralStats.link)}" ${referralStats.link ? '' : 'disabled'}>Copy Referral Link</button>
+                <button class="workspace-button secondary" type="button" data-open-referral-invite ${referralStats.link ? '' : 'disabled'}>Invite Founder</button>
+              </div>
             </div>
-            ${referralStats.link ? '' : '<div class="workspace-os-empty" style="margin-top:12px">Referral link appears after the workspace slug is available.</div>'}
           `;
         }
 
@@ -7096,15 +7261,20 @@
         document.getElementById('newRequestBtn').addEventListener('click', openWorkspaceTaskDrawer);
         document.getElementById('closeWorkspaceTaskDrawer')?.addEventListener('click', closeWorkspaceTaskDrawer);
         document.getElementById('closeOperationUpdateModal')?.addEventListener('click', closeOperationUpdateModal);
+        document.getElementById('closeReferralInviteModal')?.addEventListener('click', closeReferralInviteModal);
         workspaceTaskDrawer?.addEventListener('click', (event) => {
           if (event.target === workspaceTaskDrawer) closeWorkspaceTaskDrawer();
         });
         operationUpdateModal?.addEventListener('click', (event) => {
           if (event.target === operationUpdateModal) closeOperationUpdateModal();
         });
+        referralInviteModal?.addEventListener('click', (event) => {
+          if (event.target === referralInviteModal) closeReferralInviteModal();
+        });
         document.addEventListener('keydown', (event) => {
           if (event.key === 'Escape' && workspaceTaskDrawer?.classList.contains('is-open')) closeWorkspaceTaskDrawer();
           if (event.key === 'Escape' && operationUpdateModal?.classList.contains('is-open')) closeOperationUpdateModal();
+          if (event.key === 'Escape' && referralInviteModal?.classList.contains('is-open')) closeReferralInviteModal();
         });
         document.getElementById('drawerDeadlinePills')?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-drawer-deadline]');
@@ -7126,13 +7296,18 @@
         });
         workspaceReferralPanel?.addEventListener('click', async (event) => {
           const button = event.target.closest('[data-copy-referral-link]');
-          if (!button) return;
-          const link = button.dataset.copyReferralLink || '';
-          if (!link) return;
-          await navigator.clipboard?.writeText(link).catch(() => {});
-          button.textContent = 'Referral link copied';
-          window.setTimeout(() => { button.textContent = 'Copy referral link'; }, 1800);
+          if (button) {
+            const link = button.dataset.copyReferralLink || '';
+            if (!link) return;
+            await navigator.clipboard?.writeText(link).catch(() => {});
+            button.textContent = 'Referral link copied';
+            window.setTimeout(() => { button.textContent = 'Copy Referral Link'; }, 1800);
+            return;
+          }
+          if (event.target.closest('[data-open-referral-invite]')) openReferralInviteModal();
         });
+        referralInviteForm?.addEventListener('input', updateReferralInvitePreview);
+        copyReferralInviteBtn?.addEventListener('click', copyReferralInviteLink);
         workspaceAllTasksPanel?.addEventListener('click', handleWorkspaceTaskHistoryClick);
         renderRecommendations();
         recommendationRail?.addEventListener('click', (event) => {

@@ -717,7 +717,7 @@ function buildReferralCenter(tasks = [], workspaceSlug = "") {
     interested: clean(firstKnown("referral_interested", "interested_founders", "interested")),
     converted: clean(firstKnown("referral_conversions", "conversions", "converted_founders")),
     reward_balance: clean(firstKnown("reward_balance", "referral_reward_balance")),
-    referral_link: workspaceSlug ? `https://doneovernight.com/ask?ref=${encodeURIComponent(workspaceSlug)}` : ""
+    referral_link: workspaceSlug ? `https://ask.doneovernight.com?ref=${encodeURIComponent(workspaceSlug)}` : ""
   };
 }
 

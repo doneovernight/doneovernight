@@ -1540,6 +1540,33 @@
         return true;
       }
 
+      function normalizeReferralValue(value) {
+        const raw = String(value || "").trim();
+        const taskMatch = raw.match(/\bDON-\d{4}-\d{3,8}\b/i);
+        if (taskMatch) return { type: "task", value: taskMatch[0].toUpperCase() };
+        const slug = raw.replace(/^@+/, "").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+        return slug ? { type: "workspace", value: slug } : null;
+      }
+
+      function buildReferralAttribution(referral) {
+        if (!referral?.value) return null;
+        const now = new Date().toISOString();
+        const referralUrl = `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(referral.value)}`;
+        return {
+          ...(referral.type === "task" ? {
+            referral_task_id: referral.value,
+            referred_by_task_id: referral.value
+          } : {
+            referral_workspace_slug: referral.value,
+            referred_by_client: referral.value
+          }),
+          referral_source: referral.type === "workspace" ? "workspace_referral" : "referral_email",
+          referral_url: referralUrl,
+          referral_created_at: now,
+          referral_submitted_at: now
+        };
+      }
+
       function normalizeReferralTaskId(value) {
         const match = String(value || "").trim().match(/\bDON-\d{4}-\d{3,8}\b/i);
         return match ? match[0].toUpperCase() : "";
@@ -1547,15 +1574,10 @@
 
       function getReferralAttribution() {
         const storageKey = "doneovernight_referral_attribution";
-        const urlReferral = normalizeReferralTaskId(new URLSearchParams(window.location.search).get("ref"));
+        const urlReferral = normalizeReferralValue(new URLSearchParams(window.location.search).get("ref"));
 
         if (urlReferral) {
-          const attribution = {
-            referral_task_id: urlReferral,
-            referred_by_task_id: urlReferral,
-            referral_source: "referral_email",
-            referral_created_at: new Date().toISOString()
-          };
+          const attribution = buildReferralAttribution(urlReferral);
           try {
             sessionStorage.setItem(storageKey, JSON.stringify(attribution));
           } catch (error) {}
@@ -1564,13 +1586,13 @@
 
         try {
           const stored = JSON.parse(sessionStorage.getItem(storageKey) || "null");
-          const storedReferral = normalizeReferralTaskId(stored?.referral_task_id || stored?.referred_by_task_id);
+          const storedReferral = normalizeReferralValue(stored?.referral_task_id || stored?.referred_by_task_id || stored?.referral_workspace_slug || stored?.referred_by_client);
           if (storedReferral) {
             return {
-              referral_task_id: storedReferral,
-              referred_by_task_id: storedReferral,
-              referral_source: "referral_email",
-              referral_created_at: stored?.referral_created_at || new Date().toISOString()
+              ...buildReferralAttribution(storedReferral),
+              referral_url: stored?.referral_url || buildReferralAttribution(storedReferral)?.referral_url,
+              referral_created_at: stored?.referral_created_at || new Date().toISOString(),
+              referral_submitted_at: stored?.referral_submitted_at || stored?.referral_created_at || new Date().toISOString()
             };
           }
         } catch (error) {}
@@ -1867,7 +1889,8 @@
               page_hostname: window.location.hostname,
               consent: true,
               marketing_consent_at: now,
-              segment: "start"
+              segment: "start",
+              ...(referralAttribution || {})
             })
           });
           const data = await response.json().catch(() => ({}));
