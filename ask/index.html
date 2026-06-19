@@ -2110,7 +2110,8 @@
           .filter(Boolean);
       }
 
-      const intakeQualityMessage = "Please provide a real request. Tell us what needs to be done.";
+      const intakeQualityMessage = "Please provide a real request.";
+      const intakeQualityDetail = "Tell us what needs to be done.";
 
       function looksRepeatedInput(value) {
         const compact = String(value || "").replace(/\s+/g, "").toLowerCase();
@@ -2207,7 +2208,7 @@
           const task = document.querySelector("#startTask");
           task?.closest(".field")?.classList.add("is-invalid");
           task?.focus({ preventScroll: true });
-          setMessage(intakeQualityMessage);
+          setMessage(intakeQualityMessage, false, intakeQualityDetail);
           return false;
         }
         return true;

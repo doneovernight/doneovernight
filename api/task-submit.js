@@ -721,6 +721,13 @@ function applyIntakeQuality(task, intakeQuality = {}) {
   };
 }
 
+function safeSnippet(value = "", max = 220) {
+  const text = Array.isArray(value)
+    ? value.map((item) => clean(item)).filter(Boolean).join(", ")
+    : clean(value);
+  return text ? text.slice(0, max) : "Not provided";
+}
+
 async function notifyLowConfidenceIntake(task, intakeQuality = {}) {
   const urls = getWebhookUrls([
     "LOW_CONFIDENCE_INTAKE_WEBHOOK_URL",
@@ -729,18 +736,31 @@ async function notifyLowConfidenceIntake(task, intakeQuality = {}) {
   ]);
   const reasons = Array.isArray(intakeQuality.reasons) && intakeQuality.reasons.length
     ? intakeQuality.reasons.join(", ")
-    : "not_enough_executable_context";
+    : "Randomized input detected";
+  const linksSnippet = safeSnippet(task.links || task.rawPayload?.links || task.rawPayload?.files_link);
+  const budgetSnippet = safeSnippet(task.clientBudget || task.rawPayload?.client_budget || task.rawPayload?.budget);
+  const requestSnippet = safeSnippet(task.taskSummary || task.rawPayload?.task_summary || task.rawPayload?.task_description);
   const telegramMessage = [
     "🟠 LOW CONFIDENCE INTAKE",
+    "",
+    `Operational ID: ${task.taskId}`,
     `Status: ${intakeQuality.status || LOW_CONFIDENCE_INTAKE}`,
-    `Reference: ${task.taskId}`,
+    `Reason: ${reasons}`,
     `Name: ${task.name || "Unknown"}`,
     `Email: ${task.email || "Unknown"}`,
     `Source: ${task.source || "task_intake"}`,
-    `Reasons: ${reasons}`,
     "",
     "Request:",
-    task.taskSummary || "Not provided"
+    requestSnippet,
+    "",
+    "Links:",
+    linksSnippet,
+    "",
+    "Budget:",
+    budgetSnippet,
+    "",
+    "Action:",
+    "Review or ignore. Client has been asked to resubmit."
   ].join("\n");
 
   const result = await dispatchWebhook({

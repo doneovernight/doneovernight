@@ -3527,6 +3527,8 @@ function getActiveOperators(operators = adminOperators) {
 function getStatusLabel(status) {
   const labels = {
     request_received: 'Request received',
+    invalid_request: 'Invalid request',
+    low_confidence_intake: 'Low confidence',
     under_review: 'Review in progress',
     review_in_progress: 'Review in progress',
     quote_preparation: 'Execution plan',
@@ -3635,6 +3637,9 @@ function getStatusClass(status) {
 function getTaskCardStatusLabel(task = {}) {
   const paymentStatus = normalizeStatus(task.payment_status);
   const status = normalizeStatus(task.status);
+  const qualityStatus = normalizeStatus(task.raw_payload?.intake_quality_status);
+  if (status === 'invalid_request' || qualityStatus === 'invalid_request') return 'Invalid request';
+  if (status === 'low_confidence_intake' || qualityStatus === 'low_confidence_intake') return 'Low confidence';
   if (task.raw_payload?.reopened_at && ['under_review', 'review_pending', 'review_in_progress'].includes(status)) {
     return 'Reopened / Under review';
   }
@@ -3668,6 +3673,7 @@ function getPaymentStatusLabel(status) {
 
 const ADMIN_TASK_CATEGORY_SECTIONS = {
   new: { title: 'Request Received', slug: 'new' },
+  intake_quality: { title: 'Low Confidence', slug: 'intake-quality' },
   needs_info: { title: 'Needs Info', slug: 'needs-info' },
   review_complete: { title: 'Review', slug: 'review-complete' },
   awaiting_start: { title: 'Awaiting Start', slug: 'awaiting-payment' },
@@ -3680,9 +3686,11 @@ const ADMIN_TASK_CATEGORY_SECTIONS = {
 function resolveAdminTaskCategory(task = {}) {
   const rawPayload = task.raw_payload || {};
   const status = normalizeStatus(task.status);
+  const intakeQualityStatus = normalizeStatus(rawPayload.intake_quality_status || rawPayload.intake_quality?.status);
   const paymentStatus = normalizeStatus(task.payment_status);
   const archivedFlag = task.archived === true || rawPayload.archived === true || normalizeStatus(task.archived) === 'true' || normalizeStatus(rawPayload.archived) === 'true';
   if (['archived', 'cancelled', 'rejected'].includes(status) || archivedFlag) return 'archived';
+  if (['invalid_request', 'low_confidence_intake'].includes(status) || ['invalid_request', 'low_confidence_intake'].includes(intakeQualityStatus)) return 'intake_quality';
   if (status === 'completed') return 'completed';
   if (isDeliveredTask(task)) return 'delivered';
   if (['project_active', 'workspace_active', 'workspace_ready', 'execution_active', 'operators_assigned', 'payment_confirmed', 'paid', 'queued', 'in_progress', 'delivery_prep', 'revision_requested'].includes(status) || ['paid', 'payment_confirmed'].includes(paymentStatus)) return 'project_active';
@@ -3720,6 +3728,8 @@ function canRequestReferralTask(task = {}) {
 function getTaskActionAvailability(task = {}) {
   const rawPayload = task.raw_payload || {};
   const status = normalizeStatus(task.status);
+  const intakeQualityStatus = normalizeStatus(rawPayload.intake_quality_status || rawPayload.intake_quality?.status);
+  const isIntakeQualityBlocked = ['invalid_request', 'low_confidence_intake'].includes(status) || ['invalid_request', 'low_confidence_intake'].includes(intakeQualityStatus);
   const paymentStatus = normalizeStatus(task.payment_status);
   const workspaceStatus = normalizeStatus(task.workspace_status || rawPayload.workspace_status);
   const projectStatus = normalizeStatus(task.project_status || rawPayload.project_status);
@@ -3764,6 +3774,26 @@ function getTaskActionAvailability(task = {}) {
   const canMarkDelivered = ['operators_assigned', 'payment_confirmed', 'workspace_ready', 'workspace_active', 'execution_active', 'project_active', 'queued', 'in_progress'].includes(status) ||
     ['workspace_ready', 'workspace_active', 'active'].includes(workspaceStatus) ||
     ['project_active', 'execution_active', 'active'].includes(projectStatus);
+
+  if (isIntakeQualityBlocked) {
+    return {
+      canOpenReview: false,
+      canSendReminder: false,
+      canConfirmPayment: false,
+      canRequestReferral: false,
+      canPreparePlan: false,
+      canAlternativeScope: false,
+      canRequestNeedsInfo: false,
+      canMarkDelivered: false,
+      canArchive: !['archived', 'completed'].includes(status),
+      canReopenArchived: isArchived,
+      canDeleteArchived: isArchived,
+      canOpenWorkspace: false,
+      canEditWorkspaceSlug: false,
+      isLockedAfterApproval: false,
+      hasTokenizedReviewUrl
+    };
+  }
 
   return {
     canOpenReview: !isLockedAfterApproval && hasTokenizedReviewUrl,
@@ -4309,6 +4339,7 @@ function sortedTasks(tasks) {
 const TASK_FILTERS = [
   ['all', 'All'],
   ['new', 'New'],
+  ['intake_quality', 'Low Confidence'],
   ['needs_info', 'Needs Info'],
   ['review_complete', 'Review'],
   ['awaiting_start', 'Awaiting Start'],
