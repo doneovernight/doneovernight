@@ -3595,6 +3595,34 @@ function getClientConnectedOperator(client = {}, primaryTask = null) {
   return [displayName, handle, role].filter(Boolean).join(' · ');
 }
 
+function getClientJoinLifecycleSummary(client = {}, primaryTask = null) {
+  const raw = client.raw_payload || {};
+  const taskRaw = primaryTask?.raw_payload || {};
+  const source = raw.client_join_source || raw.referral_source || raw.source || client.source || primaryTask?.source || taskRaw.source || 'direct';
+  const operatorSlug = normalizeOperatorHandleLabel(
+    raw.connected_operator_slug ||
+    raw.referring_operator_slug ||
+    raw.operator_referral_slug ||
+    taskRaw.connected_operator_slug ||
+    taskRaw.referring_operator_slug ||
+    taskRaw.operator_referral_slug
+  );
+  const welcomeSent = raw.welcome_email_sent === true || Boolean(raw.welcome_email_sent_at);
+  const telegramSent = raw.client_join_telegram_ok === true || Boolean(raw.client_join_telegram_sent_at);
+  const welcomeStatus = welcomeSent
+    ? `Sent${raw.welcome_email_sent_at ? ` · ${formatTaskDate(raw.welcome_email_sent_at)}` : ''}`
+    : (raw.welcome_email_status || 'Not sent yet');
+  const telegramStatus = telegramSent
+    ? `Sent${raw.client_join_telegram_sent_at ? ` · ${formatTaskDate(raw.client_join_telegram_sent_at)}` : ''}`
+    : (raw.client_join_telegram_status || 'Not sent yet');
+  return {
+    source: String(source || 'direct').replace(/_/g, ' '),
+    operator: operatorSlug || 'None',
+    welcomeStatus,
+    telegramStatus
+  };
+}
+
 function normalizeStatus(status) {
   return String(status || '').trim().toLowerCase();
 }
@@ -5838,15 +5866,19 @@ function renderClientRow(client) {
   const actions = [...workspaceActions, ...clientActions];
   const group = getClientStatusGroup(client.status);
   const flashMessage = getClientFlashMessage(client);
+  const joinLifecycle = getClientJoinLifecycleSummary(client, primaryTask);
   const workspaceGrid = `
     <div class="admin-client-workspace-grid">
       <div class="admin-client-workspace-item"><span>Workspace</span><strong>${escapeHTML(workspaceSummary.workspaceSlug ? `@${workspaceSummary.workspaceSlug}` : 'Not active')}</strong></div>
       <div class="admin-client-workspace-item"><span>Connected operator</span><strong>${escapeHTML(getClientConnectedOperator(client, primaryTask))}</strong></div>
+      <div class="admin-client-workspace-item"><span>Join source</span><strong>${escapeHTML(joinLifecycle.source)}</strong></div>
       <div class="admin-client-workspace-item"><span>Status</span><strong>${escapeHTML(workspaceSummary.workspaceStatus)}</strong></div>
       <div class="admin-client-workspace-item"><span>Active projects</span><strong>${escapeHTML(String(workspaceSummary.activeProjectCount))}</strong></div>
       <div class="admin-client-workspace-item"><span>Latest project</span><strong>${escapeHTML(workspaceSummary.latestReference || 'No DON reference')}</strong></div>
       <div class="admin-client-workspace-item"><span>Project status</span><strong>${escapeHTML(workspaceSummary.latestProjectStatus || 'No active project')}</strong></div>
       <div class="admin-client-workspace-item"><span>Payment / workspace</span><strong>${escapeHTML(workspaceSummary.paymentWorkspaceStatus)}</strong></div>
+      <div class="admin-client-workspace-item"><span>Welcome email</span><strong>${escapeHTML(joinLifecycle.welcomeStatus)}</strong></div>
+      <div class="admin-client-workspace-item"><span>Telegram alert</span><strong>${escapeHTML(joinLifecycle.telegramStatus)}</strong></div>
     </div>
   `;
   const actionMarkup = actions.length ? `

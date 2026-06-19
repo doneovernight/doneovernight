@@ -285,7 +285,7 @@ async function claimOperatorReferralForPortalRequest(portalRequest = {}, input =
   return claimOperatorClientRelationship({
     portalRequest,
     operatorSlug,
-    source: "operator_referral"
+    source: "operator_existing_account"
   });
 }
 

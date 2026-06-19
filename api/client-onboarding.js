@@ -2,7 +2,8 @@ const crypto = require("crypto");
 
 const { buildTaskPayload } = require("../lib/tasks/model");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
-const { dispatchWebhook, getWebhookUrls, syncAccessKeyCredential } = require("../lib/ops");
+const { syncAccessKeyCredential } = require("../lib/ops");
+const { deliverClientJoinLifecycle, normalizeClientJoinSource } = require("../lib/client-join-lifecycle");
 const { claimOperatorClientRelationship, normalizeHandle } = require("../lib/operator-relationships");
 
 const SUPABASE_TIMEOUT_MS = 10_000;
@@ -172,40 +173,6 @@ async function findPortalByUsername(username) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
-async function sendClientJoinedTelegram({ name, email, workspaceSlug, source, taskId }) {
-  const client = [clean(name) || "New client", normalizeEmail(email)].filter(Boolean).join(" / ");
-  const text = [
-    "🟢 NEW CLIENT JOINED",
-    `Client: ${client}`,
-    workspaceSlug ? `Workspace: @${workspaceSlug}` : "",
-    taskId ? `Task: ${taskId}` : "",
-    `Source: ${source || "direct"}`
-  ].filter(Boolean).join("\n");
-  const result = await dispatchWebhook({
-    tag: "[NEW_CLIENT_JOINED_TELEGRAM]",
-    event: "client_joined",
-    urls: getWebhookUrls(["DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"]),
-    payload: {
-      event: "client_joined",
-      notification_type: "new_client_joined",
-      client_name: clean(name),
-      client_email: normalizeEmail(email),
-      workspace_slug: workspaceSlug,
-      task_id: taskId,
-      source: source || "direct",
-      telegram_message: text,
-      text
-    },
-    timeoutMs: SUPABASE_TIMEOUT_MS
-  });
-  return {
-    sent: result.fulfilled > 0,
-    attempted: result.attempted,
-    fulfilled: result.fulfilled,
-    status: result.fulfilled > 0 ? "sent_to_provider" : result.attempted > 0 ? "delivery_not_confirmed" : "not_configured"
-  };
-}
-
 async function createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral = {} }) {
   const workspaceSlug = slugify(username || projectName || name || email);
   const now = new Date().toISOString();
@@ -366,8 +333,17 @@ module.exports = async function handler(req, res) {
     const username = normalizeUsername(input.username || input.handle || "");
     const projectName = clean(input.project_name || input.projectName);
     const notes = clean(input.notes);
-    const source = clean(input.source) || "client_onboarding";
+    const rawSource = clean(input.source) || "client_onboarding";
     const operatorSlug = normalizeHandle(input.operator_slug || input.operator_handle || input.referral_operator_slug || input.referring_operator_slug);
+    const source = normalizeClientJoinSource(
+      operatorSlug && googleUser?.id
+        ? "operator_google_signin"
+        : googleUser?.id
+          ? "google_onboarding"
+          : operatorSlug
+            ? "operator_referral"
+            : rawSource
+    );
     const operatorReferral = {
       operator_slug: operatorSlug,
       operator_name: clean(input.operator_name || input.operatorName),
@@ -470,19 +446,25 @@ module.exports = async function handler(req, res) {
     await syncAccessKeyCredential(portalLead, portalLead?.access_key || accessKey).catch((error) => {
       console.warn(`Access key sync warning: ${error.code || error.message}`);
     });
-    const newClientTelegram = (!operatorSlug && portalLead?._created)
-      ? await sendClientJoinedTelegram({
-        name,
-        email,
-        workspaceSlug: portalLead.workspace_slug || username,
-        source,
-        taskId
-      }).catch((error) => ({ sent: false, status: error.code || error.message || "CLIENT_JOINED_TELEGRAM_FAILED" }))
-      : null;
     const workspaceSession = (allowLegacySaiAccess || Boolean(operatorSlug))
       ? await createWorkspaceSessionForLead(res, portalLead).catch(() => null)
       : null;
     const workspaceSlug = slugify(portalLead?.workspace_slug || portalLead?.username || username || projectName);
+    const activeWorkspaceUrl = workspaceSession?.workspaceSlug
+      ? `https://portal.doneovernight.com/@${workspaceSession.workspaceSlug}`
+      : (String(portalLead?.status || "").toLowerCase() === "active" ? `https://portal.doneovernight.com/@${workspaceSlug}` : "");
+    const clientJoinLifecycle = (!operatorSlug || operatorRelationship?.success !== true)
+      ? await deliverClientJoinLifecycle({
+        portalRequest: portalLead,
+        source,
+        workspace_slug: workspaceSlug,
+        workspace_url: activeWorkspaceUrl,
+        task_id: taskId
+      }).catch((error) => ({
+        skipped: false,
+        error: error.code || error.message || "CLIENT_JOIN_LIFECYCLE_FAILED"
+      }))
+      : operatorRelationship?.clientJoinLifecycle || null;
 
     return send(res, 200, {
       success: true,
@@ -496,7 +478,7 @@ module.exports = async function handler(req, res) {
       workspacePath: `/workspace/@${workspaceSlug}`,
       workspaceSlug,
       operatorRelationship,
-      newClientTelegram,
+      clientJoinLifecycle,
       ...(workspaceSession ? { workspacePath: workspaceSession.workspacePath, workspaceSlug: workspaceSession.workspaceSlug } : {}),
       portalPath: "/portal.html",
       accessEmailStatus: "not_configured",
