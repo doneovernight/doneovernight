@@ -22,6 +22,7 @@
       --right-slide: -74px;
       --four-rotate: 0deg;
       --four-y: 0px;
+      --dot-x: 0px;
       --lock-y: 0px;
       --lock-scale: 1;
     }
@@ -73,7 +74,7 @@
       inset: 0;
       z-index: -3;
       background:
-        linear-gradient(180deg, rgba(8,8,7,.2), rgba(8,8,7,.66)),
+        linear-gradient(180deg, rgba(8,8,7,.06), rgba(8,8,7,.3)),
         url("/assets/romypeters/romy-peters-04.jpg") center / cover no-repeat;
       transform: scale(calc(1.08 - (var(--open) * .035)));
       filter: saturate(.82) contrast(1.04);
@@ -84,9 +85,9 @@
       inset: 0;
       z-index: -2;
       background:
-        radial-gradient(circle at 50% 43%, rgba(248,243,232,.34), transparent 23%),
-        linear-gradient(90deg, rgba(239,234,223,.82), rgba(239,234,223,.58) 32%, rgba(239,234,223,.46) 62%, rgba(239,234,223,.76));
-      opacity: calc(.92 - (var(--open) * .18));
+        radial-gradient(circle at 50% 44%, rgba(248,243,232,.72), transparent 22%),
+        linear-gradient(90deg, rgba(241,236,226,.96), rgba(241,236,226,.72) 32%, rgba(241,236,226,.58) 62%, rgba(241,236,226,.9));
+      opacity: calc(.98 - (var(--open) * .08));
     }
     .pin::after {
       content: "";
@@ -99,7 +100,7 @@
     }
 
     .brand-stage {
-      width: min(92vw, 1480px);
+      width: min(94vw, 1320px);
       display: grid;
       place-items: center;
       transform: translate3d(0, var(--lock-y), 0) scale(var(--lock-scale));
@@ -112,22 +113,23 @@
       justify-content: center;
       color: var(--ink);
       font-family: var(--industrial);
-      font-size: clamp(72px, 15vw, 244px);
+      font-size: clamp(74px, 15.5vw, 210px);
       font-weight: 900;
       line-height: .78;
-      letter-spacing: -.055em;
-      text-transform: uppercase;
+      letter-spacing: -.078em;
+      text-transform: lowercase;
       white-space: nowrap;
       transform: translate3d(0, 0, 0);
       will-change: transform;
+      filter: url("#stamp-distress");
     }
     .core {
       position: relative;
       z-index: 2;
       display: inline-block;
     }
-    .c-core { margin-right: .05em; }
-    .p-core { margin-left: clamp(.1em, 2.3vw, .22em); }
+    .c-core { margin-right: .012em; }
+    .p-core { margin-left: clamp(.012em, .75vw, .055em); }
     .reveal-window {
       display: inline-block;
       overflow: hidden;
@@ -150,13 +152,13 @@
     }
     .four {
       display: inline-block;
-      width: .68em;
-      height: .83em;
-      margin: 0 -.02em 0 .01em;
+      width: .56em;
+      height: .74em;
+      margin: 0 -.025em 0 -.025em;
       transform: translate3d(0, var(--four-y), 0) rotate(var(--four-rotate));
-      transform-origin: 50% 100%;
+      transform-origin: 55% 100%;
       will-change: transform;
-      vertical-align: -.07em;
+      vertical-align: -.05em;
     }
     .four svg {
       display: block;
@@ -168,6 +170,12 @@
       fill: currentColor;
       shape-rendering: geometricPrecision;
     }
+    .dot {
+      display: inline-block;
+      margin-left: .08em;
+      transform: translate3d(var(--dot-x), .02em, 0);
+      will-change: transform;
+    }
 
     .logo-shadow {
       position: absolute;
@@ -175,10 +183,10 @@
       top: calc(50% + clamp(42px, 8vw, 112px));
       width: min(72vw, 840px);
       height: 18px;
-      background: rgba(8, 8, 7, .28);
+      background: rgba(8, 8, 7, .2);
       border-radius: 999px;
       filter: blur(18px);
-      transform: translateX(-50%) scaleX(calc(.42 + var(--open) * .58));
+      transform: translateX(-50%) scaleX(calc(.24 + var(--open) * .76));
       opacity: calc(.52 - var(--open) * .12);
       will-change: transform, opacity;
     }
@@ -188,7 +196,7 @@
       bottom: clamp(28px, 5vw, 56px);
       width: min(72vw, 760px);
       height: 1px;
-      background: rgba(8, 8, 7, .26);
+      background: rgba(8, 8, 7, .18);
       transform: translateX(-50%) scaleX(calc(.18 + var(--open) * .82));
       transform-origin: center;
     }
@@ -271,10 +279,11 @@
       .reveal-track { min-height: 390vh; }
       .brand-stage { width: 96vw; }
       .logo {
-        font-size: clamp(58px, 18.4vw, 104px);
-        letter-spacing: -.06em;
+        font-size: clamp(58px, 17.2vw, 98px);
+        letter-spacing: -.082em;
       }
-      .p-core { margin-left: .13em; }
+      .p-core { margin-left: .035em; }
+      .dot { margin-left: .07em; }
       .scroll-note {
         writing-mode: horizontal-tb;
         right: auto;
@@ -306,22 +315,29 @@
   </style>
 </head>
 <body>
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <filter id="stamp-distress">
+      <feTurbulence type="fractalNoise" baseFrequency="0.78" numOctaves="3" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
   <main>
     <section class="reveal-track" id="reveal">
       <div class="pin">
         <div class="background" aria-hidden="true"></div>
         <div class="brand-stage" aria-label="COMMON PL4CE scroll reveal">
           <div class="logo" id="logo" aria-hidden="true">
-            <span class="core c-core">C</span>
+            <span class="core c-core">c</span>
             <span class="reveal-window left-window" id="leftWindow">
-              <span class="revealed" id="leftLetters">OMMON</span>
+              <span class="revealed" id="leftLetters">ommon</span>
             </span>
-            <span class="core p-core">P</span>
+            <span class="core p-core">p</span>
             <span class="reveal-window right-window" id="rightWindow">
               <span class="revealed" id="rightLetters">
-                <span class="letter">L</span><span class="four" id="fallenFour"><svg viewBox="0 0 140 180" focusable="false" aria-hidden="true"><path d="M20 174 H51 L104 6 H73 Z"/><path d="M34 92 L127 72 L132 99 L39 119 Z"/><path d="M92 174 H123 L108 34 H77 Z"/></svg></span><span class="letter">CE</span>
+                <span class="letter">l</span><span class="four" id="fallenFour"><svg viewBox="0 0 118 162" focusable="false" aria-hidden="true"><path d="M14 158 H43 L92 5 H64 Z"/><path d="M25 86 L107 86 L103 112 L21 112 Z"/><path d="M82 158 H111 L101 36 H72 Z"/></svg></span><span class="letter">ce</span>
               </span>
             </span>
+            <span class="core dot" id="movingDot">.</span>
           </div>
           <div class="logo-shadow" aria-hidden="true"></div>
         </div>
@@ -331,14 +347,14 @@
       <div class="locked-copy">
         <div class="locked-copy-inner">
           <strong>Locked</strong>
-          <p>The monogram has opened into the full COMMON PL4CE wordmark. The 4 loses balance, settles left, and stays readable.</p>
+          <p>The compact cp. mark opens into commonpl4ce. The period travels with the right side, and the 4 settles into the final wordmark.</p>
         </div>
       </div>
     </section>
     <section class="content" aria-labelledby="system-title">
       <div class="content-inner">
         <h2 id="system-title">Industrial. Editorial. Kinetic.</h2>
-        <p>This prototype uses requestAnimationFrame and transform-driven interpolation. The hidden wordmark is clipped inside the compact CP, then mechanically expands until COMMON PL4CE locks into place.</p>
+        <p>This prototype uses requestAnimationFrame and transform-driven interpolation. The hidden wordmark is clipped inside the compact cp. mark, then mechanically expands until commonpl4ce. locks into place.</p>
       </div>
     </section>
   </main>
@@ -396,10 +412,11 @@
         root.style.setProperty("--open", open.toFixed(4));
         root.style.setProperty("--left-reveal", `${(leftWidth * leftOpen).toFixed(2)}px`);
         root.style.setProperty("--right-reveal", `${(rightWidth * rightOpen).toFixed(2)}px`);
-        root.style.setProperty("--left-slide", `${((-1 + leftOpen) * 92).toFixed(2)}px`);
-        root.style.setProperty("--right-slide", `${((-1 + rightOpen) * 74).toFixed(2)}px`);
-        root.style.setProperty("--four-rotate", `${(-12 * fall).toFixed(2)}deg`);
-        root.style.setProperty("--four-y", `${(12 * fall).toFixed(2)}px`);
+        root.style.setProperty("--left-slide", `${((-1 + leftOpen) * leftWidth).toFixed(2)}px`);
+        root.style.setProperty("--right-slide", `${((-1 + rightOpen) * rightWidth).toFixed(2)}px`);
+        root.style.setProperty("--dot-x", `${(rightWidth * (1 - rightOpen)).toFixed(2)}px`);
+        root.style.setProperty("--four-rotate", `${(-10 * fall).toFixed(2)}deg`);
+        root.style.setProperty("--four-y", `${(7 * fall).toFixed(2)}px`);
         root.style.setProperty("--lock-y", `${(-36 * lock).toFixed(2)}vh`);
         root.style.setProperty("--lock-scale", `${(1 - 0.58 * lock).toFixed(4)}`);
 
