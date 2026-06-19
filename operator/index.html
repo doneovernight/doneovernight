@@ -442,6 +442,83 @@
       line-height: 1.35;
     }
 
+    .operator-progress-summary {
+      margin-top: 18px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 18%, rgba(255,255,255,.075));
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 14px;
+    }
+
+    .operator-progress-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .operator-progress-head span {
+      display: block;
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-progress-head strong {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255,255,255,.9);
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .operator-progress-tier {
+      color: color-mix(in srgb, var(--operator-accent) 72%, rgba(245,241,234,.7));
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .operator-progress-bar {
+      height: 8px;
+      margin-top: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .operator-progress-bar span {
+      display: block;
+      width: var(--progress, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(233,196,138,.54), rgba(139,224,173,.58));
+      box-shadow: 0 0 22px rgba(233,196,138,.16);
+      transition: width .6s ease;
+    }
+
+    .operator-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      color: rgba(245,241,234,.42);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .11em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+
     .operator-availability-toggle {
       display: inline-flex;
       align-items: center;
@@ -660,6 +737,110 @@
     .operator-section {
       margin-top: 34px;
       scroll-margin-top: 96px;
+    }
+
+    .progression-shell {
+      display: grid;
+      grid-template-columns: minmax(0, .74fr) minmax(0, 1.26fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .progression-intro,
+    .progression-roadmap {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      padding: 18px;
+    }
+
+    .progression-intro h3,
+    .progression-roadmap h3 {
+      margin: 0;
+      color: rgba(255,255,255,.88);
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 400;
+      letter-spacing: -.02em;
+    }
+
+    .progression-intro p {
+      margin: 12px 0 0;
+      color: rgba(245,241,234,.48);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .tier-list {
+      display: grid;
+      gap: 9px;
+      margin-top: 18px;
+    }
+
+    .tier-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid rgba(255,255,255,.055);
+      padding-top: 9px;
+      color: rgba(245,241,234,.62);
+      font-size: 12px;
+    }
+
+    .tier-row:first-child { border-top: 0; padding-top: 0; }
+
+    .tier-row b {
+      color: rgba(255,255,255,.82);
+      font-weight: 650;
+    }
+
+    .tier-row span {
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .roadmap-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .roadmap-card {
+      min-height: 112px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 8px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.026), rgba(255,255,255,.012)),
+        rgba(0,0,0,.14);
+      padding: 14px;
+    }
+
+    .roadmap-card span {
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .roadmap-card h4 {
+      margin: 12px 0 8px;
+      color: rgba(255,255,255,.84);
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .roadmap-card p {
+      margin: 0;
+      color: rgba(245,241,234,.42);
+      font-size: 11px;
+      line-height: 1.55;
     }
 
     .section-head {
@@ -1296,6 +1477,7 @@
       .gateway-shell,
       .operator-hero,
       .operator-two-column,
+      .progression-shell,
       .profile-shell { grid-template-columns: 1fr; }
       .command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .operator-metric.is-wide { grid-column: span 1; }
@@ -1313,6 +1495,7 @@
       h1 { max-width: 11ch; }
       .command-grid,
       .module-grid,
+      .roadmap-grid,
       .profile-fields { grid-template-columns: 1fr; }
       .profile-settings-grid { grid-template-columns: 1fr; }
       .operator-row { grid-template-columns: 1fr; }
@@ -1411,6 +1594,20 @@
           <div class="operator-state-item"><span>Next action</span><strong data-runtime="stateNextAction">Standing by</strong></div>
           <div class="operator-state-item"><span>Payout state</span><strong data-runtime="statePayout">Private</strong></div>
         </div>
+        <div class="operator-progress-summary" aria-label="Operator progress">
+          <div class="operator-progress-head">
+            <div>
+              <span>Operator Progress</span>
+              <strong data-progression="level">Level 1</strong>
+            </div>
+            <div class="operator-progress-tier" data-progression="tier">Observer</div>
+          </div>
+          <div class="operator-progress-bar" aria-hidden="true"><span data-progression="bar"></span></div>
+          <div class="operator-progress-meta">
+            <span data-progression="percent">0%</span>
+            <span data-progression="next">Next: Level 2</span>
+          </div>
+        </div>
         <div class="operator-actions">
           <a class="operator-button" href="/apply">Apply as operator →</a>
           <a class="operator-button" id="operatorRuntimeAction" href="#assigned-work" hidden>Open assigned work →</a>
@@ -1461,6 +1658,44 @@
           <div class="metric-label">Pending Payout</div>
           <div class="metric-value" data-metric="revenue">Private</div>
           <p class="metric-note">Paid and pending payout visibility.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="operator-roadmap" aria-labelledby="operatorRoadmapTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operator Roadmap</p>
+          <h2 id="operatorRoadmapTitle">Private progression layer.</h2>
+        </div>
+        <p>Progression is opening soon. Current score will be tracked for successful outcomes, referrals, client delivery, and long-term contribution.</p>
+      </div>
+      <div class="progression-shell">
+        <article class="progression-intro">
+          <p class="eyebrow">Progression System</p>
+          <h3>Opening Soon</h3>
+          <p>This layer tracks contribution quietly. Unlocks will arrive through consistent delivery, trusted referrals, and operator reliability.</p>
+          <div class="tier-list" aria-label="Future operator tiers">
+            <div class="tier-row"><b>Observer</b><span>Level 1</span></div>
+            <div class="tier-row"><b>Operator</b><span>Level 10</span></div>
+            <div class="tier-row"><b>Partner Operator</b><span>Level 25</span></div>
+            <div class="tier-row"><b>Execution Partner</b><span>Level 40</span></div>
+            <div class="tier-row"><b>Senior Partner</b><span>Level 60</span></div>
+            <div class="tier-row"><b>Growth Partner</b><span>Level 80</span></div>
+            <div class="tier-row"><b>Elite Partner</b><span>Level 100</span></div>
+          </div>
+        </article>
+        <article class="progression-roadmap">
+          <p class="eyebrow">Unlock Roadmap</p>
+          <h3>Future access.</h3>
+          <div class="roadmap-grid">
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Referral System</h4><p>Opening Soon</p></div>
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Portfolio Profile</h4><p>Unlock at Level 25</p></div>
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Partner Subdomain</h4><p>Unlock at Level 40</p></div>
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Lead Discovery</h4><p>Unlock at Level 80</p></div>
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Outreach Engine</h4><p>Unlock at Level 100</p></div>
+            <div class="roadmap-card"><span>🔒 Locked</span><h4>Elite Partner Tools</h4><p>Unlock at Level 100+</p></div>
+          </div>
         </article>
       </div>
     </section>
@@ -1873,6 +2108,10 @@
         text(`[data-metric="${name}"]`, value ?? '0');
       }
 
+      function progressionField(name, value) {
+        text(`[data-progression="${name}"]`, value);
+      }
+
       function escapeHTML(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
           '&': '&amp;',
@@ -2220,6 +2459,27 @@
         return 'is-muted';
       }
 
+      function normalizedProgression(value = {}) {
+        const level = Math.max(1, Math.min(100, Number(value.level || 1) || 1));
+        const progress = Math.max(0, Math.min(100, Number(value.progress || 0) || 0));
+        return {
+          level,
+          tier: String(value.tier || 'Observer'),
+          progress,
+          nextLevel: Math.min(100, Number(value.next_level || level + 1) || level + 1)
+        };
+      }
+
+      function renderOperatorProgression(value = {}) {
+        const progression = normalizedProgression(value);
+        progressionField('level', `Level ${progression.level}`);
+        progressionField('tier', progression.tier);
+        progressionField('percent', `${progression.progress}%`);
+        progressionField('next', `Next: Level ${progression.nextLevel}`);
+        const bar = document.querySelector('[data-progression="bar"]');
+        if (bar) bar.style.setProperty('--progress', `${progression.progress}%`);
+      }
+
       function nextOperatorAction({ state = {}, tasks = [], messages = [] } = {}) {
         if (Number(state.revisions_pending || 0) > 0) return 'Review requested changes';
         if (Number(state.unread_messages || 0) > 0 || messages.some((item) => String(item.status || '').toLowerCase() === 'unread')) return 'Read client update';
@@ -2284,7 +2544,8 @@
             portfolio: data.operator?.portfolio || '',
             instagram: data.operator?.instagram || data.operator?.instagram_handle || '',
             last_active_at: data.operator?.last_active_at || '',
-            operator_availability: data.operator?.operator_availability || ''
+            operator_availability: data.operator?.operator_availability || '',
+            operator_progression: data.operator?.operator_progression || {}
           },
           metrics,
           state: {
@@ -2482,6 +2743,7 @@
         const runtimeAssignments = runtime.assignments || [];
         const runtimeMessages = runtime.messages || [];
         const nextAction = nextOperatorAction({ state, tasks: runtimeTasks, messages: runtimeMessages });
+        renderOperatorProgression(operator.operator_progression || {});
         setAvailabilityState(owner ? (operator.operator_availability || state.operator_availability || 'always_available') : 'offline', { disabled: !owner });
         if (!owner && availabilityLabel) availabilityLabel.textContent = 'Private';
 
