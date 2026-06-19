@@ -442,6 +442,9 @@
     }
 
     .workspace-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-height: 50px;
       border: 1px solid rgba(233,196,138,.45);
       border-radius: 999px;
@@ -453,6 +456,7 @@
       font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
+      text-align: center;
       cursor: pointer;
       transition: background .22s, border-color .22s, color .22s, box-shadow .22s, transform .22s;
     }
@@ -1629,6 +1633,109 @@
       color: rgba(255,255,255,.62);
       font-size: 13px;
       line-height: 1.65;
+    }
+
+    .referral-invite-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,.018);
+      padding: 4px;
+    }
+
+    .referral-invite-tab {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,255,255,.46);
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
+    }
+
+    .referral-invite-tab.is-active {
+      border-color: rgba(233,196,138,.34);
+      background: rgba(233,196,138,.08);
+      color: #f4d28a;
+      box-shadow: 0 0 18px rgba(233,196,138,.12);
+    }
+
+    .referral-invite-panel {
+      display: none;
+      gap: 14px;
+    }
+
+    .referral-invite-panel.is-active {
+      display: grid;
+    }
+
+    .referral-field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .referral-note-generate {
+      border: 1px solid rgba(233,196,138,.22);
+      border-radius: 999px;
+      background: rgba(233,196,138,.05);
+      color: rgba(244,210,138,.88);
+      padding: 7px 10px;
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color .2s, background .2s, color .2s;
+    }
+
+    .referral-note-generate:hover,
+    .referral-note-generate:focus-visible {
+      border-color: rgba(233,196,138,.46);
+      background: rgba(233,196,138,.1);
+      color: #ffe3ad;
+      outline: none;
+    }
+
+    .referral-helper-copy {
+      margin: -2px 0 0;
+      color: rgba(255,255,255,.42);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .referral-copy-panel {
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 9px;
+      background: rgba(255,255,255,.018);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .referral-copy-panel p {
+      margin: 0 auto 14px;
+      max-width: 42ch;
+      color: rgba(255,255,255,.56);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .referral-readonly-link {
+      margin-top: 12px;
+      color: rgba(255,255,255,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
     }
 
     .workspace-os-card.is-quiet-empty {
@@ -4226,30 +4333,46 @@
         </div>
         <button class="workspace-drawer-close" id="closeReferralInviteModal" type="button" aria-label="Close referral invite">×</button>
       </div>
-      <p class="workspace-drawer-copy">Create a clean referral invitation. The link keeps your workspace attribution attached.</p>
+      <p class="workspace-drawer-copy">Introduce a founder who could benefit from private execution.</p>
       <form class="request-form" id="referralInviteForm" novalidate>
-        <div class="field-group">
-          <label for="referralFounderName">Founder name <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
-          <input id="referralFounderName" type="text" placeholder="Founder name">
+        <div class="referral-invite-tabs" role="tablist" aria-label="Referral invite mode">
+          <button class="referral-invite-tab is-active" id="referralSendModeTab" type="button" role="tab" aria-selected="true" aria-controls="referralSendModePanel" data-referral-mode="send">Send Introduction</button>
+          <button class="referral-invite-tab" id="referralCopyModeTab" type="button" role="tab" aria-selected="false" aria-controls="referralCopyModePanel" data-referral-mode="copy">Copy Referral Link</button>
         </div>
-        <div class="field-group">
-          <label for="referralFounderEmail">Founder email <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
-          <input id="referralFounderEmail" type="email" placeholder="founder@company.com">
+
+        <div class="referral-invite-panel is-active" id="referralSendModePanel" role="tabpanel" aria-labelledby="referralSendModeTab" data-referral-panel="send">
+          <div class="field-group">
+            <label for="referralFounderName">Founder name <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+            <input id="referralFounderName" type="text" placeholder="Founder name">
+          </div>
+          <div class="field-group">
+            <label for="referralFounderEmail">Founder email <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+            <input id="referralFounderEmail" type="email" placeholder="founder@company.com">
+          </div>
+          <div class="field-group">
+            <label for="referralFounderCompany">Company <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+            <input id="referralFounderCompany" type="text" placeholder="Company">
+          </div>
+          <div class="field-group">
+            <div class="referral-field-head">
+              <label for="referralInviteNote">Why are you introducing them?</label>
+              <button class="referral-note-generate" id="generateReferralNoteBtn" type="button">Generate note</button>
+            </div>
+            <textarea id="referralInviteNote" rows="3" placeholder="Add a short private context note."></textarea>
+            <p class="referral-helper-copy">A successful referral can earn DONEOVERNIGHT credit for future tasks.</p>
+          </div>
+          <a class="workspace-button primary-command" id="sendReferralInviteBtn" href="mailto:ask@doneovernight.com">Send Introduction</a>
         </div>
-        <div class="field-group">
-          <label for="referralFounderCompany">Company <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
-          <input id="referralFounderCompany" type="text" placeholder="Company">
+
+        <div class="referral-invite-panel" id="referralCopyModePanel" role="tabpanel" aria-labelledby="referralCopyModeTab" data-referral-panel="copy">
+          <div class="referral-copy-panel">
+            <p>Copy your private referral link and send it directly. Attribution stays attached when the founder enters intake.</p>
+            <button class="workspace-button secondary" id="copyReferralInviteBtn" type="button">Copy Referral Link</button>
+            <div class="referral-readonly-link" id="referralInvitePreview" aria-live="polite">Referral link is prepared privately.</div>
+          </div>
         </div>
-        <div class="field-group">
-          <label for="referralInviteNote">Note <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
-          <textarea id="referralInviteNote" rows="3" placeholder="Short context for the founder."></textarea>
-        </div>
-        <div class="referral-invite-preview" id="referralInvitePreview">Your invite link will appear here.</div>
+
         <div class="workspace-message" id="referralInviteMessage" aria-live="polite"></div>
-        <div class="workspace-referral-actions">
-          <button class="workspace-button secondary" id="copyReferralInviteBtn" type="button">Copy Invite Link</button>
-          <a class="workspace-button secondary" id="sendReferralInviteBtn" href="mailto:ask@doneovernight.com">Send Invite</a>
-        </div>
       </form>
     </aside>
   </div>
@@ -4356,6 +4479,7 @@
       const referralInviteMessage = document.getElementById('referralInviteMessage');
       const copyReferralInviteBtn = document.getElementById('copyReferralInviteBtn');
       const sendReferralInviteBtn = document.getElementById('sendReferralInviteBtn');
+      const generateReferralNoteBtn = document.getElementById('generateReferralNoteBtn');
       const workspaceDonbot = document.getElementById('workspaceDonbot');
       const workspaceDonbotPanel = document.getElementById('workspaceDonbotPanel');
       const workspaceDonbotContent = document.getElementById('workspaceDonbotContent');
@@ -5870,7 +5994,42 @@
       }
 
       function getReferralInviteLink() {
-        return activeReferralLink || (workspaceSlug ? `https://ask.doneovernight.com?ref=${encodeURIComponent(workspaceSlug)}` : '');
+        return workspaceSlug ? `https://ask.doneovernight.com?ref=${encodeURIComponent(workspaceSlug)}` : (activeReferralLink || '');
+      }
+
+      const referralNoteTemplates = [
+        'I thought of you because DONEOVERNIGHT is built for founders who need execution without another meeting.',
+        'This might be useful if you want to hand off an urgent digital or operational task and get a clear plan back quickly.',
+        'I think this could help with the kind of execution work that usually stays stuck between ideas, inboxes, and unfinished systems.',
+        'Worth looking at if you need a private operator-style team for fast digital execution.'
+      ];
+
+      function getReferralNoteTemplate(values = {}) {
+        const seed = [values.name, values.company, workspaceSlug].filter(Boolean).join('').length;
+        const base = referralNoteTemplates[seed % referralNoteTemplates.length];
+        if (values.name && values.company) {
+          return `${values.name}, ${base.charAt(0).toLowerCase()}${base.slice(1)} It felt relevant for ${values.company}.`;
+        }
+        if (values.name) {
+          return `${values.name}, ${base.charAt(0).toLowerCase()}${base.slice(1)}`;
+        }
+        if (values.company) {
+          return `${base} It felt relevant for ${values.company}.`;
+        }
+        return base;
+      }
+
+      function generateReferralNote() {
+        const values = getReferralInviteValues();
+        const note = document.getElementById('referralInviteNote');
+        if (!note) return;
+        note.value = getReferralNoteTemplate(values);
+        updateReferralInvitePreview();
+      }
+
+      function getReferralReferrerName() {
+        const session = getSession();
+        return session.name || workspaceName?.textContent?.trim() || 'A DONEOVERNIGHT client';
       }
 
       function buildReferralInviteText() {
@@ -5879,21 +6038,38 @@
         return [
           values.name ? `Hi ${values.name},` : 'Hi,',
           '',
-          values.note || 'I thought DONEOVERNIGHT might be useful for your next execution request.',
+          'I wanted to send this over because DONEOVERNIGHT is built for founders who need private execution without adding another meeting.',
           '',
-          link
+          values.note || getReferralNoteTemplate(values),
+          '',
+          'You can enter a private intake here:',
+          link,
+          '',
+          `— ${getReferralReferrerName()}`
         ].join('\n');
+      }
+
+      function setReferralInviteMode(mode = 'send') {
+        const nextMode = mode === 'copy' ? 'copy' : 'send';
+        referralInviteForm?.querySelectorAll('[data-referral-mode]').forEach((tab) => {
+          const active = tab.dataset.referralMode === nextMode;
+          tab.classList.toggle('is-active', active);
+          tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        referralInviteForm?.querySelectorAll('[data-referral-panel]').forEach((panel) => {
+          panel.classList.toggle('is-active', panel.dataset.referralPanel === nextMode);
+        });
       }
 
       function updateReferralInvitePreview() {
         if (!referralInvitePreview || !sendReferralInviteBtn) return;
         const values = getReferralInviteValues();
         const link = getReferralInviteLink();
-        referralInvitePreview.textContent = link || 'Referral link will appear when your workspace slug is available.';
-        const subjectParts = ['DONEOVERNIGHT referral', values.company].filter(Boolean);
+        referralInvitePreview.textContent = link || 'Referral link is prepared when your workspace slug is available.';
+        const subject = 'Private DONEOVERNIGHT introduction';
         const mailto = values.email
-          ? `mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent(subjectParts.join(' · '))}&body=${encodeURIComponent(buildReferralInviteText())}`
-          : `mailto:?subject=${encodeURIComponent(subjectParts.join(' · '))}&body=${encodeURIComponent(buildReferralInviteText())}`;
+          ? `mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildReferralInviteText())}`
+          : `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildReferralInviteText())}`;
         sendReferralInviteBtn.href = mailto;
       }
 
@@ -5902,6 +6078,7 @@
         referralInviteForm.reset();
         referralInviteMessage.textContent = '';
         referralInviteMessage.className = 'workspace-message';
+        setReferralInviteMode('send');
         updateReferralInvitePreview();
         referralInviteModal.classList.add('is-open');
         referralInviteModal.removeAttribute('aria-hidden');
@@ -7738,6 +7915,14 @@
           if (event.target.closest('[data-open-referral-invite]')) openReferralInviteModal();
         });
         referralInviteForm?.addEventListener('input', updateReferralInvitePreview);
+        referralInviteForm?.addEventListener('click', (event) => {
+          const modeButton = event.target.closest('[data-referral-mode]');
+          if (modeButton) {
+            setReferralInviteMode(modeButton.dataset.referralMode);
+            updateReferralInvitePreview();
+          }
+        });
+        generateReferralNoteBtn?.addEventListener('click', generateReferralNote);
         copyReferralInviteBtn?.addEventListener('click', copyReferralInviteLink);
         workspaceAllTasksPanel?.addEventListener('click', handleWorkspaceTaskHistoryClick);
         renderRecommendations();
