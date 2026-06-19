@@ -351,6 +351,17 @@
     }
 
     .operator-card[hidden] { display: none; }
+    .operator-card.is-network {
+      border-top-color: rgba(233,196,138,.14);
+      padding: 16px 0;
+    }
+
+    .operator-card.is-network h2,
+    .operator-card.is-network .operator-handle,
+    .operator-card.is-network .operator-role,
+    .operator-card.is-network .operator-note {
+      display: none;
+    }
 
     .operator-card-label {
       margin: 0 0 10px;
@@ -395,7 +406,7 @@
 
     .auth-entry {
       display: grid;
-      gap: 11px;
+      gap: 12px;
       margin-bottom: 18px;
     }
 
@@ -437,12 +448,21 @@
     }
 
     .form-title {
-      margin: 4px 0 2px;
+      margin: 2px 0 2px;
       color: rgba(255,255,255,.82);
       font-family: var(--serif);
       font-size: 24px;
       font-weight: 400;
     }
+
+    .field-error {
+      display: none;
+      color: var(--red);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .field.is-invalid .field-error { display: block; }
 
     .next-section {
       margin-top: 18px;
@@ -498,79 +518,80 @@
     <header class="topbar">
       <div class="topbar-inner">
         <a class="wordmark" href="../" aria-label="DONEOVERNIGHT home"><img src="https://doneovernight.com/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
-        <div class="status">Private client setup</div>
+        <div class="status" data-l10n="status">Private client setup</div>
       </div>
     </header>
 
     <section class="layout">
       <div>
-        <p class="eyebrow">Private referral access</p>
-        <h1>Introduced through DONEOVERNIGHT.</h1>
-        <p class="copy">You were invited through the DONEOVERNIGHT operator network. Create a workspace or sign in with an existing account to continue.</p>
+        <p class="eyebrow" data-l10n="heroEyebrow">Private referral access</p>
+        <h1 data-l10n="heroTitle">Introduced through DONEOVERNIGHT.</h1>
+        <p class="copy" data-l10n="heroCopy">You were invited through the DONEOVERNIGHT operator network. Continue with your existing account or create a private workspace to begin.</p>
         <div class="operator-card" id="operatorReferralCard" hidden>
-          <p class="operator-card-label">Introduced by</p>
+          <p class="operator-card-label" id="operatorReferralLabel" data-l10n="introducedBy">Introduced by</p>
           <h2 id="operatorReferralName">DONEOVERNIGHT Operator</h2>
           <div class="operator-handle" id="operatorReferralHandle">@operator</div>
           <div class="operator-role" id="operatorReferralRole">Specialist layer</div>
           <p class="operator-note" id="operatorReferralNote">Private execution. Operational systems. Overnight delivery.</p>
         </div>
         <div class="onboarding-path" aria-label="Client onboarding path">
-          <div class="onboarding-path-item"><span>1</span><div>Enter with Google, sign in, or create a new workspace.</div></div>
-          <div class="onboarding-path-item"><span>2</span><div>DONEOVERNIGHT connects your request to the private operating layer.</div></div>
-          <div class="onboarding-path-item"><span>3</span><div>Track execution, files, updates, and delivery from the workspace.</div></div>
+          <div class="onboarding-path-item"><span>1</span><div data-l10n="pathOne">Continue access or create a new workspace.</div></div>
+          <div class="onboarding-path-item"><span>2</span><div data-l10n="pathTwo">DONEOVERNIGHT connects your request to the private operating layer.</div></div>
+          <div class="onboarding-path-item"><span>3</span><div data-l10n="pathThree">Track execution, files, updates, and delivery from the workspace.</div></div>
         </div>
       </div>
 
       <aside class="panel">
         <div class="auth-entry">
-          <h2 class="auth-entry-title">Continue access.</h2>
-          <p class="auth-entry-copy">Already have a workspace? Continue to your account. New here? Create a private workspace below.</p>
+          <h2 class="auth-entry-title" data-l10n="continueAccess">Continue Access</h2>
+          <p class="auth-entry-copy" data-l10n="continueCopy">Already have a workspace? Continue with your existing account.</p>
           <div class="auth-actions">
-            <button class="button is-secondary" id="googleOnboarding" type="button">Continue with Google</button>
-            <a class="button is-quiet-link" id="existingWorkspaceLink" href="https://portal.doneovernight.com/workspace">Sign In</a>
+            <button class="button is-secondary" id="googleOnboarding" type="button" data-l10n="continueGoogle">Continue with Google</button>
+            <a class="button is-quiet-link" id="existingWorkspaceLink" href="https://portal.doneovernight.com/workspace" data-l10n="signIn">Sign In</a>
           </div>
         </div>
         <form class="form" id="onboardingForm" novalidate>
-          <div class="divider">or</div>
-          <h2 class="form-title">Create New Workspace</h2>
+          <div class="divider" data-l10n="createDivider">or create a new workspace</div>
+          <h2 class="form-title" data-l10n="createWorkspace">Create New Workspace</h2>
           <div class="field">
-            <label for="clientName">Name</label>
+            <label for="clientName" data-l10n="nameLabel">Name</label>
             <input id="clientName" name="name" autocomplete="name" required>
           </div>
           <div class="field">
-            <label for="clientEmail">Email</label>
+            <label for="clientEmail" data-l10n="emailLabel">Email</label>
             <input id="clientEmail" name="email" type="email" autocomplete="email" required>
           </div>
           <div class="field">
-            <label for="clientUsername">Username</label>
-            <input id="clientUsername" name="username" autocomplete="username" placeholder="choose a username" required>
+            <label for="clientUsername" data-l10n="usernameLabel">Username</label>
+            <input id="clientUsername" name="username" autocomplete="username" placeholder="choose a username" data-l10n-placeholder="usernamePlaceholder" required>
+          </div>
+          <div class="field" id="projectField">
+            <label for="projectName" data-l10n="projectLabel">Project / company name</label>
+            <input id="projectName" name="project_name" placeholder="Project or company name" data-l10n-placeholder="projectPlaceholder" required>
+            <div class="field-error" id="projectFieldError" data-l10n="projectRequired">Add a project name so operations can prepare the workspace.</div>
           </div>
           <div class="field">
-            <label for="projectName">Project name</label>
-            <input id="projectName" name="project_name" placeholder="Project or company name" required>
-          </div>
-          <div class="field">
-            <label for="clientNotes">Notes <span style="opacity:.55">optional</span></label>
-            <textarea id="clientNotes" name="notes" placeholder="Anything operations should know before the workspace is prepared."></textarea>
+            <label for="clientNotes"><span data-l10n="notesLabel">Notes</span> <span style="opacity:.55" data-l10n="optionalLabel">optional</span></label>
+            <textarea id="clientNotes" name="notes" placeholder="Anything operations should know before the workspace is prepared." data-l10n-placeholder="notesPlaceholder"></textarea>
           </div>
           <div class="message" id="onboardingMessage" aria-live="polite"></div>
-          <button class="button" id="onboardingSubmit" type="submit">Prepare private workspace →</button>
+          <button class="button" id="onboardingSubmit" type="submit" data-l10n="submitButton">Prepare private workspace →</button>
         </form>
         <div class="next-section" aria-label="What happens next">
-          <h3>What happens next</h3>
+          <h3 data-l10n="nextTitle">What happens next</h3>
           <ul>
-            <li>Workspace access</li>
-            <li>Project tracking</li>
-            <li>File delivery</li>
-            <li>Operational updates</li>
-            <li>Direct execution requests</li>
+            <li data-l10n="nextWorkspace">Workspace access</li>
+            <li data-l10n="nextTracking">Project tracking</li>
+            <li data-l10n="nextFiles">File delivery</li>
+            <li data-l10n="nextUpdates">Operational updates</li>
+            <li data-l10n="nextRequests">Direct execution requests</li>
           </ul>
         </div>
 
         <div class="success-card" id="onboardingSuccess">
-          <strong>Workspace intake received.</strong>
-          <p>Operations has the request in queue. Access credentials and released project links remain inside the protected workspace.</p>
-          <a href="../workspace/">Open protected workspace</a>
+          <strong data-l10n="successTitle">Workspace intake received.</strong>
+          <p data-l10n="successCopy">Operations has the request in queue. Access credentials and released project links remain inside the protected workspace.</p>
+          <a href="../workspace/" data-l10n="successLink">Open protected workspace</a>
         </div>
       </aside>
     </section>
@@ -594,10 +615,120 @@
       const operatorReferralHandle = document.getElementById('operatorReferralHandle');
       const operatorReferralRole = document.getElementById('operatorReferralRole');
       const operatorReferralNote = document.getElementById('operatorReferralNote');
+      const operatorReferralLabel = document.getElementById('operatorReferralLabel');
       const existingWorkspaceLink = document.getElementById('existingWorkspaceLink');
+      const projectField = document.getElementById('projectField');
       let googleAccessToken = '';
       let googleProfileImage = '';
+      let projectTouched = false;
+      let hasTriedSubmit = false;
       let operatorReferral = getOperatorReferralFromPath();
+      const localeCopy = {
+        en: {
+          status: 'Private client setup',
+          heroEyebrow: 'Private referral access',
+          heroTitle: 'Introduced through DONEOVERNIGHT.',
+          heroCopy: 'You were invited through the DONEOVERNIGHT operator network. Continue with your existing account or create a private workspace to begin.',
+          introducedBy: 'Introduced by',
+          networkIntro: 'Introduced through the DONEOVERNIGHT operator network.',
+          fallbackRole: 'Private referral access',
+          fallbackNote: 'Private execution. Operational systems. Overnight delivery.',
+          specialistLayer: 'Specialist layer',
+          pathOne: 'Continue access or create a new workspace.',
+          pathTwo: 'DONEOVERNIGHT connects your request to the private operating layer.',
+          pathThree: 'Track execution, files, updates, and delivery from the workspace.',
+          continueAccess: 'Continue Access',
+          continueCopy: 'Already have a workspace? Continue with your existing account.',
+          continueGoogle: 'Continue with Google',
+          signIn: 'Sign In',
+          createDivider: 'or create a new workspace',
+          createWorkspace: 'Create New Workspace',
+          nameLabel: 'Name',
+          emailLabel: 'Email',
+          usernameLabel: 'Username',
+          usernamePlaceholder: 'choose a username',
+          projectLabel: 'Project / company name',
+          projectPlaceholder: 'Project or company name',
+          notesLabel: 'Notes',
+          optionalLabel: 'optional',
+          notesPlaceholder: 'Anything operations should know before the workspace is prepared.',
+          submitButton: 'Prepare private workspace →',
+          submitting: 'Preparing workspace…',
+          nextTitle: 'What happens next',
+          nextWorkspace: 'Workspace access',
+          nextTracking: 'Project tracking',
+          nextFiles: 'File delivery',
+          nextUpdates: 'Operational updates',
+          nextRequests: 'Direct execution requests',
+          successTitle: 'Workspace intake received.',
+          successCopy: 'Operations has the request in queue. Access credentials and released project links remain inside the protected workspace.',
+          successLink: 'Open protected workspace',
+          googleUnavailable: 'Google onboarding is temporarily unavailable. Continue manually.',
+          googleOpening: 'Opening secure Google onboarding…',
+          googleStartFailed: 'Could not start Google onboarding. Continue manually or try again.',
+          googleRestoreFailed: 'Google identity could not be restored. You can continue manually.',
+          googleCallbackFailed: 'Google onboarding could not be completed. You can continue manually.',
+          googleVerified: 'Google identity verified. Complete the remaining workspace details.',
+          nameRequired: 'Add your name so operations can prepare the workspace.',
+          usernameRequired: 'Choose a username to continue.',
+          projectRequired: 'Add a project name so operations can prepare the workspace.',
+          emailInvalid: 'Please enter a valid email address.',
+          usernameTaken: 'That username is already in use.',
+          createFailed: 'Could not create the workspace request. Please try again.'
+        },
+        nl: {
+          status: 'Private clientinstelling',
+          heroEyebrow: 'Private referraltoegang',
+          heroTitle: 'Geïntroduceerd via DONEOVERNIGHT.',
+          heroCopy: 'U bent uitgenodigd via het DONEOVERNIGHT operatornetwerk. Ga verder met uw bestaande account of maak een private werkomgeving aan om te beginnen.',
+          introducedBy: 'Geïntroduceerd door',
+          networkIntro: 'Geïntroduceerd via het DONEOVERNIGHT operatornetwerk.',
+          fallbackRole: 'Private referraltoegang',
+          fallbackNote: 'Private uitvoering. Operationele systemen. Overnight delivery.',
+          specialistLayer: 'Specialistische laag',
+          pathOne: 'Ga verder of maak een nieuwe werkomgeving aan.',
+          pathTwo: 'DONEOVERNIGHT koppelt uw aanvraag aan de private operationele laag.',
+          pathThree: 'Volg uitvoering, bestanden, updates en levering vanuit de werkomgeving.',
+          continueAccess: 'Toegang voortzetten',
+          continueCopy: 'Heeft u al een werkomgeving? Ga verder met uw bestaande account.',
+          continueGoogle: 'Doorgaan met Google',
+          signIn: 'Inloggen',
+          createDivider: 'of maak een nieuwe werkomgeving aan',
+          createWorkspace: 'Nieuwe werkomgeving aanmaken',
+          nameLabel: 'Naam',
+          emailLabel: 'E-mail',
+          usernameLabel: 'Gebruikersnaam',
+          usernamePlaceholder: 'kies een gebruikersnaam',
+          projectLabel: 'Project / bedrijfsnaam',
+          projectPlaceholder: 'Project- of bedrijfsnaam',
+          notesLabel: 'Notities',
+          optionalLabel: 'optioneel',
+          notesPlaceholder: 'Alles wat operations moet weten voordat de werkomgeving wordt voorbereid.',
+          submitButton: 'Private werkomgeving voorbereiden →',
+          submitting: 'Werkomgeving voorbereiden…',
+          nextTitle: 'Wat gebeurt hierna',
+          nextWorkspace: 'Toegang tot werkomgeving',
+          nextTracking: 'Projectvoortgang',
+          nextFiles: 'Bestandslevering',
+          nextUpdates: 'Operationele updates',
+          nextRequests: 'Directe uitvoeringsaanvragen',
+          successTitle: 'Workspace-intake ontvangen.',
+          successCopy: 'Operations heeft de aanvraag in behandeling. Toegangsgegevens en vrijgegeven projectlinks blijven in de beveiligde werkomgeving.',
+          successLink: 'Beveiligde werkomgeving openen',
+          googleUnavailable: 'Google-onboarding is tijdelijk niet beschikbaar. Ga handmatig verder.',
+          googleOpening: 'Beveiligde Google-onboarding openen…',
+          googleStartFailed: 'Google-onboarding kon niet worden gestart. Ga handmatig verder of probeer opnieuw.',
+          googleRestoreFailed: 'Google-identiteit kon niet worden hersteld. U kunt handmatig verdergaan.',
+          googleCallbackFailed: 'Google-onboarding kon niet worden afgerond. U kunt handmatig verdergaan.',
+          googleVerified: 'Google-identiteit bevestigd. Vul de resterende werkruimtegegevens aan.',
+          nameRequired: 'Vul uw naam in zodat operations de werkomgeving kan voorbereiden.',
+          usernameRequired: 'Kies een gebruikersnaam om verder te gaan.',
+          projectRequired: 'Voeg een projectnaam toe zodat operations de werkomgeving kan voorbereiden.',
+          emailInvalid: 'Vul een geldig e-mailadres in.',
+          usernameTaken: 'Deze gebruikersnaam is al in gebruik.',
+          createFailed: 'De workspace-aanvraag kon niet worden aangemaakt. Probeer opnieuw.'
+        }
+      };
 
       function getClientOnboardingRedirect() {
         return window.location.hostname === 'client.doneovernight.com'
@@ -614,12 +745,13 @@
       }
 
       function normalizeOperatorHandle(value) {
-        return safeDecode(value)
-          .trim()
-          .toLowerCase()
-          .replace(/^@+/, '')
-          .replace(/[^a-z0-9_-]+/g, '')
-          .slice(0, 31);
+        const decoded = safeDecode(value).trim().replace(/^@+/, '');
+        const cleanMatch = decoded.match(/^[a-z0-9][a-z0-9_-]*/);
+        const clean = (cleanMatch?.[0] || '').toLowerCase().slice(0, 31);
+        if (/^doneovernight/i.test(decoded) && /\s/.test(decoded) && clean.startsWith('doneovernight')) return 'doneovernight';
+        if (clean) return clean;
+        const fallbackMatch = decoded.toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,30}/);
+        return (fallbackMatch?.[0] || '').slice(0, 31);
       }
 
       function getOperatorReferralFromPath() {
@@ -633,9 +765,46 @@
         };
       }
 
+      function activeLocale() {
+        const runtimeLang = window.DONEOVERNIGHT_LANG?.get?.();
+        const storedLang = (() => {
+          try { return localStorage.getItem('doneovernight_lang'); } catch (error) { return ''; }
+        })();
+        const candidate = String(runtimeLang || storedLang || document.documentElement.lang || 'en').toLowerCase().split('-')[0];
+        return candidate === 'nl' ? 'nl' : 'en';
+      }
+
+      function l10n(key) {
+        return localeCopy[activeLocale()]?.[key] || localeCopy.en[key] || key;
+      }
+
+      function applyClientLocale() {
+        document.documentElement.lang = activeLocale();
+        document.querySelectorAll('[data-l10n]').forEach((element) => {
+          const key = element.getAttribute('data-l10n');
+          if (key && localeCopy[activeLocale()]?.[key]) element.textContent = l10n(key);
+        });
+        document.querySelectorAll('[data-l10n-placeholder]').forEach((element) => {
+          const key = element.getAttribute('data-l10n-placeholder');
+          if (key && localeCopy[activeLocale()]?.[key]) element.setAttribute('placeholder', l10n(key));
+        });
+        if (!submit.disabled) submit.textContent = l10n('submitButton');
+        renderOperatorReferralCard();
+        updateProjectValidation();
+      }
+
       function setMessage(text, type = '') {
         message.textContent = text;
         message.className = `message${type ? ` is-${type}` : ''}`;
+      }
+
+      function setMessageKey(key, type = '') {
+        setMessage(l10n(key), type);
+      }
+
+      function updateProjectValidation({ force = false } = {}) {
+        const shouldShow = (force || projectTouched || hasTriedSubmit) && !projectInput.value.trim();
+        projectField?.classList.toggle('is-invalid', Boolean(shouldShow));
       }
 
       function isValidEmail(value) {
@@ -659,13 +828,36 @@
         return normalizeUsername(base.replace(/[._-]+/g, '.')) || normalizeUsername(name) || '';
       }
 
-      function renderOperatorFallback() {
+      function renderOperatorReferralCard() {
         if (!operatorReferral.operator_slug || !operatorReferralCard) return;
         operatorReferralCard.hidden = false;
-        operatorReferralName.textContent = 'DONEOVERNIGHT operator network';
+        const hasProfile = Boolean(operatorReferral.operator_name || operatorReferral.profile_found);
+        operatorReferralCard.classList.toggle('is-network', !hasProfile);
+        if (!hasProfile) {
+          if (operatorReferralLabel) operatorReferralLabel.textContent = l10n('networkIntro');
+          operatorReferralName.textContent = '';
+          operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
+          operatorReferralRole.textContent = '';
+          operatorReferralNote.textContent = '';
+          return;
+        }
+        if (operatorReferralLabel) operatorReferralLabel.textContent = l10n('introducedBy');
+        operatorReferralName.textContent = operatorReferral.operator_name || '';
         operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
-        operatorReferralRole.textContent = 'Private referral access';
-        operatorReferralNote.textContent = 'Private execution. Operational systems. Overnight delivery.';
+        operatorReferralRole.textContent = operatorReferral.operator_role || l10n('specialistLayer');
+        operatorReferralNote.textContent = operatorReferral.operator_note || l10n('fallbackNote');
+      }
+
+      function renderOperatorFallback() {
+        if (!operatorReferral.operator_slug || !operatorReferralCard) return;
+        operatorReferral = {
+          ...operatorReferral,
+          profile_found: false,
+          operator_name: '',
+          operator_role: '',
+          operator_note: ''
+        };
+        renderOperatorReferralCard();
       }
 
       async function hydrateOperatorReferral() {
@@ -682,15 +874,16 @@
           const operator = data.operator || {};
           operatorReferral = {
             ...operatorReferral,
+            profile_found: true,
             operator_name: operator.display_name || operator.name || '',
-            operator_role: operator.role || operator.role_type || 'Specialist layer',
+            operator_role: operator.role || operator.role_type || l10n('specialistLayer'),
+            operator_note: operator.bio || l10n('fallbackNote'),
             referral_url: `https://client.doneovernight.com/@${encodeURIComponent(operatorReferral.operator_slug)}`
           };
-          operatorReferralCard.hidden = false;
-          operatorReferralName.textContent = operatorReferral.operator_name || 'DONEOVERNIGHT operator network';
-          operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
-          operatorReferralRole.textContent = operatorReferral.operator_role || 'Specialist layer';
-          operatorReferralNote.textContent = operator.bio || 'Private execution. Operational systems. Overnight delivery.';
+          if (!operatorReferral.operator_name) {
+            operatorReferral.profile_found = false;
+          }
+          renderOperatorReferralCard();
         } catch (error) {
           renderOperatorFallback();
         }
@@ -704,7 +897,7 @@
         if (!supabaseClient) return;
         const params = new URLSearchParams(window.location.search);
         if (params.has('error')) {
-          setMessage('Google onboarding could not be completed. You can continue manually.', 'error');
+          setMessageKey('googleCallbackFailed', 'error');
           return;
         }
         let { data } = await supabaseClient.auth.getSession();
@@ -723,16 +916,16 @@
         if (name && !document.getElementById('clientName').value.trim()) document.getElementById('clientName').value = name;
         if (user.email && !document.getElementById('clientEmail').value.trim()) document.getElementById('clientEmail').value = user.email;
         if (!usernameInput.value.trim()) usernameInput.value = usernameFromIdentity({ name, email: user.email || '' });
-        setMessage('Google identity verified. Complete the remaining workspace details.', 'success');
+        setMessageKey('googleVerified', 'success');
       }
 
       googleButton?.addEventListener('click', async () => {
         if (!supabaseClient) {
-          setMessage('Google onboarding is temporarily unavailable. Continue manually.', 'error');
+          setMessageKey('googleUnavailable', 'error');
           return;
         }
         googleButton.disabled = true;
-        setMessage('Opening secure Google onboarding…');
+        setMessageKey('googleOpening');
         const { error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -742,12 +935,22 @@
         });
         if (error) {
           googleButton.disabled = false;
-          setMessage('Could not start Google onboarding. Continue manually or try again.', 'error');
+          setMessageKey('googleStartFailed', 'error');
         }
+      });
+
+      projectInput?.addEventListener('blur', () => {
+        projectTouched = true;
+        updateProjectValidation();
+      });
+
+      projectInput?.addEventListener('input', () => {
+        if (projectTouched || hasTriedSubmit) updateProjectValidation();
       });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        hasTriedSubmit = true;
         const username = normalizeUsername(document.getElementById('clientUsername').value);
         const payload = {
           name: document.getElementById('clientName').value.trim(),
@@ -765,27 +968,28 @@
         };
 
         if (!payload.name) {
-          setMessage('Add your name so operations can prepare the workspace.', 'error');
+          setMessageKey('nameRequired', 'error');
           return;
         }
 
         if (!payload.username || !isValidUsername(payload.username)) {
-          setMessage('Choose a username to continue.', 'error');
+          setMessageKey('usernameRequired', 'error');
           return;
         }
 
         if (!payload.project_name) {
-          setMessage('Add a project name so operations can prepare the workspace.', 'error');
+          updateProjectValidation({ force: true });
+          setMessageKey('projectRequired', 'error');
           return;
         }
 
         if (!payload.email || (!isValidEmail(payload.email) && !isSaiAmyException(payload))) {
-          setMessage('Please enter a valid email address.', 'error');
+          setMessageKey('emailInvalid', 'error');
           return;
         }
 
         submit.disabled = true;
-        submit.textContent = 'Preparing workspace…';
+        submit.textContent = l10n('submitting');
         setMessage('');
         try {
           const response = await fetch('../api/client-onboarding', {
@@ -828,18 +1032,27 @@
           }, 700);
         } catch (error) {
           setMessage(error.message === 'That username is already in use.'
-            ? 'That username is already in use.'
+            ? l10n('usernameTaken')
             : error.message === 'Please enter a valid email address.'
-            ? 'Please enter a valid email address.'
-            : 'Could not create the workspace request. Please try again.', 'error');
+            ? l10n('emailInvalid')
+            : l10n('createFailed'), 'error');
         } finally {
           submit.disabled = false;
-          submit.textContent = 'Prepare private workspace →';
+          submit.textContent = l10n('submitButton');
         }
       });
 
+      document.addEventListener('click', (event) => {
+        if (!event.target?.closest?.('[data-don-lang]')) return;
+        window.setTimeout(applyClientLocale, 80);
+        window.setTimeout(applyClientLocale, 300);
+      });
+
+      applyClientLocale();
+      window.setTimeout(applyClientLocale, 120);
+      window.setTimeout(applyClientLocale, 520);
       hydrateGoogleIdentity().catch(() => {
-        setMessage('Google identity could not be restored. You can continue manually.', 'error');
+        setMessageKey('googleRestoreFailed', 'error');
       });
       hydrateOperatorReferral();
     })();
