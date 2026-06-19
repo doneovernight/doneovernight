@@ -719,6 +719,7 @@
     }
     .activity,
     .how,
+    .takeover,
     .footer {
       width: min(1180px, 100%);
       margin: 0 auto;
@@ -807,6 +808,75 @@
       color: rgba(245, 241, 234, 0.38);
       font-size: 0.76rem;
       line-height: 1.45;
+    }
+    .takeover {
+      padding: clamp(42px, 6.5vw, 96px) 0 clamp(52px, 8vw, 112px);
+    }
+    .takeover-inner {
+      display: grid;
+      gap: clamp(28px, 4.6vw, 58px);
+      border-top: 1px solid rgba(245, 241, 234, 0.055);
+      padding-top: clamp(34px, 5.4vw, 72px);
+    }
+    .takeover-head {
+      display: grid;
+      justify-items: center;
+      gap: 16px;
+      max-width: 680px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .takeover-kicker {
+      color: rgba(233, 196, 138, 0.62);
+      font-family: var(--mono);
+      font-size: 0.69rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .takeover h2 {
+      max-width: 12ch;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 5.6vw, 5.2rem);
+      font-weight: 400;
+      line-height: 0.98;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+    .takeover-copy {
+      max-width: 46ch;
+      color: rgba(245, 241, 234, 0.52);
+      font-size: clamp(0.94rem, 1.2vw, 1.06rem);
+      line-height: 1.78;
+    }
+    .takeover-lines {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(26px, 5vw, 82px);
+      row-gap: 0;
+      width: min(920px, 100%);
+      margin: 0 auto;
+      border-bottom: 1px solid rgba(245, 241, 234, 0.055);
+    }
+    .takeover-item {
+      display: grid;
+      gap: 10px;
+      padding: clamp(18px, 2.4vw, 26px) 0;
+      border-top: 1px solid rgba(245, 241, 234, 0.075);
+    }
+    .takeover-item span {
+      color: rgba(233, 196, 138, 0.64);
+      font-family: var(--mono);
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .takeover-item p {
+      color: rgba(245, 241, 234, 0.62);
+      font-size: clamp(0.9rem, 1.04vw, 1rem);
+      line-height: 1.72;
     }
     .dispatch-sheet {
       position: fixed;
@@ -1015,6 +1085,7 @@
       .header,
       .activity,
       .how,
+      .takeover,
       .footer {
         width: min(1240px, 100%);
       }
@@ -1090,6 +1161,7 @@
       .header,
       .activity,
       .how,
+      .takeover,
       .footer {
         width: min(1320px, 100%);
       }
@@ -1198,6 +1270,7 @@
       .header,
       .activity,
       .how,
+      .takeover,
       .footer {
         width: min(1440px, 100%);
       }
@@ -1220,6 +1293,7 @@
       .actions .btn { flex: 1 1 180px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
+      .takeover-lines { grid-template-columns: 1fr; }
       .dispatch-sheet { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
       .dispatch-panel { width: min(520px, 100%); }
       .dispatch-form { grid-template-columns: 1fr; }
@@ -1277,6 +1351,19 @@
       .activity-copy { margin-top: 24px; font-size: 0.92rem; }
       .how-list { grid-template-columns: 1fr; }
       .how-step { min-height: auto; padding-bottom: 2px; }
+      .takeover {
+        padding: 42px 0 62px;
+      }
+      .takeover-inner {
+        padding-top: 38px;
+      }
+      .takeover-head {
+        gap: 14px;
+      }
+      .takeover h2 {
+        max-width: 10.6ch;
+        font-size: clamp(2.18rem, 12vw, 3.5rem);
+      }
       .dispatch-panel {
         max-height: min(82svh, 660px);
         padding: 24px 16px 18px;
@@ -1332,6 +1419,7 @@
         <div class="actions">
           <button class="btn btn-primary" id="revealIntake" type="button" aria-controls="task-intake" aria-expanded="false">Begin Intake</button>
           <a class="btn btn-secondary" href="#how-it-works">How It Works</a>
+          <a class="btn btn-secondary" id="takeoverScroll" href="#what-we-take-over">What We Take Over</a>
         </div>
         <div class="trust-panel" aria-label="DONEOVERNIGHT status">
           <div class="status-block">
@@ -1414,6 +1502,42 @@
           <div class="how-step"><span>02</span><strong>Review</strong><small>Scope and timing.</small></div>
           <div class="how-step"><span>03</span><strong>Plan</strong><small>Clear next move.</small></div>
           <div class="how-step"><span>04</span><strong>Execute</strong><small>Starts after approval.</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="takeover" id="what-we-take-over" aria-labelledby="takeoverTitle">
+      <div class="takeover-inner">
+        <div class="takeover-head">
+          <p class="takeover-kicker">Private execution scope</p>
+          <h2 id="takeoverTitle">What We Take Over</h2>
+          <p class="takeover-copy">You do not need another dashboard, meeting, or freelancer to manage. DONEOVERNIGHT takes operational work off your plate and turns it into clear execution.</p>
+        </div>
+        <div class="takeover-lines" aria-label="DONEOVERNIGHT capability groups">
+          <div class="takeover-item">
+            <span>Digital Presence</span>
+            <p>Landing pages, conversion pages, website fixes, and premium page polish.</p>
+          </div>
+          <div class="takeover-item">
+            <span>Business Systems</span>
+            <p>Intake flows, client portals, CRM structure, and dashboards only when useful.</p>
+          </div>
+          <div class="takeover-item">
+            <span>Automation</span>
+            <p>Email workflows, Telegram or Slack alerts, follow-up flows, and internal handoffs.</p>
+          </div>
+          <div class="takeover-item">
+            <span>Brand Operations</span>
+            <p>Visual systems, offer pages, launch assets, and campaign pages.</p>
+          </div>
+          <div class="takeover-item">
+            <span>Recovery / Fixes</span>
+            <p>Broken funnels, missing tracking, messy forms, lost leads, and unfinished workflows.</p>
+          </div>
+          <div class="takeover-item">
+            <span>Private Execution</span>
+            <p>Urgent requests, overnight fixes, founder support, and operator-backed delivery.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -1794,6 +1918,7 @@
       if (!form || !email || !message || !sheet || !close) return;
 
       let hasShown = false;
+      let suppressScrollDispatchUntil = 0;
 
       function markSeen() {
         try {
@@ -1839,10 +1964,14 @@
       }
 
       function checkScrollTrigger() {
+        if (Date.now() < suppressScrollDispatchUntil) return;
         if (scrollProgress() >= 0.6) showDispatch("scroll");
       }
 
       const delay = 25000 + Math.floor(Math.random() * 10000);
+      document.querySelector("#takeoverScroll")?.addEventListener("click", () => {
+        suppressScrollDispatchUntil = Date.now() + 5500;
+      });
       window.setTimeout(() => showDispatch("timer"), delay);
       window.addEventListener("scroll", checkScrollTrigger, { passive: true });
       close.addEventListener("click", hideDispatch);
