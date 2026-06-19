@@ -1392,6 +1392,10 @@
       font-size: 10px;
     }
 
+    .workspace-print-task-summary {
+      display: none;
+    }
+
     .workspace-link-button {
       align-self: center;
       border: 1px solid rgba(233,196,138,.20);
@@ -1410,6 +1414,158 @@
       grid-template-columns: auto minmax(0, 1fr) auto;
       gap: 12px;
       align-items: center;
+    }
+
+    @media print {
+      @page {
+        margin: 18mm;
+        size: auto;
+      }
+
+      html,
+      body {
+        background: #fff !important;
+        color: #111 !important;
+      }
+
+      body.is-printing-task > *:not(.workspace-print-task-summary) {
+        display: none !important;
+      }
+
+      body.is-printing-task .workspace-print-task-summary {
+        display: block !important;
+        color: #111;
+        background: #fff;
+        font-family: Arial, Helvetica, sans-serif;
+        letter-spacing: 0;
+      }
+
+      .workspace-print-document {
+        max-width: 780px;
+        margin: 0 auto;
+      }
+
+      .workspace-print-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid #d8d8d8;
+      }
+
+      .workspace-print-brand {
+        color: #111;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+
+      .workspace-print-generated {
+        color: #666;
+        font-size: 10px;
+        line-height: 1.5;
+        text-align: right;
+      }
+
+      .workspace-print-title {
+        margin: 28px 0 8px;
+        color: #111;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 30px;
+        font-weight: 400;
+        line-height: 1.15;
+      }
+
+      .workspace-print-reference {
+        margin: 0 0 22px;
+        color: #555;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .workspace-print-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        margin: 0 0 24px;
+        border: 1px solid #ddd;
+        background: #ddd;
+        page-break-inside: avoid;
+      }
+
+      .workspace-print-fact {
+        min-width: 0;
+        background: #fff;
+        padding: 11px 12px;
+      }
+
+      .workspace-print-label,
+      .workspace-print-section h3 {
+        display: block;
+        margin: 0;
+        color: #666;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .workspace-print-value {
+        display: block;
+        margin-top: 6px;
+        color: #151515;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .workspace-print-section {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e1e1;
+        page-break-inside: avoid;
+      }
+
+      .workspace-print-section p,
+      .workspace-print-section li {
+        color: #222;
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .workspace-print-section p {
+        margin: 8px 0 0;
+        white-space: pre-wrap;
+      }
+
+      .workspace-print-list {
+        display: grid;
+        gap: 6px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .workspace-print-list li {
+        position: relative;
+        padding-left: 13px;
+      }
+
+      .workspace-print-list li::before {
+        position: absolute;
+        top: 0.68em;
+        left: 0;
+        width: 4px;
+        height: 4px;
+        border-radius: 999px;
+        background: #777;
+        content: "";
+      }
     }
 
     .workspace-referral-actions {
@@ -4451,6 +4607,7 @@
 
       function getTaskInvoices(task = {}) {
         const rawInvoices = Array.isArray(task.raw_payload?.invoices) ? task.raw_payload.invoices : [];
+        const taskInvoices = Array.isArray(task.invoices) ? task.invoices : [];
         const directInvoice = task.invoice_number || task.raw_payload?.invoice_number
           ? [{
               invoice_number: task.invoice_number || task.raw_payload?.invoice_number,
@@ -4461,7 +4618,7 @@
             }]
           : [];
         const seen = new Set();
-        return [...directInvoice, ...rawInvoices].filter((invoice) => {
+        return [...directInvoice, ...taskInvoices, ...rawInvoices].filter((invoice) => {
           const number = invoice?.invoice_number || '';
           if (!number || seen.has(number)) return false;
           seen.add(number);
@@ -4838,6 +4995,8 @@
         const raw = project.raw_payload || {};
         return collectWorkspaceItems(
           room.delivered_work,
+          project.deliverables,
+          project.delivery_files,
           raw.deliverables,
           raw.completed_outputs,
           raw.delivery_files
@@ -5284,38 +5443,175 @@
         return getTaskHistoryItems(workspaceTasks).find((task) => getWorkspaceOperationKey(task) === key) || null;
       }
 
-      function buildWorkspaceTaskSummary(task = {}) {
+      function getWorkspaceLifecycleSummaryItems(task = {}) {
+        const labels = ['Request Received', 'Review Complete', 'Plan Approved', 'Payment Confirmed', 'Workspace Activated', 'Execution Active', 'Delivery'];
+        const currentIndex = getLifecycleProgressIndex(task);
+        return labels.map((label, index) => ({
+          label,
+          state: index < currentIndex ? 'Complete' : (index === currentIndex ? 'Current' : 'Pending')
+        }));
+      }
+
+      function summarizeNamedItems(items = [], fallbackLabel = 'Item') {
+        return items.map((item) => ({
+          title: item.title || item.name || item.filename || item.invoice_number || fallbackLabel,
+          meta: [
+            item.timestamp ? formatDate(item.timestamp) : '',
+            item.delivered_at ? formatDate(item.delivered_at) : '',
+            item.invoice_created_at ? formatDate(item.invoice_created_at) : '',
+            item.invoice_amount || item.status || item.mime_type || ''
+          ].filter(Boolean).join(' · ')
+        }));
+      }
+
+      function getWorkspaceTaskSummaryData(task = {}) {
+        const created = task.created_at || task.createdAt || task.raw_payload?.created_at || '';
+        const files = summarizeNamedItems(dedupeWorkspaceFiles(getWorkspaceFiles(task, {})), 'Client file');
+        const deliverables = summarizeNamedItems(dedupeWorkspaceDeliverables(getWorkspaceDeliverables(task, {})), 'Deliverable');
+        const documents = summarizeNamedItems(getTaskInvoices(task), 'Document');
+        const generatedAt = new Date();
+        return {
+          brand: 'DONEOVERNIGHT',
+          title: task.display_title || task.project_title || task.task_summary || getTaskSummary(task),
+          reference: getTaskId(task),
+          status: task.client_status || getWorkspaceClientStatus(task),
+          created: created ? formatDate(created) : 'Not available',
+          deadline: getOperationTimeline(task),
+          investment: getOperationInvestment(task) || 'Not provided',
+          source: getClientSafeTaskSource(task),
+          scope: getClientSafeTaskScope(task),
+          progressItems: getWorkspaceLifecycleSummaryItems(task),
+          nextStep: getOperationNextStep(task),
+          files,
+          deliverables,
+          documents,
+          generatedAt: formatDate(generatedAt.toISOString())
+        };
+      }
+
+      function renderWorkspacePrintList(items = [], emptyText = 'None available.') {
+        if (!items.length) return `<p>${escapeHTML(emptyText)}</p>`;
+        return `<ul class="workspace-print-list">${items.map((item) => `
+          <li><strong>${escapeHTML(item.title)}</strong>${item.meta ? ` <span>${escapeHTML(item.meta)}</span>` : ''}</li>
+        `).join('')}</ul>`;
+      }
+
+      function renderWorkspaceTaskSummaryHtml(summary = {}) {
+        const facts = [
+          ['Status', summary.status],
+          ['Created', summary.created],
+          ['Deadline', summary.deadline],
+          ['Investment', summary.investment],
+          ['Source', summary.source],
+          ['Generated', summary.generatedAt]
+        ];
+        return `
+          <section class="workspace-print-document" aria-label="DONEOVERNIGHT task summary">
+            <header class="workspace-print-header">
+              <strong class="workspace-print-brand">${escapeHTML(summary.brand)}</strong>
+              <span class="workspace-print-generated">Task summary<br>${escapeHTML(summary.generatedAt)}</span>
+            </header>
+            <h1 class="workspace-print-title">${escapeHTML(summary.title)}</h1>
+            <p class="workspace-print-reference">${escapeHTML(summary.reference)}</p>
+            <div class="workspace-print-grid">
+              ${facts.map(([label, value]) => `
+                <div class="workspace-print-fact">
+                  <span class="workspace-print-label">${escapeHTML(label)}</span>
+                  <strong class="workspace-print-value">${escapeHTML(value || 'Not available')}</strong>
+                </div>
+              `).join('')}
+            </div>
+            <section class="workspace-print-section">
+              <h3>Scope</h3>
+              <p>${escapeHTML(summary.scope)}</p>
+            </section>
+            <section class="workspace-print-section">
+              <h3>Progress / Status Summary</h3>
+              ${renderWorkspacePrintList(summary.progressItems.map((item) => ({ title: item.label, meta: item.state })))}
+            </section>
+            <section class="workspace-print-section">
+              <h3>Next Step</h3>
+              <p>${escapeHTML(summary.nextStep)}</p>
+            </section>
+            <section class="workspace-print-section">
+              <h3>Client Files</h3>
+              ${renderWorkspacePrintList(summary.files, 'No client files attached to this task.')}
+            </section>
+            <section class="workspace-print-section">
+              <h3>Deliverables</h3>
+              ${renderWorkspacePrintList(summary.deliverables, 'No deliverables ready yet.')}
+            </section>
+            <section class="workspace-print-section">
+              <h3>Documents / Invoices</h3>
+              ${renderWorkspacePrintList(summary.documents, 'No documents available yet.')}
+            </section>
+          </section>
+        `;
+      }
+
+      function buildWorkspaceTaskSummaryText(task = {}) {
+        const summary = getWorkspaceTaskSummaryData(task);
         const lines = [
           'DONEOVERNIGHT Task Summary',
+          `Generated: ${summary.generatedAt}`,
           '',
-          `Task: ${task.display_title || task.project_title || task.task_summary || getTaskSummary(task)}`,
-          `Reference: ${getTaskId(task)}`,
-          `Status: ${task.client_status || getWorkspaceClientStatus(task)}`,
-          `Created: ${task.created_at || task.createdAt ? formatDate(task.created_at || task.createdAt) : 'Not available'}`,
-          `Deadline: ${getOperationTimeline(task)}`,
-          `Investment: ${getOperationInvestment(task) || 'Not provided'}`,
-          `Source: ${getClientSafeTaskSource(task)}`,
+          `Task: ${summary.title}`,
+          `Reference: ${summary.reference}`,
+          `Status: ${summary.status}`,
+          `Created: ${summary.created}`,
+          `Deadline: ${summary.deadline}`,
+          `Investment: ${summary.investment}`,
+          `Source: ${summary.source}`,
           '',
           'Scope',
-          getClientSafeTaskScope(task),
+          summary.scope,
+          '',
+          'Progress / Status Summary',
+          ...summary.progressItems.map((item) => `- ${item.label}: ${item.state}`),
           '',
           'Next Step',
-          getOperationNextStep(task)
+          summary.nextStep,
+          '',
+          'Client Files',
+          ...(summary.files.length ? summary.files.map((file) => `- ${file.title}${file.meta ? ` (${file.meta})` : ''}`) : ['No client files attached to this task.']),
+          '',
+          'Deliverables',
+          ...(summary.deliverables.length ? summary.deliverables.map((item) => `- ${item.title}${item.meta ? ` (${item.meta})` : ''}`) : ['No deliverables ready yet.']),
+          '',
+          'Documents / Invoices',
+          ...(summary.documents.length ? summary.documents.map((item) => `- ${item.title}${item.meta ? ` (${item.meta})` : ''}`) : ['No documents available yet.'])
         ];
-        const files = dedupeWorkspaceFiles(getWorkspaceFiles(task, {}));
-        if (files.length) {
-          lines.push('', 'Client Files', ...files.map((file) => `- ${file.title || 'Attached file'}`));
-        }
-        const deliverables = dedupeWorkspaceDeliverables(getWorkspaceDeliverables(task, {}));
-        if (deliverables.length) {
-          lines.push('', 'Deliverables', ...deliverables.map((item) => `- ${item.title || 'Deliverable'}`));
-        }
         return lines.join('\n');
+      }
+
+      function ensureWorkspacePrintRoot() {
+        let root = document.getElementById('workspaceTaskPrintSummary');
+        if (!root) {
+          root = document.createElement('div');
+          root.id = 'workspaceTaskPrintSummary';
+          root.className = 'workspace-print-task-summary';
+          document.body.appendChild(root);
+        }
+        return root;
+      }
+
+      function printWorkspaceTaskSummary(task = {}) {
+        const root = ensureWorkspacePrintRoot();
+        root.innerHTML = renderWorkspaceTaskSummaryHtml(getWorkspaceTaskSummaryData(task));
+        document.body.classList.add('is-printing-task');
+        const cleanup = () => {
+          document.body.classList.remove('is-printing-task');
+          root.innerHTML = '';
+        };
+        window.addEventListener('afterprint', cleanup, { once: true });
+        window.setTimeout(() => {
+          window.print();
+        }, 60);
       }
 
       function downloadWorkspaceTaskSummary(task = {}) {
         const reference = getTaskId(task).replace(/[^a-z0-9-]+/gi, '-').replace(/^-+|-+$/g, '') || 'workspace-task';
-        const blob = new Blob([buildWorkspaceTaskSummary(task)], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([buildWorkspaceTaskSummaryText(task)], { type: 'text/plain;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${reference}-summary.txt`;
@@ -5332,7 +5628,7 @@
           if (!task) return;
           const action = actionButton.dataset.taskDetailAction;
           if (action === 'update-operation') openOperationUpdateModal(task);
-          if (action === 'print') window.print();
+          if (action === 'print') printWorkspaceTaskSummary(task);
           if (action === 'download') downloadWorkspaceTaskSummary(task);
           return;
         }
