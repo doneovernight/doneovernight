@@ -1772,6 +1772,24 @@
         if (revealButton) revealButton.textContent = open ? "Close" : "Begin Intake";
       }
 
+      function scrollIntakeIntoView() {
+        if (!formCard) return;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const rect = formCard.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const pageTop = window.scrollY || window.pageYOffset || 0;
+        const isMobile = window.matchMedia("(max-width: 640px)").matches;
+        const desiredTop = isMobile
+          ? Math.max(18, Math.min(92, viewportHeight * 0.14))
+          : Math.max(64, (viewportHeight - rect.height) / 2);
+        const targetTop = Math.max(0, pageTop + rect.top - desiredTop);
+        window.scrollTo({
+          top: targetTop,
+          left: 0,
+          behavior: reduceMotion ? "auto" : "smooth"
+        });
+      }
+
       function revealIntake({ focus = false, scroll = true, trigger = "start_button" } = {}) {
         if (!formCard) return;
         const wasOpen = formCard.classList.contains("is-revealed");
@@ -1785,7 +1803,7 @@
           });
         }
         if (scroll) {
-          window.setTimeout(() => formCard.scrollIntoView({ behavior: "smooth", block: "start" }), 90);
+          window.setTimeout(scrollIntakeIntoView, 180);
         }
         if (focus) {
           window.setTimeout(() => document.querySelector("#startName")?.focus({ preventScroll: true }), 520);
