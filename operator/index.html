@@ -448,6 +448,17 @@
       border-radius: 8px;
       background: rgba(0,0,0,.16);
       padding: 14px;
+      cursor: pointer;
+      transition: border-color .24s, background .24s, box-shadow .24s, transform .24s;
+    }
+
+    .operator-progress-summary:hover,
+    .operator-progress-summary:focus-visible {
+      border-color: color-mix(in srgb, var(--operator-accent) 42%, rgba(255,255,255,.08));
+      background: color-mix(in srgb, var(--operator-accent) 5%, rgba(0,0,0,.18));
+      box-shadow: 0 0 34px color-mix(in srgb, var(--operator-accent) 13%, transparent), inset 0 1px 0 rgba(255,255,255,.04);
+      outline: none;
+      transform: translateY(-1px);
     }
 
     .operator-progress-head {
@@ -516,6 +527,17 @@
       font-size: 8px;
       letter-spacing: .11em;
       line-height: 1.5;
+      text-transform: uppercase;
+    }
+
+    .operator-progress-hint {
+      display: block;
+      margin-top: 11px;
+      color: color-mix(in srgb, var(--operator-accent) 66%, rgba(245,241,234,.44));
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
       text-transform: uppercase;
     }
 
@@ -771,6 +793,34 @@
       line-height: 1.7;
     }
 
+    .progression-position {
+      margin-top: 16px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 14px;
+    }
+
+    .progression-position strong {
+      display: block;
+      color: rgba(255,255,255,.9);
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .progression-position span {
+      display: block;
+      margin-top: 8px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
     .tier-list {
       display: grid;
       gap: 9px;
@@ -778,17 +828,32 @@
     }
 
     .tier-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      border-top: 1px solid rgba(255,255,255,.055);
-      padding-top: 9px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 14px;
+      border: 1px solid rgba(255,255,255,.055);
+      border-radius: 8px;
+      background: rgba(255,255,255,.012);
+      padding: 11px 12px;
       color: rgba(245,241,234,.62);
       font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .22s, background .22s, box-shadow .22s, transform .22s;
     }
 
-    .tier-row:first-child { border-top: 0; padding-top: 0; }
+    .tier-row:first-child { border-top: 1px solid rgba(255,255,255,.055); padding-top: 11px; }
+
+    .tier-row:hover,
+    .tier-row:focus-visible,
+    .tier-row.is-active {
+      border-color: color-mix(in srgb, var(--tier-accent, var(--operator-accent)) 38%, rgba(255,255,255,.08));
+      background: color-mix(in srgb, var(--tier-accent, var(--operator-accent)) 7%, rgba(255,255,255,.014));
+      box-shadow: 0 0 30px color-mix(in srgb, var(--tier-accent, var(--operator-accent)) 13%, transparent);
+      outline: none;
+      transform: translateY(-1px);
+    }
 
     .tier-row b {
       color: rgba(255,255,255,.82);
@@ -800,6 +865,37 @@
       font-family: var(--mono);
       font-size: 8px;
       letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .tier-detail {
+      display: none;
+      grid-column: 1 / -1;
+      color: rgba(245,241,234,.48);
+      font-size: 11px;
+      line-height: 1.65;
+    }
+
+    .tier-row.is-active .tier-detail { display: block; }
+
+    .tier-unlocks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    .tier-unlocks em {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 999px;
+      background: rgba(255,255,255,.02);
+      color: rgba(245,241,234,.64);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-style: normal;
+      font-weight: 800;
+      letter-spacing: .08em;
+      padding: 6px 8px;
       text-transform: uppercase;
     }
 
@@ -818,6 +914,17 @@
         linear-gradient(145deg, rgba(255,255,255,.026), rgba(255,255,255,.012)),
         rgba(0,0,0,.14);
       padding: 14px;
+      transition: border-color .22s, background .22s, box-shadow .22s, transform .22s;
+    }
+
+    .roadmap-card:hover,
+    .roadmap-card:focus-within {
+      border-color: color-mix(in srgb, var(--operator-accent) 26%, rgba(255,255,255,.08));
+      background:
+        linear-gradient(145deg, color-mix(in srgb, var(--operator-accent) 5%, rgba(255,255,255,.022)), rgba(255,255,255,.012)),
+        rgba(0,0,0,.16);
+      box-shadow: 0 0 26px color-mix(in srgb, var(--operator-accent) 10%, transparent);
+      transform: translateY(-1px);
     }
 
     .roadmap-card span {
@@ -841,6 +948,64 @@
       color: rgba(245,241,234,.42);
       font-size: 11px;
       line-height: 1.55;
+    }
+
+    .operator-referral-network {
+      display: grid;
+      grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .operator-referral-card {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      padding: 18px;
+    }
+
+    .operator-referral-card h3 {
+      margin: 8px 0 8px;
+      color: rgba(255,255,255,.88);
+      font-family: var(--serif);
+      font-size: 30px;
+      font-weight: 400;
+    }
+
+    .operator-referral-card p {
+      margin: 0;
+      color: rgba(245,241,234,.48);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .operator-referral-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .operator-referral-stat {
+      border-top: 1px solid rgba(255,255,255,.06);
+      padding-top: 11px;
+    }
+
+    .operator-referral-stat span {
+      display: block;
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-referral-stat strong {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255,255,255,.84);
+      font-size: 13px;
     }
 
     .section-head {
@@ -1414,6 +1579,55 @@
       padding: 24px;
     }
 
+    .operator-modal-card.is-roadmap {
+      width: min(100%, 920px);
+      max-height: min(86vh, 920px);
+      overflow-y: auto;
+      background:
+        radial-gradient(circle at 78% 0%, color-mix(in srgb, var(--preview-accent, var(--operator-accent)) 13%, transparent), transparent 34%),
+        rgba(7,8,9,.97);
+      transition: border-color .24s, box-shadow .24s, background .24s;
+    }
+
+    .operator-modal-card.is-roadmap[data-preview="graphite"] { --preview-accent: #7c858b; }
+    .operator-modal-card.is-roadmap[data-preview="emerald"] { --preview-accent: #6fd6a5; }
+    .operator-modal-card.is-roadmap[data-preview="amber"] { --preview-accent: #e9c48a; }
+    .operator-modal-card.is-roadmap[data-preview="midnight"] { --preview-accent: #7ea7ff; }
+    .operator-modal-card.is-roadmap[data-preview="violet"] { --preview-accent: #b69cff; }
+    .operator-modal-card.is-roadmap[data-preview="silver"] { --preview-accent: #c8ced2; }
+    .operator-modal-card.is-roadmap[data-preview="gold"] { --preview-accent: #ffd98a; }
+    .operator-modal-card.is-roadmap[data-preview="obsidian"] { --preview-accent: #3f4448; }
+
+    .roadmap-modal-layout {
+      display: grid;
+      grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .roadmap-modal-panel {
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 8px;
+      background: rgba(255,255,255,.018);
+      padding: 16px;
+    }
+
+    .roadmap-reward-list {
+      margin: 13px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      color: rgba(245,241,234,.56);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .roadmap-reward-list li::before {
+      color: var(--preview-accent, var(--operator-accent));
+      content: "✓ ";
+    }
+
     .operator-modal-card h2 {
       margin: 8px 0 8px;
       font-family: var(--serif);
@@ -1477,7 +1691,9 @@
       .gateway-shell,
       .operator-hero,
       .operator-two-column,
+      .operator-referral-network,
       .progression-shell,
+      .roadmap-modal-layout,
       .profile-shell { grid-template-columns: 1fr; }
       .command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .operator-metric.is-wide { grid-column: span 1; }
@@ -1496,6 +1712,7 @@
       .command-grid,
       .module-grid,
       .roadmap-grid,
+      .operator-referral-stats,
       .profile-fields { grid-template-columns: 1fr; }
       .profile-settings-grid { grid-template-columns: 1fr; }
       .operator-row { grid-template-columns: 1fr; }
@@ -1594,7 +1811,7 @@
           <div class="operator-state-item"><span>Next action</span><strong data-runtime="stateNextAction">Standing by</strong></div>
           <div class="operator-state-item"><span>Payout state</span><strong data-runtime="statePayout">Private</strong></div>
         </div>
-        <div class="operator-progress-summary" aria-label="Operator progress">
+        <div class="operator-progress-summary" id="operatorProgressCard" role="button" tabindex="0" aria-label="Open operator progression roadmap">
           <div class="operator-progress-head">
             <div>
               <span>Operator Progress</span>
@@ -1607,6 +1824,7 @@
             <span data-progression="percent">0%</span>
             <span data-progression="next">Next: Level 2</span>
           </div>
+          <span class="operator-progress-hint">Open Progression Roadmap</span>
         </div>
         <div class="operator-actions">
           <a class="operator-button" href="/apply">Apply as operator →</a>
@@ -1675,26 +1893,50 @@
           <p class="eyebrow">Progression System</p>
           <h3>Opening Soon</h3>
           <p>This layer tracks contribution quietly. Unlocks will arrive through consistent delivery, trusted referrals, and operator reliability.</p>
-          <div class="tier-list" aria-label="Future operator tiers">
-            <div class="tier-row"><b>Observer</b><span>Level 1</span></div>
-            <div class="tier-row"><b>Operator</b><span>Level 10</span></div>
-            <div class="tier-row"><b>Partner Operator</b><span>Level 25</span></div>
-            <div class="tier-row"><b>Execution Partner</b><span>Level 40</span></div>
-            <div class="tier-row"><b>Senior Partner</b><span>Level 60</span></div>
-            <div class="tier-row"><b>Growth Partner</b><span>Level 80</span></div>
-            <div class="tier-row"><b>Elite Partner</b><span>Level 100</span></div>
+          <div class="progression-position">
+            <strong data-progression="level">Level 1</strong>
+            <span data-progression="tier">Observer</span>
+            <div class="operator-progress-bar" aria-hidden="true"><span data-progression="bar"></span></div>
+            <div class="operator-progress-meta">
+              <span data-progression="percent">0%</span>
+              <span data-progression="next">Next: Level 2</span>
+            </div>
           </div>
+          <div class="tier-list" id="operatorTierList" aria-label="Future operator tiers"></div>
         </article>
         <article class="progression-roadmap">
           <p class="eyebrow">Unlock Roadmap</p>
           <h3>Future access.</h3>
-          <div class="roadmap-grid">
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Referral System</h4><p>Opening Soon</p></div>
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Portfolio Profile</h4><p>Unlock at Level 25</p></div>
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Partner Subdomain</h4><p>Unlock at Level 40</p></div>
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Lead Discovery</h4><p>Unlock at Level 80</p></div>
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Outreach Engine</h4><p>Unlock at Level 100</p></div>
-            <div class="roadmap-card"><span>🔒 Locked</span><h4>Elite Partner Tools</h4><p>Unlock at Level 100+</p></div>
+          <div class="roadmap-grid" id="operatorUnlockRoadmap"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="operator-section" id="operator-referral-network" aria-labelledby="operatorReferralTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operator Referral Network</p>
+          <h2 id="operatorReferralTitle">Trusted introductions.</h2>
+        </div>
+        <p>Successful referrals contribute to future unlocks. Invite carefully; the network compounds through trust.</p>
+      </div>
+      <div class="operator-referral-network">
+        <article class="operator-referral-card">
+          <p class="eyebrow">Referral Progress</p>
+          <h3>Network layer opening.</h3>
+          <p>Introductions are tracked as part of long-term contribution. Referral unlocks will connect portfolio profiles, partner subdomains, lead discovery, and outreach tools.</p>
+          <div class="operator-actions">
+            <button class="operator-button" id="operatorReferralInviteInline" type="button">Invite Client →</button>
+          </div>
+        </article>
+        <article class="operator-referral-card">
+          <p class="eyebrow">Future unlocks</p>
+          <h3>Referral path.</h3>
+          <div class="operator-referral-stats">
+            <div class="operator-referral-stat"><span>Successful introductions</span><strong data-referral-progress="introductions">Tracking soon</strong></div>
+            <div class="operator-referral-stat"><span>Current tier</span><strong data-referral-progress="tier">Observer</strong></div>
+            <div class="operator-referral-stat"><span>Next referral unlock</span><strong>Referral Tracking</strong></div>
+            <div class="operator-referral-stat"><span>Future access</span><strong>Lead Discovery / Outreach Engine</strong></div>
           </div>
         </article>
       </div>
@@ -1934,6 +2176,46 @@
       </div>
     </section>
     </div>
+    <div class="operator-modal" id="operatorProgressModal" hidden>
+      <div class="operator-modal-backdrop" data-operator-progress-close></div>
+      <div class="operator-modal-card is-roadmap" id="operatorRoadmapModalCard" role="dialog" aria-modal="true" aria-labelledby="operatorProgressTitle" data-preview="graphite">
+        <button class="operator-modal-close" type="button" data-operator-progress-close aria-label="Close">×</button>
+        <p class="eyebrow">Progression System</p>
+        <h2 id="operatorProgressTitle">Private Progression Layer</h2>
+        <p>Current contribution will be tracked. Operators will be rewarded for successful client outcomes, trusted referrals, delivery quality, and contribution to the network. Progression is opening soon.</p>
+        <div class="roadmap-modal-layout">
+          <article class="roadmap-modal-panel">
+            <p class="eyebrow">Current position</p>
+            <div class="progression-position">
+              <strong data-progression="level">Level 1</strong>
+              <span data-progression="tier">Observer</span>
+              <div class="operator-progress-bar" aria-hidden="true"><span data-progression="bar"></span></div>
+              <div class="operator-progress-meta">
+                <span data-progression="percent">0%</span>
+                <span data-progression="next">Next: Level 2</span>
+              </div>
+              <span class="operator-progress-hint">Tracking begins soon.</span>
+            </div>
+            <ul class="roadmap-reward-list">
+              <li>Successful client outcomes</li>
+              <li>Trusted referrals</li>
+              <li>Delivery quality</li>
+              <li>Contribution to the network</li>
+            </ul>
+          </article>
+          <article class="roadmap-modal-panel">
+            <p class="eyebrow">Tier architecture</p>
+            <div class="tier-list" id="operatorModalTierList" aria-label="Progression tiers"></div>
+          </article>
+        </div>
+        <div class="roadmap-modal-layout">
+          <article class="roadmap-modal-panel" style="grid-column:1/-1">
+            <p class="eyebrow">Unlock Roadmap</p>
+            <div class="roadmap-grid" id="operatorModalUnlockRoadmap"></div>
+          </article>
+        </div>
+      </div>
+    </div>
     <div class="operator-modal" id="operatorSupportModal" hidden>
       <div class="operator-modal-backdrop" data-operator-support-close></div>
       <div class="operator-modal-card" role="dialog" aria-modal="true" aria-labelledby="operatorSupportTitle">
@@ -1974,9 +2256,17 @@
       const logoutButton = document.getElementById('operatorLogout');
       const runtimeAction = document.getElementById('operatorRuntimeAction');
       const inviteClientAction = document.getElementById('operatorInviteClientAction');
+      const referralInviteInline = document.getElementById('operatorReferralInviteInline');
       const inviteMessage = document.getElementById('operatorInviteMessage');
       const availabilityOptions = document.getElementById('operatorAvailabilityOptions');
       const availabilityLabel = document.getElementById('operatorAvailabilityLabel');
+      const progressCard = document.getElementById('operatorProgressCard');
+      const progressModal = document.getElementById('operatorProgressModal');
+      const roadmapModalCard = document.getElementById('operatorRoadmapModalCard');
+      const tierList = document.getElementById('operatorTierList');
+      const modalTierList = document.getElementById('operatorModalTierList');
+      const unlockRoadmap = document.getElementById('operatorUnlockRoadmap');
+      const modalUnlockRoadmap = document.getElementById('operatorModalUnlockRoadmap');
       const supportAction = document.getElementById('operatorSupportAction');
       const supportModal = document.getElementById('operatorSupportModal');
       const supportMessage = document.getElementById('operatorSupportMessage');
@@ -2009,6 +2299,90 @@
       let liveHeartbeatTimer = null;
       let liveHeartbeatActive = false;
       let liveRuntimeFingerprint = '';
+      const TIER_ATMOSPHERES = {
+        graphite: '#7c858b',
+        emerald: '#6fd6a5',
+        amber: '#e9c48a',
+        midnight: '#7ea7ff',
+        violet: '#b69cff',
+        silver: '#c8ced2',
+        gold: '#ffd98a',
+        obsidian: '#3f4448'
+      };
+      const OPERATOR_TIERS = [
+        {
+          name: 'Observer',
+          level: 1,
+          atmosphere: 'Graphite',
+          key: 'graphite',
+          detail: 'Learning the DONEOVERNIGHT system.',
+          unlocks: ['Operator Profile', 'Progress Tracking']
+        },
+        {
+          name: 'Operator',
+          level: 10,
+          atmosphere: 'Emerald',
+          key: 'emerald',
+          detail: 'Access to assigned work.',
+          unlocks: ['Assigned Tasks', 'Client Deliveries', 'Revenue Visibility']
+        },
+        {
+          name: 'Partner Operator',
+          level: 25,
+          atmosphere: 'Amber',
+          key: 'amber',
+          detail: 'Trusted contribution begins to shape operator visibility.',
+          unlocks: ['Referral Tracking', 'Verified Profile', 'Portfolio Page']
+        },
+        {
+          name: 'Execution Partner',
+          level: 40,
+          atmosphere: 'Midnight',
+          key: 'midnight',
+          detail: 'Higher-trust execution routing and visible delivery authority.',
+          unlocks: ['Case Studies', 'Priority Assignment Routing', 'Execution Badge']
+        },
+        {
+          name: 'Senior Partner',
+          level: 60,
+          atmosphere: 'Violet',
+          key: 'violet',
+          detail: 'Specialist layer with room for a personal DONEOVERNIGHT surface.',
+          unlocks: ['Personal DONEOVERNIGHT Subdomain', 'automation.doneovernight.com', 'design.doneovernight.com']
+        },
+        {
+          name: 'Growth Partner',
+          level: 80,
+          atmosphere: 'Silver',
+          key: 'silver',
+          detail: 'Growth layer for operators who repeatedly create successful outcomes.',
+          unlocks: ['Lead Discovery', 'Opening Soon']
+        },
+        {
+          name: 'Elite Partner',
+          level: 100,
+          atmosphere: 'Gold',
+          key: 'gold',
+          detail: 'Private top tier for operators with exceptional contribution.',
+          unlocks: ['Outreach Engine', 'Level 100', '250 Successful Clients', 'Opening Soon']
+        },
+        {
+          name: 'Inner Circle',
+          level: 100,
+          atmosphere: 'Obsidian',
+          key: 'obsidian',
+          detail: 'Future private layer beyond the public roadmap.',
+          unlocks: ['Elite Partner Tools', 'Level 100+', 'Opening Soon']
+        }
+      ];
+      const OPERATOR_UNLOCKS = [
+        { title: 'Referral System', status: 'Opening Soon', level: 10 },
+        { title: 'Portfolio Profile', status: 'Unlock at Level 25', level: 25 },
+        { title: 'Partner Subdomain', status: 'Unlock at Level 40', level: 40 },
+        { title: 'Lead Discovery', status: 'Unlock at Level 80', level: 80 },
+        { title: 'Outreach Engine', status: 'Unlock at Level 100', level: 100 },
+        { title: 'Elite Partner Tools', status: 'Unlock at Level 100+', level: 100 }
+      ];
 
       function getPathHandle() {
         const rawSegment = window.location.pathname.split('/').filter(Boolean)[0] || '';
@@ -2109,7 +2483,9 @@
       }
 
       function progressionField(name, value) {
-        text(`[data-progression="${name}"]`, value);
+        document.querySelectorAll(`[data-progression="${name}"]`).forEach((node) => {
+          node.textContent = value;
+        });
       }
 
       function escapeHTML(value) {
@@ -2476,8 +2852,80 @@
         progressionField('tier', progression.tier);
         progressionField('percent', `${progression.progress}%`);
         progressionField('next', `Next: Level ${progression.nextLevel}`);
-        const bar = document.querySelector('[data-progression="bar"]');
-        if (bar) bar.style.setProperty('--progress', `${progression.progress}%`);
+        document.querySelectorAll('[data-progression="bar"]').forEach((bar) => {
+          bar.style.setProperty('--progress', `${progression.progress}%`);
+        });
+        document.querySelectorAll('[data-referral-progress="tier"]').forEach((node) => {
+          node.textContent = progression.tier;
+        });
+      }
+
+      function tierAccentStyle(tier = {}) {
+        return `--tier-accent:${TIER_ATMOSPHERES[tier.key] || TIER_ATMOSPHERES.graphite}`;
+      }
+
+      function renderTierRows(target, { compact = false } = {}) {
+        if (!target) return;
+        target.innerHTML = OPERATOR_TIERS.map((tier, index) => `
+          <button class="tier-row${index === 0 ? ' is-active' : ''}" type="button" data-tier-index="${index}" data-tier-preview="${escapeHTML(tier.key)}" style="${escapeHTML(tierAccentStyle(tier))}">
+            <b>${escapeHTML(tier.name)}</b>
+            <span>${escapeHTML(tier.atmosphere)} · Level ${escapeHTML(tier.level)}</span>
+            ${compact ? '' : `
+              <div class="tier-detail">
+                ${escapeHTML(tier.detail)}
+                <div class="tier-unlocks">
+                  ${tier.unlocks.map((unlock) => `<em>✓ ${escapeHTML(unlock)}</em>`).join('')}
+                </div>
+              </div>
+            `}
+          </button>
+        `).join('');
+      }
+
+      function renderUnlockCards(target) {
+        if (!target) return;
+        target.innerHTML = OPERATOR_UNLOCKS.map((item) => `
+          <div class="roadmap-card">
+            <span>Locked</span>
+            <h4>${escapeHTML(item.title)}</h4>
+            <p>${escapeHTML(item.status)}</p>
+          </div>
+        `).join('');
+      }
+
+      function setRoadmapPreview(key = 'graphite') {
+        if (roadmapModalCard) roadmapModalCard.dataset.preview = key || 'graphite';
+      }
+
+      function setActiveTier(index = 0) {
+        [tierList, modalTierList].forEach((list) => {
+          list?.querySelectorAll('[data-tier-index]').forEach((row) => {
+            row.classList.toggle('is-active', Number(row.dataset.tierIndex) === Number(index));
+          });
+        });
+        const tier = OPERATOR_TIERS[Number(index)] || OPERATOR_TIERS[0];
+        setRoadmapPreview(tier.key);
+      }
+
+      function renderProgressionRoadmap() {
+        renderTierRows(tierList, { compact: true });
+        renderTierRows(modalTierList);
+        renderUnlockCards(unlockRoadmap);
+        renderUnlockCards(modalUnlockRoadmap);
+        setActiveTier(0);
+      }
+
+      function openProgressModal() {
+        if (!progressModal) return;
+        progressModal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        window.setTimeout(() => progressModal.querySelector('[data-tier-index]')?.focus({ preventScroll: true }), 80);
+      }
+
+      function closeProgressModal() {
+        if (!progressModal) return;
+        progressModal.hidden = true;
+        document.body.style.overflow = '';
       }
 
       function nextOperatorAction({ state = {}, tasks = [], messages = [] } = {}) {
@@ -3238,6 +3686,38 @@
         shareOperatorInvite();
       });
 
+      referralInviteInline?.addEventListener('click', (event) => {
+        event.preventDefault();
+        shareOperatorInvite();
+      });
+
+      progressCard?.addEventListener('click', openProgressModal);
+      progressCard?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openProgressModal();
+        }
+      });
+
+      progressModal?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-operator-progress-close]')) closeProgressModal();
+      });
+
+      document.addEventListener('mouseover', (event) => {
+        const tier = event.target.closest?.('[data-tier-preview]');
+        if (tier) setRoadmapPreview(tier.dataset.tierPreview || 'graphite');
+      });
+
+      document.addEventListener('focusin', (event) => {
+        const tier = event.target.closest?.('[data-tier-preview]');
+        if (tier) setRoadmapPreview(tier.dataset.tierPreview || 'graphite');
+      });
+
+      document.addEventListener('click', (event) => {
+        const tier = event.target.closest?.('[data-tier-index]');
+        if (tier) setActiveTier(tier.dataset.tierIndex || 0);
+      });
+
       availabilityOptions?.addEventListener('click', async (event) => {
         const button = event.target.closest('[data-availability]');
         if (!button || button.disabled) return;
@@ -3307,6 +3787,8 @@
       });
 
       window.addEventListener('pagehide', teardownLiveRuntimeSync);
+
+      renderProgressionRoadmap();
 
       if (runtimeHandle) {
         loadOperatorRuntime()
