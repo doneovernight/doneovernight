@@ -1841,6 +1841,18 @@ body.is-admin .admin-dashboard { display: block; }
   text-transform: uppercase;
 }
 
+.admin-task-update {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid rgba(255,255,255,.055);
+  padding-top: 12px;
+}
+
+.admin-task-update:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .admin-task-priority {
   display: inline-flex;
   align-items: center;
@@ -3739,6 +3751,14 @@ function getAttachmentUrl(attachment = {}) {
   ).trim();
 }
 
+function normalizeAdminExternalLink(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
+  if (/^(?:www\.|[a-z0-9-]+\.)/i.test(raw)) return `https://${raw.replace(/^\/+/, '')}`;
+  return raw;
+}
+
 function formatAttachmentSize(bytes) {
   const size = Number(bytes || 0);
   if (!Number.isFinite(size) || size <= 0) return '';
@@ -3792,6 +3812,118 @@ function renderTaskAttachments(task) {
           `;
         }).join('')}
       </div>
+    </div>
+  `;
+}
+
+function getWorkspaceRecordTaskId(record = {}) {
+  const metadata = record.metadata || {};
+  return String(record.task_id || record.taskId || metadata.task_id || metadata.operation || '').trim();
+}
+
+function isClientOperationUpdateRecord(record = {}) {
+  const metadata = record.metadata || {};
+  const type = String(record.message_type || record.messageType || '').toLowerCase();
+  return metadata.source === 'operation_update' ||
+    metadata.update_type === 'client_update' ||
+    type.includes('client update') ||
+    type.includes('client_update');
+}
+
+function getAdminOperationUpdates(task = {}) {
+  const reference = getTaskId(task);
+  if (!reference) return [];
+  return (workspaceRecords.messages || [])
+    .filter((record) => isClientOperationUpdateRecord(record) && getWorkspaceRecordTaskId(record) === reference)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+}
+
+function getAdminOperationUpdateSignature(task = {}) {
+  return getAdminOperationUpdates(task)
+    .map((record) => `${record.id || ''}:${record.created_at || ''}:${JSON.stringify(record.metadata || {})}`)
+    .join('|');
+}
+
+function getRecordLinks(record = {}) {
+  const metadata = record.metadata || {};
+  const links = Array.isArray(metadata.links) ? metadata.links : [];
+  return [...new Set(links.map(normalizeAdminExternalLink).filter(Boolean))];
+}
+
+function getRecordAttachments(record = {}) {
+  const metadata = record.metadata || {};
+  return (Array.isArray(metadata.attachments) ? metadata.attachments : [])
+    .map((attachment) => {
+      if (!attachment) return null;
+      const item = typeof attachment === 'string' ? { name: attachment } : attachment;
+      const name = String(item.name || item.filename || item.title || 'Attachment').trim();
+      if (!name) return null;
+      return { ...item, name, url: getAttachmentUrl(item) };
+    })
+    .filter(Boolean);
+}
+
+function renderRecordLinks(record = {}) {
+  const links = getRecordLinks(record);
+  if (!links.length) return '';
+  return `
+    <div class="admin-attachment-list">
+      ${links.map((link) => `
+        <div class="admin-attachment-row">
+          <div>
+            <strong>Reference Link</strong>
+            <span>${escapeHTML(link)}</span>
+          </div>
+          <a class="admin-payment-link" href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">Open link</a>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderRecordAttachments(record = {}) {
+  const attachments = getRecordAttachments(record);
+  if (!attachments.length) return '';
+  return `
+    <div class="admin-attachment-list">
+      ${attachments.map((attachment) => {
+        const meta = [attachment.mime_type || attachment.type, formatAttachmentSize(attachment.size)].filter(Boolean).join(' · ');
+        return `
+          <div class="admin-attachment-row">
+            <div>
+              <strong>${escapeHTML(attachment.name || 'Attachment')}</strong>
+              ${meta ? `<span>${escapeHTML(meta)}</span>` : ''}
+            </div>
+            ${attachment.url
+              ? `<a class="admin-payment-link" href="${escapeHTML(attachment.url)}" target="_blank" rel="noopener noreferrer">Open file</a>`
+              : '<span class="admin-payment-link" aria-disabled="true">No URL</span>'}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderAdminOperationUpdates(task = {}) {
+  const updates = getAdminOperationUpdates(task);
+  if (!updates.length) return '';
+  return `
+    <div class="admin-task-detail">
+      <span class="admin-task-detail-label">Operation Updates</span>
+      ${updates.slice(0, 3).map((record) => {
+        const metadata = record.metadata || {};
+        return `
+          <div class="admin-task-update">
+            <div><strong>CLIENT UPDATE RECEIVED</strong> · ${escapeHTML(formatTaskDate(record.created_at) || 'Just now')}</div>
+            <div>${escapeHTML(metadata.client_message || record.message || 'Client added operation context.')}</div>
+            ${metadata.notes ? `<div><strong>Notes</strong> · ${escapeHTML(metadata.notes)}</div>` : ''}
+            ${metadata.workspace_slug || record.workspace_slug ? `<div><strong>Workspace</strong> · @${escapeHTML(metadata.workspace_slug || record.workspace_slug)}</div>` : ''}
+            ${metadata.client_name || metadata.client_email || record.email ? `<div><strong>Client</strong> · ${escapeHTML([metadata.client_name, metadata.client_email || record.email].filter(Boolean).join(' / '))}</div>` : ''}
+            ${renderRecordLinks(record)}
+            ${renderRecordAttachments(record)}
+          </div>
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -5495,6 +5627,7 @@ async function loadWorkspaceRecords(options = {}) {
       quotes: Array.isArray(data.quotes) ? data.quotes : []
     };
     renderWorkspaceRecords();
+    if (adminTasks.length) renderTasks(adminTasks);
   } catch (error) {
     if (!options.silent) {
       workspaceMessagesList.innerHTML = '<div class="workspace-record-empty">Could not load workspace messages.</div>';
@@ -5518,14 +5651,21 @@ function renderWorkspaceRecords() {
 
 function renderWorkspaceMessageRecord(record) {
   const canDelete = isClearlyMarkedTestRecord(record);
+  const metadata = record.metadata || {};
+  const isClientUpdate = isClientOperationUpdateRecord(record);
+  const clientLine = [metadata.client_name, metadata.client_email || record.email].filter(Boolean).join(' / ');
   return `
     <article class="workspace-record-row">
       <div class="workspace-record-title">
-        <span>${escapeHTML(record.message_type || 'workspace update')}</span>
+        <span>${escapeHTML(isClientUpdate ? 'CLIENT UPDATE RECEIVED' : record.message_type || 'workspace update')}</span>
         ${canDelete ? `<button class="workspace-record-delete" type="button" data-record-type="message" data-record-id="${escapeHTML(record.id)}">Delete test</button>` : ''}
       </div>
-      <div class="workspace-record-meta">${escapeHTML(record.workspace_slug || record.email || 'workspace')} · ${escapeHTML(formatTaskDate(record.created_at) || 'No date')}</div>
-      <div class="workspace-record-body">${escapeHTML(record.message || 'No message')}</div>
+      <div class="workspace-record-meta">${escapeHTML(getWorkspaceRecordTaskId(record) || 'No DON reference')} · ${escapeHTML(record.workspace_slug ? `@${record.workspace_slug}` : record.email || 'workspace')} · ${escapeHTML(formatTaskDate(record.created_at) || 'No date')}</div>
+      ${clientLine ? `<div class="workspace-record-meta">${escapeHTML(clientLine)}</div>` : ''}
+      <div class="workspace-record-body">${escapeHTML(metadata.client_message || record.message || 'No message')}</div>
+      ${metadata.notes ? `<div class="workspace-record-body"><strong>Notes:</strong> ${escapeHTML(metadata.notes)}</div>` : ''}
+      ${renderRecordLinks(record)}
+      ${renderRecordAttachments(record)}
     </article>
   `;
 }
@@ -5587,7 +5727,7 @@ function renderTasks(tasks) {
 
   const renderTaskCard = (task) => {
     const domId = getTaskDomId(task);
-    const renderSignature = getTaskRenderSignature(task);
+    const renderSignature = `${getTaskRenderSignature(task)}:${getAdminOperationUpdateSignature(task)}`;
     const createdAt = formatTaskDate(task.created_at);
     const deadline = task.deadline ? escapeHTML(task.deadline) : 'No deadline set';
     const clientBudget = task.client_budget || task.raw_payload?.client_budget || task.raw_payload?.budget || task.raw_payload?.clientBudget || '';
@@ -5773,6 +5913,7 @@ function renderTasks(tasks) {
             <div><strong>@${escapeHTML(workspaceSlug)}</strong></div>
           </div>
         ` : ''}
+        ${renderAdminOperationUpdates(task)}
         ${renderTaskAttachments(task)}
         ${paymentCallout}
         ${recoveryCard}
@@ -5792,7 +5933,7 @@ function renderTasks(tasks) {
     filterCounts,
     groups.map((group) => [
     group.slug,
-    group.tasks.map((task) => `${getTaskDomId(task)}:${getTaskRenderSignature(task)}`)
+    group.tasks.map((task) => `${getTaskDomId(task)}:${getTaskRenderSignature(task)}:${getAdminOperationUpdateSignature(task)}`)
     ])
   ]);
   if (nextSignature === adminTaskRenderSignature) return;

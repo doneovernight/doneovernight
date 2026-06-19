@@ -8,6 +8,7 @@ const OPERATOR_ACCESS_WEBHOOK_URL = "https://n8n.doneovernight.com/webhook/opera
 
 const crypto = require("crypto");
 const { clean, dispatchWebhook, getWebhookUrls, parseBody, send, slugify, supabaseFetch } = require("../lib/ops");
+const { withFreshAttachmentUrls } = require("../lib/attachments");
 const { getConfig } = require("../heartbeat/config");
 const { getAnalyticsSummary } = require("../heartbeat/providers/analytics");
 const { generateHeartbeat, sendHeartbeat } = require("../heartbeat/summary");
@@ -53,8 +54,22 @@ async function listWorkspaceRecords() {
   ]);
 
   return {
-    messages: Array.isArray(messages) ? messages : [],
+    messages: await Promise.all((Array.isArray(messages) ? messages : []).map(signWorkspaceMessageRecord)),
     quotes: Array.isArray(quotes) ? quotes : []
+  };
+}
+
+async function signWorkspaceMessageRecord(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
+  const attachments = await withFreshAttachmentUrls(metadata.attachments || metadata.files || [], {
+    expiresIn: 60 * 60 * 24 * 7
+  }).catch(() => metadata.attachments || metadata.files || []);
+  return {
+    ...record,
+    metadata: {
+      ...metadata,
+      ...(Array.isArray(attachments) && attachments.length ? { attachments } : {})
+    }
   };
 }
 

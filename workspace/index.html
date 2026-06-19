@@ -5336,9 +5336,17 @@
 
       function parseWorkspaceLinks(value = '') {
         return String(value || '')
-          .split(/[\n,]+/)
-          .map((item) => item.trim())
+          .split(/[\s,]+/)
+          .map(normalizeWorkspaceExternalLink)
           .filter(Boolean);
+      }
+
+      function normalizeWorkspaceExternalLink(value = '') {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
+        if (/^(?:www\.|[a-z0-9-]+\.)/i.test(raw)) return `https://${raw.replace(/^\/+/, '')}`;
+        return raw;
       }
 
       function getOperationUpdates(task = {}) {
@@ -5359,14 +5367,20 @@
 
       function renderOperationUpdateAssets(update = {}) {
         const metadata = update.metadata || {};
-        const files = dedupeWorkspaceFiles(collectWorkspaceItems(metadata.attachments, metadata.files));
+        const files = dedupeWorkspaceFiles(collectWorkspaceItems(metadata.attachments, metadata.files).map((file) => ({
+          title: file.title || file.label || file.name || file.filename || file.file_name || 'Attached file',
+          href: file.signed_url || file.url || file.href || file.file_url || file.download_url || file.public_url || '',
+          path: file.storage_path || file.storagePath || file.path || file.file_path || file.object_path || '',
+          bucket: file.bucket || file.storage_bucket || '',
+          name: file.name || file.filename || file.file_name || ''
+        })));
         const links = Array.isArray(metadata.links) ? metadata.links : [];
         const assets = [
           ...files.map((file) => ({
             label: file.title || file.name || 'Attached file',
             href: file.href || file.signed_url || file.url || ''
           })),
-          ...links.map((link) => ({ label: 'Reference link', href: link }))
+          ...links.map((link) => ({ label: 'Reference link', href: normalizeWorkspaceExternalLink(link) }))
         ].filter((asset) => asset.href);
         if (!assets.length) return '';
         return `<div class="workspace-secondary-chips">${assets.map((asset) => `<a class="workspace-secondary-chip" href="${escapeHTML(asset.href)}" target="_blank" rel="noopener noreferrer">${escapeHTML(asset.label)}</a>`).join('')}</div>`;
