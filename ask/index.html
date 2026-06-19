@@ -725,11 +725,23 @@
       margin: 0 auto;
     }
     .activity {
+      position: relative;
       display: grid;
       justify-items: center;
-      padding: clamp(68px, 8vw, 124px) 0;
+      min-height: clamp(760px, 168svh, 1280px);
+      padding: 0;
       border-top: 1px solid rgba(245, 241, 234, 0.055);
       text-align: center;
+    }
+    .activity-stage {
+      position: sticky;
+      top: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      min-height: 100svh;
+      width: 100%;
+      padding: clamp(68px, 8vw, 124px) 0;
     }
     .activity-kicker,
     .how-kicker {
@@ -756,6 +768,18 @@
     }
     .activity-words span {
       display: block;
+      opacity: 0.24;
+      filter: blur(0.9px);
+      transform: translateY(6px);
+      transition: opacity 520ms ease, filter 560ms ease, transform 620ms cubic-bezier(0.22, 0.68, 0.26, 1), color 520ms ease, text-shadow 520ms ease;
+      will-change: opacity, filter, transform;
+    }
+    .activity-words span.is-active {
+      color: #fff7ea;
+      opacity: 1;
+      filter: blur(0);
+      transform: translateY(0);
+      text-shadow: 0 0 30px rgba(233, 196, 138, 0.09);
     }
     .activity-copy {
       max-width: 28ch;
@@ -1209,6 +1233,9 @@
         margin-top: clamp(30px, 5vh, 58px);
       }
       .activity {
+        min-height: clamp(820px, 172svh, 1360px);
+      }
+      .activity-stage {
         padding: clamp(96px, 10vw, 164px) 0;
       }
       .how {
@@ -1345,7 +1372,15 @@
       input { height: 44px; }
       textarea { min-height: 108px; }
       .deadline-chips { grid-template-columns: 1fr 1fr; }
-      .activity { padding: 58px 0 64px; }
+      .activity {
+        min-height: auto;
+        padding: 58px 0 64px;
+      }
+      .activity-stage {
+        position: relative;
+        min-height: auto;
+        padding: 0;
+      }
       .activity-kicker { margin-bottom: 24px; }
       .activity-words { gap: 4px; font-size: clamp(2.5rem, 13vw, 4.2rem); line-height: 1.02; }
       .activity-copy { margin-top: 24px; font-size: 0.92rem; }
@@ -1381,6 +1416,14 @@
       .splash-sky { display: none; }
       .atmosphere::before { animation: none; }
       .form-card { transition: none; }
+      .activity { min-height: auto; padding: clamp(68px, 8vw, 124px) 0; }
+      .activity-stage { position: relative; min-height: auto; padding: 0; }
+      .activity-words span {
+        opacity: 1;
+        filter: none;
+        transform: none;
+        transition: none;
+      }
       .dispatch-sheet { transition: none; }
       .btn,
       .deadline-chip,
@@ -1483,15 +1526,17 @@
       </aside>
     </section>
 
-    <section class="activity" aria-label="DONEOVERNIGHT overnight execution layer">
-      <p class="activity-kicker">Overnight active</p>
-      <div class="activity-words" aria-label="Intake. Review. Plan. Execution.">
-        <span>Intake.</span>
-        <span>Review.</span>
-        <span>Plan.</span>
-        <span>Execution.</span>
+    <section class="activity" data-scroll-reveal aria-label="DONEOVERNIGHT overnight execution layer">
+      <div class="activity-stage">
+        <p class="activity-kicker">Overnight active</p>
+        <div class="activity-words" aria-label="Intake. Review. Plan. Execution.">
+          <span>Intake.</span>
+          <span>Review.</span>
+          <span>Plan.</span>
+          <span>Execution.</span>
+        </div>
+        <p class="activity-copy">Running while you sleep.</p>
       </div>
-      <p class="activity-copy">Running while you sleep.</p>
     </section>
 
     <section class="how" id="how-it-works" aria-labelledby="howTitle">
@@ -1599,6 +1644,63 @@
   </aside>
 
   <script>
+    (() => {
+      const section = document.querySelector("[data-scroll-reveal]");
+      if (!section) return;
+      const words = Array.from(section.querySelectorAll(".activity-words span"));
+      if (!words.length) return;
+
+      const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let frame = 0;
+      let activeCount = -1;
+
+      function setActiveWords(count) {
+        const nextCount = Math.max(0, Math.min(words.length, count));
+        if (nextCount === activeCount) return;
+        activeCount = nextCount;
+        section.dataset.activeStep = String(nextCount);
+        words.forEach((word, index) => {
+          word.classList.toggle("is-active", index < nextCount);
+        });
+      }
+
+      function scrollProgress() {
+        const rect = section.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1;
+        const start = viewportHeight * 0.78;
+        const end = -rect.height + viewportHeight * 0.28;
+        const range = start - end || 1;
+        return Math.max(0, Math.min(1, (start - rect.top) / range));
+      }
+
+      function updateReveal() {
+        frame = 0;
+        if (reduceMotionQuery.matches) {
+          setActiveWords(words.length);
+          return;
+        }
+        setActiveWords(Math.ceil(scrollProgress() * words.length));
+      }
+
+      function requestUpdate() {
+        if (frame) return;
+        frame = window.requestAnimationFrame(updateReveal);
+      }
+
+      function configureReveal() {
+        if (reduceMotionQuery.matches) {
+          setActiveWords(words.length);
+        } else {
+          requestUpdate();
+        }
+      }
+
+      window.addEventListener("scroll", requestUpdate, { passive: true });
+      window.addEventListener("resize", requestUpdate);
+      reduceMotionQuery.addEventListener?.("change", configureReveal);
+      configureReveal();
+    })();
+
     (() => {
       const form = document.querySelector("#startTaskForm");
       const message = document.querySelector("#startTaskMessage");
