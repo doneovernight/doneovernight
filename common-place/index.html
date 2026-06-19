@@ -109,74 +109,72 @@
       will-change: transform;
     }
     .logo {
+      --unit: clamp(78px, 13.2vw, 184px);
       display: inline-flex;
-      align-items: baseline;
+      align-items: flex-end;
       justify-content: center;
-      color: var(--ink);
-      font-family: var(--industrial);
-      font-size: clamp(74px, 15.5vw, 210px);
-      font-weight: 900;
-      line-height: .78;
-      letter-spacing: -.078em;
-      text-transform: lowercase;
+      height: calc(var(--unit) * 1.04);
       white-space: nowrap;
       transform: translate3d(0, 0, 0);
       will-change: transform;
-      filter: url("#stamp-distress");
     }
-    .core {
+    .logo-piece {
       position: relative;
-      z-index: 2;
-      display: inline-block;
+      z-index: 1;
+      flex: 0 0 auto;
+      display: block;
+      width: calc(var(--unit) * var(--w, .9));
+      height: var(--unit);
+      margin-left: calc(var(--unit) * var(--kern, -.14));
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
     }
-    .c-core { margin-right: .012em; }
-    .p-core { margin-left: clamp(.012em, .75vw, .055em); }
+    .logo-piece:first-child { margin-left: 0; }
+    .logo-piece img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+    }
+    .logo-piece.c { --w: .96; }
+    .logo-piece.o { --w: .92; --kern: -.2; }
+    .logo-piece.m { --w: 1.06; --kern: -.2; }
+    .logo-piece.n { --w: .98; --kern: -.19; }
+    .logo-piece.p { --w: .9; --kern: .02; z-index: 3; }
+    .logo-piece.l { --w: .64; --kern: -.14; }
+    .logo-piece.four {
+      --w: .76;
+      --kern: -.18;
+      z-index: 4;
+      transform: translate3d(0, var(--four-y), 0) rotate(var(--four-rotate));
+      transform-origin: 54% 100%;
+    }
+    .logo-piece.e { --w: .82; --kern: -.18; }
+    .logo-piece.dot {
+      --w: .38;
+      --kern: -.07;
+      z-index: 5;
+      transform: translate3d(var(--dot-x), 0, 0);
+    }
     .reveal-window {
       display: inline-block;
       overflow: hidden;
       width: var(--window);
-      vertical-align: baseline;
+      flex: 0 0 auto;
       will-change: width;
     }
     .left-window { --window: var(--left-reveal); }
     .right-window { --window: var(--right-reveal); }
     .revealed {
       display: inline-flex;
-      align-items: baseline;
+      align-items: flex-end;
+      height: calc(var(--unit) * 1.04);
       transform: translate3d(var(--slide), 0, 0);
       will-change: transform;
     }
     .left-window .revealed { --slide: var(--left-slide); }
     .right-window .revealed { --slide: var(--right-slide); }
-    .letter {
-      display: inline-block;
-    }
-    .four {
-      display: inline-block;
-      width: .56em;
-      height: .74em;
-      margin: 0 -.025em 0 -.025em;
-      transform: translate3d(0, var(--four-y), 0) rotate(var(--four-rotate));
-      transform-origin: 55% 100%;
-      will-change: transform;
-      vertical-align: -.05em;
-    }
-    .four svg {
-      display: block;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-    }
-    .four path {
-      fill: currentColor;
-      shape-rendering: geometricPrecision;
-    }
-    .dot {
-      display: inline-block;
-      margin-left: .08em;
-      transform: translate3d(var(--dot-x), .02em, 0);
-      will-change: transform;
-    }
 
     .logo-shadow {
       position: absolute;
@@ -444,12 +442,9 @@
     @media (max-width: 720px) {
       .reveal-track { min-height: 390vh; }
       .brand-stage { width: 96vw; }
-      .logo {
-        font-size: clamp(58px, 17.2vw, 98px);
-        letter-spacing: -.082em;
-      }
-      .p-core { margin-left: .035em; }
-      .dot { margin-left: .07em; }
+      .logo { --unit: clamp(56px, 15.5vw, 94px); }
+      .logo-piece { margin-left: calc(var(--unit) * var(--kern, -.17)); }
+      .logo-piece.p { --kern: .02; }
       .scroll-note {
         writing-mode: horizontal-tb;
         right: auto;
@@ -497,7 +492,7 @@
       .brand-stage,
       .logo,
       .revealed,
-      .four,
+      .logo-piece,
       .logo-shadow,
       .mechanical-line {
         transition: none !important;
@@ -509,29 +504,32 @@
   </style>
 </head>
 <body>
-  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
-    <filter id="stamp-distress">
-      <feTurbulence type="fractalNoise" baseFrequency="0.78" numOctaves="3" seed="7" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </svg>
   <main>
     <section class="reveal-track" id="reveal">
       <div class="pin">
         <div class="background" aria-hidden="true"></div>
         <div class="brand-stage" aria-label="COMMON PL4CE scroll reveal">
           <div class="logo" id="logo" aria-hidden="true">
-            <span class="core c-core">c</span>
+            <span class="logo-piece c"><img src="/assets/common-place-logo/c.png" alt="" loading="lazy" decoding="async"></span>
             <span class="reveal-window left-window" id="leftWindow">
-              <span class="revealed" id="leftLetters">ommon</span>
-            </span>
-            <span class="core p-core">p</span>
-            <span class="reveal-window right-window" id="rightWindow">
-              <span class="revealed" id="rightLetters">
-                <span class="letter">l</span><span class="four" id="fallenFour"><svg viewBox="0 0 118 162" focusable="false" aria-hidden="true"><path d="M14 158 H43 L92 5 H64 Z"/><path d="M25 86 L107 86 L103 112 L21 112 Z"/><path d="M82 158 H111 L101 36 H72 Z"/></svg></span><span class="letter">ce</span>
+              <span class="revealed" id="leftLetters">
+                <span class="logo-piece o"><img src="/assets/common-place-logo/o.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece m"><img src="/assets/common-place-logo/m.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece m"><img src="/assets/common-place-logo/m.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece o"><img src="/assets/common-place-logo/o.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece n"><img src="/assets/common-place-logo/n.png" alt="" loading="lazy" decoding="async"></span>
               </span>
             </span>
-            <span class="core dot" id="movingDot">.</span>
+            <span class="logo-piece p"><img src="/assets/common-place-logo/p.png" alt="" loading="lazy" decoding="async"></span>
+            <span class="reveal-window right-window" id="rightWindow">
+              <span class="revealed" id="rightLetters">
+                <span class="logo-piece l"><img src="/assets/common-place-logo/l.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece four"><img src="/assets/common-place-logo/4.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece c"><img src="/assets/common-place-logo/c.png" alt="" loading="lazy" decoding="async"></span>
+                <span class="logo-piece e"><img src="/assets/common-place-logo/e.png" alt="" loading="lazy" decoding="async"></span>
+              </span>
+            </span>
+            <span class="logo-piece dot"><img src="/assets/common-place-logo/dot.png" alt="" loading="lazy" decoding="async"></span>
           </div>
           <div class="logo-shadow" aria-hidden="true"></div>
         </div>
@@ -602,7 +600,7 @@
     </section>
     <section class="close" aria-labelledby="close-title">
       <div class="close-inner">
-        <h2 id="close-title">commonpl4ce.</h2>
+        <h2 id="close-title">Archive locked.</h2>
         <p>A rough-edged wordmark, a moving archive, and a visual system built from the roll itself.</p>
       </div>
     </section>
@@ -674,9 +672,9 @@
         root.style.setProperty("--right-reveal", `${(rightWidth * rightOpen).toFixed(2)}px`);
         root.style.setProperty("--left-slide", `${((-1 + leftOpen) * leftWidth).toFixed(2)}px`);
         root.style.setProperty("--right-slide", `${((-1 + rightOpen) * rightWidth).toFixed(2)}px`);
-        root.style.setProperty("--dot-x", `${(rightWidth * (1 - rightOpen)).toFixed(2)}px`);
-        root.style.setProperty("--four-rotate", `${(-10 * fall).toFixed(2)}deg`);
-        root.style.setProperty("--four-y", `${(7 * fall).toFixed(2)}px`);
+        root.style.setProperty("--dot-x", "0px");
+        root.style.setProperty("--four-rotate", `${(-22 * fall).toFixed(2)}deg`);
+        root.style.setProperty("--four-y", `${(10 * fall).toFixed(2)}px`);
         root.style.setProperty("--lock-y", `${(-36 * lock).toFixed(2)}vh`);
         root.style.setProperty("--lock-scale", `${(1 - 0.58 * lock).toFixed(4)}`);
         root.style.setProperty("--gallery-x", `${(-galleryTravel * ease(galleryCurrent)).toFixed(2)}px`);
