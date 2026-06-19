@@ -353,6 +353,28 @@
       margin: 0 auto;
       padding: clamp(48px, 8vh, 104px) 0 clamp(48px, 8vh, 96px);
     }
+    .shell:has(.form-card.is-revealed) {
+      width: min(1180px, 100%);
+      grid-template-columns: minmax(0, 0.92fr) minmax(470px, 0.86fr);
+      gap: clamp(30px, 5vw, 72px);
+      justify-items: stretch;
+    }
+    .shell:has(.form-card.is-revealed) .hero {
+      width: min(520px, 100%);
+      margin: 0;
+      text-align: left;
+    }
+    .shell:has(.form-card.is-revealed) h1,
+    .shell:has(.form-card.is-revealed) .subhead {
+      margin-left: 0;
+    }
+    .shell:has(.form-card.is-revealed) .actions,
+    .shell:has(.form-card.is-revealed) .service-line {
+      justify-content: flex-start;
+    }
+    .shell:has(.form-card.is-revealed) .trust-panel {
+      margin-left: 0;
+    }
     .hero {
       width: min(560px, 100%);
       margin: 0 auto;
@@ -508,20 +530,20 @@
     .form-card {
       position: relative;
       overflow: hidden;
-      width: min(720px, 100%);
+      width: min(560px, 100%);
       max-height: 0;
       margin: 0 auto;
       border: 1px solid rgba(245, 241, 234, 0.105);
       border-radius: 6px;
       background:
-        radial-gradient(circle at 22% -12%, rgba(233, 196, 138, 0.12), transparent 18rem),
-        linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.016)),
-        rgba(7, 8, 11, 0.84);
+        radial-gradient(circle at 20% -18%, rgba(233, 196, 138, 0.14), transparent 16rem),
+        linear-gradient(145deg, rgba(245, 241, 234, 0.046), rgba(245, 241, 234, 0.014)),
+        rgba(7, 8, 11, 0.86);
       box-shadow:
-        0 36px 86px -22px rgba(0, 0, 0, 0.72),
+        0 30px 60px -15px rgba(0, 0, 0, 0.6),
         0 18px 54px rgba(0, 0, 0, 0.34),
-        inset 0 1px 0 rgba(245, 241, 234, 0.055);
-      backdrop-filter: blur(28px);
+        inset 0 1px 0 rgba(245, 241, 234, 0.04);
+      backdrop-filter: blur(20px);
       opacity: 0;
       pointer-events: none;
       transform: translateY(-8px);
@@ -529,7 +551,7 @@
       transition: max-height 620ms cubic-bezier(0.22, 0.68, 0.26, 1), opacity 420ms ease, transform 520ms ease, visibility 0ms linear 620ms;
     }
     .form-card.is-revealed {
-      max-height: 1180px;
+      max-height: 900px;
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
@@ -546,19 +568,19 @@
       background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.46), transparent);
       content: "";
     }
-    .form-inner { position: relative; padding: clamp(28px, 4vw, 42px); }
+    .form-inner { position: relative; padding: clamp(24px, 3vw, 34px); }
     .form-head {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 24px;
-      padding-bottom: 20px;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 17px;
       border-bottom: 1px solid rgba(245, 241, 234, 0.085);
     }
     .form-head h2 {
       font-family: var(--serif);
-      font-size: clamp(1.72rem, 2.6vw, 2.24rem);
+      font-size: clamp(1.32rem, 2.1vw, 1.64rem);
       font-weight: 400;
       line-height: 1.08;
       letter-spacing: -0.025em;
@@ -585,8 +607,8 @@
       box-shadow: 0 0 12px rgba(139, 224, 173, 0.3);
       content: "";
     }
-    form { display: grid; gap: 15px; }
-    .field { display: grid; gap: 9px; }
+    form { display: grid; gap: 11px; }
+    .field { display: grid; gap: 7px; }
     .field label {
       color: rgba(245, 241, 234, 0.62);
       font-family: var(--mono);
@@ -595,7 +617,8 @@
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .grid.deadline-budget-grid { grid-template-columns: minmax(0, 1.28fr) minmax(150px, 0.72fr); }
     input, textarea {
       width: 100%;
       border: 1px solid rgba(245, 241, 234, 0.105);
@@ -605,9 +628,9 @@
       color: rgba(245, 241, 234, 0.9);
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
-    input { height: 50px; padding: 0 15px; }
-    textarea { min-height: 144px; resize: vertical; padding: 15px; line-height: 1.58; }
-    #startReferences { min-height: 252px; }
+    input { height: 44px; padding: 0 13px; }
+    textarea { min-height: 92px; resize: vertical; padding: 12px 13px; line-height: 1.5; }
+    #startReferences { min-height: 72px; }
     input::placeholder, textarea::placeholder { color: rgba(245, 241, 234, 0.34); }
     input:focus, textarea:focus {
       border-color: rgba(233, 196, 138, 0.4);
@@ -620,18 +643,20 @@
     }
     .deadline-chips {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(4, max-content);
+      gap: 6px;
+      justify-content: start;
     }
     .deadline-chip {
-      min-height: 44px;
-      padding: 11px 9px;
+      min-height: 38px;
+      min-width: 52px;
+      padding: 8px 12px;
       background: rgba(245, 241, 234, 0.032);
       border: 1px solid rgba(245, 241, 234, 0.105);
       border-radius: 100px;
       font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 0.12em;
+      font-size: 9px;
+      letter-spacing: 0.09em;
       text-transform: uppercase;
       color: var(--ink-dim);
       text-align: center;
@@ -658,16 +683,16 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 58px;
-      margin-top: 8px;
+      min-height: 56px;
+      margin-top: 6px;
       border: 1px solid rgba(233, 196, 138, 0.45);
       border-radius: 999px;
       background: rgba(233, 196, 138, 0.08);
       color: #f4d28a;
       cursor: pointer;
-      font-size: 0.84rem;
+      font-size: 0.8rem;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.11em;
       text-transform: uppercase;
       box-shadow:
         0 0 24px rgba(233, 196, 138, 0.16),
@@ -730,10 +755,11 @@
       text-transform: uppercase;
     }
     .fine {
-      margin-top: -2px;
-      color: rgba(245, 241, 234, 0.46);
-      font-size: 0.76rem;
-      line-height: 1.5;
+      margin: 0 auto;
+      max-width: 44ch;
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.72rem;
+      line-height: 1.42;
       text-align: center;
     }
     .activity,
@@ -1519,8 +1545,32 @@
       .page { padding: 18px; }
       .header { padding-bottom: 18px; }
       .shell { min-height: auto; padding: 64px 0 42px; gap: 34px; }
+      .shell:has(.form-card.is-revealed) {
+        width: min(720px, 100%);
+        grid-template-columns: 1fr;
+      }
+      .shell:has(.form-card.is-revealed) .hero {
+        width: min(560px, 100%);
+        margin: 0 auto;
+        text-align: center;
+      }
+      .shell:has(.form-card.is-revealed) h1,
+      .shell:has(.form-card.is-revealed) .subhead {
+        margin-left: auto;
+      }
+      .shell:has(.form-card.is-revealed) .actions,
+      .shell:has(.form-card.is-revealed) .service-line {
+        justify-content: center;
+      }
+      .shell:has(.form-card.is-revealed) .trust-panel {
+        margin-left: auto;
+      }
       h1 { max-width: 12.2ch; }
-      .grid { grid-template-columns: 1fr; }
+      .grid,
+      .grid.deadline-budget-grid { grid-template-columns: 1fr; }
+      .deadline-chips {
+        grid-template-columns: 1fr 1fr;
+      }
       .actions .btn { flex: 1 1 180px; }
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
@@ -1576,8 +1626,8 @@
       .live { margin-top: 0; }
       form { gap: 10px; }
       input { height: 46px; }
-      textarea { min-height: 112px; }
-      #startReferences { min-height: 236px; }
+      textarea { min-height: 104px; }
+      #startReferences { min-height: 88px; }
       .deadline-chips { grid-template-columns: 1fr 1fr; }
       .activity {
         min-height: auto;
@@ -1702,24 +1752,13 @@
         <div class="form-inner">
           <div class="form-head">
             <h2>Send the ask.</h2>
-            <span class="live">Private desk active</span>
+            <span class="live">Operations online</span>
           </div>
 
           <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
             <input type="hidden" name="source" value="ask_intake">
             <input type="hidden" name="intakeVersion" value="ask_page_v1">
             <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
-
-            <div class="grid">
-              <div class="field" data-field="name">
-                <label for="startName">Name</label>
-                <input id="startName" name="name" type="text" autocomplete="name" required placeholder="Your name">
-              </div>
-              <div class="field" data-field="email">
-                <label for="startEmail">Email</label>
-                <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
-              </div>
-            </div>
 
             <div class="field" data-field="task_description">
               <label for="startTask">What should we handle overnight?</label>
@@ -1728,18 +1767,11 @@
 
             <div class="field" data-field="references">
               <label for="startReferences">Files / References (optional)</label>
-              <textarea id="startReferences" name="files_link" placeholder="Paste:
-Google Drive
-Dropbox
-WeTransfer
-Loom
-Figma
-Notion
-GitHub
-Website URL"></textarea>
+              <textarea id="startReferences" name="files_link" placeholder="Google Drive, Dropbox, WeTransfer,
+Loom, Figma, Notion, GitHub or Website URL"></textarea>
             </div>
 
-            <div class="grid">
+            <div class="grid deadline-budget-grid">
               <div class="field">
                 <label for="startDeadline">Deadline / urgency</label>
                 <input id="startDeadline" name="deadline" type="hidden" value="Tonight">
@@ -1753,6 +1785,17 @@ Website URL"></textarea>
               <div class="field">
                 <label for="startBudget">Budget</label>
                 <input id="startBudget" name="budget" type="text" inputmode="text" autocomplete="off" placeholder="Optional">
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="field" data-field="name">
+                <label for="startName">Name</label>
+                <input id="startName" name="name" type="text" autocomplete="name" required placeholder="Your name">
+              </div>
+              <div class="field" data-field="email">
+                <label for="startEmail">Email</label>
+                <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
               </div>
             </div>
 
