@@ -444,6 +444,20 @@
       line-height: 1.35;
     }
 
+    .operator-availability-label {
+      color: color-mix(in srgb, var(--operator-accent) 72%, rgba(245,241,234,.78));
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .operator-availability-label[data-availability="always_available"] { color: rgba(111, 214, 165, .94); }
+    .operator-availability-label[data-availability="available"] { color: rgba(139, 224, 173, .92); }
+    .operator-availability-label[data-availability="busy"] { color: rgba(233, 196, 138, .94); }
+    .operator-availability-label[data-availability="offline"] { color: rgba(190, 104, 104, .82); }
+
     .operator-progress-summary {
       margin-top: 18px;
       border: 1px solid color-mix(in srgb, var(--operator-accent) 18%, rgba(255,255,255,.075));
@@ -1812,27 +1826,12 @@
         <p class="eyebrow">Operator state</p>
         <h2 data-runtime="accessState">Synchronizing operator layer...</h2>
         <p data-runtime="accessSummary">Runtime presence is connecting to the private operator layer.</p>
-        <div class="runtime-strip" aria-label="Runtime presence">
-          <span class="runtime-chip is-live" data-runtime="presenceState">Operator layer synchronized</span>
-          <span class="runtime-chip" data-runtime="lastActive">Awaiting first activity</span>
-          <span class="runtime-chip" data-runtime="deliveryWindow">No active delivery</span>
-        </div>
-        <div class="operator-availability-control" aria-label="Operator availability">
-          <div class="operator-availability-head">
-            <span>Availability</span>
-            <strong id="operatorAvailabilityLabel">Always Available</strong>
-          </div>
-          <div class="operator-status-options" id="operatorAvailabilityOptions">
-            <button class="operator-status-option" type="button" data-availability="always_available">Always Available</button>
-            <button class="operator-status-option" type="button" data-availability="available">Available</button>
-            <button class="operator-status-option" type="button" data-availability="busy">Busy</button>
-            <button class="operator-status-option" type="button" data-availability="offline">Offline</button>
-          </div>
-        </div>
         <div class="operator-state-grid" aria-label="Operator state summary">
+          <div class="operator-state-item"><span>Current status</span><strong class="operator-availability-label" id="operatorAvailabilityLabel" data-availability="always_available">Always Available</strong></div>
           <div class="operator-state-item"><span>Assigned work</span><strong data-runtime="stateAssignments">0 active</strong></div>
-          <div class="operator-state-item"><span>Client updates</span><strong data-runtime="stateUpdates">0 unread</strong></div>
+          <div class="operator-state-item"><span>Unread updates</span><strong data-runtime="stateUpdates">0 unread</strong></div>
           <div class="operator-state-item"><span>Next action</span><strong data-runtime="stateNextAction">Standing by</strong></div>
+          <div class="operator-state-item"><span>Delivery window</span><strong data-runtime="deliveryWindow">No active delivery</strong></div>
           <div class="operator-state-item"><span>Payout state</span><strong data-runtime="statePayout">Private</strong></div>
         </div>
         <div class="operator-progress-summary" id="operatorProgressCard" role="button" tabindex="0" aria-label="Open operator progression roadmap">
@@ -2165,6 +2164,21 @@
           <div class="profile-field"><span>Payout email</span><strong>Finance readiness</strong></div>
           <div class="profile-field"><span>Last active</span><strong data-profile-field="last_active_at">Runtime</strong></div>
           <div class="profile-atmosphere" id="operatorAtmosphere">Operator atmosphere will synchronize from your public identity, accent tint, and runtime state.</div>
+          <div class="profile-settings operator-presence-settings">
+            <p class="eyebrow">Identity and operating preferences</p>
+            <div class="operator-availability-control" aria-label="Availability and presence">
+              <div class="operator-availability-head">
+                <span>Availability & Presence</span>
+                <strong class="operator-availability-label" id="operatorAvailabilityProfileLabel" data-availability="always_available">Always Available</strong>
+              </div>
+              <div class="operator-status-options" id="operatorAvailabilityOptions">
+                <button class="operator-status-option" type="button" data-availability="always_available">Always Available</button>
+                <button class="operator-status-option" type="button" data-availability="available">Available</button>
+                <button class="operator-status-option" type="button" data-availability="busy">Busy</button>
+                <button class="operator-status-option" type="button" data-availability="offline">Offline</button>
+              </div>
+            </div>
+          </div>
           <form class="profile-settings" id="operatorProfileSettings">
             <p class="eyebrow">Public profile settings</p>
             <div class="profile-settings-grid">
@@ -2359,6 +2373,7 @@
       const inviteMessage = document.getElementById('operatorInviteMessage');
       const availabilityOptions = document.getElementById('operatorAvailabilityOptions');
       const availabilityLabel = document.getElementById('operatorAvailabilityLabel');
+      const availabilityProfileLabel = document.getElementById('operatorAvailabilityProfileLabel');
       const progressCard = document.getElementById('operatorProgressCard');
       const progressModal = document.getElementById('operatorProgressModal');
       const roadmapModalCard = document.getElementById('operatorRoadmapModalCard');
@@ -3239,7 +3254,11 @@
       function setAvailabilityState(value, { disabled = false, pending = false } = {}) {
         const key = normalizeAvailability(value);
         if (!pending) currentAvailability = key;
-        if (availabilityLabel) availabilityLabel.textContent = pending ? 'Saving...' : availabilityLabels[key];
+        [availabilityLabel, availabilityProfileLabel].forEach((label) => {
+          if (!label) return;
+          label.textContent = pending ? 'Saving...' : availabilityLabels[key];
+          label.dataset.availability = key;
+        });
         availabilityOptions?.querySelectorAll('[data-availability]').forEach((button) => {
           button.classList.toggle('is-active', button.dataset.availability === key);
           button.disabled = disabled || pending;
@@ -3483,7 +3502,11 @@
         const nextAction = nextOperatorAction({ state, tasks: runtimeTasks, messages: runtimeMessages });
         renderOperatorProgression(operator.operator_progression || {});
         setAvailabilityState(owner ? (operator.operator_availability || state.operator_availability || 'always_available') : 'offline', { disabled: !owner });
-        if (!owner && availabilityLabel) availabilityLabel.textContent = 'Private';
+        if (!owner) [availabilityLabel, availabilityProfileLabel].forEach((label) => {
+          if (!label) return;
+          label.textContent = 'Private';
+          label.dataset.availability = 'offline';
+        });
 
         text('[data-runtime="overviewCopy"]', owner
           ? 'Action-based operator state from assigned clients, task pressure, client updates, delivery windows, and payouts.'
