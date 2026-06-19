@@ -932,17 +932,6 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
     }
 
-    .workspace-operation-dossier::after {
-      position: absolute;
-      top: 0;
-      right: clamp(18px, 4vw, 44px);
-      width: 1px;
-      height: 100%;
-      background: linear-gradient(180deg, rgba(233,196,138,.20), transparent 74%);
-      content: "";
-      opacity: .46;
-    }
-
     .workspace-operation-dossier > * {
       position: relative;
       z-index: 1;
@@ -6399,9 +6388,6 @@
         const operations = activeProjects.length ? activeProjects : [project];
         const [primaryOperation] = operations;
         const scope = primaryOperation.quote_note || primaryOperation.task_description || primaryOperation.task_summary || 'Project scope is attached to this workspace.';
-        const headerStatus = operations.some(isWorkspaceActiveProject)
-          ? 'Project Active'
-          : (operations[0]?.client_status || getWorkspaceClientStatus(operations[0]) || 'Request received');
         const primaryTitle = primaryOperation.display_title || primaryOperation.project_title || primaryOperation.task_summary || getTaskSummary(primaryOperation);
         const primarySource = getOperationSource(primaryOperation);
 
@@ -6411,7 +6397,6 @@
               <p class="workspace-os-eyebrow">Workspace Operation</p>
               <h2 class="workspace-os-title">Current Operation</h2>
             </div>
-            <span class="workspace-os-status">${escapeHTML(headerStatus)}</span>
           </div>
           <div class="workspace-operations-list">
             <article class="workspace-operation-dossier">
