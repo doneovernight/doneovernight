@@ -171,9 +171,10 @@ async function findPortalByUsername(username) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
-async function createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess }) {
+async function createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral = {} }) {
   const workspaceSlug = slugify(username || projectName || name || email);
   const now = new Date().toISOString();
+  const operatorSlug = slugify(operatorReferral.operator_slug || operatorReferral.operator_handle || operatorReferral.referral_operator_slug);
   const basePayload = {
     email,
     name,
@@ -199,7 +200,16 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
       source,
       username,
       workspace_slug: workspaceSlug,
-      access_delivery: "email_todo"
+      access_delivery: "email_todo",
+      ...(operatorSlug ? {
+        referral_source: "operator_referral",
+        referral_operator_slug: operatorSlug,
+        operator_referral_slug: operatorSlug,
+        operator_referral_name: clean(operatorReferral.operator_name || operatorReferral.operator_display_name),
+        operator_referral_role: clean(operatorReferral.operator_role || operatorReferral.operator_category),
+        referral_url: clean(operatorReferral.referral_url),
+        referral_submitted_at: now
+      } : {})
     }
   };
 
@@ -301,6 +311,13 @@ module.exports = async function handler(req, res) {
     const projectName = clean(input.project_name || input.projectName);
     const notes = clean(input.notes);
     const source = clean(input.source) || "client_onboarding";
+    const operatorSlug = slugify(input.operator_slug || input.operator_handle || input.referral_operator_slug);
+    const operatorReferral = {
+      operator_slug: operatorSlug,
+      operator_name: clean(input.operator_name || input.operatorName),
+      operator_role: clean(input.operator_role || input.operatorRole || input.operator_category),
+      referral_url: clean(input.referral_url || input.referralUrl)
+    };
     const isSaiUniversityPreview = source === "saiuniversity_preview";
     const allowLegacySaiAccess = isSaiAmyException({ name, email, projectName });
 
@@ -369,11 +386,20 @@ module.exports = async function handler(req, res) {
       google_provider_id: googleUser?.id || null,
       profile_image: clean(input.profile_image || input.profileImage || googleMeta.avatar_url || googleMeta.picture),
       release_required: isSaiUniversityPreview,
+      ...(operatorSlug ? {
+        referral_source: "operator_referral",
+        referral_operator_slug: operatorSlug,
+        operator_referral_slug: operatorSlug,
+        operator_referral_name: operatorReferral.operator_name,
+        operator_referral_role: operatorReferral.operator_role,
+        referral_url: operatorReferral.referral_url,
+        referral_submitted_at: now.toISOString()
+      } : {}),
       ...(isSaiUniversityPreview ? { preview_link: "/workspace-assets/saiuniversity-preview/" } : {})
     };
 
     const persistedTask = await saveTask(task);
-    const portalLead = await createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess });
+    const portalLead = await createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral });
     await syncAccessKeyCredential(portalLead, portalLead?.access_key || accessKey).catch((error) => {
       console.warn(`Access key sync warning: ${error.code || error.message}`);
     });

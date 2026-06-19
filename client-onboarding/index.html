@@ -342,6 +342,142 @@
       box-shadow: 0 0 16px rgba(233,196,138,.08);
     }
 
+    .operator-card {
+      max-width: 430px;
+      margin-top: 28px;
+      border-top: 1px solid rgba(233,196,138,.18);
+      border-bottom: 1px solid rgba(255,255,255,.075);
+      padding: 18px 0;
+    }
+
+    .operator-card[hidden] { display: none; }
+
+    .operator-card-label {
+      margin: 0 0 10px;
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .operator-card h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 400;
+      letter-spacing: -.025em;
+    }
+
+    .operator-handle {
+      margin-top: 6px;
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .operator-role {
+      margin-top: 12px;
+      color: rgba(255,255,255,.78);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .operator-note {
+      margin: 10px 0 0;
+      color: rgba(245,241,234,.52);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .auth-entry {
+      display: grid;
+      gap: 11px;
+      margin-bottom: 18px;
+    }
+
+    .auth-entry-title {
+      margin: 0;
+      color: rgba(255,255,255,.84);
+      font-family: var(--serif);
+      font-size: 25px;
+      font-weight: 400;
+    }
+
+    .auth-entry-copy,
+    .next-copy {
+      margin: 0;
+      color: rgba(245,241,234,.52);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .auth-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .button.is-quiet-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      border-color: rgba(255,255,255,.105);
+      border-radius: 999px;
+      background: rgba(255,255,255,.018);
+      color: rgba(255,255,255,.72);
+      box-shadow: none;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .13em;
+    }
+
+    .form-title {
+      margin: 4px 0 2px;
+      color: rgba(255,255,255,.82);
+      font-family: var(--serif);
+      font-size: 24px;
+      font-weight: 400;
+    }
+
+    .next-section {
+      margin-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.075);
+      padding-top: 16px;
+    }
+
+    .next-section h3 {
+      margin: 0 0 10px;
+      color: rgba(255,255,255,.8);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .next-section ul {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .next-section li {
+      color: rgba(245,241,234,.5);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .next-section li::before {
+      display: inline-block;
+      width: 16px;
+      color: var(--amber);
+      content: "•";
+    }
+
     @keyframes signalDrift { 50% { background-position: 140% 0; opacity: .28; } }
     @keyframes livePulse { 0%, 100% { opacity: .62; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.16); } }
 
@@ -349,6 +485,7 @@
       .layout { grid-template-columns: 1fr; align-items: start; }
       .topbar-inner { align-items: flex-start; flex-direction: column; gap: 12px; }
       h1 { max-width: 12ch; }
+      .auth-actions { grid-template-columns: 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -367,20 +504,35 @@
 
     <section class="layout">
       <div>
-        <p class="eyebrow">Client onboarding</p>
-        <h1>Enter the private operating layer.</h1>
-        <p class="copy">A calm setup flow for approved clients and new project requests. DONEOVERNIGHT prepares the workspace, issues access credentials, and moves the request into operational review before any quote, file, or delivery link is released.</p>
+        <p class="eyebrow">Private referral access</p>
+        <h1>Introduced through DONEOVERNIGHT.</h1>
+        <p class="copy">You were invited through the DONEOVERNIGHT operator network. Create a workspace or sign in with an existing account to continue.</p>
+        <div class="operator-card" id="operatorReferralCard" hidden>
+          <p class="operator-card-label">Introduced by</p>
+          <h2 id="operatorReferralName">DONEOVERNIGHT Operator</h2>
+          <div class="operator-handle" id="operatorReferralHandle">@operator</div>
+          <div class="operator-role" id="operatorReferralRole">Specialist layer</div>
+          <p class="operator-note" id="operatorReferralNote">Private execution. Operational systems. Overnight delivery.</p>
+        </div>
         <div class="onboarding-path" aria-label="Client onboarding path">
-          <div class="onboarding-path-item"><span>1</span><div>Confirm identity and project context.</div></div>
-          <div class="onboarding-path-item"><span>2</span><div>Receive issued workspace access and a protected session.</div></div>
-          <div class="onboarding-path-item"><span>3</span><div>Track quotes, updates, payments, and delivery movement from the workspace.</div></div>
+          <div class="onboarding-path-item"><span>1</span><div>Enter with Google, sign in, or create a new workspace.</div></div>
+          <div class="onboarding-path-item"><span>2</span><div>DONEOVERNIGHT connects your request to the private operating layer.</div></div>
+          <div class="onboarding-path-item"><span>3</span><div>Track execution, files, updates, and delivery from the workspace.</div></div>
         </div>
       </div>
 
       <aside class="panel">
+        <div class="auth-entry">
+          <h2 class="auth-entry-title">Continue access.</h2>
+          <p class="auth-entry-copy">Already have a workspace? Continue to your account. New here? Create a private workspace below.</p>
+          <div class="auth-actions">
+            <button class="button is-secondary" id="googleOnboarding" type="button">Continue with Google</button>
+            <a class="button is-quiet-link" id="existingWorkspaceLink" href="https://portal.doneovernight.com/workspace">Sign In</a>
+          </div>
+        </div>
         <form class="form" id="onboardingForm" novalidate>
-          <button class="button is-secondary" id="googleOnboarding" type="button">Continue with Google</button>
-          <div class="divider">or complete manually</div>
+          <div class="divider">or</div>
+          <h2 class="form-title">Create New Workspace</h2>
           <div class="field">
             <label for="clientName">Name</label>
             <input id="clientName" name="name" autocomplete="name" required>
@@ -404,6 +556,16 @@
           <div class="message" id="onboardingMessage" aria-live="polite"></div>
           <button class="button" id="onboardingSubmit" type="submit">Prepare private workspace →</button>
         </form>
+        <div class="next-section" aria-label="What happens next">
+          <h3>What happens next</h3>
+          <ul>
+            <li>Workspace access</li>
+            <li>Project tracking</li>
+            <li>File delivery</li>
+            <li>Operational updates</li>
+            <li>Direct execution requests</li>
+          </ul>
+        </div>
 
         <div class="success-card" id="onboardingSuccess">
           <strong>Workspace intake received.</strong>
@@ -427,13 +589,48 @@
       const projectInput = document.getElementById('projectName');
       const usernameInput = document.getElementById('clientUsername');
       const googleButton = document.getElementById('googleOnboarding');
+      const operatorReferralCard = document.getElementById('operatorReferralCard');
+      const operatorReferralName = document.getElementById('operatorReferralName');
+      const operatorReferralHandle = document.getElementById('operatorReferralHandle');
+      const operatorReferralRole = document.getElementById('operatorReferralRole');
+      const operatorReferralNote = document.getElementById('operatorReferralNote');
+      const existingWorkspaceLink = document.getElementById('existingWorkspaceLink');
       let googleAccessToken = '';
       let googleProfileImage = '';
+      let operatorReferral = getOperatorReferralFromPath();
 
       function getClientOnboardingRedirect() {
         return window.location.hostname === 'client.doneovernight.com'
-          ? window.location.origin
+          ? `${window.location.origin}${window.location.pathname}`
           : 'https://client.doneovernight.com';
+      }
+
+      function safeDecode(value) {
+        try {
+          return decodeURIComponent(String(value || ''));
+        } catch (error) {
+          return String(value || '');
+        }
+      }
+
+      function normalizeOperatorHandle(value) {
+        return safeDecode(value)
+          .trim()
+          .toLowerCase()
+          .replace(/^@+/, '')
+          .replace(/[^a-z0-9_-]+/g, '')
+          .slice(0, 31);
+      }
+
+      function getOperatorReferralFromPath() {
+        const segment = window.location.pathname.split('/').filter(Boolean)[0] || '';
+        const handle = segment.startsWith('@') ? normalizeOperatorHandle(segment) : '';
+        return {
+          operator_slug: handle,
+          operator_name: '',
+          operator_role: '',
+          referral_url: handle ? `https://client.doneovernight.com/@${encodeURIComponent(handle)}` : window.location.href
+        };
       }
 
       function setMessage(text, type = '') {
@@ -460,6 +657,43 @@
       function usernameFromIdentity({ name = '', email = '' } = {}) {
         const base = email.split('@')[0] || name;
         return normalizeUsername(base.replace(/[._-]+/g, '.')) || normalizeUsername(name) || '';
+      }
+
+      function renderOperatorFallback() {
+        if (!operatorReferral.operator_slug || !operatorReferralCard) return;
+        operatorReferralCard.hidden = false;
+        operatorReferralName.textContent = 'DONEOVERNIGHT operator network';
+        operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
+        operatorReferralRole.textContent = 'Private referral access';
+        operatorReferralNote.textContent = 'Private execution. Operational systems. Overnight delivery.';
+      }
+
+      async function hydrateOperatorReferral() {
+        if (!operatorReferral.operator_slug) return;
+        renderOperatorFallback();
+        try {
+          const response = await fetch('/api/operator-apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ action: 'operator_runtime', handle: operatorReferral.operator_slug })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true || !data.operator) return;
+          const operator = data.operator || {};
+          operatorReferral = {
+            ...operatorReferral,
+            operator_name: operator.display_name || operator.name || '',
+            operator_role: operator.role || operator.role_type || 'Specialist layer',
+            referral_url: `https://client.doneovernight.com/@${encodeURIComponent(operatorReferral.operator_slug)}`
+          };
+          operatorReferralCard.hidden = false;
+          operatorReferralName.textContent = operatorReferral.operator_name || 'DONEOVERNIGHT operator network';
+          operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
+          operatorReferralRole.textContent = operatorReferral.operator_role || 'Specialist layer';
+          operatorReferralNote.textContent = operator.bio || 'Private execution. Operational systems. Overnight delivery.';
+        } catch (error) {
+          renderOperatorFallback();
+        }
       }
 
       function isValidUsername(value) {
@@ -523,7 +757,11 @@
           notes: document.getElementById('clientNotes').value.trim(),
           source: 'client_onboarding',
           google_access_token: googleAccessToken,
-          profile_image: googleProfileImage
+          profile_image: googleProfileImage,
+          operator_slug: operatorReferral.operator_slug,
+          operator_name: operatorReferral.operator_name,
+          operator_role: operatorReferral.operator_role,
+          referral_url: operatorReferral.referral_url
         };
 
         if (!payload.name) {
@@ -572,7 +810,8 @@
             access_key: data.accessKey || '',
             taskId: data.taskId,
             source: payload.source,
-            slug: data.workspaceSlug || ''
+            slug: data.workspaceSlug || '',
+            operator_referral_slug: payload.operator_slug || ''
           }));
           if (data.username && data.accessKey) {
             sessionStorage.setItem('doneovernight:accessCredentials', JSON.stringify({
@@ -602,6 +841,7 @@
       hydrateGoogleIdentity().catch(() => {
         setMessage('Google identity could not be restored. You can continue manually.', 'error');
       });
+      hydrateOperatorReferral();
     })();
   </script>
 <script src="/lang/runtime.js" defer></script>
