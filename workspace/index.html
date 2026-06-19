@@ -918,13 +918,13 @@
     .workspace-operation-dossier {
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(233,196,138,.13);
+      border: 1px solid rgba(233,196,138,.09);
       border-radius: 8px;
       background:
         radial-gradient(circle at 8% 0%, rgba(233,196,138,.10), transparent 34%),
         linear-gradient(180deg, rgba(255,255,255,.032), rgba(255,255,255,.008)),
         rgba(5,6,8,.62);
-      padding: clamp(18px, 2.6vw, 28px);
+      padding: clamp(22px, 3vw, 34px);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
     }
 
@@ -1021,17 +1021,16 @@
     .workspace-operation-meta-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 1px;
-      margin: 22px 0;
-      border-top: 1px solid rgba(255,255,255,.07);
-      border-bottom: 1px solid rgba(255,255,255,.07);
-      background: rgba(255,255,255,.035);
+      gap: clamp(14px, 2vw, 26px);
+      margin: 26px 0 24px;
+      background: transparent;
     }
 
     .workspace-operation-fact {
       min-width: 0;
-      background: rgba(5,6,8,.62);
-      padding: 15px 14px;
+      border-top: 1px solid rgba(255,255,255,.075);
+      background: transparent;
+      padding: 13px 0 0;
     }
 
     .workspace-operation-fact strong {
@@ -1168,16 +1167,41 @@
     }
 
     .workspace-referral-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       margin-top: 18px;
     }
 
     .workspace-referral-actions .workspace-button {
-      width: 100%;
+      width: auto;
       min-height: 44px;
-      padding-inline: 12px;
+      padding-inline: 16px;
+    }
+
+    .workspace-os-card.is-quiet-empty {
+      border-color: rgba(255,255,255,.055);
+      background: rgba(245,241,234,.006);
+      padding: 18px 20px;
+      box-shadow: none;
+    }
+
+    .workspace-os-card.is-quiet-empty::before {
+      opacity: .18;
+    }
+
+    .workspace-os-card.is-quiet-empty .workspace-os-head {
+      margin-bottom: 10px;
+    }
+
+    .workspace-os-card.is-quiet-empty .workspace-os-title {
+      font-size: 24px !important;
+      line-height: 1.1;
+    }
+
+    .workspace-os-empty.is-quiet {
+      color: rgba(255,255,255,.36);
+      font-size: 12px;
     }
 
     .workspace-donbot {
@@ -4283,14 +4307,29 @@
         ).map((file) => ({
           title: file.title || file.label || file.name || file.filename || file.file_name || 'Attached file',
           timestamp: file.created_at || file.uploaded_at || file.timestamp || '',
-          href: file.signed_url || file.url || file.href || file.file_url || file.download_url || file.public_url || ''
+          href: file.signed_url || file.url || file.href || file.file_url || file.download_url || file.public_url || '',
+          path: file.storage_path || file.storagePath || file.path || file.file_path || file.object_path || '',
+          bucket: file.bucket || file.storage_bucket || ''
         })).filter((file) => file.title);
+      }
+
+      function normalizeWorkspaceFileKey(value = '') {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        try {
+          const parsed = new URL(raw, window.location.origin);
+          return decodeURIComponent(parsed.pathname).toLowerCase();
+        } catch (error) {
+          return raw.split('?')[0].toLowerCase();
+        }
       }
 
       function dedupeWorkspaceFiles(files = []) {
         const byKey = new Map();
         files.forEach((file) => {
-          const key = `${file.title || ''}::${file.href || ''}`;
+          const filename = String(file.title || '').trim().toLowerCase();
+          const durablePath = normalizeWorkspaceFileKey(file.path || file.href || '');
+          const key = `${filename}::${file.bucket || ''}::${durablePath}`;
           if (!file.title || byKey.has(key)) return;
           byKey.set(key, file);
         });
@@ -4386,20 +4425,38 @@
 
       function renderWorkspaceNotifications(events = workspaceNotifications) {
         if (!workspaceNotificationsPanel) return;
+        const allowedEvents = events.filter(isAllowedWorkspaceSignal);
         workspaceNotificationsPanel.innerHTML = `
           <div class="workspace-os-head">
             <div>
               <p class="workspace-os-eyebrow">Signals</p>
               <h3 class="workspace-os-title" style="font-size:34px">Important updates.</h3>
             </div>
-            ${events.length ? `<span class="workspace-os-status">${escapeHTML(events.length)} real event${events.length === 1 ? '' : 's'}</span>` : ''}
+            ${allowedEvents.length ? `<span class="workspace-os-status">${escapeHTML(allowedEvents.length)} signal${allowedEvents.length === 1 ? '' : 's'}</span>` : ''}
           </div>
-          ${events.length ? renderWorkspaceRows(events.map((event) => ({
+          ${allowedEvents.length ? renderWorkspaceRows(allowedEvents.map((event) => ({
             title: event.title,
             timestamp: event.timestamp,
             meta: [event.task_id, event.meta].filter(Boolean).join(' · ')
-          })), 'No signals right now.') : '<div class="workspace-os-empty">No signals right now. File, delivery, invoice, referral, and message updates appear here when they matter.</div>'}
+          })), 'No important signals right now.') : '<div class="workspace-os-empty is-quiet">No important signals right now.</div>'}
         `;
+      }
+
+      function isAllowedWorkspaceSignal(event = {}) {
+        const text = [
+          event.title,
+          event.label,
+          event.message,
+          event.meta,
+          event.type,
+          event.message_type,
+          event.category
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!text) return false;
+        if (/task received|task submitted|request received|workspace activated|workspace active|project started|payment confirmed|payment received|execution plan ready|execution plan sent|plan approved|review complete|request under review|project active/.test(text)) {
+          return false;
+        }
+        return /file uploaded|file ready|deliverable ready|delivery ready|client action|required|operator message|message from|invoice available|invoice ready|referral conversion|revision requested|revision/.test(text);
       }
 
       function businessProfileRows(profile = workspaceBusinessProfile || {}) {
@@ -4508,8 +4565,8 @@
         workspaceActiveProject.innerHTML = `
           <div class="workspace-os-head">
             <div>
-              <p class="workspace-os-eyebrow">Current Operation</p>
-              <h2 class="workspace-os-title">Private execution dossier.</h2>
+              <p class="workspace-os-eyebrow">Workspace Operation</p>
+              <h2 class="workspace-os-title">Current Operation</h2>
             </div>
             <span class="workspace-os-status">${escapeHTML(headerStatus)}</span>
           </div>
@@ -4577,9 +4634,10 @@
           `).join('')}</ul>` : '<div class="workspace-os-empty">Client files appear here after they are attached to a task.</div>'}
         `;
 
-        workspaceDeliverablesPanel.innerHTML = `
+        workspaceDeliverablesPanel.classList.toggle('is-quiet-empty', !delivered.length);
+        workspaceDeliverablesPanel.innerHTML = delivered.length ? `
           <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Deliverables</p><h3 class="workspace-os-title" style="font-size:34px">What we delivered.</h3></div></div>
-          ${delivered.length ? `<ul class="workspace-os-list">${delivered.map((item) => `
+          <ul class="workspace-os-list">${delivered.map((item) => `
             <li class="workspace-os-row">
               <span class="workspace-os-dot" aria-hidden="true"></span>
               <div>
@@ -4588,7 +4646,10 @@
                 ${item.delivery_link ? `<a class="workspace-os-link" href="${escapeHTML(item.delivery_link)}" target="_blank" rel="noopener noreferrer">Open delivery</a>` : ''}
               </div>
             </li>
-          `).join('')}</ul>` : '<div class="workspace-os-empty">DONEOVERNIGHT deliverables appear here once prepared.</div>'}
+          `).join('')}</ul>
+        ` : `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Deliverables</p><h3 class="workspace-os-title" style="font-size:34px">Deliverables</h3></div></div>
+          <div class="workspace-os-empty is-quiet">No deliverables ready yet.</div>
         `;
 
         const invoices = room.invoices?.length ? room.invoices : getTaskInvoices(project);
