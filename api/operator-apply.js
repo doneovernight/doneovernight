@@ -2,6 +2,11 @@ const crypto = require("crypto");
 
 const { clean, dispatchWebhook, getWebhookUrls, normalizeAccessKey, parseBody, send, supabaseFetch } = require("../lib/ops");
 const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
+const {
+  buildOperatorAvailabilityRawPayload,
+  normalizeOperatorAvailability,
+  resolveOperatorAvailability
+} = require("../lib/operator-availability");
 const { loadOperatorRuntime } = require("../lib/operator-runtime");
 const { syncOperatorProfile } = require("../lib/operator-sync");
 const SUPABASE_AUTH_TIMEOUT_MS = 10_000;
@@ -95,18 +100,6 @@ function missingColumnName(error) {
     || "";
 }
 
-function normalizeOperatorAvailability(value) {
-  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
-  const labels = {
-    available: "Available",
-    busy: "Busy",
-    offline: "Offline",
-    always_available: "Always Available"
-  };
-  const key = Object.prototype.hasOwnProperty.call(labels, normalized) ? normalized : "always_available";
-  return { value: key, label: labels[key] };
-}
-
 function normalizeUsername(value) {
   return clean(value)
     .toLowerCase()
@@ -198,8 +191,7 @@ function clearOperatorCookie(res) {
 function sanitizeOperator(profile = {}) {
   const handle = canonicalProfileHandle(profile);
   const publicLinks = profileLinksFromRecord(profile);
-  const rawPayload = profile.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
-  const availability = normalizeOperatorAvailability(rawPayload.operator_availability || rawPayload.availability_status || rawPayload.availability);
+  const availability = resolveOperatorAvailability(profile);
   return {
     id: profile.id || "",
     email: profile.email || "",
@@ -218,7 +210,7 @@ function sanitizeOperator(profile = {}) {
     status: profile.status || "",
     operator_availability: availability.value,
     operator_availability_label: availability.label,
-    operator_availability_updated_at: rawPayload.operator_availability_updated_at || null
+    operator_availability_updated_at: availability.updated_at || null
   };
 }
 
@@ -557,25 +549,36 @@ async function updateOperatorAvailability(req, input) {
   const availability = normalizeOperatorAvailability(input.operator_availability || input.availability || input.status);
   const now = new Date().toISOString();
   const profile = await loadOperatorProfileRow(current.operator.id);
-  const rawPayload = profile?.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
+  const beforeAvailability = resolveOperatorAvailability(profile);
+  const rawPayload = buildOperatorAvailabilityRawPayload(profile, availability, now);
   const patch = await patchOperatorProfileById(current.operator.id, {
     availability: availability.value,
-    raw_payload: {
-      ...rawPayload,
-      operator_availability: availability.value,
-      operator_availability_label: availability.label,
-      operator_availability_updated_at: now,
-      operator_availability_source: "operator_os"
-    },
+    raw_payload: rawPayload,
     updated_at: now
   });
-  const updatedProfile = patch.row;
+  const savedProfile = await loadOperatorProfileRow(current.operator.id);
+  const updatedProfile = savedProfile || patch.row || { ...profile, availability: availability.value, raw_payload: rawPayload };
+  const afterAvailability = resolveOperatorAvailability(updatedProfile);
+  const audit = {
+    operator_id: current.operator.id,
+    requested: availability.value,
+    value_before_save: beforeAvailability.value,
+    source_before_save: beforeAvailability.source,
+    value_after_save: afterAvailability.value,
+    source_after_save: afterAvailability.source,
+    backend_record_updated: Boolean(patch.row),
+    backend_record_read: Boolean(savedProfile?.id),
+    persisted_fields: patch.persisted_fields || [],
+    skipped_missing_columns: patch.skipped_missing_columns || []
+  };
+  console.log("DONEOVERNIGHT_OPERATOR_AVAILABILITY_AUDIT", audit);
   return {
-    operator: sanitizeOperator(updatedProfile || { ...profile, raw_payload: rawPayload }),
+    operator: sanitizeOperator(updatedProfile),
     availability,
     updated_at: now,
     persisted_fields: patch.persisted_fields,
-    skipped_missing_columns: patch.skipped_missing_columns
+    skipped_missing_columns: patch.skipped_missing_columns,
+    availability_audit: audit
   };
 }
 

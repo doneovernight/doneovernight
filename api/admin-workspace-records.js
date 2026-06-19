@@ -9,6 +9,7 @@ const OPERATOR_ACCESS_WEBHOOK_URL = "https://n8n.doneovernight.com/webhook/opera
 const crypto = require("crypto");
 const { clean, dispatchWebhook, getWebhookUrls, parseBody, send, slugify, supabaseFetch } = require("../lib/ops");
 const { withFreshAttachmentUrls } = require("../lib/attachments");
+const { resolveOperatorAvailability } = require("../lib/operator-availability");
 const { getConfig } = require("../heartbeat/config");
 const { getAnalyticsSummary } = require("../heartbeat/providers/analytics");
 const { generateHeartbeat, sendHeartbeat } = require("../heartbeat/summary");
@@ -518,18 +519,6 @@ function getOperatorStatusGroup(status) {
   return "pending";
 }
 
-function normalizeOperatorAvailability(value) {
-  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
-  const labels = {
-    available: "Available",
-    busy: "Busy",
-    offline: "Offline",
-    always_available: "Always Available"
-  };
-  const key = Object.prototype.hasOwnProperty.call(labels, normalized) ? normalized : "always_available";
-  return { value: key, label: labels[key] };
-}
-
 function missingColumnName(error) {
   const detail = [
     error?.detail,
@@ -597,7 +586,7 @@ async function listOperators() {
 
   profiles.forEach((profile) => {
     const raw = profile.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
-    const availability = normalizeOperatorAvailability(raw.operator_availability || raw.availability_status || raw.availability || profile.availability);
+    const availability = resolveOperatorAvailability(profile);
     const handle = clean(profile.handle || profile.handle_normalized || profile.username).toLowerCase().replace(/^@+/, "");
     const activityRows = [
       ...(activityByProfileId.get(clean(profile.id)) || []),
@@ -668,10 +657,10 @@ async function listOperators() {
       birthdate: profile.birthdate,
       payout_email: profile.payout_email,
       tools: splitList(profile.tools),
-      availability: profile.availability,
+      availability: availability.value,
       operator_availability: availability.value,
       operator_availability_label: availability.label,
-      operator_availability_updated_at: raw.operator_availability_updated_at || null,
+      operator_availability_updated_at: availability.updated_at || null,
       last_active_at: profile.last_active_at || profile.updated_at || profile.created_at,
       connected_clients: connectedClients.length,
       connected_clients_detail: connectedClients,

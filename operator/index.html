@@ -3987,7 +3987,12 @@
             operator_availability: nextAvailability
           });
           storeOperator(data.operator);
-          setAvailabilityState(data.operator?.operator_availability || nextAvailability);
+          if (data.availability_audit) console.info('DONEOVERNIGHT_OPERATOR_AVAILABILITY_AUDIT', data.availability_audit);
+          const savedAvailability = normalizeAvailability(data.availability_audit?.value_after_save || data.operator?.operator_availability || data.availability?.value || nextAvailability);
+          setAvailabilityState(savedAvailability);
+          if (savedAvailability !== nextAvailability) {
+            showRuntimeAlert('Availability did not match the saved backend value. Refreshing runtime state.');
+          }
           if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'availability' }).catch(() => {});
         } catch (error) {
           showRuntimeAlert(error.message || 'Could not update operator availability.');
