@@ -3840,6 +3840,31 @@ function getTaskId(task) {
   return task.task_id || task.taskId || task.id || 'Pending ID';
 }
 
+function normalizeAdminTaskBindingValue(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const donMatch = raw.match(/DON-\d{4}-\d{5}/i);
+  if (donMatch) return donMatch[0].toUpperCase();
+  return raw.toLowerCase();
+}
+
+function getAdminTaskBindingKeys(task = {}) {
+  const rawPayload = task.raw_payload || task.rawPayload || {};
+  return new Set([
+    task.task_id,
+    task.taskId,
+    task.reference,
+    task.task_reference,
+    task.don_reference,
+    rawPayload.task_id,
+    rawPayload.taskId,
+    rawPayload.reference,
+    rawPayload.task_reference,
+    rawPayload.don_reference,
+    task.id
+  ].map(normalizeAdminTaskBindingValue).filter(Boolean));
+}
+
 function getTaskTitle(task) {
   return task.task_summary || task.task_description || 'Untitled task';
 }
@@ -3942,7 +3967,52 @@ function renderTaskAttachments(task) {
 
 function getWorkspaceRecordTaskId(record = {}) {
   const metadata = record.metadata || {};
-  return String(record.task_id || record.taskId || metadata.task_id || metadata.operation || '').trim();
+  return String(
+    record.task_id ||
+    record.taskId ||
+    record.reference ||
+    record.task_reference ||
+    record.don_reference ||
+    metadata.task_id ||
+    metadata.taskId ||
+    metadata.reference ||
+    metadata.task_reference ||
+    metadata.taskReference ||
+    metadata.don_reference ||
+    metadata.donReference ||
+    metadata.operation ||
+    ''
+  ).trim();
+}
+
+function getWorkspaceRecordTaskBindingKeys(record = {}) {
+  const metadata = record.metadata || {};
+  const keys = [
+    record.task_id,
+    record.taskId,
+    record.reference,
+    record.task_reference,
+    record.don_reference,
+    metadata.task_id,
+    metadata.taskId,
+    metadata.reference,
+    metadata.task_reference,
+    metadata.taskReference,
+    metadata.don_reference,
+    metadata.donReference
+  ].map(normalizeAdminTaskBindingValue).filter(Boolean);
+
+  const operationKey = normalizeAdminTaskBindingValue(metadata.operation);
+  if (operationKey && operationKey.startsWith('DON-')) keys.push(operationKey);
+
+  return new Set(keys);
+}
+
+function doesWorkspaceRecordBelongToTask(record = {}, task = {}) {
+  const taskKeys = getAdminTaskBindingKeys(task);
+  const recordKeys = getWorkspaceRecordTaskBindingKeys(record);
+  if (!taskKeys.size || !recordKeys.size) return false;
+  return [...recordKeys].some((key) => taskKeys.has(key));
 }
 
 function isClientOperationUpdateRecord(record = {}) {
@@ -3955,10 +4025,9 @@ function isClientOperationUpdateRecord(record = {}) {
 }
 
 function getAdminOperationUpdates(task = {}) {
-  const reference = getTaskId(task);
-  if (!reference) return [];
+  if (!getAdminTaskBindingKeys(task).size) return [];
   return (workspaceRecords.messages || [])
-    .filter((record) => isClientOperationUpdateRecord(record) && getWorkspaceRecordTaskId(record) === reference)
+    .filter((record) => isClientOperationUpdateRecord(record) && doesWorkspaceRecordBelongToTask(record, task))
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
 
@@ -5857,7 +5926,7 @@ async function markAdminClientUpdatesViewed(taskId) {
     workspaceRecords = {
       ...workspaceRecords,
       messages: (workspaceRecords.messages || []).map((record) => {
-        if (!isClientOperationUpdateRecord(record) || getWorkspaceRecordTaskId(record) !== reference) return record;
+        if (!isClientOperationUpdateRecord(record) || !doesWorkspaceRecordBelongToTask(record, task)) return record;
         return {
           ...record,
           metadata: {
@@ -5992,7 +6061,8 @@ function renderTasks(tasks) {
     const availability = getTaskActionAvailability(task);
     const workspaceSlug = getTaskWorkspaceSlug(task);
     const clientDisplayName = task.name || task.email || 'Unknown client';
-    const clientIdentity = workspaceSlug ? `${clientDisplayName} · @${workspaceSlug}` : clientDisplayName;
+    const taskReference = getTaskId(task);
+    const clientIdentity = `${clientDisplayName} · ${workspaceSlug ? `@${workspaceSlug}` : 'no workspace'} · ${taskReference}`;
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
@@ -6089,7 +6159,7 @@ function renderTasks(tasks) {
         class="admin-client-update-badge ${clientUpdateCounts.unread ? 'is-unread' : ''}"
         type="button"
         data-client-updates-open
-        data-task-id="${escapeHTML(getTaskId(task))}"
+        data-task-id="${escapeHTML(taskReference)}"
       >${escapeHTML(clientUpdateCounts.unread ? `Client updates (${clientUpdateCounts.unread})` : 'Client updates')}</button>
     ` : '';
     const actionMarkup = actions.length ? `
@@ -6117,7 +6187,7 @@ function renderTasks(tasks) {
             <div class="admin-task-identity">
               <span class="admin-task-client">${escapeHTML(clientIdentity)}</span>
               <span class="admin-task-email">${escapeHTML(task.email || 'No email')}</span>
-              <span class="admin-task-id">${escapeHTML(getTaskId(task))}</span>
+              <span class="admin-task-id">${escapeHTML(taskReference)}</span>
             </div>
             <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
             ${clientUpdateBadge}

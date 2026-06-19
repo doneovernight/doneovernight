@@ -834,7 +834,58 @@ async function deleteWorkspaceRecord(input) {
 
 function getWorkspaceRecordTaskId(record = {}) {
   const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
-  return clean(record.task_id || record.taskId || metadata.task_id || metadata.operation);
+  return clean(
+    record.task_id ||
+      record.taskId ||
+      record.reference ||
+      record.task_reference ||
+      record.don_reference ||
+      metadata.task_id ||
+      metadata.taskId ||
+      metadata.reference ||
+      metadata.task_reference ||
+      metadata.taskReference ||
+      metadata.don_reference ||
+      metadata.donReference ||
+      metadata.operation
+  );
+}
+
+function normalizeTaskBindingValue(value = "") {
+  const raw = clean(value);
+  if (!raw) return "";
+  const match = raw.match(/DON-\d{4}-\d{5}/i);
+  if (match) return match[0].toUpperCase();
+  return raw.toLowerCase();
+}
+
+function getWorkspaceRecordTaskBindingKeys(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
+  const keys = [
+    record.task_id,
+    record.taskId,
+    record.reference,
+    record.task_reference,
+    record.don_reference,
+    metadata.task_id,
+    metadata.taskId,
+    metadata.reference,
+    metadata.task_reference,
+    metadata.taskReference,
+    metadata.don_reference,
+    metadata.donReference
+  ].map(normalizeTaskBindingValue).filter(Boolean);
+
+  const operationKey = normalizeTaskBindingValue(metadata.operation);
+  if (operationKey && operationKey.startsWith("DON-")) keys.push(operationKey);
+
+  return new Set(keys);
+}
+
+function workspaceRecordMatchesTaskId(record = {}, taskId = "") {
+  const normalizedTaskId = normalizeTaskBindingValue(taskId);
+  if (!normalizedTaskId) return false;
+  return getWorkspaceRecordTaskBindingKeys(record).has(normalizedTaskId);
 }
 
 function isClientOperationUpdateRecord(record = {}) {
@@ -857,7 +908,7 @@ async function markClientUpdatesViewed(input) {
 
   const rows = await supabaseFetch("workspace_messages?select=*&order=created_at.desc&limit=200");
   const updates = (Array.isArray(rows) ? rows : [])
-    .filter((record) => isClientOperationUpdateRecord(record) && getWorkspaceRecordTaskId(record) === taskId);
+    .filter((record) => isClientOperationUpdateRecord(record) && workspaceRecordMatchesTaskId(record, taskId));
 
   const viewedAt = new Date().toISOString();
   const actionId = crypto.randomUUID();
