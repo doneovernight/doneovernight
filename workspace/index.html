@@ -1129,6 +1129,16 @@
       background: rgba(255,255,255,.035);
     }
 
+    .workspace-secondary-label {
+      background: rgba(5,6,8,.56);
+      color: rgba(233,196,138,.68);
+      padding: 11px 16px;
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
     .workspace-secondary-operation {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -1197,6 +1207,83 @@
       font-size: 8px;
       letter-spacing: .09em;
       text-transform: uppercase;
+    }
+
+    .workspace-task-history {
+      overflow: hidden;
+    }
+
+    .workspace-task-history-list {
+      display: grid;
+      gap: 1px;
+      max-height: min(520px, 58vh);
+      overflow-y: auto;
+      border-top: 1px solid rgba(255,255,255,.07);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.032);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(233,196,138,.28) transparent;
+    }
+
+    .workspace-task-history-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .workspace-task-history-list::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(233,196,138,.24);
+    }
+
+    .workspace-task-history-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(132px, .32fr);
+      gap: 18px;
+      align-items: center;
+      background: rgba(5,6,8,.60);
+      padding: 15px 16px;
+    }
+
+    .workspace-task-history-title {
+      display: block;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-task-history-meta,
+    .workspace-task-history-detail {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .workspace-task-history-status {
+      display: inline-flex;
+      align-items: center;
+      justify-self: end;
+      gap: 7px;
+      color: rgba(233,196,138,.76);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .12em;
+      text-align: right;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .workspace-task-history-status::before {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(139,224,173,.25);
+      content: "";
     }
 
     .workspace-referral-actions {
@@ -3091,6 +3178,8 @@
       .workspace-operation-meta-grid { grid-template-columns: 1fr; }
       .workspace-progress-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workspace-progress-step:nth-child(2n)::after { display: none; }
+      .workspace-task-history-row { grid-template-columns: 1fr; }
+      .workspace-task-history-status { justify-self: start; text-align: left; }
       .workspace-referral-actions { grid-template-columns: 1fr; }
       .workspace-link-grid { grid-template-columns: 1fr; }
       .workspace-task-drawer { border-left: none; }
@@ -3360,6 +3449,9 @@
     <section class="workspace-os" id="workspaceOs" aria-label="Client project workspace">
       <div class="workspace-os-card" id="workspaceActiveProject">
         <div class="workspace-os-empty">Workspace is syncing…</div>
+      </div>
+      <div class="workspace-os-card workspace-task-history" id="workspaceAllTasksPanel">
+        <div class="workspace-os-empty">Task history is syncing…</div>
       </div>
       <div class="workspace-os-card" id="workspaceNotificationsPanel">
         <div class="workspace-os-empty">Notifications are syncing…</div>
@@ -3745,6 +3837,7 @@
       const workspaceActivityFeed = document.getElementById('workspaceActivityFeed');
       const workspaceOs = document.getElementById('workspaceOs');
       const workspaceActiveProject = document.getElementById('workspaceActiveProject');
+      const workspaceAllTasksPanel = document.getElementById('workspaceAllTasksPanel');
       const workspaceNotificationsPanel = document.getElementById('workspaceNotificationsPanel');
       const workspaceFilesPanel = document.getElementById('workspaceFilesPanel');
       const workspaceDeliverablesPanel = document.getElementById('workspaceDeliverablesPanel');
@@ -4241,6 +4334,17 @@
         return 5;
       }
 
+      function getTaskHistoryPriority(task = {}) {
+        const clientStatus = getWorkspaceClientStatus(task);
+        const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
+        const payment = normalizeTaskStatus(task.payment_status || task.raw_payload?.payment_status);
+        if (['Project active', 'Execution scheduled'].includes(clientStatus) || ['project_active', 'execution_active', 'operators_assigned'].includes(status)) return 1;
+        if (['request_received', 'review_pending', 'under_review', 'review_in_progress', 'new'].includes(status)) return 2;
+        if (clientStatus === 'Execution plan ready' || ['execution_plan_ready', 'awaiting_start', 'awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(payment)) return 3;
+        if (['Delivered', 'Completed'].includes(clientStatus) || ['delivered', 'completed'].includes(status)) return 4;
+        return 5;
+      }
+
       function isVisibleWorkspaceOperation(task = {}) {
         const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
         const clientStatus = getWorkspaceClientStatus(task);
@@ -4296,6 +4400,37 @@
             const priority = getOperationPriority(a) - getOperationPriority(b);
             if (priority !== 0) return priority;
             return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+          });
+      }
+
+      function isClientSafeTaskHistoryItem(task = {}) {
+        const status = normalizeTaskStatus(task.status || task.raw_payload?.status);
+        if (!task) return false;
+        if (status === 'archived' || task.archived === true || task.raw_payload?.archived === true) return false;
+        return true;
+      }
+
+      function getTaskLastActivity(task = {}) {
+        return task.updated_at || task.delivered_at || task.started_at || task.paid_at || task.quoted_at || task.created_at || task.createdAt || '';
+      }
+
+      function getTaskHistoryItems(tasks = workspaceTasks) {
+        const roomProjects = [
+          workspaceProjectRoom?.active_project,
+          ...(workspaceProjectRoom?.other_requests || [])
+        ].filter(Boolean);
+        const byId = new Map();
+        [...tasks, ...roomProjects, ...localSubmittedWorkspaceTasks].forEach((task) => {
+          if (!task) return;
+          const id = getWorkspaceOperationKey(task);
+          byId.set(id, mergeWorkspaceOperationTask(byId.get(id) || {}, task));
+        });
+        return [...byId.values()]
+          .filter(isClientSafeTaskHistoryItem)
+          .sort((a, b) => {
+            const priority = getTaskHistoryPriority(a) - getTaskHistoryPriority(b);
+            if (priority !== 0) return priority;
+            return new Date(getTaskLastActivity(b) || b.created_at || 0) - new Date(getTaskLastActivity(a) || a.created_at || 0);
           });
       }
 
@@ -4610,6 +4745,41 @@
         `).join('')}</ul>`;
       }
 
+      function renderWorkspaceAllTasks(tasks = workspaceTasks) {
+        if (!workspaceAllTasksPanel) return;
+        const historyItems = getTaskHistoryItems(tasks);
+        workspaceAllTasksPanel.innerHTML = `
+          <div class="workspace-os-head">
+            <div>
+              <p class="workspace-os-eyebrow">Task History</p>
+              <h3 class="workspace-os-title" style="font-size:34px">All Tasks</h3>
+            </div>
+            ${historyItems.length ? `<span class="workspace-os-status">${escapeHTML(historyItems.length)} task${historyItems.length === 1 ? '' : 's'}</span>` : ''}
+          </div>
+          ${historyItems.length ? `
+            <div class="workspace-task-history-list" aria-label="All workspace tasks">
+              ${historyItems.map((task) => {
+                const attachmentCount = getOperationAttachmentCount(task);
+                const reference = getTaskId(task);
+                const timeline = getOperationTimeline(task);
+                const investment = getOperationInvestment(task);
+                const lastActivity = getTaskLastActivity(task);
+                return `
+                  <article class="workspace-task-history-row">
+                    <div>
+                      <strong class="workspace-task-history-title">${escapeHTML(task.display_title || task.project_title || task.task_summary || getTaskSummary(task))}</strong>
+                      <span class="workspace-task-history-meta">${escapeHTML([reference, lastActivity ? formatDate(lastActivity) : '', timeline && timeline !== 'Timeline updating' ? timeline : ''].filter(Boolean).join(' · '))}</span>
+                      <span class="workspace-task-history-detail">${escapeHTML([investment && investment !== 'Investment confirmed' ? investment : '', attachmentCount ? `${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '))}</span>
+                    </div>
+                    <em class="workspace-task-history-status">${escapeHTML(task.client_status || getWorkspaceClientStatus(task))}</em>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          ` : '<div class="workspace-os-empty is-quiet">No tasks are linked to this workspace yet.</div>'}
+        `;
+      }
+
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
         if (!workspaceActiveProject) return;
         const project = getPrimaryProject(tasks);
@@ -4617,6 +4787,7 @@
 
         if (!project) {
           workspaceActiveProject.innerHTML = '<div class="workspace-os-empty">No active project yet.</div>';
+          renderWorkspaceAllTasks(tasks);
           renderWorkspaceNotifications();
           workspaceFilesPanel.innerHTML = '<div class="workspace-os-empty">Client files appear here after they are attached to a task.</div>';
           workspaceDeliverablesPanel.innerHTML = '<div class="workspace-os-empty">DONEOVERNIGHT deliverables appear here once prepared.</div>';
@@ -4630,6 +4801,8 @@
         const activeProjects = getWorkspaceOperationTasks(tasks);
         const operations = activeProjects.length ? activeProjects : [project];
         const [primaryOperation, ...secondaryOperations] = operations;
+        const visibleSecondaryOperations = secondaryOperations.slice(0, 3);
+        const additionalSecondaryCount = Math.max(0, secondaryOperations.length - visibleSecondaryOperations.length);
         const scope = primaryOperation.quote_note || primaryOperation.task_description || primaryOperation.task_summary || 'Project scope is attached to this workspace.';
         const headerStatus = operations.some(isWorkspaceActiveProject)
           ? 'Project Active'
@@ -4664,9 +4837,10 @@
               <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(primaryOperation)}</div>
               <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
             </article>
-            ${secondaryOperations.length ? `
+            ${visibleSecondaryOperations.length ? `
               <div class="workspace-secondary-operations" aria-label="Secondary operations">
-                ${secondaryOperations.map((operation) => `
+                <div class="workspace-secondary-label">Other Requests</div>
+                ${visibleSecondaryOperations.map((operation) => `
                   <div class="workspace-secondary-operation">
                     <div>
                       <strong>${escapeHTML(operation.display_title || operation.project_title || operation.task_summary || getTaskSummary(operation))}</strong>
@@ -4676,11 +4850,13 @@
                     <em class="workspace-secondary-status">${escapeHTML(operation.client_status || getWorkspaceClientStatus(operation))}</em>
                   </div>
                 `).join('')}
+                ${additionalSecondaryCount ? `<div class="workspace-secondary-operation"><div><strong>${escapeHTML(additionalSecondaryCount)} more task${additionalSecondaryCount === 1 ? '' : 's'} in Task History</strong><span>Complete workspace history below</span></div><em class="workspace-secondary-status">All Tasks</em></div>` : ''}
               </div>
             ` : ''}
           </div>
         `;
 
+        renderWorkspaceAllTasks(tasks);
         renderWorkspaceNotifications();
 
         const files = dedupeWorkspaceFiles([
