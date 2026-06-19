@@ -3526,6 +3526,16 @@
         return true;
       }
 
+      async function verifyOperatorSessionIfLikely() {
+        const hasStoredOperatorHint = ['doneovernight_operator_email', 'doneovernight_operator_handle', 'doneovernight_operator_username', 'doneovernight_operator_auth_method']
+          .some((key) => Boolean(sessionStorage.getItem(key)));
+        if (hasStoredOperatorHint || params.has('code')) return verifyOperatorSession();
+        if (!supabaseClient) return false;
+        const sessionResult = await supabaseClient.auth.getSession().catch(() => null);
+        if (sessionResult?.data?.session) return verifyOperatorSession();
+        return false;
+      }
+
       async function openOperatorWithGoogle(session) {
         const accessToken = session?.access_token;
         if (!accessToken) throw new Error('Google session is missing.');
@@ -3793,14 +3803,14 @@
       if (runtimeHandle) {
         loadOperatorRuntime()
           .then((isOwner) => {
-            if (!isOwner) return verifyOperatorSession();
+            if (!isOwner) return verifyOperatorSessionIfLikely();
             return true;
           })
           .catch(() => {
             showRuntimeAlert('Operator profile could not be loaded.');
           });
       } else {
-        verifyOperatorSession().catch(() => {});
+        verifyOperatorSessionIfLikely().catch(() => {});
       }
       completeGoogleReturn().catch(() => {
         setMessage('Google access could not be completed. Use your issued operator access key.', 'error');
