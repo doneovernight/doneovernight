@@ -1853,6 +1853,84 @@ body.is-admin .admin-dashboard { display: block; }
   padding-top: 0;
 }
 
+.admin-client-updates {
+  border-color: rgba(244, 210, 138, 0.17);
+  background:
+    linear-gradient(135deg, rgba(244, 210, 138, 0.055), rgba(245, 241, 234, 0.014)),
+    rgba(5, 6, 8, 0.28);
+}
+
+.admin-client-updates-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.admin-client-updates-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-client-updates-summary strong {
+  color: #f4d28a;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.admin-client-updates-summary span {
+  color: rgba(245, 241, 234, 0.45);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-client-updates-summary .is-unread {
+  color: #ffe3ad;
+}
+
+.admin-client-updates-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-task-update-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(245, 241, 234, 0.46);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-task-update-field {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-task-update-field span {
+  color: rgba(245, 241, 234, 0.38);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-task-update-field strong {
+  color: rgba(245, 241, 234, 0.82);
+  font-size: 13px;
+  font-weight: 560;
+  line-height: 1.45;
+}
+
 .admin-task-priority {
   display: inline-flex;
   align-items: center;
@@ -1883,6 +1961,42 @@ body.is-admin .admin-dashboard { display: block; }
 .admin-task-priority.priority-normal {
   color: rgba(245, 241, 234, 0.38);
   background: rgba(245, 241, 234, 0.035);
+}
+
+.admin-client-update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  border: 1px solid rgba(244, 210, 138, 0.24);
+  border-radius: 999px;
+  background: rgba(244, 210, 138, 0.065);
+  color: #f4d28a;
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-client-update-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(244, 210, 138, 0.72);
+  box-shadow: 0 0 14px rgba(244, 210, 138, 0.24);
+}
+
+.admin-client-update-badge.is-unread {
+  border-color: rgba(244, 210, 138, 0.42);
+  background: rgba(244, 210, 138, 0.11);
+  color: #ffe3ad;
+}
+
+.admin-client-update-badge.is-unread::before {
+  background: #f4d28a;
 }
 
 .admin-task-actions,
@@ -3239,6 +3353,7 @@ let adminSystemStatus = null;
 let adminTrafficSignalsData = null;
 let adminHeartbeatGeneratedAt = null;
 let workspaceRecords = { messages: [], quotes: [] };
+const adminClientUpdateReadPending = new Set();
 let adminTaskPollingInterval = null;
 let adminTasksLoading = false;
 let adminClientsLoading = false;
@@ -3838,6 +3953,29 @@ function getAdminOperationUpdates(task = {}) {
     .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
 
+function getAdminOperationUpdateViewedAt(record = {}) {
+  const metadata = record.metadata || {};
+  return metadata.admin_viewed_at || metadata.admin_read_at || record.admin_viewed_at || record.admin_read_at || '';
+}
+
+function isAdminOperationUpdateUnread(record = {}) {
+  const viewedAt = getAdminOperationUpdateViewedAt(record);
+  if (!viewedAt) return true;
+  const viewedTime = new Date(viewedAt).getTime();
+  const createdTime = new Date(record.created_at || 0).getTime();
+  if (Number.isNaN(viewedTime)) return true;
+  if (Number.isNaN(createdTime)) return false;
+  return createdTime > viewedTime;
+}
+
+function getAdminOperationUpdateCounts(task = {}) {
+  const updates = getAdminOperationUpdates(task);
+  return {
+    total: updates.length,
+    unread: updates.filter(isAdminOperationUpdateUnread).length
+  };
+}
+
 function getAdminOperationUpdateSignature(task = {}) {
   return getAdminOperationUpdates(task)
     .map((record) => `${record.id || ''}:${record.created_at || ''}:${JSON.stringify(record.metadata || {})}`)
@@ -3907,24 +4045,53 @@ function renderRecordAttachments(record = {}) {
 function renderAdminOperationUpdates(task = {}) {
   const updates = getAdminOperationUpdates(task);
   if (!updates.length) return '';
+  const reference = getTaskId(task);
+  const counts = getAdminOperationUpdateCounts(task);
+  const unreadLabel = counts.unread ? `NEW INFORMATION (${counts.unread})` : `CLIENT UPDATES (${counts.total})`;
   return `
-    <div class="admin-task-detail">
-      <span class="admin-task-detail-label">Operation Updates</span>
-      ${updates.slice(0, 3).map((record) => {
+    <details class="admin-task-detail admin-client-updates" data-client-updates-panel data-task-id="${escapeHTML(reference)}">
+      <summary class="admin-client-updates-summary" data-client-updates-summary data-task-id="${escapeHTML(reference)}">
+        <strong>Client Updates</strong>
+        <span class="${counts.unread ? 'is-unread' : ''}">${escapeHTML(unreadLabel)}</span>
+      </summary>
+      <div class="admin-client-updates-body">
+      ${updates.map((record) => {
         const metadata = record.metadata || {};
         return `
           <div class="admin-task-update">
-            <div><strong>CLIENT UPDATE RECEIVED</strong> · ${escapeHTML(formatTaskDate(record.created_at) || 'Just now')}</div>
-            <div>${escapeHTML(metadata.client_message || record.message || 'Client added operation context.')}</div>
-            ${metadata.notes ? `<div><strong>Notes</strong> · ${escapeHTML(metadata.notes)}</div>` : ''}
-            ${metadata.workspace_slug || record.workspace_slug ? `<div><strong>Workspace</strong> · @${escapeHTML(metadata.workspace_slug || record.workspace_slug)}</div>` : ''}
-            ${metadata.client_name || metadata.client_email || record.email ? `<div><strong>Client</strong> · ${escapeHTML([metadata.client_name, metadata.client_email || record.email].filter(Boolean).join(' / '))}</div>` : ''}
+            <div class="admin-task-update-head">
+              <strong>CLIENT UPDATE</strong>
+              <time>${escapeHTML(formatTaskDate(record.created_at) || 'Just now')}</time>
+            </div>
+            <div class="admin-task-update-field">
+              <span>Message</span>
+              <strong>${escapeHTML(metadata.client_message || record.message || 'Client added operation context.')}</strong>
+            </div>
+            ${metadata.notes ? `
+              <div class="admin-task-update-field">
+                <span>Notes</span>
+                <strong>${escapeHTML(metadata.notes)}</strong>
+              </div>
+            ` : ''}
+            ${metadata.workspace_slug || record.workspace_slug ? `
+              <div class="admin-task-update-field">
+                <span>Workspace</span>
+                <strong>@${escapeHTML(metadata.workspace_slug || record.workspace_slug)}</strong>
+              </div>
+            ` : ''}
+            ${metadata.client_name || metadata.client_email || record.email ? `
+              <div class="admin-task-update-field">
+                <span>Client</span>
+                <strong>${escapeHTML([metadata.client_name, metadata.client_email || record.email].filter(Boolean).join(' / '))}</strong>
+              </div>
+            ` : ''}
             ${renderRecordLinks(record)}
             ${renderRecordAttachments(record)}
           </div>
         `;
       }).join('')}
-    </div>
+      </div>
+    </details>
   `;
 }
 
@@ -5636,6 +5803,47 @@ async function loadWorkspaceRecords(options = {}) {
   }
 }
 
+async function markAdminClientUpdatesViewed(taskId) {
+  const reference = String(taskId || '').trim();
+  if (!reference || adminClientUpdateReadPending.has(reference)) return;
+  const task = (adminTasks || []).find((item) => getTaskId(item) === reference || getTaskDomId(item) === reference);
+  const counts = task ? getAdminOperationUpdateCounts(task) : { unread: 0 };
+  if (!counts.unread) return;
+
+  adminClientUpdateReadPending.add(reference);
+  try {
+    const data = await adminWorkspaceRequest({
+      action: 'mark_client_updates_viewed',
+      task_id: reference
+    });
+    const viewedAt = data.viewed_at || new Date().toISOString();
+    workspaceRecords = {
+      ...workspaceRecords,
+      messages: (workspaceRecords.messages || []).map((record) => {
+        if (!isClientOperationUpdateRecord(record) || getWorkspaceRecordTaskId(record) !== reference) return record;
+        return {
+          ...record,
+          metadata: {
+            ...(record.metadata || {}),
+            admin_viewed_at: viewedAt,
+            admin_viewed_by: 'admin'
+          }
+        };
+      })
+    };
+    renderWorkspaceRecords();
+    adminTaskRenderSignature = '';
+    if (adminTasks.length) renderTasks(adminTasks);
+  } catch (error) {
+    const row = [...document.querySelectorAll('.admin-task-row')]
+      .find((item) => item.querySelector('[data-client-updates-open]')?.dataset?.taskId === reference);
+    const message = row?.querySelector('.admin-task-message');
+    if (message) message.textContent = 'Could not mark client updates viewed.';
+  } finally {
+    adminClientUpdateReadPending.delete(reference);
+  }
+}
+
 function renderWorkspaceRecords() {
   if (workspaceMessagesList) {
     workspaceMessagesList.innerHTML = workspaceRecords.messages.length
@@ -5770,6 +5978,7 @@ function renderTasks(tasks) {
     const activationStatus = getTaskActivationStatus(task);
     const informationRequestStatus = getTaskInformationRequestStatus(task);
     const priority = getTaskPriority(task);
+    const clientUpdateCounts = getAdminOperationUpdateCounts(task);
     const activityLabel = getTaskActivityLabel(task);
     const recovery = isAwaitingPayment ? getRevenueRecovery(task) : null;
     const paymentCallout = isAwaitingPayment ? `
@@ -5836,6 +6045,14 @@ function renderTasks(tasks) {
         ${informationRequestStatus.sentAt ? `<time>${escapeHTML(formatTaskDate(informationRequestStatus.sentAt) || '')}</time>` : ''}
       </div>
     ` : '';
+    const clientUpdateBadge = clientUpdateCounts.total ? `
+      <button
+        class="admin-client-update-badge ${clientUpdateCounts.unread ? 'is-unread' : ''}"
+        type="button"
+        data-client-updates-open
+        data-task-id="${escapeHTML(getTaskId(task))}"
+      >${escapeHTML(clientUpdateCounts.unread ? `Client update (${clientUpdateCounts.unread})` : `Client updates (${clientUpdateCounts.total})`)}</button>
+    ` : '';
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
         <span class="admin-task-actions-label">Actions</span>
@@ -5863,6 +6080,7 @@ function renderTasks(tasks) {
               <span class="admin-task-id">${escapeHTML(getTaskId(task))}</span>
             </div>
             <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
+            ${clientUpdateBadge}
           </div>
           <div class="admin-task-actions" style="margin-top:0">
             <span class="admin-status-pill ${getTaskCardStatusClass(task)}">${getTaskCardStatusLabel(task)}</span>
@@ -5884,6 +6102,7 @@ function renderTasks(tasks) {
         ${planSentBanner}
         ${activationStatusBanner}
         ${informationRequestBanner}
+        ${renderAdminOperationUpdates(task)}
         ${(task.quote_amount || task.quote_note || task.delivery_eta) ? `
           <div class="admin-task-detail">
             <span class="admin-task-detail-label">Execution Plan</span>
@@ -5913,7 +6132,6 @@ function renderTasks(tasks) {
             <div><strong>@${escapeHTML(workspaceSlug)}</strong></div>
           </div>
         ` : ''}
-        ${renderAdminOperationUpdates(task)}
         ${renderTaskAttachments(task)}
         ${paymentCallout}
         ${recoveryCard}
@@ -7438,6 +7656,27 @@ adminTasksList.addEventListener('click', async (e) => {
     adminTaskFilter = filterButton.dataset.taskFilter || 'all';
     adminTaskRenderSignature = '';
     renderAdminTasks(adminTasks);
+    return;
+  }
+
+  const openUpdatesButton = e.target.closest('[data-client-updates-open]');
+  if (openUpdatesButton) {
+    const row = openUpdatesButton.closest('.admin-task-row');
+    const panel = row?.querySelector('[data-client-updates-panel]');
+    if (panel) {
+      panel.open = true;
+      panel.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+      markAdminClientUpdatesViewed(openUpdatesButton.dataset.taskId);
+    }
+    return;
+  }
+
+  const updatesSummary = e.target.closest('[data-client-updates-summary]');
+  if (updatesSummary) {
+    window.setTimeout(() => {
+      const panel = updatesSummary.closest('[data-client-updates-panel]');
+      if (panel?.open) markAdminClientUpdatesViewed(updatesSummary.dataset.taskId);
+    }, 0);
     return;
   }
 

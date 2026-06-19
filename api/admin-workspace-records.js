@@ -49,7 +49,7 @@ function isClearlyMarkedTestRecord(record = {}) {
 
 async function listWorkspaceRecords() {
   const [messages, quotes] = await Promise.all([
-    supabaseFetch("workspace_messages?select=*&order=created_at.desc&limit=30"),
+    supabaseFetch("workspace_messages?select=*&order=created_at.desc&limit=120"),
     supabaseFetch("workspace_quotes?select=*&order=created_at.desc&limit=30")
   ]);
 
@@ -832,6 +832,64 @@ async function deleteWorkspaceRecord(input) {
   return Array.isArray(deletedRows) ? deletedRows[0] : record;
 }
 
+function getWorkspaceRecordTaskId(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
+  return clean(record.task_id || record.taskId || metadata.task_id || metadata.operation);
+}
+
+function isClientOperationUpdateRecord(record = {}) {
+  const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
+  const type = clean(record.message_type || record.messageType).toLowerCase();
+  return metadata.source === "operation_update" ||
+    metadata.update_type === "client_update" ||
+    type.includes("client update") ||
+    type.includes("client_update");
+}
+
+async function markClientUpdatesViewed(input) {
+  const taskId = clean(input.task_id || input.taskId);
+  if (!taskId) {
+    const error = new Error("Task id is required");
+    error.statusCode = 400;
+    error.code = "TASK_ID_REQUIRED";
+    throw error;
+  }
+
+  const rows = await supabaseFetch("workspace_messages?select=*&order=created_at.desc&limit=200");
+  const updates = (Array.isArray(rows) ? rows : [])
+    .filter((record) => isClientOperationUpdateRecord(record) && getWorkspaceRecordTaskId(record) === taskId);
+
+  const viewedAt = new Date().toISOString();
+  const actionId = crypto.randomUUID();
+  const updated = [];
+
+  for (const record of updates) {
+    const id = clean(record.id);
+    if (!id) continue;
+    const metadata = record.metadata && typeof record.metadata === "object" ? record.metadata : {};
+    const patchedRows = await supabaseFetch(`workspace_messages?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        metadata: {
+          ...metadata,
+          admin_viewed_at: viewedAt,
+          admin_viewed_by: "admin",
+          admin_viewed_action_id: actionId
+        }
+      })
+    });
+    if (Array.isArray(patchedRows) && patchedRows[0]) updated.push(patchedRows[0]);
+  }
+
+  return {
+    task_id: taskId,
+    viewed_at: viewedAt,
+    viewed_count: updated.length,
+    total_updates: updates.length
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -894,6 +952,11 @@ module.exports = async function handler(req, res) {
     if (action === "delete") {
       const record = await deleteWorkspaceRecord(input);
       return send(res, 200, { success: true, record });
+    }
+
+    if (action === "mark_client_updates_viewed") {
+      const result = await markClientUpdatesViewed(input);
+      return send(res, 200, { success: true, ...result });
     }
 
     return send(res, 400, { success: false, error: "Unsupported workspace admin action" });
