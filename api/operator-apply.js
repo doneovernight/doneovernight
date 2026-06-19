@@ -653,6 +653,50 @@ async function insertOperatorRuntimeActivity(payload) {
   return appendOperatorRuntimeActivityFallback(payload, error);
 }
 
+async function patchInsertedOperatorActivityMetadata(profileId, insert, rawPatch = {}, topLevelPatch = {}) {
+  const messageId = clean(insert?.row?.id);
+  if (!messageId || !profileId) return { updated: false, reason: "missing_activity_id" };
+  const now = new Date().toISOString();
+  const rowRawPayload = insert.row?.raw_payload && typeof insert.row.raw_payload === "object" ? insert.row.raw_payload : {};
+
+  if (insert.storage_fallback || rowRawPayload.profile_raw_payload_fallback) {
+    const profile = await loadOperatorProfileRow(profileId);
+    const rawPayload = rawPayloadOf(profile || {});
+    const rows = Array.isArray(rawPayload.operator_runtime_activity) ? rawPayload.operator_runtime_activity : [];
+    const updatedRows = rows.map((item) => String(item.id || "") === messageId
+      ? {
+          ...item,
+          ...topLevelPatch,
+          updated_at: now,
+          raw_payload: {
+            ...(item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {}),
+            ...rawPatch
+          }
+        }
+      : item);
+    await patchOperatorProfileById(profileId, {
+      raw_payload: {
+        ...rawPayload,
+        operator_runtime_activity: updatedRows,
+        operator_runtime_activity_storage_updated_at: now
+      },
+      updated_at: now
+    });
+    return { updated: true, source: "profile_raw_payload" };
+  }
+
+  const nextRawPayload = { ...rowRawPayload, ...rawPatch };
+  const result = await patchOperatorRuntimeActivityViewed(
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    {
+      ...topLevelPatch,
+      raw_payload: nextRawPayload,
+      updated_at: now
+    }
+  );
+  return { ...result, source: "operator_runtime_activity" };
+}
+
 function operatorSupportWebhookUrls() {
   return getWebhookUrls([
     "OPERATOR_SUPPORT_TELEGRAM_WEBHOOK_URL",
@@ -663,17 +707,22 @@ function operatorSupportWebhookUrls() {
 
 async function notifyOperatorSupport({ operator, message, taskReference, messageType, createdAt }) {
   const handle = operator?.handle ? `@${operator.handle}` : "@operator";
+  const operatorName = operator?.display_name || operator?.name || "";
   const text = [
     "🟣 OPERATOR SUPPORT REQUEST",
     "",
-    `Operator: ${handle}`,
-    `Task: ${taskReference || "Not attached"}`,
-    `Type: ${messageType || "support"}`,
+    `Operator: ${operatorName ? `${operatorName} / ${handle}` : handle}`,
+    `Task: ${taskReference || "—"}`,
     "",
     "Message:",
     message || "No message provided.",
     "",
-    `Submitted: ${createdAt}`
+    "Time:",
+    createdAt,
+    "",
+    "Actions:",
+    "Open Admin:",
+    "https://admin.doneovernight.com#operators"
   ].join("\n");
 
   const result = await dispatchWebhook({
@@ -702,7 +751,10 @@ async function notifyOperatorSupport({ operator, message, taskReference, message
     configured: result.attempted > 0,
     delivered: result.fulfilled > 0,
     attempted: result.attempted,
-    fulfilled: result.fulfilled
+    fulfilled: result.fulfilled,
+    rejected: result.rejected || 0,
+    error: result.errors?.[0]?.message || "",
+    status: result.errors?.[0]?.status || null
   };
 }
 
@@ -1192,13 +1244,19 @@ async function createOperatorHqMessage(req, input) {
     operator_slug: current.operator.handle || "",
     operator_name: current.operator.display_name || current.operator.name || "",
     operator_email: current.operator.email || "",
+    don_reference: taskReference,
     task_reference: taskReference,
     task_id: taskReference,
     sender_role: "operator",
     message_type: storedMessageType,
-    don_reference: taskReference,
+    status: "unread",
     unread_for_admin: true,
+    viewed_at: null,
+    resolved_at: null,
     viewed: false,
+    telegram_sent_at: null,
+    telegram_ok: false,
+    telegram_error: null,
     sent_at: now
   };
   const insert = await insertOperatorRuntimeActivity({
@@ -1216,6 +1274,8 @@ async function createOperatorHqMessage(req, input) {
     don_reference: taskReference,
     unread_for_admin: true,
     unread_for_operator: false,
+    viewed_at: null,
+    resolved_at: null,
     raw_payload: rawPayload,
     created_at: now,
     updated_at: now
@@ -1233,12 +1293,37 @@ async function createOperatorHqMessage(req, input) {
       error: error.message || "OPERATOR_SUPPORT_TELEGRAM_FAILED"
     }))
     : null;
+  const telegramSentAt = telegram?.delivered ? new Date().toISOString() : null;
+  const telegramMetadata = telegram
+    ? {
+        telegram_sent_at: telegramSentAt,
+        telegram_ok: Boolean(telegram.delivered),
+        telegram_error: telegram.delivered ? "" : (telegram.error || (telegram.configured ? "OPERATOR_SUPPORT_TELEGRAM_NOT_DELIVERED" : "OPERATOR_SUPPORT_TELEGRAM_NOT_CONFIGURED")),
+        telegram_attempted: Number(telegram.attempted || 0),
+        telegram_fulfilled: Number(telegram.fulfilled || 0),
+        telegram_rejected: Number(telegram.rejected || 0)
+      }
+    : {};
+  const metadataPatch = Object.keys(telegramMetadata).length
+    ? await patchInsertedOperatorActivityMetadata(current.operator.id, insert, telegramMetadata, {
+        telegram_sent_at: telegramSentAt,
+        telegram_ok: Boolean(telegram?.delivered),
+        telegram_error: telegramMetadata.telegram_error || ""
+      }).catch((error) => ({ updated: false, error: error.message || "OPERATOR_SUPPORT_METADATA_PATCH_FAILED" }))
+    : null;
 
   return {
-    message: insert.row,
+    message: insert.row ? {
+      ...insert.row,
+      raw_payload: {
+        ...(insert.row.raw_payload && typeof insert.row.raw_payload === "object" ? insert.row.raw_payload : {}),
+        ...telegramMetadata
+      }
+    } : insert.row,
     persisted_fields: insert.persisted_fields,
     skipped_missing_columns: insert.skipped_missing_columns,
-    telegram
+    telegram,
+    metadata_patch: metadataPatch
   };
 }
 

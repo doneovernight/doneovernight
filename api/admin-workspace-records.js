@@ -600,7 +600,34 @@ async function listOperators() {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
       return rawPayload.unread_for_admin === true || item.unread_for_admin === true || (!item.admin_read_at && clean(item.actor_role).toLowerCase() === "operator");
     });
-    const supportPings = activityRows.filter((item) => /support|ping|hq/i.test(`${item.activity_type || ""} ${item.title || ""}`));
+    const supportPings = activityRows.filter((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      return rawPayload.message_type === "OPERATOR_SUPPORT_REQUEST"
+        || /support|ping|hq/i.test(`${item.activity_type || ""} ${item.title || ""}`);
+    });
+    const supportPingRows = supportPings.slice(0, 40).map((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      const viewedAt = item.viewed_at || item.admin_read_at || rawPayload.viewed_at || rawPayload.admin_read_at || "";
+      const resolvedAt = item.resolved_at || rawPayload.resolved_at || "";
+      const unread = !viewedAt && !resolvedAt && (rawPayload.unread_for_admin === true || item.unread_for_admin === true);
+      return {
+        id: clean(item.id),
+        source: rawPayload.profile_raw_payload_fallback ? "profile_raw_payload" : "operator_runtime_activity",
+        operator_name: clean(rawPayload.operator_name || profile.full_name || profile.display_name || profile.name),
+        operator_slug: clean(rawPayload.operator_slug || profile.handle || profile.handle_normalized || profile.username).replace(/^@+/, ""),
+        operator_email: clean(rawPayload.operator_email || profile.email),
+        message: clean(item.body || item.message || item.detail).slice(0, 900),
+        task_reference: clean(item.task_reference || item.don_reference || item.task_id || rawPayload.task_reference || rawPayload.don_reference || rawPayload.task_id),
+        created_at: item.created_at || rawPayload.sent_at || "",
+        viewed_at: viewedAt,
+        resolved_at: resolvedAt,
+        status: resolvedAt ? "resolved" : viewedAt ? "viewed" : "unread",
+        unread_for_admin: unread,
+        telegram_sent_at: item.telegram_sent_at || rawPayload.telegram_sent_at || "",
+        telegram_ok: item.telegram_ok === true || rawPayload.telegram_ok === true,
+        telegram_error: clean(item.telegram_error || rawPayload.telegram_error)
+      };
+    });
     const operatorMessages = activityRows.slice(0, 20).map((item) => {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
       const role = clean(item.actor_role || item.sender_role || rawPayload.sender_role).toLowerCase();
@@ -667,6 +694,8 @@ async function listOperators() {
       active_assigned_tasks: activeAssignments.length,
       unread_operator_messages: unreadMessages.length,
       support_pings: supportPings.length,
+      operator_pings_detail: supportPingRows,
+      unread_operator_pings: supportPingRows.filter((item) => item.status === "unread").length,
       operator_messages_detail: operatorMessages,
       pending_deliveries: pendingDeliveries.length,
       portfolio: profile.portfolio_url,
@@ -1073,11 +1102,13 @@ async function markOperatorMessageViewed(input) {
     const updatedRows = rows.map((item) => String(item.id || "") === messageId
       ? {
           ...item,
+          viewed_at: item.viewed_at || item.admin_read_at || now,
           admin_read_at: item.admin_read_at || now,
           unread_for_admin: false,
           raw_payload: {
             ...(item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {}),
             unread_for_admin: false,
+            viewed_at: item.raw_payload?.viewed_at || item.raw_payload?.admin_read_at || now,
             admin_read_at: item.raw_payload?.admin_read_at || now
           }
         }
@@ -1092,15 +1123,102 @@ async function markOperatorMessageViewed(input) {
     });
     return { message_id: messageId, source, viewed_at: now };
   }
+  const currentRows = await safeSupabaseRows([
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    "select=raw_payload",
+    "limit=1"
+  ].join("&"));
+  const currentRaw = currentRows[0]?.raw_payload && typeof currentRows[0].raw_payload === "object" ? currentRows[0].raw_payload : {};
   await patchOperatorRuntimeActivityViewed([
     `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
     `operator_profile_id=eq.${encodeURIComponent(profile.id)}`
   ].join("&"), {
+    viewed_at: now,
     admin_read_at: now,
     unread_for_admin: false,
+    raw_payload: {
+      ...currentRaw,
+      unread_for_admin: false,
+      viewed_at: currentRaw.viewed_at || currentRaw.admin_read_at || now,
+      admin_read_at: currentRaw.admin_read_at || now,
+      status: currentRaw.resolved_at ? "resolved" : "viewed"
+    },
     updated_at: now
   });
   return { message_id: messageId, source: "operator_runtime_activity", viewed_at: now };
+}
+
+async function markOperatorPingResolved(input) {
+  const email = clean(input.email).toLowerCase();
+  const messageId = clean(input.message_id || input.id);
+  const source = clean(input.source || "operator_runtime_activity");
+  if (!email || !messageId) {
+    const error = new Error("Operator email and ping id are required");
+    error.statusCode = 400;
+    throw error;
+  }
+  const profile = await findOperatorProfileByEmail(email);
+  if (!profile?.id) {
+    const error = new Error("Operator profile was not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  const now = new Date().toISOString();
+  if (source === "profile_raw_payload") {
+    const rawPayload = rawPayloadOf(profile);
+    const rows = Array.isArray(rawPayload.operator_runtime_activity) ? rawPayload.operator_runtime_activity : [];
+    const updatedRows = rows.map((item) => String(item.id || "") === messageId
+      ? {
+          ...item,
+          viewed_at: item.viewed_at || item.admin_read_at || now,
+          admin_read_at: item.admin_read_at || now,
+          resolved_at: item.resolved_at || now,
+          unread_for_admin: false,
+          raw_payload: {
+            ...(item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {}),
+            unread_for_admin: false,
+            viewed_at: item.raw_payload?.viewed_at || item.raw_payload?.admin_read_at || now,
+            admin_read_at: item.raw_payload?.admin_read_at || now,
+            resolved_at: item.raw_payload?.resolved_at || now,
+            status: "resolved"
+          }
+        }
+      : item);
+    await patchOperatorProfileById(profile.id, {
+      raw_payload: {
+        ...rawPayload,
+        operator_runtime_activity: updatedRows,
+        operator_runtime_activity_admin_resolved_at: now
+      },
+      updated_at: now
+    });
+    return { message_id: messageId, source, resolved_at: now };
+  }
+  const currentRows = await safeSupabaseRows([
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    "select=raw_payload",
+    "limit=1"
+  ].join("&"));
+  const currentRaw = currentRows[0]?.raw_payload && typeof currentRows[0].raw_payload === "object" ? currentRows[0].raw_payload : {};
+  await patchOperatorRuntimeActivityViewed([
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    `operator_profile_id=eq.${encodeURIComponent(profile.id)}`
+  ].join("&"), {
+    viewed_at: now,
+    admin_read_at: now,
+    resolved_at: now,
+    unread_for_admin: false,
+    raw_payload: {
+      ...currentRaw,
+      unread_for_admin: false,
+      viewed_at: currentRaw.viewed_at || currentRaw.admin_read_at || now,
+      admin_read_at: currentRaw.admin_read_at || now,
+      resolved_at: currentRaw.resolved_at || now,
+      status: "resolved"
+    },
+    updated_at: now
+  });
+  return { message_id: messageId, source: "operator_runtime_activity", resolved_at: now };
 }
 
 async function createWorkspaceMessage(input) {
@@ -1361,6 +1479,11 @@ module.exports = async function handler(req, res) {
 
     if (action === "mark_operator_message_viewed") {
       const result = await markOperatorMessageViewed(input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "mark_operator_ping_resolved") {
+      const result = await markOperatorPingResolved(input);
       return send(res, 200, { success: true, ...result });
     }
 

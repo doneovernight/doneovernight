@@ -1411,6 +1411,49 @@ body.is-admin .admin-dashboard { display: block; }
   margin-top: 7px;
 }
 
+.admin-operator-ping-inbox {
+  border: 1px solid rgba(188, 143, 95, 0.22);
+  background: linear-gradient(180deg, rgba(188, 143, 95, 0.08), rgba(12, 12, 12, 0.2));
+}
+
+.admin-operator-ping-item {
+  border-top: 1px solid rgba(245, 241, 234, 0.06);
+  padding-top: 10px;
+}
+
+.admin-operator-ping-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.admin-operator-ping-item.is-unread strong {
+  color: rgba(249, 220, 174, 0.95);
+}
+
+.admin-operator-ping-item.is-resolved {
+  opacity: 0.72;
+}
+
+.admin-operator-ping-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgba(245, 241, 234, 0.11);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: rgba(245, 241, 234, 0.6);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.admin-task-row.is-flashing {
+  border-color: rgba(249, 220, 174, 0.42);
+  box-shadow: 0 0 0 1px rgba(249, 220, 174, 0.16), 0 18px 44px rgba(0, 0, 0, 0.2);
+}
+
 .admin-operator-availability {
   display: inline-flex;
   align-items: center;
@@ -5948,12 +5991,13 @@ function renderOperators(operators) {
     const section = adminOperatorFilter === 'pending'
       ? renderOperatorSection('Pending Operators', filteredOperators, { urgent: true, empty: 'No pending operator applications.' })
       : renderOperatorSection('Active Operators', filteredOperators, { empty: 'No active operators.' });
-    adminOperatorsList.innerHTML = `<div class="admin-operator-list">${section}</div>`;
+    adminOperatorsList.innerHTML = `<div class="admin-operator-list">${renderOperatorPingsInbox(countableOperators)}${section}</div>`;
     return;
   }
 
   adminOperatorsList.innerHTML = `
     <div class="admin-operator-list">
+      ${renderOperatorPingsInbox(countableOperators)}
       ${renderOperatorSection('Pending Operators', groups.pending, { urgent: true, empty: 'No pending operator applications.' })}
       ${renderOperatorSection('Active Operators', groups.active, { empty: 'No active operators.' })}
       ${renderOperatorSection('Revoked / Inactive', groups.inactive, { muted: true, empty: 'No revoked operators.' })}
@@ -6005,6 +6049,64 @@ function renderOperatorFieldHtml(label, html) {
       <span>${escapeHTML(label)}</span>
       <strong>${html || '—'}</strong>
     </div>
+  `;
+}
+
+function getOperatorPings(operators = []) {
+  return (operators || []).flatMap((operator) => {
+    const pings = Array.isArray(operator.operator_pings_detail) ? operator.operator_pings_detail : [];
+    return pings.map((ping) => ({
+      ...ping,
+      operator_email: ping.operator_email || operator.email || '',
+      operator_name: ping.operator_name || operator.name || 'Operator',
+      operator_slug: String(ping.operator_slug || operator.handle || operator.username || '').replace(/^@+/, ''),
+      source: ping.source || 'operator_runtime_activity'
+    }));
+  }).sort((a, b) => {
+    const priority = (item) => item.status === 'unread' ? 0 : item.status === 'viewed' ? 1 : 2;
+    const diff = priority(a) - priority(b);
+    if (diff) return diff;
+    return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0);
+  });
+}
+
+function renderOperatorPingsInbox(operators = []) {
+  const pings = getOperatorPings(operators);
+  const unread = pings.filter((ping) => ping.status === 'unread').length;
+  const visible = pings.slice(0, 12);
+  return `
+    <section class="admin-client-section admin-operator-ping-inbox">
+      <div class="admin-client-section-head ${unread ? 'admin-client-section-head--urgent' : ''}">
+        <span class="${unread ? 'admin-client-section-dot admin-client-section-dot--urgent' : 'admin-client-section-dot'}"></span>
+        Operator Pings
+        <span class="admin-client-section-count">${escapeHTML(unread ? `${unread} unread` : `${pings.length} total`)}</span>
+      </div>
+      <div class="admin-operator-connected-list">
+        ${visible.length ? visible.map((ping) => {
+          const slug = ping.operator_slug ? `@${ping.operator_slug}` : '@operator';
+          const status = ping.status || 'unread';
+          return `
+            <div class="admin-operator-connected-item admin-operator-ping-item is-${escapeHTML(status)}">
+              <strong>${escapeHTML(ping.operator_name || 'Operator')} · ${escapeHTML(slug)}</strong>
+              <span>${escapeHTML(ping.created_at ? formatTaskDate(ping.created_at) : 'No date')}${ping.task_reference ? ` · ${escapeHTML(ping.task_reference)}` : ''}</span>
+              <span>${escapeHTML(ping.message || 'No message body')}</span>
+              <span class="admin-operator-ping-status">${escapeHTML(status)}</span>
+              <span>Telegram: ${escapeHTML(ping.telegram_ok ? 'sent' : ping.telegram_error ? `failed · ${ping.telegram_error}` : 'pending')}</span>
+              <div class="admin-operator-message-actions">
+                ${status === 'unread' ? `
+                  <button class="admin-client-action" type="button" data-operator-action="mark-ping-viewed" data-operator-email="${escapeHTML(ping.operator_email || '')}" data-operator-message-id="${escapeHTML(ping.id || '')}" data-operator-message-source="${escapeHTML(ping.source || '')}">Mark viewed</button>
+                ` : ''}
+                ${status !== 'resolved' ? `
+                  <button class="admin-client-action" type="button" data-operator-action="mark-ping-resolved" data-operator-email="${escapeHTML(ping.operator_email || '')}" data-operator-message-id="${escapeHTML(ping.id || '')}" data-operator-message-source="${escapeHTML(ping.source || '')}">Mark resolved</button>
+                ` : ''}
+                <button class="admin-client-action" type="button" data-operator-action="message" data-operator-email="${escapeHTML(ping.operator_email || '')}">Message operator</button>
+                ${ping.task_reference ? `<button class="admin-client-action" type="button" data-operator-action="open-related-task" data-task-reference="${escapeHTML(ping.task_reference)}">Open related task</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('') : '<div class="placeholder">No operator support pings yet.</div>'}
+      </div>
+    </section>
   `;
 }
 
@@ -6561,7 +6663,7 @@ function renderTasks(tasks) {
     ` : '';
 
     return `
-      <article class="admin-task-row ${isNew ? 'is-new-task is-review-operation' : ''} ${isAwaitingPayment ? 'is-awaiting-payment-operation' : ''} ${isActive ? 'is-active-operation' : ''} ${isDelivered ? 'is-delivered-operation' : ''} ${isComplete ? 'is-complete-operation' : ''}" data-task-row-id="${escapeHTML(domId)}" data-render-signature="${escapeHTML(renderSignature)}">
+      <article class="admin-task-row ${isNew ? 'is-new-task is-review-operation' : ''} ${isAwaitingPayment ? 'is-awaiting-payment-operation' : ''} ${isActive ? 'is-active-operation' : ''} ${isDelivered ? 'is-delivered-operation' : ''} ${isComplete ? 'is-complete-operation' : ''}" data-task-row-id="${escapeHTML(domId)}" data-task-reference="${escapeHTML(taskReference)}" data-render-signature="${escapeHTML(renderSignature)}">
         <div class="admin-task-top">
           <div>
             <h3 class="admin-task-title">${escapeHTML(getTaskTitle(task))}</h3>
@@ -7103,6 +7205,21 @@ async function loadOperators(options = {}) {
 
 async function loadAdminOperators(options = {}) {
   return loadOperators(options);
+}
+
+function openAdminTaskByReference(taskReference) {
+  const reference = String(taskReference || '').trim().toUpperCase();
+  if (!reference) return false;
+  const section = document.getElementById('adminTasksSection');
+  section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const row = adminTasksList?.querySelector(`[data-task-reference="${CSS.escape(reference)}"]`);
+  if (row) {
+    row.classList.add('is-flashing');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => row.classList.remove('is-flashing'), 1600);
+    return true;
+  }
+  return false;
 }
 
 async function loadTasks(options = {}) {
@@ -7966,14 +8083,22 @@ adminOperatorsList?.addEventListener('click', async (event) => {
   const email = button.dataset.operatorEmail;
   const status = button.dataset.operatorStatus;
   const operatorAction = button.dataset.operatorAction || '';
-  if (!email) return;
 
   const row = button.closest('.admin-operator-row');
   const actions = row?.querySelectorAll('[data-operator-action]') || [];
   const message = row?.querySelector('.admin-client-message');
   const previousText = button.textContent;
 
-  if (operatorAction === 'mark-message-viewed') {
+  if (operatorAction === 'open-related-task') {
+    const taskReference = button.dataset.taskReference || '';
+    const opened = openAdminTaskByReference(taskReference);
+    if (!opened && message) message.textContent = 'Related task is not loaded in the current task list.';
+    return;
+  }
+
+  if (!email) return;
+
+  if (operatorAction === 'mark-message-viewed' || operatorAction === 'mark-ping-viewed') {
     const messageId = button.dataset.operatorMessageId || '';
     const source = button.dataset.operatorMessageSource || '';
     if (!messageId) return;
@@ -7993,6 +8118,30 @@ adminOperatorsList?.addEventListener('click', async (event) => {
       button.disabled = false;
       button.textContent = previousText;
       if (message) message.textContent = 'Could not mark operator message viewed.';
+    }
+    return;
+  }
+
+  if (operatorAction === 'mark-ping-resolved') {
+    const messageId = button.dataset.operatorMessageId || '';
+    const source = button.dataset.operatorMessageSource || '';
+    if (!messageId) return;
+    button.disabled = true;
+    button.textContent = 'Resolving...';
+    if (message) message.textContent = '';
+    try {
+      await adminOperatorRequest({
+        action: 'mark_operator_ping_resolved',
+        email,
+        message_id: messageId,
+        source
+      });
+      if (message) message.textContent = 'Operator ping resolved.';
+      await loadOperators({ silent: true });
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = previousText;
+      if (message) message.textContent = 'Could not resolve operator ping.';
     }
     return;
   }
