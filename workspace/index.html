@@ -934,6 +934,26 @@
       padding: 10px 14px 12px;
     }
 
+    .workspace-operation-next-step {
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(233,196,138,.10);
+      background: linear-gradient(90deg, rgba(233,196,138,.07), rgba(5,6,8,.78));
+      color: rgba(255,255,255,.66);
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .workspace-operation-next-step strong {
+      display: block;
+      margin-bottom: 4px;
+      color: rgba(233,196,138,.82);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
     .workspace-progress-rail {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -3123,35 +3143,16 @@
         <div class="workspace-os-empty">Notifications are syncing…</div>
       </div>
       <div class="workspace-os-two">
-        <div class="workspace-os-card" id="workspaceProjectTimeline">
-          <div class="workspace-os-empty">Project timeline is syncing…</div>
-        </div>
-        <div class="workspace-os-card" id="workspaceLatestUpdates">
-          <div class="workspace-os-empty">Latest updates are syncing…</div>
-        </div>
-      </div>
-      <div class="workspace-os-two">
-        <div class="workspace-os-card" id="workspaceMessagesPanel">
-          <div class="workspace-os-empty">Messages are syncing…</div>
-        </div>
         <div class="workspace-os-card" id="workspaceFilesPanel">
-          <div class="workspace-os-empty">Files are syncing…</div>
+          <div class="workspace-os-empty">Files and deliverables are syncing…</div>
         </div>
-      </div>
-      <div class="workspace-os-two">
         <div class="workspace-os-card" id="workspaceInvoicesPanel">
           <div class="workspace-os-empty">Invoices are syncing…</div>
-        </div>
-        <div class="workspace-os-card" id="workspaceDeliveredPanel">
-          <div class="workspace-os-empty">Delivery status is syncing…</div>
         </div>
       </div>
       <div class="workspace-os-two">
         <div class="workspace-os-card" id="workspaceReferralPanel">
           <div class="workspace-os-empty">Referral center is syncing…</div>
-        </div>
-        <div class="workspace-os-card" id="workspaceSettingsPanel">
-          <div class="workspace-os-empty">Workspace settings are syncing…</div>
         </div>
       </div>
     </section>
@@ -3520,14 +3521,9 @@
       const workspaceOs = document.getElementById('workspaceOs');
       const workspaceActiveProject = document.getElementById('workspaceActiveProject');
       const workspaceNotificationsPanel = document.getElementById('workspaceNotificationsPanel');
-      const workspaceProjectTimeline = document.getElementById('workspaceProjectTimeline');
-      const workspaceLatestUpdates = document.getElementById('workspaceLatestUpdates');
-      const workspaceMessagesPanel = document.getElementById('workspaceMessagesPanel');
       const workspaceFilesPanel = document.getElementById('workspaceFilesPanel');
       const workspaceInvoicesPanel = document.getElementById('workspaceInvoicesPanel');
-      const workspaceDeliveredPanel = document.getElementById('workspaceDeliveredPanel');
       const workspaceReferralPanel = document.getElementById('workspaceReferralPanel');
-      const workspaceSettingsPanel = document.getElementById('workspaceSettingsPanel');
       const completedHistoryFeed = document.getElementById('completedHistoryFeed');
       const completedHistoryMeta = document.getElementById('completedHistoryMeta');
       const requestForm = document.getElementById('workspaceRequestForm');
@@ -3569,8 +3565,6 @@
       let workspaceBusinessProfile = null;
       let workspaceMemory = null;
       let localSubmittedWorkspaceTasks = [];
-      let localWorkspaceEvents = [];
-      let localWorkspaceMessages = [];
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -3956,20 +3950,6 @@
         return 'Request received';
       }
 
-      function clientTimelineEvents(task = {}) {
-        const raw = task.raw_payload || {};
-        return [
-          ['Request received', task.created_at || task.createdAt],
-          ['Review started', raw.review_started_at || (['under_review', 'review_in_progress'].includes(normalizeTaskStatus(task.status)) ? task.updated_at : '')],
-          ['Execution plan sent', raw.execution_plan_sent_at || task.quoted_at],
-          ['Payment confirmed', raw.payment_confirmed_at || task.paid_at || raw.paid_at],
-          ['Workspace activated', raw.workspace_activated_at || raw.workspace_active_at],
-          ['Project started', raw.project_started_at || raw.workspace_activated_at || task.started_at],
-          ['Delivery preparing', raw.delivery_preparing_at || (normalizeTaskStatus(task.status) === 'delivery_prep' ? task.updated_at : '')],
-          ['Delivered', task.delivered_at || raw.delivered_at]
-        ].filter((item) => item[1]).map(([label, timestamp]) => ({ label, timestamp }));
-      }
-
       function getProjectInvestment(project = {}) {
         const raw = project.raw_payload || {};
         const value = project.quote_amount ||
@@ -4097,13 +4077,15 @@
       }
 
       function renderWorkspaceLifecycleRail(task = {}) {
-        const labels = ['Request', 'Review', 'Plan', 'Payment', 'Workspace', 'Execution', 'Delivery'];
+        const labels = ['Request Received', 'Review Complete', 'Plan Approved', 'Payment Confirmed', 'Workspace Activated', 'Execution Active', 'Delivery'];
         const currentIndex = getLifecycleProgressIndex(task);
         return `
           <div class="workspace-progress-rail" aria-label="Operation lifecycle">
-            ${labels.map((label, index) => `
-              <span class="workspace-progress-step ${index < currentIndex ? 'is-complete' : (index === currentIndex ? 'is-current' : '')}">${escapeHTML(label)}</span>
-            `).join('')}
+            ${labels.map((label, index) => {
+              const state = index < currentIndex ? 'is-complete' : (index === currentIndex ? 'is-current' : '');
+              const marker = index < currentIndex ? '✓' : (index === currentIndex ? '●' : '○');
+              return `<span class="workspace-progress-step ${state}">${escapeHTML(`${marker} ${label}`)}</span>`;
+            }).join('')}
           </div>
         `;
       }
@@ -4132,7 +4114,7 @@
         ).map((file) => ({
           title: file.title || file.label || file.name || file.filename || file.file_name || 'Attached file',
           timestamp: file.created_at || file.uploaded_at || file.timestamp || '',
-          href: file.url || file.href || file.file_url || file.download_url || file.signed_url || file.public_url || ''
+          href: file.signed_url || file.url || file.href || file.file_url || file.download_url || file.public_url || ''
         })).filter((file) => file.title);
       }
 
@@ -4155,6 +4137,18 @@
           const key = `${file.title || ''}::${file.href || ''}`;
           if (!file.title || byKey.has(key)) return;
           byKey.set(key, file);
+        });
+        return Array.from(byKey.values());
+      }
+
+      function dedupeWorkspaceDeliverables(items = []) {
+        const byKey = new Map();
+        items.forEach((item) => {
+          const title = item?.title || '';
+          const href = item?.delivery_link || '';
+          const key = `${title}::${href}`;
+          if (!title || byKey.has(key)) return;
+          byKey.set(key, item);
         });
         return Array.from(byKey.values());
       }
@@ -4194,6 +4188,44 @@
           reward: hasReward ? String(raw.reward_balance ?? raw.referral_reward_balance ?? '—') : 'No reward balance yet',
           link: workspaceSlug ? `https://doneovernight.com/ask?ref=${encodeURIComponent(workspaceSlug)}` : ''
         };
+      }
+
+      function hasReferralStats(project = {}) {
+        const raw = project.raw_payload || {};
+        if (workspaceReferrals) {
+          return Boolean(workspaceReferrals.invited_founders || workspaceReferrals.interested || workspaceReferrals.converted || workspaceReferrals.reward_balance);
+        }
+        return raw.referral_count !== undefined ||
+          raw.referrals_count !== undefined ||
+          raw.referrals !== undefined ||
+          raw.referral_conversions !== undefined ||
+          raw.conversions !== undefined ||
+          raw.reward_balance !== undefined ||
+          raw.referral_reward_balance !== undefined;
+      }
+
+      function getOperationNextStep(operation = {}) {
+        const status = normalizeTaskStatus(operation.status || operation.raw_payload?.status);
+        const payment = normalizeTaskStatus(operation.payment_status || operation.raw_payload?.payment_status);
+        const workspaceStatus = normalizeTaskStatus(operation.workspace_status || operation.raw_payload?.workspace_status || operation.raw_payload?.workspace_activation_status);
+        const projectStatus = normalizeTaskStatus(operation.project_status || operation.raw_payload?.project_status);
+        const rawNext = operation.current_next_step || operation.raw_payload?.next_step || operation.raw_payload?.client_next_step || '';
+        if (rawNext) return rawNext;
+        if (['delivered', 'completed'].includes(status)) return 'Delivery is ready. Review the files and reply if anything needs attention.';
+        if (status === 'delivery_prep') return 'Delivery is being prepared.';
+        if (['project_active', 'execution_active', 'operators_assigned', 'queued', 'in_progress'].includes(status) || ['project_active', 'execution_active', 'active'].includes(projectStatus)) {
+          return 'Execution is active. Expected update tonight before 22:00.';
+        }
+        if (workspaceStatus === 'active' || workspaceStatus === 'workspace_active' || operation.raw_payload?.workspace_active === true) {
+          return 'Workspace is active. Execution updates will appear here.';
+        }
+        if (payment === 'paid' || payment === 'payment_confirmed' || status === 'payment_confirmed') return 'Payment is confirmed. Workspace activation is being synchronized.';
+        if (['awaiting_payment', 'payment_returned', 'verification_pending'].includes(status) || ['awaiting_payment', 'verification_pending'].includes(payment)) {
+          return 'Waiting for payment verification.';
+        }
+        if (['execution_plan_ready', 'awaiting_start', 'quoted', 'quote_sent'].includes(status)) return 'Review the execution plan and approve the start step.';
+        if (['under_review', 'review_in_progress', 'review_pending'].includes(status)) return 'Review is active. The execution plan follows after review.';
+        return 'Request received. DONEOVERNIGHT Operations is reviewing it.';
       }
 
       function renderWorkspaceNotifications(events = workspaceNotifications) {
@@ -4298,14 +4330,9 @@
         if (!project) {
           workspaceActiveProject.innerHTML = '<div class="workspace-os-empty">No active project yet.</div>';
           renderWorkspaceNotifications();
-          workspaceProjectTimeline.innerHTML = '<div class="workspace-os-empty">Project timeline will appear when work begins.</div>';
-          workspaceLatestUpdates.innerHTML = '<div class="workspace-os-empty">No updates yet.</div>';
-          workspaceMessagesPanel.innerHTML = '<div class="workspace-os-empty">No messages yet. You can reply by email.</div><a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>';
-          workspaceFilesPanel.innerHTML = '<div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>';
+          workspaceFilesPanel.innerHTML = '<div class="workspace-os-empty">Files and deliverables will appear here once attached or delivered.</div>';
           workspaceInvoicesPanel.innerHTML = '<div class="workspace-os-empty">No invoices available yet.</div>';
-          workspaceDeliveredPanel.innerHTML = '<div class="workspace-os-empty">Delivery will appear here when ready.</div>';
-          if (workspaceReferralPanel) workspaceReferralPanel.innerHTML = '<div class="workspace-os-empty">Referral center will appear after the workspace is active.</div>';
-          if (workspaceSettingsPanel) workspaceSettingsPanel.innerHTML = '<div class="workspace-os-empty">Workspace settings will appear after activation.</div>';
+          if (workspaceReferralPanel) workspaceReferralPanel.innerHTML = '<div class="workspace-os-empty">Invite founders. Earn credits for successful introductions.</div>';
           renderDonbotPanel();
           return;
         }
@@ -4313,12 +4340,6 @@
         const status = project.client_status || getWorkspaceClientStatus(project);
         const reference = getTaskId(project);
         const scope = project.quote_note || project.task_description || project.task_summary || 'Project scope is attached to this workspace.';
-        const timeline = project.delivery_eta || 'Timeline will update here.';
-        const investment = getProjectInvestment(project);
-        const paymentDate = project.raw_payload?.payment_confirmed_at || project.paid_at || '';
-        const activatedDate = project.raw_payload?.workspace_activated_at || '';
-        const nextStep = project.current_next_step || (status === 'Delivered' ? 'Review the delivered work.' : 'Execution is active. Updates will appear in this workspace.');
-        const workspaceSlugLabel = workspaceSlug ? `@${workspaceSlug}` : '';
         const activeProjects = getWorkspaceOperationTasks(tasks);
         const operations = activeProjects.length ? activeProjects : [project];
         const headerStatus = operations.some(isWorkspaceActiveProject)
@@ -4342,61 +4363,57 @@
                 <div class="workspace-operation-cell"><span>Timeline</span><strong>${escapeHTML(getOperationTimeline(operation))}</strong></div>
                 <div class="workspace-operation-cell"><span>Investment</span><strong>${escapeHTML(getOperationInvestment(operation))}</strong></div>
                 <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(operation)}</div>
+                <div class="workspace-operation-next-step"><strong>Next Step</strong>${escapeHTML(getOperationNextStep(operation))}</div>
                 ${renderOperationAttachments(operation)}
               </div>
             `).join('')}
           </div>
           <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
-          <p class="workspace-os-scope" style="margin-top:14px"><strong>Next milestone</strong>${escapeHTML(nextStep)}</p>
         `;
 
         renderWorkspaceNotifications();
-
-        const timelineEvents = room.lifecycle_events?.length ? room.lifecycle_events : clientTimelineEvents(project);
-        workspaceProjectTimeline.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Operations Timeline</p><h3 class="workspace-os-title" style="font-size:34px">Mission Timeline</h3></div></div>
-          ${renderWorkspaceRows(timelineEvents, 'No timeline events yet.')}
-        `;
-
-        const latestUpdates = [
-          ...localWorkspaceEvents,
-          ...(room.latest_updates?.length ? room.latest_updates : (project.raw_payload?.admin_activity_events || []))
-        ];
-        workspaceLatestUpdates.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Operations Feed</p><h3 class="workspace-os-title" style="font-size:34px">Movement</h3></div></div>
-          ${renderWorkspaceRows(latestUpdates, 'Movement will appear as operations advances.')}
-        `;
-
-        const visibleMessages = [
-          ...localWorkspaceMessages,
-          ...workspaceMessages.filter(isClientFacingWorkspaceMessage)
-        ].slice(0, 7);
-        workspaceMessagesPanel.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Messages</p><h3 class="workspace-os-title" style="font-size:34px">Client channel</h3></div></div>
-          ${renderWorkspaceRows(visibleMessages.map((message) => ({
-            title: message.message || 'Workspace message',
-            timestamp: message.created_at,
-            meta: message.message_type || ''
-          })), 'No messages yet. You can reply by email.')}
-          <a class="workspace-os-link" href="mailto:ask@doneovernight.com">Reply by email</a>
-        `;
 
         const files = dedupeWorkspaceFiles([
           ...getWorkspaceFiles(project, room),
           ...operations.flatMap((operation) => getWorkspaceFiles(operation, {}))
         ]);
+        const delivered = dedupeWorkspaceDeliverables([
+          ...getWorkspaceDeliverables(project, room),
+          ...operations.flatMap((operation) => getWorkspaceDeliverables(operation, {})),
+          ...(['delivered', 'completed'].includes(normalizeTaskStatus(project.status)) ? [{
+            title: project.task_summary,
+            timestamp: project.delivered_at,
+            delivery_link: project.delivery_link
+          }] : [])
+        ]);
+        const fileAndDeliveryRows = [
+          ...files.map((file) => ({
+            title: file.title,
+            timestamp: file.timestamp,
+            href: file.href,
+            action: 'Open file',
+            type: 'File'
+          })),
+          ...delivered.map((item) => ({
+            title: item.title || 'Delivered work',
+            timestamp: item.delivered_at || item.timestamp,
+            href: item.delivery_link,
+            action: 'Open delivery',
+            type: 'Deliverable'
+          }))
+        ];
         workspaceFilesPanel.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Files</p><h3 class="workspace-os-title" style="font-size:34px">Attached work</h3></div></div>
-          ${files.length ? `<ul class="workspace-os-list">${files.map((file) => `
+          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Files & Deliverables</p><h3 class="workspace-os-title" style="font-size:34px">Files</h3></div></div>
+          ${fileAndDeliveryRows.length ? `<ul class="workspace-os-list">${fileAndDeliveryRows.map((file) => `
             <li class="workspace-os-row">
               <span class="workspace-os-dot" aria-hidden="true"></span>
               <div>
                 <strong>${escapeHTML(file.title)}</strong>
-                <span>${escapeHTML(file.timestamp ? formatDate(file.timestamp) : 'Attached file')}</span>
-                ${file.href ? `<a class="workspace-os-link" href="${escapeHTML(file.href)}" target="_blank" rel="noopener noreferrer">Open file</a>` : ''}
+                <span>${escapeHTML([file.type, file.timestamp ? formatDate(file.timestamp) : ''].filter(Boolean).join(' · ') || 'Workspace file')}</span>
+                ${file.href ? `<a class="workspace-os-link" href="${escapeHTML(file.href)}" target="_blank" rel="noopener noreferrer">${escapeHTML(file.action)}</a>` : ''}
               </div>
             </li>
-          `).join('')}</ul>` : '<div class="workspace-os-empty">Files will appear here once attached by DONEOVERNIGHT.</div>'}
+          `).join('')}</ul>` : '<div class="workspace-os-empty">Files and deliverables will appear here once attached or delivered.</div>'}
         `;
 
         const invoices = room.invoices?.length ? room.invoices : getTaskInvoices(project);
@@ -4414,51 +4431,22 @@
           `).join('')}</ul>` : '<div class="workspace-os-empty">No invoices available yet.</div>'}
         `;
 
-        const delivered = getWorkspaceDeliverables(project, room).length ? getWorkspaceDeliverables(project, room) : (['delivered', 'completed'].includes(normalizeTaskStatus(project.status)) ? [{
-          title: project.task_summary,
-          timestamp: project.delivered_at,
-          delivery_link: project.delivery_link
-        }] : []);
-        workspaceDeliveredPanel.innerHTML = `
-          <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Delivered Work</p><h3 class="workspace-os-title" style="font-size:34px">Delivery</h3></div></div>
-          ${delivered.length ? `<ul class="workspace-os-list">${delivered.map((item) => `
-            <li class="workspace-os-row">
-              <span class="workspace-os-dot" aria-hidden="true"></span>
-              <div>
-                <strong>${escapeHTML(item.title || 'Delivered work')}</strong>
-                <span>${escapeHTML(item.delivered_at || item.timestamp ? formatDate(item.delivered_at || item.timestamp) : 'Delivered')}</span>
-                ${item.delivery_link ? `<a class="workspace-os-link" href="${escapeHTML(item.delivery_link)}" target="_blank" rel="noopener noreferrer">Open delivery</a>` : ''}
-              </div>
-            </li>
-          `).join('')}</ul>` : '<div class="workspace-os-empty">Delivery will appear here when ready.</div>'}
-        `;
-
         if (workspaceReferralPanel) {
           const referralStats = getReferralStats(project);
+          const hasReferralData = hasReferralStats(project);
           workspaceReferralPanel.innerHTML = `
             <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Referral Center</p><h3 class="workspace-os-title" style="font-size:34px">Referrals</h3></div></div>
-            <div class="workspace-readonly-grid">
+            ${hasReferralData ? `<div class="workspace-readonly-grid">
               <div class="workspace-readonly-row"><span>Invited founders</span><strong>${escapeHTML(referralStats.invited)}</strong></div>
               <div class="workspace-readonly-row"><span>Interested</span><strong>${escapeHTML(referralStats.interested)}</strong></div>
               <div class="workspace-readonly-row"><span>Converted</span><strong>${escapeHTML(referralStats.converted)}</strong></div>
               <div class="workspace-readonly-row"><span>Reward balance</span><strong>${escapeHTML(referralStats.reward)}</strong></div>
-            </div>
+            </div>` : '<p class="workspace-os-scope" style="margin-top:0">Invite founders. Earn credits for successful introductions.</p>'}
             <div class="workspace-actions" style="margin-top:14px">
               <button class="workspace-button secondary" type="button" data-copy-referral-link="${escapeHTML(referralStats.link)}" ${referralStats.link ? '' : 'disabled'}>Copy referral link</button>
               <a class="workspace-button secondary" href="${referralStats.link ? `mailto:?subject=${encodeURIComponent('DONEOVERNIGHT referral')}&body=${encodeURIComponent(`Thought this might be useful: ${referralStats.link}`)}` : 'mailto:ask@doneovernight.com'}">Invite founder</a>
             </div>
             ${referralStats.link ? '' : '<div class="workspace-os-empty" style="margin-top:12px">Referral link appears after the workspace slug is available.</div>'}
-          `;
-        }
-
-        if (workspaceSettingsPanel) {
-          workspaceSettingsPanel.innerHTML = `
-            <div class="workspace-os-head"><div><p class="workspace-os-eyebrow">Workspace Settings</p><h3 class="workspace-os-title" style="font-size:34px">Settings</h3></div></div>
-            <div class="workspace-readonly-grid">
-              <div class="workspace-readonly-row"><span>Workspace slug</span><strong>${escapeHTML(workspaceSlugLabel || 'Not set')}</strong></div>
-              <div class="workspace-readonly-row"><span>Language</span><strong>${escapeHTML(getWorkspaceLanguage(project))}</strong></div>
-              <div class="workspace-readonly-row"><span>Notifications</span><strong>Email updates</strong></div>
-            </div>
           `;
         }
 
@@ -5535,16 +5523,6 @@
               optimisticTask,
               ...localSubmittedWorkspaceTasks.filter((task) => getTaskId(task) !== getTaskId(optimisticTask))
             ].slice(0, 5);
-            localWorkspaceEvents = [{
-              title: 'New task submitted',
-              timestamp: createdAt,
-              meta: getTaskId(optimisticTask)
-            }, ...localWorkspaceEvents].slice(0, 5);
-            localWorkspaceMessages = [{
-              message: 'Task submitted to DONEOVERNIGHT Operations.',
-              created_at: createdAt,
-              message_type: 'client_workspace'
-            }, ...localWorkspaceMessages].slice(0, 5);
             renderTasks([optimisticTask, ...workspaceTasks]);
           } catch (uiError) {
             drawerRequestMessage.textContent = 'TASK_UI_UPDATE_FAILED';

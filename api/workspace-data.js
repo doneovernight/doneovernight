@@ -454,7 +454,7 @@ function safeAssetList(value) {
       bucket: clean(item.bucket),
       path: clean(item.path || item.storage_path),
       storage_path: clean(item.storage_path || item.path),
-      url: clean(item.url || item.signed_url || item.href || item.file_url || item.download_url || item.delivery_link),
+      url: clean(item.signed_url || item.url || item.href || item.file_url || item.download_url || item.delivery_link),
       signed_url: clean(item.signed_url || item.url),
       created_at: clean(item.created_at || item.uploaded_at || item.delivered_at || item.timestamp),
       type: clean(item.type || item.file_type || item.mime_type),
@@ -484,8 +484,8 @@ function lifecycleEventsForTask(task = {}) {
 function safeUpdatesForTask(task = {}) {
   const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
   const events = Array.isArray(rawPayload.admin_activity_events) ? rawPayload.admin_activity_events : [];
-  const clientFacingPattern = /(payment|workspace|project|started|information|delivery|delivered|message|file|invoice|operator|assigned)/i;
-  const blockedPattern = /(execution plan sent|quote|review|webhook|test|debug|token|payment link|bunq|provider)/i;
+  const clientFacingPattern = /(file uploaded|file|review requested|information requested|delivery ready|delivery|delivered|message|client reply|invoice|referral conversion|referral)/i;
+  const blockedPattern = /(request received|payment confirmed|workspace activated|project started|execution plan sent|quote|webhook|test|debug|token|payment link|bunq|provider)/i;
   const fromAdmin = events.map((event) => ({
     title: clean(event.title || event.message || event.event_type || "Workspace updated"),
     timestamp: clean(event.created_at || event.at || event.timestamp),
@@ -495,16 +495,8 @@ function safeUpdatesForTask(task = {}) {
     return clientFacingPattern.test(`${event.title} ${event.type}`);
   });
 
-  const fromLifecycle = lifecycleEventsForTask(task)
-    .filter((event) => !["Review started", "Execution plan sent"].includes(event.label))
-    .map((event) => ({
-      title: event.label,
-      timestamp: event.timestamp,
-      type: "lifecycle"
-    }));
-
   const seen = new Set();
-  return [...fromAdmin, ...fromLifecycle]
+  return fromAdmin
     .filter((event) => event.title && event.timestamp)
     .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
     .filter((event) => {
