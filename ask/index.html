@@ -930,6 +930,9 @@
     .takeover-item[open] summary::after {
       transform: rotate(45deg);
     }
+    .takeover-item[open] {
+      grid-column: 1 / -1;
+    }
     .takeover-item span {
       color: rgba(233, 196, 138, 0.64);
       font-family: var(--mono);
@@ -945,8 +948,7 @@
     }
     .takeover-preview {
       display: grid;
-      grid-template-columns: minmax(160px, 0.72fr) minmax(0, 1fr);
-      gap: clamp(16px, 2.4vw, 24px);
+      gap: clamp(18px, 2.6vw, 26px);
       margin-top: 18px;
       padding: clamp(16px, 2.2vw, 22px);
       border: 1px solid rgba(245, 241, 234, 0.075);
@@ -957,57 +959,26 @@
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
       animation: takeoverPanelIn 360ms ease both;
     }
-    .takeover-visual {
-      position: relative;
-      overflow: hidden;
-      min-height: 132px;
-      border: 1px solid rgba(233, 196, 138, 0.11);
-      border-radius: 7px;
-      background:
-        linear-gradient(90deg, rgba(233, 196, 138, 0.06) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(233, 196, 138, 0.045) 1px, transparent 1px),
-        radial-gradient(circle at 28% 24%, rgba(233, 196, 138, 0.13), transparent 34%),
-        rgba(4, 5, 7, 0.72);
-      background-size: 34px 34px, 34px 34px, auto, auto;
-    }
-    .takeover-visual::before,
-    .takeover-visual::after {
-      position: absolute;
-      content: "";
-    }
-    .takeover-visual::before {
-      inset: 18px;
-      border: 1px solid rgba(245, 241, 234, 0.09);
-      border-radius: 5px;
-      background:
-        linear-gradient(90deg, rgba(245, 241, 234, 0.12), transparent 38%),
-        linear-gradient(180deg, transparent 0 32%, rgba(233, 196, 138, 0.12) 32% 34%, transparent 34% 58%, rgba(245, 241, 234, 0.09) 58% 60%, transparent 60%);
-      opacity: 0.76;
-    }
-    .takeover-visual::after {
-      top: 0;
-      bottom: 0;
-      left: -48%;
-      width: 42%;
-      background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.16), transparent);
-      filter: blur(10px);
-      animation: takeoverSweep 4.8s ease-in-out infinite;
-    }
-    .takeover-preview-body {
-      display: grid;
-      gap: 16px;
-      align-content: start;
-    }
-    .takeover-preview-body > p {
-      color: rgba(245, 241, 234, 0.62);
-      font-size: clamp(0.88rem, 1vw, 0.96rem);
+    .takeover-note {
+      max-width: 62ch;
+      color: rgba(245, 241, 234, 0.64);
+      font-size: clamp(0.9rem, 1vw, 0.98rem);
       line-height: 1.7;
+    }
+    .takeover-process-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(14px, 2.2vw, 20px);
     }
     .takeover-exchange {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 14px;
+      gap: 0;
       margin: 0;
+    }
+    .takeover-exchange.takeover-process-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(14px, 2.2vw, 20px);
     }
     .takeover-exchange div {
       display: grid;
@@ -1031,8 +1002,83 @@
       font-size: 0.82rem;
       line-height: 1.58;
     }
+    .takeover-storyboard {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .story-frame {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      align-content: start;
+      min-height: 132px;
+      gap: 14px;
+      padding: 14px;
+      border: 1px solid rgba(245, 241, 234, 0.075);
+      border-radius: 7px;
+      background:
+        linear-gradient(90deg, rgba(233, 196, 138, 0.04) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(233, 196, 138, 0.035) 1px, transparent 1px),
+        rgba(4, 5, 7, 0.54);
+      background-size: 28px 28px;
+      opacity: 0;
+      transform: translateY(5px);
+      animation: takeoverFrameIn 520ms ease forwards;
+      animation-delay: calc(var(--frame-index, 0) * 76ms);
+    }
+    .story-frame::after {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -56%;
+      width: 46%;
+      background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.115), transparent);
+      filter: blur(10px);
+      opacity: 0;
+      animation: takeoverSweep 5.8s ease-in-out infinite;
+      animation-delay: calc(0.6s + var(--frame-index, 0) * 140ms);
+      content: "";
+    }
+    .story-frame:nth-child(2) { --frame-index: 1; }
+    .story-frame:nth-child(3) { --frame-index: 2; }
+    .story-frame:nth-child(4) { --frame-index: 3; }
+    .story-frame:nth-child(5) { --frame-index: 4; }
+    .story-frame:nth-child(6) { --frame-index: 5; }
+    .frame-index {
+      color: rgba(233, 196, 138, 0.62);
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .story-frame strong {
+      position: relative;
+      z-index: 1;
+      color: rgba(245, 241, 234, 0.76);
+      font-family: var(--serif);
+      font-size: clamp(1.04rem, 1.25vw, 1.28rem);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.01em;
+    }
+    .story-frame small {
+      position: relative;
+      z-index: 1;
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.72rem;
+      line-height: 1.48;
+    }
     @keyframes takeoverPanelIn {
       from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes takeoverFrameIn {
+      from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
     }
     @keyframes takeoverSweep {
@@ -1460,9 +1506,8 @@
       .how-inner { grid-template-columns: 1fr; }
       .how-list { grid-template-columns: 1fr 1fr; }
       .takeover-lines { grid-template-columns: 1fr; }
-      .takeover-preview {
-        grid-template-columns: 1fr;
-      }
+      .takeover-exchange.takeover-process-grid { grid-template-columns: 1fr; }
+      .takeover-storyboard { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .dispatch-sheet { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
       .dispatch-panel { width: min(520px, 100%); }
       .dispatch-form { grid-template-columns: 1fr; }
@@ -1549,9 +1594,8 @@
         margin-top: 15px;
         padding: 15px;
       }
-      .takeover-visual {
-        min-height: 108px;
-      }
+      .takeover-storyboard { grid-template-columns: 1fr; }
+      .story-frame { min-height: 104px; }
       .dispatch-panel {
         max-height: min(82svh, 660px);
         padding: 24px 16px 18px;
@@ -1580,7 +1624,8 @@
       .takeover-preview {
         animation: none;
       }
-      .takeover-visual::after {
+      .story-frame,
+      .story-frame::after {
         animation: none;
       }
       .dispatch-sheet { transition: none; }
@@ -1724,20 +1769,28 @@
               <p>Landing pages, conversion pages, website fixes, and premium page polish.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>A focused page is tightened around one decision: what the visitor should understand, trust, and do next.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>Current URL, rough copy, screenshots, offer notes, or a half-finished page.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>A sharper page structure, refined copy direction, and implementation-ready polish.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">A focused page is tightened around one decision: what the visitor should understand, trust, and do next.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>Current URL, rough copy, screenshots, offer notes, or a half-finished page.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Reviews the page flow, removes friction, sharpens hierarchy, and prepares the conversion path.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>A clearer page structure, refined copy direction, and implementation-ready polish.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Digital Presence process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Page received</strong><small>Existing page, notes, or draft enters review.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>Friction found</strong><small>Confusing moments and weak signals are isolated.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>CTA rebuilt</strong><small>The next action becomes clear and deliberate.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Mobile refined</strong><small>The small-screen decision path is tightened.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>Conversion path active</strong><small>The page is ready to move visitors forward.</small></li>
+              </ol>
             </div>
           </details>
           <details class="takeover-item">
@@ -1746,20 +1799,28 @@
               <p>Intake flows, client portals, CRM structure, and dashboards only when useful.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>Operational information is turned into a clean path from request to decision, without adding another tool to manage.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>Current process, intake questions, client stages, spreadsheet columns, or portal requirements.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>A working flow, clear status language, and a calmer operating surface for repeat work.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">Operational information becomes a clean path from request to decision, without adding another tool to manage.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>Current process, intake questions, client stages, spreadsheet columns, or portal requirements.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Maps the flow, names the stages, removes duplicate handling, and prepares the operating surface.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>A working flow, clearer status language, and calmer repeatable operations.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Business Systems process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Intake mapped</strong><small>The request path is made visible.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>Client flow structured</strong><small>Stages become understandable and useful.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>Portal logic prepared</strong><small>Client-facing state and access are organized.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Internal handoff simplified</strong><small>Operators receive only what matters.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>System ready</strong><small>The flow is ready to handle real work.</small></li>
+              </ol>
             </div>
           </details>
           <details class="takeover-item">
@@ -1768,20 +1829,28 @@
               <p>Email workflows, Telegram or Slack alerts, follow-up flows, and internal handoffs.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>Repetitive follow-up and routing work becomes a quiet system that moves information to the right place.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>Trigger moments, message examples, destinations, and the decisions currently handled manually.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>Connected notifications, cleaner handoffs, and reduced manual chasing.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">Repetitive follow-up and routing work becomes a quiet system that moves information to the right place.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>Trigger moments, message examples, destinations, and decisions currently handled manually.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Connects the handoff path, aligns messages, and protects the workflow from silent drops.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>Connected notifications, cleaner handoffs, and reduced manual chasing.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Automation process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Lead enters</strong><small>A real signal enters the system.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>No response path found</strong><small>The drop-off point is identified.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>Workflow connected</strong><small>The next move is routed automatically.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Email / Telegram / CRM aligned</strong><small>Messages reach the right destination.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>Follow-up automatic</strong><small>The loop continues without manual chasing.</small></li>
+              </ol>
             </div>
           </details>
           <details class="takeover-item">
@@ -1790,20 +1859,28 @@
               <p>Visual systems, offer pages, launch assets, and campaign pages.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>Brand material is organized into assets that can ship, instead of sitting as scattered ideas and unfinished files.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>Brand references, product notes, old assets, campaign ideas, or a launch deadline.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>A sharper visual direction, launch-ready page assets, and clearer presentation structure.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">Brand material is organized into assets that can ship, instead of sitting as scattered ideas and unfinished files.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>Brand references, product notes, old assets, campaign ideas, or a launch deadline.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Aligns the offer, sharpens the visual system, and turns scattered material into launch-ready output.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>A sharper visual direction, launch-ready page assets, and clearer presentation structure.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Brand Operations process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Offer reviewed</strong><small>The core promise is inspected.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>Visual system aligned</strong><small>Design choices become consistent.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>Campaign assets prepared</strong><small>The pieces needed to ship are organized.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Launch page refined</strong><small>The public surface is tightened.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>Ready to publish</strong><small>The operation can move live.</small></li>
+              </ol>
             </div>
           </details>
           <details class="takeover-item">
@@ -1812,20 +1889,28 @@
               <p>Broken funnels, missing tracking, messy forms, lost leads, and unfinished workflows.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>The broken part is isolated, stabilized, and made usable again without turning it into a drawn-out rebuild.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>Error screenshots, URLs, form examples, access notes, and what stopped working.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>A repaired path, cleaner tracking signal, and a concise explanation of what changed.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">The broken part is isolated, stabilized, and made usable again without turning it into a drawn-out rebuild.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>Error screenshots, URLs, form examples, access notes, and what stopped working.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Traces the failure point, repairs the broken path, and confirms the signal is moving again.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>A repaired path, cleaner tracking signal, and a concise explanation of what changed.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Recovery and Fixes process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Broken flow detected</strong><small>The failure is named clearly.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>Form / tracking / handoff checked</strong><small>Every link in the chain is inspected.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>Failure point isolated</strong><small>The exact break is separated from noise.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Fix deployed</strong><small>The path is repaired with minimal disruption.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>Lead path restored</strong><small>The operation can receive signal again.</small></li>
+              </ol>
             </div>
           </details>
           <details class="takeover-item">
@@ -1834,20 +1919,29 @@
               <p>Urgent requests, overnight fixes, founder support, and operator-backed delivery.</p>
             </summary>
             <div class="takeover-preview">
-              <div class="takeover-visual" aria-hidden="true"></div>
-              <div class="takeover-preview-body">
-                <p>Urgent operational work is converted into a clear handoff, reviewed privately, and moved forward while attention is elsewhere.</p>
-                <dl class="takeover-exchange">
-                  <div>
-                    <dt>Client hands off</dt>
-                    <dd>The problem, desired outcome, deadline, constraints, and any useful files or links.</dd>
-                  </div>
-                  <div>
-                    <dt>DONEOVERNIGHT returns</dt>
-                    <dd>A reviewed plan, next-step execution, and operator-backed delivery without extra meetings.</dd>
-                  </div>
-                </dl>
-              </div>
+              <p class="takeover-note">Urgent operational work is converted into a clear handoff, reviewed privately, and moved forward while attention is elsewhere.</p>
+              <dl class="takeover-exchange takeover-process-grid">
+                <div>
+                  <dt>What you hand off</dt>
+                  <dd>The problem, desired outcome, deadline, constraints, and any useful files or links.</dd>
+                </div>
+                <div>
+                  <dt>What DONEOVERNIGHT does</dt>
+                  <dd>Reviews the request, prepares the plan, assigns execution, and keeps the operation moving.</dd>
+                </div>
+                <div>
+                  <dt>What returns</dt>
+                  <dd>A reviewed plan, next-step execution, and operator-backed delivery without extra meetings.</dd>
+                </div>
+              </dl>
+              <ol class="takeover-storyboard" aria-label="Private Execution process">
+                <li class="story-frame"><span class="frame-index">01</span><strong>Request received</strong><small>The handoff enters DONEOVERNIGHT Operations.</small></li>
+                <li class="story-frame"><span class="frame-index">02</span><strong>Review started</strong><small>The request is privately inspected.</small></li>
+                <li class="story-frame"><span class="frame-index">03</span><strong>Plan prepared</strong><small>The next move becomes visible.</small></li>
+                <li class="story-frame"><span class="frame-index">04</span><strong>Operators assigned</strong><small>The work moves into execution hands.</small></li>
+                <li class="story-frame"><span class="frame-index">05</span><strong>Execution active</strong><small>The operation progresses without extra meetings.</small></li>
+                <li class="story-frame"><span class="frame-index">06</span><strong>Delivery ready</strong><small>The completed output is prepared for review.</small></li>
+              </ol>
             </div>
           </details>
         </div>
@@ -1911,6 +2005,20 @@
   </aside>
 
   <script>
+    (() => {
+      const takeoverItems = Array.from(document.querySelectorAll(".takeover-item"));
+      if (!takeoverItems.length) return;
+
+      takeoverItems.forEach((item) => {
+        item.addEventListener("toggle", () => {
+          if (!item.open) return;
+          takeoverItems.forEach((otherItem) => {
+            if (otherItem !== item) otherItem.open = false;
+          });
+        });
+      });
+    })();
+
     (() => {
       const section = document.querySelector("[data-scroll-reveal]");
       if (!section) return;
