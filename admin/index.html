@@ -5991,12 +5991,13 @@ function renderOperators(operators) {
     const section = adminOperatorFilter === 'pending'
       ? renderOperatorSection('Pending Operators', filteredOperators, { urgent: true, empty: 'No pending operator applications.' })
       : renderOperatorSection('Active Operators', filteredOperators, { empty: 'No active operators.' });
-    adminOperatorsList.innerHTML = `<div class="admin-operator-list">${renderOperatorPingsInbox(countableOperators)}${section}</div>`;
+    adminOperatorsList.innerHTML = `<div class="admin-operator-list">${renderOperatorSupportInbox(countableOperators)}${renderOperatorPingsInbox(countableOperators)}${section}</div>`;
     return;
   }
 
   adminOperatorsList.innerHTML = `
     <div class="admin-operator-list">
+      ${renderOperatorSupportInbox(countableOperators)}
       ${renderOperatorPingsInbox(countableOperators)}
       ${renderOperatorSection('Pending Operators', groups.pending, { urgent: true, empty: 'No pending operator applications.' })}
       ${renderOperatorSection('Active Operators', groups.active, { empty: 'No active operators.' })}
@@ -6068,6 +6069,63 @@ function getOperatorPings(operators = []) {
     if (diff) return diff;
     return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0);
   });
+}
+
+function getOperatorSupportMessages(operators = []) {
+  return (operators || []).flatMap((operator) => {
+    const messages = Array.isArray(operator.operator_support_detail) ? operator.operator_support_detail : [];
+    return messages.map((item) => ({
+      ...item,
+      operator_email: item.operator_email || operator.email || '',
+      operator_name: item.operator_name || operator.name || 'Operator',
+      operator_slug: String(item.operator_slug || operator.handle || operator.username || '').replace(/^@+/, ''),
+      source: item.source || 'operator_runtime_activity'
+    }));
+  }).sort((a, b) => {
+    const priority = (item) => item.unread_for_admin ? 0 : item.status === 'viewed' ? 1 : item.status === 'sent' ? 2 : 3;
+    const diff = priority(a) - priority(b);
+    if (diff) return diff;
+    return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0);
+  });
+}
+
+function renderOperatorSupportInbox(operators = []) {
+  const messages = getOperatorSupportMessages(operators);
+  const unread = messages.filter((item) => item.unread_for_admin).length;
+  const visible = messages.slice(0, 16);
+  return `
+    <section class="admin-client-section admin-operator-ping-inbox">
+      <div class="admin-client-section-head ${unread ? 'admin-client-section-head--urgent' : ''}">
+        <span class="${unread ? 'admin-client-section-dot admin-client-section-dot--urgent' : 'admin-client-section-dot'}"></span>
+        Operator Support
+        <span class="admin-client-section-count">${escapeHTML(unread ? `${unread} unread` : `${messages.length} total`)}</span>
+      </div>
+      <div class="admin-operator-connected-list">
+        ${visible.length ? visible.map((item) => {
+          const slug = item.operator_slug ? `@${item.operator_slug}` : '@operator';
+          const status = item.status || (item.unread_for_admin ? 'unread' : 'viewed');
+          return `
+            <div class="admin-operator-connected-item admin-operator-ping-item is-${escapeHTML(status)}">
+              <strong>${escapeHTML(item.sender_role === 'admin' ? 'HQ reply' : item.operator_name || 'Operator')} · ${escapeHTML(slug)}</strong>
+              <span>${escapeHTML(item.created_at ? formatTaskDate(item.created_at) : 'No date')} · ${escapeHTML(item.priority || 'normal')}${item.subject ? ` · ${escapeHTML(item.subject)}` : ''}</span>
+              <span>${escapeHTML(item.message || 'No message body')}</span>
+              <span class="admin-operator-ping-status">${escapeHTML(status)}</span>
+              <div class="admin-operator-message-actions">
+                ${item.unread_for_admin ? `
+                  <button class="admin-client-action" type="button" data-operator-action="mark-message-viewed" data-operator-email="${escapeHTML(item.operator_email || '')}" data-operator-message-id="${escapeHTML(item.id || '')}" data-operator-message-source="${escapeHTML(item.source || '')}">Mark viewed</button>
+                ` : ''}
+                ${status !== 'resolved' ? `
+                  <button class="admin-client-action" type="button" data-operator-action="mark-ping-resolved" data-operator-email="${escapeHTML(item.operator_email || '')}" data-operator-message-id="${escapeHTML(item.id || '')}" data-operator-message-source="${escapeHTML(item.source || '')}">Mark resolved</button>
+                ` : ''}
+                <button class="admin-client-action" type="button" data-operator-action="support-reply" data-operator-email="${escapeHTML(item.operator_email || '')}" data-operator-subject="${escapeHTML(item.subject || '')}">Reply</button>
+                <button class="admin-client-action" type="button" data-operator-action="message" data-operator-email="${escapeHTML(item.operator_email || '')}">Message operator</button>
+              </div>
+            </div>
+          `;
+        }).join('') : '<div class="placeholder">No operator support messages yet.</div>'}
+      </div>
+    </section>
+  `;
 }
 
 function renderOperatorPingsInbox(operators = []) {
@@ -6220,6 +6278,8 @@ function renderOperatorRow(operator) {
         ${renderOperatorField('Connected clients', operator.connected_clients || 0)}
         ${renderOperatorField('Assigned tasks', operator.active_assigned_tasks || 0)}
         ${renderOperatorField('Unread messages', operator.unread_operator_messages || 0)}
+        ${renderOperatorField('Unread support', operator.unread_operator_support_messages || 0)}
+        ${renderOperatorField('Last support', operator.last_operator_support_at ? formatTaskDate(operator.last_operator_support_at) : '—')}
         ${renderOperatorField('Support pings', operator.support_pings || 0)}
         ${renderOperatorField('Pending deliveries', operator.pending_deliveries || 0)}
         ${renderOperatorField('Portfolio', operator.portfolio)}
@@ -8164,6 +8224,33 @@ adminOperatorsList?.addEventListener('click', async (event) => {
       await loadOperators({ silent: true });
     } catch (error) {
       if (message) message.textContent = 'Could not message operator.';
+    } finally {
+      actions.forEach((action) => { action.disabled = false; });
+      button.textContent = previousText;
+    }
+    return;
+  }
+
+  if (operatorAction === 'support-reply') {
+    const note = window.prompt('Reply to this operator support thread?');
+    if (!note || !note.trim()) return;
+    const subject = button.dataset.operatorSubject || '';
+    actions.forEach((action) => { action.disabled = true; });
+    button.textContent = 'Sending...';
+    if (message) message.textContent = '';
+    try {
+      await adminOperatorRequest({
+        action: 'create_operator_message',
+        email,
+        message: note.trim(),
+        subject,
+        message_type: 'operator_support_message',
+        priority: 'normal'
+      });
+      if (message) message.textContent = 'Support reply sent.';
+      await loadOperators({ silent: true });
+    } catch (error) {
+      if (message) message.textContent = 'Could not send support reply.';
     } finally {
       actions.forEach((action) => { action.disabled = false; });
       button.textContent = previousText;

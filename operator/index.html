@@ -366,7 +366,8 @@
       text-transform: uppercase;
     }
 
-    .operator-login-field input {
+    .operator-login-field input,
+    .operator-login-field select {
       width: 100%;
       min-height: 48px;
       border: 1px solid rgba(255,255,255,.09);
@@ -378,7 +379,8 @@
       transition: border-color .22s, box-shadow .22s, background .22s;
     }
 
-    .operator-login-field input:focus {
+    .operator-login-field input:focus,
+    .operator-login-field select:focus {
       border-color: rgba(233,196,138,.48);
       background: rgba(0,0,0,.3);
       box-shadow: 0 0 0 3px rgba(233,196,138,.075);
@@ -1851,7 +1853,8 @@
         <div class="operator-actions">
           <a class="operator-button" href="/apply">Apply as operator →</a>
           <a class="operator-button" id="operatorRuntimeAction" href="#assigned-work" hidden>Open assigned work →</a>
-          <button class="operator-button secondary" id="operatorSupportAction" type="button" hidden>Need Help / Ping HQ</button>
+          <button class="operator-button secondary" id="operatorSupportInboxAction" type="button" hidden>Support / HQ</button>
+          <button class="operator-button secondary" id="operatorSupportAction" type="button" hidden>Ping HQ about task</button>
           <button class="operator-button secondary" id="operatorInviteClientAction" type="button" hidden>Invite new client →</button>
           <a class="operator-button secondary" href="#profile">Operator profile</a>
         </div>
@@ -2113,6 +2116,27 @@
       </div>
     </section>
 
+    <section class="operator-section" id="support-hq" aria-labelledby="supportHqTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Support / HQ</p>
+          <h2 id="supportHqTitle">Internal line to DONEOVERNIGHT HQ.</h2>
+        </div>
+        <p>General operator support, payout questions, account help, and HQ communication. Task-specific blockers still use Ping HQ about task.</p>
+      </div>
+
+      <article class="operator-list-panel" id="supportHqPanel">
+        <h3>HQ support thread</h3>
+        <div class="operator-row">
+          <div><strong>No support thread yet</strong><span>Start a private support message with HQ when needed.</span></div>
+          <span class="status-pill is-muted">Clear</span>
+        </div>
+      </article>
+      <div class="operator-actions">
+        <button class="operator-button" id="operatorSupportNewAction" type="button" hidden>Start support message →</button>
+      </div>
+    </section>
+
     <section class="operator-section" id="profile" aria-labelledby="profileTitle">
       <div class="section-head">
         <div>
@@ -2245,6 +2269,17 @@
         <p class="eyebrow">Private HQ line</p>
         <h2 id="operatorSupportTitle">Ping DONEOVERNIGHT HQ.</h2>
         <p>Ask for clarification, report a blocker, or attach a DON reference. This stays internal.</p>
+        <label class="operator-login-field" data-support-field="subject" hidden>
+          <span>Subject optional</span>
+          <input id="operatorSupportSubject" placeholder="Payout question">
+        </label>
+        <label class="operator-login-field" data-support-field="priority" hidden>
+          <span>Priority</span>
+          <select id="operatorSupportPriority">
+            <option value="normal">Normal</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </label>
         <label class="operator-login-field">
           <span>DON reference optional</span>
           <input id="operatorSupportReference" placeholder="DON-2026-00000">
@@ -2332,7 +2367,12 @@
       const unlockRoadmap = document.getElementById('operatorUnlockRoadmap');
       const modalUnlockRoadmap = document.getElementById('operatorModalUnlockRoadmap');
       const supportAction = document.getElementById('operatorSupportAction');
+      const supportInboxAction = document.getElementById('operatorSupportInboxAction');
+      const supportNewAction = document.getElementById('operatorSupportNewAction');
       const supportModal = document.getElementById('operatorSupportModal');
+      const supportTitle = document.getElementById('operatorSupportTitle');
+      const supportSubject = document.getElementById('operatorSupportSubject');
+      const supportPriority = document.getElementById('operatorSupportPriority');
       const supportMessage = document.getElementById('operatorSupportMessage');
       const supportReference = document.getElementById('operatorSupportReference');
       const supportSend = document.getElementById('operatorSupportSend');
@@ -2830,18 +2870,26 @@
 
       function openSupportModal({ taskReference = '', messageType = 'support' } = {}) {
         if (!supportModal) return;
+        const isGeneralSupport = messageType === 'operator_support_message';
         supportModal.hidden = false;
         supportModal.dataset.messageType = messageType;
+        if (supportTitle) supportTitle.textContent = isGeneralSupport ? 'Support / HQ.' : 'Ping DONEOVERNIGHT HQ.';
+        supportModal.querySelectorAll('[data-support-field]').forEach((field) => { field.hidden = !isGeneralSupport; });
+        if (supportSubject) supportSubject.value = '';
+        if (supportPriority) supportPriority.value = 'normal';
         if (supportReference) supportReference.value = taskReference || '';
         if (supportMessage) supportMessage.value = '';
+        if (supportMessage) supportMessage.placeholder = isGeneralSupport ? 'What should HQ know?' : 'What do you need from HQ?';
         setSupportStatus('');
-        window.setTimeout(() => supportMessage?.focus(), 80);
+        window.setTimeout(() => (isGeneralSupport ? supportSubject || supportMessage : supportMessage)?.focus(), 80);
       }
 
       function closeSupportModal() {
         if (!supportModal) return;
         supportModal.hidden = true;
         delete supportModal.dataset.messageType;
+        if (supportSubject) supportSubject.value = '';
+        if (supportPriority) supportPriority.value = 'normal';
         if (supportMessage) supportMessage.value = '';
         if (supportReference) supportReference.value = '';
         setSupportStatus('');
@@ -2851,6 +2899,8 @@
         const messageText = supportMessage?.value.trim() || '';
         const reference = supportReference?.value.trim() || '';
         const messageType = supportModal?.dataset.messageType || 'support';
+        const subject = supportSubject?.value.trim() || '';
+        const priority = supportPriority?.value || 'normal';
         if (!messageText) {
           setSupportStatus('Write a short message for HQ.', 'error');
           return;
@@ -2864,10 +2914,14 @@
           const data = await postOperatorAction({
             action: 'operator_hq_message',
             message_type: messageType,
+            subject,
+            priority,
             message: messageText,
             task_reference: reference
           });
-          setSupportStatus(data.telegram?.delivered ? 'Sent to HQ.' : 'Sent to HQ. Telegram delivery pending.', 'success');
+          setSupportStatus(messageType === 'operator_support_message'
+            ? 'Sent to DONEOVERNIGHT HQ.'
+            : data.telegram?.delivered ? 'Sent to HQ.' : 'Sent to HQ. Telegram delivery pending.', 'success');
           window.setTimeout(closeSupportModal, 900);
           if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'operator_message' }).catch(() => {});
         } catch (error) {
@@ -3400,6 +3454,8 @@
         if (logoutButton) logoutButton.hidden = !owner;
         if (runtimeAction) runtimeAction.hidden = !owner;
         if (supportAction) supportAction.hidden = !owner;
+        if (supportInboxAction) supportInboxAction.hidden = !owner;
+        if (supportNewAction) supportNewAction.hidden = !owner;
         if (inviteClientAction) {
           inviteClientAction.hidden = !owner;
           inviteClientAction.dataset.inviteUrl = owner && operator.handle
@@ -3619,6 +3675,27 @@
         renderRows(document.getElementById('messagesPanel'), owner ? messageRows : [], `
           <div class="operator-row">
             <div><strong>${owner ? 'No client updates' : 'Private client updates'}</strong><span>${owner ? 'No client movement needs attention right now.' : 'Messages and revision threads unlock for the authenticated owner.'}</span></div>
+            <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
+          </div>
+        `);
+
+        const supportRows = (runtime.support_messages || []).map((item) => `
+          <div class="operator-row">
+            <div>
+              <strong>${escapeHTML(item.sender_role === 'admin' ? 'DONEOVERNIGHT HQ' : 'You')}${item.subject ? ` · ${escapeHTML(item.subject)}` : ''}</strong>
+              <span>${escapeHTML(item.detail || 'Support message recorded.')}</span>
+              <small>${escapeHTML(item.created_at || '')} · ${escapeHTML(item.priority || 'normal')}</small>
+              <div class="operator-row-actions">
+                ${item.sender_role === 'admin' ? `<button class="operator-row-action" type="button" data-operator-task-message="operator_support_message" data-message-label="Reply to HQ" data-task-reference="${escapeHTML(item.task_reference || '')}">Reply</button>` : ''}
+                ${item.status === 'Unread' ? `<button class="operator-row-action" type="button" data-operator-mark-viewed data-message-id="${escapeHTML(item.id || '')}" data-message-source="${escapeHTML(item.source || '')}">Mark viewed</button>` : ''}
+              </div>
+            </div>
+            <span class="status-pill ${item.status === 'Unread' ? 'is-waiting' : 'is-muted'}">${escapeHTML(item.status || 'Support')}</span>
+          </div>
+        `);
+        renderRows(document.getElementById('supportHqPanel'), owner ? supportRows : [], `
+          <div class="operator-row">
+            <div><strong>${owner ? 'No support thread yet' : 'Private support thread'}</strong><span>${owner ? 'Start a private support message with HQ when needed.' : 'Support messages unlock for the authenticated operator.'}</span></div>
             <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
           </div>
         `);
@@ -4002,6 +4079,14 @@
 
       supportAction?.addEventListener('click', () => {
         openSupportModal({ messageType: 'support' });
+      });
+
+      supportInboxAction?.addEventListener('click', () => {
+        document.getElementById('support-hq')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      supportNewAction?.addEventListener('click', () => {
+        openSupportModal({ messageType: 'operator_support_message' });
       });
 
       supportSend?.addEventListener('click', sendSupportMessage);

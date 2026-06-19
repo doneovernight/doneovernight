@@ -600,10 +600,42 @@ async function listOperators() {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
       return rawPayload.unread_for_admin === true || item.unread_for_admin === true || (!item.admin_read_at && clean(item.actor_role).toLowerCase() === "operator");
     });
+    const supportMessages = activityRows.filter((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      return rawPayload.message_type === "OPERATOR_SUPPORT_MESSAGE" || item.activity_type === "operator_support_message";
+    });
     const supportPings = activityRows.filter((item) => {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
       return rawPayload.message_type === "OPERATOR_SUPPORT_REQUEST"
-        || /support|ping|hq/i.test(`${item.activity_type || ""} ${item.title || ""}`);
+        || item.activity_type === "operator_support_request";
+    });
+    const supportMessageRows = supportMessages.slice(0, 80).map((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      const viewedAt = item.viewed_at || item.admin_read_at || rawPayload.viewed_at || rawPayload.admin_read_at || "";
+      const resolvedAt = item.resolved_at || rawPayload.resolved_at || "";
+      const role = clean(item.actor_role || item.sender_role || rawPayload.sender_role).toLowerCase() || "operator";
+      return {
+        id: clean(item.id),
+        source: rawPayload.profile_raw_payload_fallback ? "profile_raw_payload" : "operator_runtime_activity",
+        conversation_id: clean(item.conversation_id || rawPayload.conversation_id || rawPayload.thread_id) || `operator_support:${clean(profile.handle || profile.handle_normalized || profile.username)}`,
+        operator_name: clean(rawPayload.operator_name || profile.full_name || profile.display_name || profile.name),
+        operator_slug: clean(rawPayload.operator_slug || profile.handle || profile.handle_normalized || profile.username).replace(/^@+/, ""),
+        operator_email: clean(rawPayload.operator_email || profile.email),
+        sender_role: role,
+        recipient_role: clean(item.recipient_role || rawPayload.recipient_role),
+        subject: clean(item.subject || rawPayload.subject),
+        message: clean(item.body || item.message || item.detail).slice(0, 1200),
+        task_reference: clean(item.task_reference || item.don_reference || item.task_id || rawPayload.task_reference || rawPayload.don_reference || rawPayload.task_id),
+        priority: clean(item.priority || rawPayload.priority) || "normal",
+        created_at: item.created_at || rawPayload.sent_at || "",
+        viewed_at: viewedAt,
+        resolved_at: resolvedAt,
+        status: resolvedAt ? "resolved" : viewedAt ? "viewed" : role === "operator" ? "unread" : "sent",
+        unread_for_admin: role === "operator" && !viewedAt && !resolvedAt && (rawPayload.unread_for_admin === true || item.unread_for_admin === true),
+        telegram_sent_at: item.telegram_sent_at || rawPayload.telegram_sent_at || "",
+        telegram_ok: item.telegram_ok === true || rawPayload.telegram_ok === true,
+        telegram_error: clean(item.telegram_error || rawPayload.telegram_error)
+      };
     });
     const supportPingRows = supportPings.slice(0, 40).map((item) => {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
@@ -696,6 +728,9 @@ async function listOperators() {
       support_pings: supportPings.length,
       operator_pings_detail: supportPingRows,
       unread_operator_pings: supportPingRows.filter((item) => item.status === "unread").length,
+      operator_support_detail: supportMessageRows,
+      unread_operator_support_messages: supportMessageRows.filter((item) => item.unread_for_admin).length,
+      last_operator_support_at: supportMessageRows.map((item) => item.created_at).filter(Boolean).sort().pop() || "",
       operator_messages_detail: operatorMessages,
       pending_deliveries: pendingDeliveries.length,
       portfolio: profile.portfolio_url,
@@ -1016,6 +1051,10 @@ async function createOperatorMessage(input) {
   const email = clean(input.email).toLowerCase();
   const message = clean(input.message || input.body || input.note).slice(0, 2000);
   const taskReference = clean(input.task_reference || input.don_reference || input.task_id || input.reference).toUpperCase().slice(0, 80);
+  const messageType = clean(input.message_type || input.intent).toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+  const isSupportMessage = messageType === "operator_support_message" || messageType === "support_message";
+  const priority = ["urgent", "normal"].includes(clean(input.priority).toLowerCase()) ? clean(input.priority).toLowerCase() : "normal";
+  const subject = clean(input.subject || input.title).slice(0, 160);
   if (!email || !message) {
     const error = new Error("Operator email and message are required");
     error.statusCode = 400;
@@ -1030,28 +1069,45 @@ async function createOperatorMessage(input) {
 
   const now = new Date().toISOString();
   const handle = clean(profile.handle || profile.handle_normalized || profile.username).toLowerCase().replace(/^@+/, "");
+  const conversationId = isSupportMessage
+    ? `operator_support:${handle || profile.id}`
+    : taskReference
+      ? `operator_task_support:${taskReference}`
+      : `operator_admin_message:${handle || profile.id}`;
   return insertOperatorRuntimeActivity({
     operator_profile_id: profile.id,
     operator_handle: handle,
-    activity_type: "admin_operator_message",
-    title: "HQ instruction",
+    activity_type: isSupportMessage ? "operator_support_message" : "admin_operator_message",
+    title: isSupportMessage ? "HQ support reply" : "HQ instruction",
+    subject,
     body: message,
     message,
     detail: message,
     actor_role: "admin",
     sender_role: "admin",
+    recipient_role: "operator",
     task_id: taskReference,
     task_reference: taskReference,
     don_reference: taskReference,
     unread_for_operator: true,
     unread_for_admin: false,
+    conversation_id: conversationId,
+    thread_id: conversationId,
+    priority,
     raw_payload: {
       operator_slug: handle,
       operator_email: email,
+      operator_name: clean(profile.full_name || profile.display_name || profile.name),
       task_reference: taskReference,
       task_id: taskReference,
       sender_role: "admin",
-      message_type: "admin_instruction",
+      recipient_role: "operator",
+      message_type: isSupportMessage ? "OPERATOR_SUPPORT_MESSAGE" : "admin_instruction",
+      conversation_id: conversationId,
+      thread_id: conversationId,
+      subject,
+      priority,
+      source: isSupportMessage ? "admin_operator_support" : "admin_operator_message",
       unread_for_operator: true,
       sent_at: now
     },
