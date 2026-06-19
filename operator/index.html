@@ -2260,6 +2260,48 @@
         <p class="operator-login-message" id="operatorSupportStatus" role="status" aria-live="polite"></p>
       </div>
     </div>
+    <div class="operator-modal" id="operatorTaskActionModal" hidden>
+      <div class="operator-modal-backdrop" data-operator-task-close></div>
+      <div class="operator-modal-card" role="dialog" aria-modal="true" aria-labelledby="operatorTaskActionTitle">
+        <button class="operator-modal-close" type="button" data-operator-task-close aria-label="Close">×</button>
+        <p class="eyebrow">Execution Desk</p>
+        <h2 id="operatorTaskActionTitle">Task action.</h2>
+        <p id="operatorTaskActionCopy">Attach the update to the selected DON reference. This stays inside DONEOVERNIGHT permissions.</p>
+        <label class="operator-login-field">
+          <span>DON reference</span>
+          <input id="operatorTaskActionReference" readonly>
+        </label>
+        <label class="operator-login-field" data-task-action-field="message">
+          <span>Message</span>
+          <textarea id="operatorTaskActionMessage" rows="4" placeholder="Write the operational update."></textarea>
+        </label>
+        <label class="operator-login-field" data-task-action-field="scope" hidden>
+          <span>Scope</span>
+          <textarea id="operatorTaskActionScope" rows="4" placeholder="What will DONEOVERNIGHT execute?"></textarea>
+        </label>
+        <label class="operator-login-field" data-task-action-field="timeline" hidden>
+          <span>Timeline</span>
+          <input id="operatorTaskActionTimeline" placeholder="Tonight, 48h, this week...">
+        </label>
+        <label class="operator-login-field" data-task-action-field="deliverables" hidden>
+          <span>Deliverables</span>
+          <textarea id="operatorTaskActionDeliverables" rows="3" placeholder="What will be returned?"></textarea>
+        </label>
+        <label class="operator-login-field" data-task-action-field="links" hidden>
+          <span>Links</span>
+          <textarea id="operatorTaskActionLinks" rows="3" placeholder="Drive, Dropbox, WeTransfer, Loom, or delivery links."></textarea>
+        </label>
+        <label class="operator-login-field" data-task-action-field="notes">
+          <span>Notes</span>
+          <textarea id="operatorTaskActionNotes" rows="3" placeholder="Internal operator context for Admin."></textarea>
+        </label>
+        <div class="operator-actions">
+          <button class="operator-button" id="operatorTaskActionSend" type="button">Submit →</button>
+          <button class="operator-button secondary" type="button" data-operator-task-close>Cancel</button>
+        </div>
+        <p class="operator-login-message" id="operatorTaskActionStatus" role="status" aria-live="polite"></p>
+      </div>
+    </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -2295,6 +2337,18 @@
       const supportReference = document.getElementById('operatorSupportReference');
       const supportSend = document.getElementById('operatorSupportSend');
       const supportStatus = document.getElementById('operatorSupportStatus');
+      const taskActionModal = document.getElementById('operatorTaskActionModal');
+      const taskActionTitle = document.getElementById('operatorTaskActionTitle');
+      const taskActionCopy = document.getElementById('operatorTaskActionCopy');
+      const taskActionReference = document.getElementById('operatorTaskActionReference');
+      const taskActionMessage = document.getElementById('operatorTaskActionMessage');
+      const taskActionScope = document.getElementById('operatorTaskActionScope');
+      const taskActionTimeline = document.getElementById('operatorTaskActionTimeline');
+      const taskActionDeliverables = document.getElementById('operatorTaskActionDeliverables');
+      const taskActionLinks = document.getElementById('operatorTaskActionLinks');
+      const taskActionNotes = document.getElementById('operatorTaskActionNotes');
+      const taskActionSend = document.getElementById('operatorTaskActionSend');
+      const taskActionStatus = document.getElementById('operatorTaskActionStatus');
       const headerStatus = document.getElementById('operatorHeaderStatus');
       const profileSettings = document.getElementById('operatorProfileSettings');
       const profileMessage = document.getElementById('operatorProfileMessage');
@@ -2826,6 +2880,155 @@
         }
       }
 
+      const TASK_ACTION_CONFIG = {
+        request_information: {
+          title: 'Request information.',
+          copy: 'Ask the client for missing information through DONEOVERNIGHT Operations.',
+          submit: 'Send request →',
+          fields: ['message', 'notes'],
+          messagePlaceholder: 'What information is needed before execution can continue?'
+        },
+        client_update: {
+          title: 'Send client update.',
+          copy: 'Send an operational update to the client workspace under DONEOVERNIGHT branding.',
+          submit: 'Send update →',
+          fields: ['message', 'links', 'notes'],
+          messagePlaceholder: 'Execution started, delivery in review, waiting on provider...'
+        },
+        execution_plan_draft: {
+          title: 'Prepare execution plan.',
+          copy: 'Save a draft plan for Admin review. The client will not see this until approved.',
+          submit: 'Save draft →',
+          fields: ['scope', 'timeline', 'deliverables', 'notes']
+        },
+        submit_execution_plan: {
+          title: 'Submit plan to Admin.',
+          copy: 'Submit the operator-prepared plan to Admin. This does not send it to the client.',
+          submit: 'Submit to Admin →',
+          fields: ['scope', 'timeline', 'deliverables', 'notes']
+        },
+        upload_deliverable: {
+          title: 'Attach deliverable.',
+          copy: 'Attach delivery links or file records for Admin approval before the client receives them.',
+          submit: 'Attach deliverable →',
+          fields: ['message', 'links', 'deliverables', 'notes'],
+          messagePlaceholder: 'Short delivery note for Admin.'
+        },
+        ready_for_admin_review: {
+          title: 'Ready for Admin review.',
+          copy: 'Tell Admin this task is ready for review. Admin receives the review signal.',
+          submit: 'Mark ready →',
+          fields: ['message', 'notes'],
+          messagePlaceholder: 'What should Admin review?'
+        },
+        archive_personal_view: {
+          title: 'Archive personal view.',
+          copy: 'Hide this task from your personal execution desk view only. The client/task remains intact.',
+          submit: 'Archive view →',
+          fields: ['notes']
+        },
+        operator_reply: {
+          hq: true,
+          title: 'Reply to HQ.'
+        }
+      };
+
+      function setTaskActionStatus(text, type = '') {
+        if (!taskActionStatus) return;
+        taskActionStatus.textContent = text || '';
+        taskActionStatus.className = `operator-login-message${type ? ` is-${type}` : ''}`;
+      }
+
+      function resetTaskActionFields() {
+        [taskActionMessage, taskActionScope, taskActionTimeline, taskActionDeliverables, taskActionLinks, taskActionNotes].forEach((field) => {
+          if (field) field.value = '';
+        });
+      }
+
+      function openTaskActionModal({ taskReference = '', actionType = 'client_update' } = {}) {
+        const config = TASK_ACTION_CONFIG[actionType] || TASK_ACTION_CONFIG.client_update;
+        if (config.hq) {
+          openSupportModal({ taskReference, messageType: actionType });
+          return;
+        }
+        if (!taskActionModal) return;
+        taskActionModal.hidden = false;
+        taskActionModal.dataset.actionType = actionType;
+        resetTaskActionFields();
+        if (taskActionTitle) taskActionTitle.textContent = config.title || 'Task action.';
+        if (taskActionCopy) taskActionCopy.textContent = config.copy || 'Attach the update to the selected DON reference.';
+        if (taskActionReference) taskActionReference.value = taskReference || '';
+        if (taskActionSend) taskActionSend.textContent = config.submit || 'Submit →';
+        document.querySelectorAll('[data-task-action-field]').forEach((field) => {
+          field.hidden = !(config.fields || []).includes(field.dataset.taskActionField);
+        });
+        if (taskActionMessage) taskActionMessage.placeholder = config.messagePlaceholder || 'Write the operational update.';
+        setTaskActionStatus('');
+        const firstVisible = taskActionModal.querySelector('[data-task-action-field]:not([hidden]) textarea, [data-task-action-field]:not([hidden]) input');
+        window.setTimeout(() => firstVisible?.focus(), 80);
+      }
+
+      function closeTaskActionModal() {
+        if (!taskActionModal) return;
+        taskActionModal.hidden = true;
+        delete taskActionModal.dataset.actionType;
+        resetTaskActionFields();
+        setTaskActionStatus('');
+      }
+
+      async function sendTaskAction() {
+        const actionType = taskActionModal?.dataset.actionType || '';
+        const reference = taskActionReference?.value.trim() || '';
+        const config = TASK_ACTION_CONFIG[actionType] || {};
+        if (!actionType || !reference) {
+          setTaskActionStatus('Task reference missing.', 'error');
+          return;
+        }
+        const payload = {
+          action: 'operator_task_action',
+          operator_action: actionType,
+          task_reference: reference,
+          message: taskActionMessage?.value.trim() || '',
+          scope: taskActionScope?.value.trim() || '',
+          timeline: taskActionTimeline?.value.trim() || '',
+          deliverables: taskActionDeliverables?.value.trim() || '',
+          links: taskActionLinks?.value.trim() || '',
+          notes: taskActionNotes?.value.trim() || ''
+        };
+        if (['request_information', 'client_update', 'ready_for_admin_review'].includes(actionType) && !payload.message) {
+          setTaskActionStatus('Write a short message first.', 'error');
+          return;
+        }
+        if (['execution_plan_draft', 'submit_execution_plan'].includes(actionType) && !payload.scope && !payload.timeline && !payload.deliverables && !payload.notes) {
+          setTaskActionStatus('Add plan details first.', 'error');
+          return;
+        }
+        if (taskActionSend) {
+          taskActionSend.disabled = true;
+          taskActionSend.textContent = 'Saving...';
+        }
+        setTaskActionStatus('');
+        try {
+          const data = await postOperatorAction(payload);
+          const emailNote = actionType === 'request_information'
+            ? (data.needs_info_email?.sent || data.needs_info_email?.delivered ? ' Email sent.' : ' Email not confirmed.')
+            : '';
+          const telegramNote = actionType === 'ready_for_admin_review'
+            ? (data.telegram?.delivered ? ' Admin alerted.' : ' Admin alert stored; Telegram not confirmed.')
+            : '';
+          setTaskActionStatus(`Recorded.${emailNote}${telegramNote}`, 'success');
+          window.setTimeout(closeTaskActionModal, 900);
+          if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: `task_action_${actionType}` }).catch(() => {});
+        } catch (error) {
+          setTaskActionStatus(error.message || 'Could not record task action.', 'error');
+        } finally {
+          if (taskActionSend) {
+            taskActionSend.disabled = false;
+            taskActionSend.textContent = config.submit || 'Submit →';
+          }
+        }
+      }
+
       function formatLastActive(value) {
         if (!value) return 'Not yet';
         const date = new Date(value);
@@ -3286,18 +3489,30 @@
           const status = item.operational_state || item.status || 'Awaiting operator';
           const deadline = item.due_label || item.deadline || 'No deadline';
           const rowAction = /revision/i.test(status) ? 'Review requested changes' : (/delivery|active|progress/i.test(status) ? 'Continue execution' : nextAction);
+          const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
+          const clientUpdateCount = Array.isArray(item.client_updates) ? item.client_updates.length : 0;
+          const planCount = Array.isArray(item.operator_execution_desk?.execution_plans) ? item.operator_execution_desk.execution_plans.length : 0;
+          const payoutLabel = item.payout_value ? `${item.payout_status || 'Pending'} · ${item.payout_value}` : item.payout_status || 'Pending';
           return `
           <div class="operator-row">
             <div>
               <strong>${escapeHTML(clientName)}${workspaceSlug ? ` · @${escapeHTML(workspaceSlug)}` : ''}</strong>
               <span>${escapeHTML(taskId)} · ${escapeHTML(title)}</span>
               <small>${escapeHTML(status)} · Deadline: ${escapeHTML(deadline)} · Next: ${escapeHTML(rowAction)}</small>
+              <small>${escapeHTML(item.scope ? `Scope: ${item.scope}` : 'Scope available inside task context.')}</small>
+              <small>${escapeHTML(item.timeline ? `Timeline: ${item.timeline}` : 'Timeline pending')} · ${escapeHTML(payoutLabel)}</small>
               <div class="operator-row-actions">
                 ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
-                <button class="operator-row-action" type="button" data-operator-task-message="request_information" data-message-label="Request more information" data-task-reference="${escapeHTML(taskId)}">Request info</button>
-                <button class="operator-row-action" type="button" data-operator-task-message="prepare_execution_plan" data-message-label="Prepare execution plan" data-task-reference="${escapeHTML(taskId)}">Prepare plan</button>
-                <button class="operator-row-action" type="button" data-operator-task-message="ready_for_admin_review" data-message-label="Ready for admin review" data-task-reference="${escapeHTML(taskId)}">Ready for review</button>
-                ${Number(state.unread_messages || 0) ? '<span class="operator-row-action">Updates</span>' : ''}
+                <button class="operator-row-action" type="button" data-operator-task-action="request_information" data-task-reference="${escapeHTML(taskId)}">Request info</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="client_update" data-task-reference="${escapeHTML(taskId)}">Send update</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="execution_plan_draft" data-task-reference="${escapeHTML(taskId)}">Draft plan</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="submit_execution_plan" data-task-reference="${escapeHTML(taskId)}">Submit plan</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="upload_deliverable" data-task-reference="${escapeHTML(taskId)}">Deliverable</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="ready_for_admin_review" data-task-reference="${escapeHTML(taskId)}">Ready for review</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="archive_personal_view" data-task-reference="${escapeHTML(taskId)}">Archive view</button>
+                ${attachmentCount ? `<span class="operator-row-action">${attachmentCount} files</span>` : ''}
+                ${clientUpdateCount ? `<span class="operator-row-action">${clientUpdateCount} updates</span>` : ''}
+                ${planCount ? `<span class="operator-row-action">${planCount} plans</span>` : ''}
               </div>
             </div>
             <span class="status-pill ${operatorStatusClass(status)}">${escapeHTML(status)}</span>
@@ -3329,8 +3544,9 @@
               </div>
               <div class="operator-row-actions">
                 ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
-                <button class="operator-row-action" type="button" data-operator-task-message="upload_deliverable" data-message-label="Upload deliverable" data-task-reference="${escapeHTML(task.id || '')}">Deliverable</button>
-                <button class="operator-row-action" type="button" data-operator-task-message="ready_for_admin_review" data-message-label="Ready for admin review" data-task-reference="${escapeHTML(task.id || '')}">Ready for review</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="client_update" data-task-reference="${escapeHTML(task.id || '')}">Send update</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="upload_deliverable" data-task-reference="${escapeHTML(task.id || '')}">Deliverable</button>
+                <button class="operator-row-action" type="button" data-operator-task-action="ready_for_admin_review" data-task-reference="${escapeHTML(task.id || '')}">Ready for review</button>
               </div>
             </article>
           `;
@@ -3782,7 +3998,22 @@
         if (event.target.closest('[data-operator-support-close]')) closeSupportModal();
       });
 
+      taskActionSend?.addEventListener('click', sendTaskAction);
+
+      taskActionModal?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-operator-task-close]')) closeTaskActionModal();
+      });
+
       document.addEventListener('click', async (event) => {
+        const executionAction = event.target.closest?.('[data-operator-task-action]');
+        if (executionAction) {
+          openTaskActionModal({
+            taskReference: executionAction.dataset.taskReference || '',
+            actionType: executionAction.dataset.operatorTaskAction || 'client_update'
+          });
+          return;
+        }
+
         const taskAction = event.target.closest?.('[data-operator-task-message]');
         if (taskAction) {
           const reference = taskAction.dataset.taskReference || '';

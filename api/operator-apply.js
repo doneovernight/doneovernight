@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 
 const { clean, dispatchWebhook, getWebhookUrls, normalizeAccessKey, parseBody, send, supabaseFetch } = require("../lib/ops");
+const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
 const { loadOperatorRuntime } = require("../lib/operator-runtime");
 const { syncOperatorProfile } = require("../lib/operator-sync");
 const SUPABASE_AUTH_TIMEOUT_MS = 10_000;
@@ -671,6 +672,462 @@ async function notifyOperatorSupport({ operator, message, taskReference, message
   };
 }
 
+function normalizeTaskReference(value = "") {
+  const raw = clean(value).toUpperCase();
+  const match = raw.match(/DON-\d{4}-\d{5}/i);
+  return match ? match[0].toUpperCase() : raw.slice(0, 100);
+}
+
+function normalizeExternalLink(value = "") {
+  const raw = clean(value);
+  if (!raw) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return raw;
+  if (/^(?:www\.|[a-z0-9-]+\.)/i.test(raw)) return `https://${raw.replace(/^\/+/, "")}`;
+  return raw;
+}
+
+function normalizeOperatorLinks(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(/[\s,]+/);
+  return [...new Set(source.map(normalizeExternalLink).filter(Boolean))].slice(0, 12);
+}
+
+function normalizeOperatorAttachments(value) {
+  const source = Array.isArray(value) ? value : [];
+  return source
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === "string") return { name: clean(item).slice(0, 180) };
+      const name = clean(item.name || item.filename || item.title).slice(0, 180);
+      if (!name) return null;
+      return {
+        name,
+        filename: name,
+        mime_type: clean(item.mime_type || item.type).slice(0, 120),
+        size: Number(item.size || 0) || null,
+        url: normalizeExternalLink(item.url || item.signed_url || item.file_url || item.href),
+        bucket: clean(item.bucket).slice(0, 120),
+        path: clean(item.path || item.storage_path).slice(0, 500)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function buildTaskFilter(taskReference) {
+  const encoded = encodeURIComponent(taskReference);
+  if (/^DON-\d{4}-\d{5}$/i.test(taskReference)) return `task_id=eq.${encoded}`;
+  return `or=(id.eq.${encoded},task_id.eq.${encoded})`;
+}
+
+async function loadTaskByReference(taskReference) {
+  const reference = normalizeTaskReference(taskReference);
+  if (!reference) return null;
+  const rows = await supabaseFetch([
+    `task_requests?${buildTaskFilter(reference)}`,
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+async function loadOperatorAssignmentsForScope(operator) {
+  const handle = normalizeOperatorHandle(operator.handle || operator.username);
+  const paths = [
+    operator.id ? `operator_assignments?operator_profile_id=eq.${encodeURIComponent(operator.id)}&select=*&limit=100` : "",
+    operator.id ? `operator_assignments?assigned_operator_id=eq.${encodeURIComponent(operator.id)}&select=*&limit=100` : "",
+    handle ? `operator_assignments?operator_handle=eq.${encodeURIComponent(handle)}&select=*&limit=100` : "",
+    operator.id ? `operator_client_relationships?operator_profile_id=eq.${encodeURIComponent(operator.id)}&select=*&limit=100` : "",
+    handle ? `operator_client_relationships?operator_handle=eq.${encodeURIComponent(handle)}&select=*&limit=100` : ""
+  ].filter(Boolean);
+  const groups = await Promise.all(paths.map((path) => supabaseFetch(path).catch(() => [])));
+  return groups.flat().filter((row) => row && typeof row === "object");
+}
+
+function taskWorkspaceSlug(task = {}) {
+  const raw = rawPayloadOf(task);
+  return clean(task.workspace_slug || raw.workspace_slug || raw.slug || raw.client_workspace_slug).toLowerCase();
+}
+
+function taskReferenceOf(task = {}) {
+  const raw = rawPayloadOf(task);
+  return normalizeTaskReference(task.task_id || task.taskId || task.reference || raw.task_id || raw.taskId || raw.reference || task.id);
+}
+
+function operatorCanAccessTask({ task, relationships = [] }) {
+  const reference = taskReferenceOf(task);
+  const slug = taskWorkspaceSlug(task);
+  return relationships.some((item) => {
+    const itemRaw = rawPayloadOf(item);
+    const relationshipStatus = clean(item.relationship_status || item.status || "active").toLowerCase();
+    if (["archived", "revoked", "inactive", "deleted"].includes(relationshipStatus)) return false;
+    const itemReference = normalizeTaskReference(item.task_id || item.taskId || item.reference || item.don_reference || itemRaw.task_id || itemRaw.reference);
+    const itemSlug = clean(item.workspace_slug || item.client_workspace_slug || itemRaw.workspace_slug || itemRaw.slug).toLowerCase();
+    return (reference && itemReference && reference === itemReference) || (slug && itemSlug && slug === itemSlug);
+  });
+}
+
+function taskClientEmail(task = {}) {
+  const raw = rawPayloadOf(task);
+  return clean(task.email || task.client_email || raw.email || raw.client_email).toLowerCase();
+}
+
+function operatorDisplayLabel(operator = {}) {
+  const handle = operator.handle ? `@${operator.handle}` : "@operator";
+  const name = clean(operator.display_name || operator.name || operator.email) || "DONEOVERNIGHT Operator";
+  return `${name} ${handle}`;
+}
+
+async function patchTaskRawPayload(task, updater) {
+  const raw = rawPayloadOf(task);
+  const nextRaw = updater(raw);
+  const reference = taskReferenceOf(task);
+  const now = new Date().toISOString();
+  const patch = {
+    raw_payload: nextRaw,
+    updated_at: now
+  };
+  let activePatch = { ...patch };
+  const droppedColumns = [];
+  for (let attempt = 0; attempt < Object.keys(patch).length + 2; attempt += 1) {
+    try {
+      const rows = await supabaseFetch(`task_requests?${buildTaskFilter(reference)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(activePatch)
+      });
+      return {
+        task: Array.isArray(rows) ? rows[0] : rows,
+        persisted_fields: Object.keys(activePatch),
+        skipped_missing_columns: droppedColumns
+      };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePatch, column)) throw error;
+      droppedColumns.push(column);
+      delete activePatch[column];
+    }
+  }
+  return { task: { ...task, raw_payload: nextRaw }, persisted_fields: ["raw_payload"], skipped_missing_columns: droppedColumns };
+}
+
+function operatorTaskActionConfig(action) {
+  const normalized = clean(action).toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+  const configs = {
+    request_information: {
+      title: "Operator requested information",
+      activity_type: "operator_request_information",
+      requiredMessage: true,
+      unreadForAdmin: true
+    },
+    client_update: {
+      title: "Operator client update",
+      activity_type: "operator_client_update",
+      requiredMessage: true,
+      unreadForAdmin: true,
+      clientVisible: true
+    },
+    execution_plan_draft: {
+      title: "Execution plan draft",
+      activity_type: "operator_execution_plan_draft",
+      unreadForAdmin: true,
+      planStatus: "draft"
+    },
+    submit_execution_plan: {
+      title: "Execution plan submitted to Admin",
+      activity_type: "operator_execution_plan_submitted",
+      unreadForAdmin: true,
+      planStatus: "submitted_to_admin"
+    },
+    upload_deliverable: {
+      title: "Operator deliverable submitted",
+      activity_type: "operator_deliverable_submitted",
+      unreadForAdmin: true
+    },
+    ready_for_admin_review: {
+      title: "Operator ready for Admin review",
+      activity_type: "operator_ready_for_admin_review",
+      unreadForAdmin: true,
+      readyForReview: true
+    },
+    archive_personal_view: {
+      title: "Operator archived personal view",
+      activity_type: "operator_archive_personal_view",
+      unreadForAdmin: false
+    }
+  };
+  return configs[normalized] ? { action: normalized, ...configs[normalized] } : null;
+}
+
+function buildOperatorReadyReviewTelegram({ operator, taskReference, workspaceSlug, message, createdAt }) {
+  return [
+    "🟢 OPERATOR READY FOR REVIEW",
+    "",
+    `Operator: ${operator?.handle ? `@${operator.handle}` : "@operator"}`,
+    `Task: ${taskReference || "Unknown"}`,
+    workspaceSlug ? `Workspace: @${workspaceSlug}` : "",
+    message ? ["", "Message:", message].join("\n") : "",
+    "",
+    `Submitted: ${createdAt}`
+  ].filter(Boolean).join("\n");
+}
+
+async function notifyOperatorReadyForReview({ operator, taskReference, workspaceSlug, message, createdAt }) {
+  const text = buildOperatorReadyReviewTelegram({ operator, taskReference, workspaceSlug, message, createdAt });
+  const result = await dispatchWebhook({
+    tag: "[OPERATOR_READY_FOR_REVIEW]",
+    event: "operator_ready_for_admin_review",
+    urls: getWebhookUrls(["OPERATOR_RUNTIME_TELEGRAM_WEBHOOK_URL", "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"]),
+    payload: {
+      event: "operator_ready_for_admin_review",
+      notification_type: "operator_ready_for_review",
+      operator_slug: operator?.handle || "",
+      operator_handle: operator?.handle || "",
+      operator_name: operator?.display_name || operator?.name || "",
+      task_id: taskReference,
+      task_reference: taskReference,
+      workspace_slug: workspaceSlug,
+      message,
+      telegram_message: text,
+      text,
+      created_at: createdAt
+    },
+    timeoutMs: OPERATOR_NOTIFY_TIMEOUT_MS
+  });
+  return {
+    configured: result.attempted > 0,
+    delivered: result.fulfilled > 0,
+    attempted: result.attempted,
+    fulfilled: result.fulfilled
+  };
+}
+
+async function insertOperatorWorkspaceMessage({ task, operator, taskReference, workspaceSlug, message, notes, links, attachments, createdAt }) {
+  const email = taskClientEmail(task);
+  if (!workspaceSlug || !email || !message) {
+    return { inserted: false, reason: "workspace_context_missing" };
+  }
+  const payload = {
+    workspace_slug: workspaceSlug,
+    task_id: taskReference,
+    email,
+    author_role: "operator",
+    message_type: "operator_update",
+    message,
+    metadata: {
+      source: "operator_execution_desk",
+      update_type: "operator_update",
+      visibility: "client",
+      task_id: taskReference,
+      operation: taskReference,
+      workspace_slug: workspaceSlug,
+      operator_slug: operator.handle || "",
+      operator_display_name: operator.display_name || operator.name || "",
+      operator_label: operatorDisplayLabel(operator),
+      notes,
+      links,
+      attachments,
+      submitted_at: createdAt
+    }
+  };
+  const rows = await supabaseFetch("workspace_messages", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload)
+  });
+  return { inserted: true, message: Array.isArray(rows) ? rows[0] : rows };
+}
+
+async function handleOperatorTaskAction(req, input) {
+  const current = await getOperatorSession(req);
+  if (!current?.operator?.id) {
+    const error = new Error("Operator login required");
+    error.statusCode = 401;
+    error.code = "OPERATOR_SESSION_REQUIRED";
+    throw error;
+  }
+  const config = operatorTaskActionConfig(input.operator_action || input.operatorAction || input.task_action);
+  if (!config) {
+    const error = new Error("Operator action is not allowed");
+    error.statusCode = 400;
+    error.code = "OPERATOR_ACTION_NOT_ALLOWED";
+    throw error;
+  }
+  const taskReference = normalizeTaskReference(input.task_reference || input.task_id || input.don_reference || input.reference);
+  const task = await loadTaskByReference(taskReference);
+  if (!task) {
+    const error = new Error("Assigned task not found");
+    error.statusCode = 404;
+    error.code = "OPERATOR_TASK_NOT_FOUND";
+    throw error;
+  }
+  const relationships = await loadOperatorAssignmentsForScope(current.operator);
+  if (!operatorCanAccessTask({ task, relationships })) {
+    const error = new Error("This task is not assigned to this operator");
+    error.statusCode = 403;
+    error.code = "OPERATOR_TASK_NOT_ASSIGNED";
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const reference = taskReferenceOf(task);
+  const workspaceSlug = taskWorkspaceSlug(task);
+  const message = clean(input.message || input.body || input.update).slice(0, 3000);
+  const notes = clean(input.notes).slice(0, 3000);
+  const scope = clean(input.scope).slice(0, 5000);
+  const timeline = clean(input.timeline).slice(0, 1000);
+  const deliverablesText = clean(input.deliverables).slice(0, 5000);
+  const links = normalizeOperatorLinks(input.links || input.link);
+  const attachments = normalizeOperatorAttachments(input.attachments || input.files);
+  if (config.requiredMessage && !message) {
+    const error = new Error("Message is required for this operator action");
+    error.statusCode = 400;
+    error.code = "OPERATOR_ACTION_MESSAGE_REQUIRED";
+    throw error;
+  }
+  if (config.planStatus && !scope && !timeline && !deliverablesText && !notes) {
+    const error = new Error("Execution plan details are required");
+    error.statusCode = 400;
+    error.code = "OPERATOR_EXECUTION_PLAN_REQUIRED";
+    throw error;
+  }
+  if (config.action === "upload_deliverable" && !message && !notes && !links.length && !attachments.length) {
+    const error = new Error("Deliverable details are required");
+    error.statusCode = 400;
+    error.code = "OPERATOR_DELIVERABLE_REQUIRED";
+    throw error;
+  }
+
+  const actionRecord = {
+    id: `operator_action_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+    action: config.action,
+    label: config.title,
+    status: config.planStatus || (config.readyForReview ? "ready_for_admin_review" : "recorded"),
+    task_id: reference,
+    task_reference: reference,
+    workspace_slug: workspaceSlug,
+    operator_slug: current.operator.handle || "",
+    operator_display_name: current.operator.display_name || current.operator.name || "",
+    message,
+    notes,
+    scope,
+    timeline,
+    deliverables: deliverablesText,
+    links,
+    attachments,
+    client_visible: config.clientVisible === true,
+    created_at: now
+  };
+
+  const patchResult = await patchTaskRawPayload(task, (raw) => {
+    const desk = raw.operator_execution_desk && typeof raw.operator_execution_desk === "object" ? raw.operator_execution_desk : {};
+    const next = {
+      ...desk,
+      last_operator_action: actionRecord,
+      last_operator_action_at: now,
+      operator_slug: current.operator.handle || desk.operator_slug || "",
+      task_reference: reference
+    };
+    const append = (key) => [actionRecord, ...(Array.isArray(desk[key]) ? desk[key] : [])].slice(0, 50);
+    if (["request_information", "client_update"].includes(config.action)) next.updates = append("updates");
+    if (config.planStatus) next.execution_plans = append("execution_plans");
+    if (config.action === "upload_deliverable") next.deliverables = append("deliverables");
+    if (config.readyForReview) {
+      next.ready_for_admin_review = true;
+      next.ready_for_admin_review_at = now;
+      next.ready_for_admin_review_by = current.operator.handle || current.operator.email || "";
+      next.ready_for_admin_review_record = actionRecord;
+    }
+    if (config.action === "archive_personal_view") {
+      next.archived_personal_views = append("archived_personal_views");
+    }
+    return {
+      ...raw,
+      operator_execution_desk: next
+    };
+  });
+
+  const activity = await insertOperatorRuntimeActivity({
+    operator_profile_id: current.operator.id,
+    operator_handle: current.operator.handle || "",
+    activity_type: config.activity_type,
+    title: config.title,
+    body: message || notes || scope || deliverablesText || config.title,
+    message: message || notes || "",
+    detail: notes || scope || deliverablesText || "",
+    actor_role: "operator",
+    sender_role: "operator",
+    workspace_slug: workspaceSlug,
+    task_id: reference,
+    task_reference: reference,
+    don_reference: reference,
+    unread_for_admin: config.unreadForAdmin === true,
+    unread_for_operator: false,
+    raw_payload: {
+      ...actionRecord,
+      source: "operator_execution_desk",
+      permission_scope: "operator_assigned_task"
+    },
+    created_at: now,
+    updated_at: now
+  });
+
+  let needsInfoEmail = null;
+  if (config.action === "request_information") {
+    needsInfoEmail = await sendNeedsInfoEmail({
+      ...task,
+      information_request: message,
+      raw_payload: {
+        ...rawPayloadOf(task),
+        information_request: message,
+        requested_by_operator: {
+          display_name: current.operator.display_name || current.operator.name || "",
+          slug: current.operator.handle || "",
+          role: current.operator.role_type || ""
+        }
+      }
+    }).catch((error) => ({ sent: false, delivered: false, error: error.message || "OPERATOR_NEEDS_INFO_EMAIL_FAILED" }));
+  }
+
+  let workspaceMessage = null;
+  if (config.clientVisible) {
+    workspaceMessage = await insertOperatorWorkspaceMessage({
+      task,
+      operator: current.operator,
+      taskReference: reference,
+      workspaceSlug,
+      message,
+      notes,
+      links,
+      attachments,
+      createdAt: now
+    }).catch((error) => ({ inserted: false, error: error.message || "OPERATOR_WORKSPACE_MESSAGE_FAILED" }));
+  }
+
+  let telegram = null;
+  if (config.readyForReview) {
+    telegram = await notifyOperatorReadyForReview({
+      operator: current.operator,
+      taskReference: reference,
+      workspaceSlug,
+      message,
+      createdAt: now
+    }).catch((error) => ({ configured: false, delivered: false, error: error.message || "OPERATOR_READY_TELEGRAM_FAILED" }));
+  }
+
+  return {
+    action: config.action,
+    task_id: reference,
+    workspace_slug: workspaceSlug,
+    activity: activity.row,
+    task: patchResult.task,
+    persisted_fields: patchResult.persisted_fields,
+    skipped_missing_columns: patchResult.skipped_missing_columns,
+    needs_info_email: needsInfoEmail,
+    workspace_message: workspaceMessage,
+    telegram
+  };
+}
+
 async function createOperatorHqMessage(req, input) {
   const current = await getOperatorSession(req);
   if (!current?.operator?.id) {
@@ -1103,6 +1560,11 @@ module.exports = async function handler(req, res) {
 
     if (action === "operator_hq_message") {
       const result = await createOperatorHqMessage(req, input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "operator_task_action") {
+      const result = await handleOperatorTaskAction(req, input);
       return send(res, 200, { success: true, ...result });
     }
 

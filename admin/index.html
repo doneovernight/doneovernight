@@ -4319,6 +4319,113 @@ function renderAdminOperationUpdates(task = {}) {
   `;
 }
 
+function getAdminOperatorExecutionDesk(task = {}) {
+  const raw = task.raw_payload || task.rawPayload || {};
+  return raw.operator_execution_desk && typeof raw.operator_execution_desk === 'object' ? raw.operator_execution_desk : {};
+}
+
+function renderOperatorDeskRecord(record = {}, fallbackLabel = 'Operator update') {
+  const label = String(record.label || record.title || fallbackLabel).trim();
+  const operator = [record.operator_display_name, record.operator_slug ? `@${record.operator_slug}` : ''].filter(Boolean).join(' · ');
+  const body = String(record.message || record.notes || record.scope || record.deliverables || '').trim();
+  const links = Array.isArray(record.links) ? record.links.map(normalizeAdminExternalLink).filter(Boolean) : [];
+  const attachments = Array.isArray(record.attachments) ? record.attachments : [];
+  return `
+    <div class="admin-task-update">
+      <div class="admin-task-update-head">
+        <strong>${escapeHTML(label)}</strong>
+        <time>${escapeHTML(formatTaskDate(record.created_at) || 'Just now')}</time>
+      </div>
+      ${operator ? `
+        <div class="admin-task-update-field">
+          <span>Operator</span>
+          <strong>${escapeHTML(operator)}</strong>
+        </div>
+      ` : ''}
+      ${record.scope ? `
+        <div class="admin-task-update-field">
+          <span>Scope</span>
+          <strong>${escapeHTML(record.scope)}</strong>
+        </div>
+      ` : ''}
+      ${record.timeline ? `
+        <div class="admin-task-update-field">
+          <span>Timeline</span>
+          <strong>${escapeHTML(record.timeline)}</strong>
+        </div>
+      ` : ''}
+      ${record.deliverables ? `
+        <div class="admin-task-update-field">
+          <span>Deliverables</span>
+          <strong>${escapeHTML(record.deliverables)}</strong>
+        </div>
+      ` : ''}
+      ${record.notes ? `
+        <div class="admin-task-update-field">
+          <span>Notes</span>
+          <strong>${escapeHTML(record.notes)}</strong>
+        </div>
+      ` : ''}
+      ${body && !record.scope && !record.deliverables ? `
+        <div class="admin-task-update-field">
+          <span>Message</span>
+          <strong>${escapeHTML(body)}</strong>
+        </div>
+      ` : ''}
+      ${links.length ? `
+        <div class="admin-attachment-list">
+          ${links.map((link) => `
+            <div class="admin-attachment-row">
+              <div><strong>Reference Link</strong><span>${escapeHTML(link)}</span></div>
+              <a class="admin-payment-link" href="${escapeHTML(link)}" target="_blank" rel="noopener noreferrer">Open link</a>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${attachments.length ? `
+        <div class="admin-attachment-list">
+          ${attachments.map((attachment) => {
+            const name = attachment.name || attachment.filename || attachment.title || 'Attachment';
+            const url = getAttachmentUrl(attachment);
+            return `
+              <div class="admin-attachment-row">
+                <div><strong>${escapeHTML(name)}</strong><span>${escapeHTML([attachment.mime_type || attachment.type, formatAttachmentSize(attachment.size)].filter(Boolean).join(' · '))}</span></div>
+                ${url ? `<a class="admin-payment-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">Open file</a>` : '<span class="admin-payment-link" aria-disabled="true">No URL</span>'}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+function renderAdminOperatorExecutionDesk(task = {}) {
+  const desk = getAdminOperatorExecutionDesk(task);
+  const updates = Array.isArray(desk.updates) ? desk.updates : [];
+  const plans = Array.isArray(desk.execution_plans) ? desk.execution_plans : [];
+  const deliverables = Array.isArray(desk.deliverables) ? desk.deliverables : [];
+  const readyRecord = desk.ready_for_admin_review_record ? [desk.ready_for_admin_review_record] : [];
+  const records = [...readyRecord, ...plans, ...deliverables, ...updates]
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  if (!records.length && desk.ready_for_admin_review !== true) return '';
+  const readyLabel = desk.ready_for_admin_review
+    ? `Ready for Admin review${desk.ready_for_admin_review_at ? ` · ${formatTaskDate(desk.ready_for_admin_review_at)}` : ''}`
+    : 'Operator movement';
+  return `
+    <details class="admin-task-detail admin-client-updates" open>
+      <summary class="admin-client-updates-summary">
+        <strong>Operator Execution Desk</strong>
+        <span class="${desk.ready_for_admin_review ? 'is-unread' : ''}">${escapeHTML(readyLabel)}</span>
+      </summary>
+      <div class="admin-client-updates-body">
+        ${records.slice(0, 8).map((record) => renderOperatorDeskRecord(record, 'Operator update')).join('')}
+      </div>
+    </details>
+  `;
+}
+
 function formatReferralSource(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'referral_email') return 'Email Referral';
@@ -4408,6 +4515,7 @@ function getTaskRenderSignature(task) {
     task.raw_payload?.information_request_sent_at,
     task.raw_payload?.information_request_email_status,
     task.raw_payload?.information_request_email_error,
+    JSON.stringify(task.raw_payload?.operator_execution_desk || {}),
     task.updated_at,
     task.created_at
   ].map((value) => String(value ?? '')).join('::');
@@ -6452,6 +6560,7 @@ function renderTasks(tasks) {
         ${activationStatusBanner}
         ${informationRequestBanner}
         ${renderAdminOperationUpdates(task)}
+        ${renderAdminOperatorExecutionDesk(task)}
         ${(task.quote_amount || task.quote_note || task.delivery_eta) ? `
           <div class="admin-task-detail">
             <span class="admin-task-detail-label">Execution Plan</span>
