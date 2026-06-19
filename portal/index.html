@@ -418,7 +418,50 @@
       const googleButton = document.getElementById('portalGoogleAccess');
       const params = new URLSearchParams(window.location.search);
       const requestedWorkspace = params.get('workspace') || '';
+      const OPERATOR_REFERRAL_STORAGE_KEY = 'doneovernight:operatorReferral';
       if (requestedWorkspace) document.getElementById('portalIdentifier').value = requestedWorkspace.replace(/^@+/, '');
+
+      function normalizeOperatorHandle(value = '') {
+        const decoded = (() => {
+          try { return decodeURIComponent(String(value || '')); } catch (error) { return String(value || ''); }
+        })().trim().replace(/^@+/, '');
+        const cleanMatch = decoded.match(/^[a-z0-9][a-z0-9_-]*/i);
+        const clean = (cleanMatch?.[0] || '').toLowerCase().slice(0, 48);
+        if (/^doneovernight/i.test(decoded) && /\s/.test(decoded) && clean.startsWith('doneovernight')) return 'doneovernight';
+        return clean;
+      }
+
+      function getOperatorReferral() {
+        const fromParams = normalizeOperatorHandle(params.get('operator') || params.get('operator_handle') || params.get('referring_operator_slug') || params.get('ref'));
+        if (fromParams) {
+          const payload = {
+            operator_slug: fromParams,
+            referring_operator_slug: fromParams,
+            source: 'operator_referral',
+            stored_at: new Date().toISOString()
+          };
+          try {
+            sessionStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(payload));
+            localStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(payload));
+          } catch (error) {}
+          return payload;
+        }
+        try {
+          return JSON.parse(sessionStorage.getItem(OPERATOR_REFERRAL_STORAGE_KEY) || localStorage.getItem(OPERATOR_REFERRAL_STORAGE_KEY) || 'null') || {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function operatorReferralPayload() {
+        const referral = getOperatorReferral();
+        const operatorSlug = normalizeOperatorHandle(referral.operator_slug || referral.referring_operator_slug);
+        return operatorSlug ? {
+          operator_slug: operatorSlug,
+          referring_operator_slug: operatorSlug,
+          source: 'operator_referral'
+        } : {};
+      }
 
       function setMessage(text, type = '') {
         message.textContent = text;
@@ -453,7 +496,7 @@
         const response = await fetch('../api/workspace-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ action: 'google_access', access_token: accessToken })
+          body: JSON.stringify({ action: 'google_access', access_token: accessToken, ...operatorReferralPayload() })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || data?.success !== true) {
@@ -500,11 +543,18 @@
           return;
         }
         googleButton.disabled = true;
+        getOperatorReferral();
         setMessage('Opening secure Google access…');
+        const redirectUrl = new URL(`${window.location.origin}/portal/`);
+        const referral = operatorReferralPayload();
+        if (referral.operator_slug) {
+          redirectUrl.searchParams.set('operator', referral.operator_slug);
+          redirectUrl.searchParams.set('source', 'operator_referral');
+        }
         const { error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/portal/`,
+            redirectTo: redirectUrl.toString(),
             queryParams: { prompt: 'select_account' }
           }
         });
@@ -530,7 +580,7 @@
           const response = await fetch('../api/workspace-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ action: 'access', identifier, access_key: accessKey })
+            body: JSON.stringify({ action: 'access', identifier, access_key: accessKey, ...operatorReferralPayload() })
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok || data?.success !== true) throw new Error(data?.error || 'Access denied');

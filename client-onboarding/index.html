@@ -534,11 +534,6 @@
           <div class="operator-role" id="operatorReferralRole">Specialist layer</div>
           <p class="operator-note" id="operatorReferralNote">Private execution. Operational systems. Overnight delivery.</p>
         </div>
-        <div class="onboarding-path" aria-label="Client onboarding path">
-          <div class="onboarding-path-item"><span>1</span><div data-l10n="pathOne">Continue access or create a new workspace.</div></div>
-          <div class="onboarding-path-item"><span>2</span><div data-l10n="pathTwo">DONEOVERNIGHT connects your request to the private operating layer.</div></div>
-          <div class="onboarding-path-item"><span>3</span><div data-l10n="pathThree">Track execution, files, updates, and delivery from the workspace.</div></div>
-        </div>
       </div>
 
       <aside class="panel">
@@ -547,12 +542,12 @@
           <p class="auth-entry-copy" data-l10n="continueCopy">Already have a workspace? Continue with your existing account.</p>
           <div class="auth-actions">
             <button class="button is-secondary" id="googleOnboarding" type="button" data-l10n="continueGoogle">Continue with Google</button>
-            <a class="button is-quiet-link" id="existingWorkspaceLink" href="https://portal.doneovernight.com/workspace" data-l10n="signIn">Sign In</a>
+            <a class="button is-quiet-link" id="existingWorkspaceLink" href="https://portal.doneovernight.com/" data-l10n="signIn">Sign In</a>
           </div>
         </div>
         <form class="form" id="onboardingForm" novalidate>
           <div class="divider" data-l10n="createDivider">or create a new workspace</div>
-          <h2 class="form-title" data-l10n="createWorkspace">Create New Workspace</h2>
+          <h2 class="form-title" data-l10n="createWorkspace">Create Private Workspace</h2>
           <div class="field">
             <label for="clientName" data-l10n="nameLabel">Name</label>
             <input id="clientName" name="name" autocomplete="name" required>
@@ -618,6 +613,8 @@
       const operatorReferralLabel = document.getElementById('operatorReferralLabel');
       const existingWorkspaceLink = document.getElementById('existingWorkspaceLink');
       const projectField = document.getElementById('projectField');
+      const WORKSPACE_DATA_ENDPOINT = '../api/workspace-data';
+      const OPERATOR_REFERRAL_STORAGE_KEY = 'doneovernight:operatorReferral';
       let googleAccessToken = '';
       let googleProfileImage = '';
       let projectTouched = false;
@@ -630,7 +627,8 @@
           heroTitle: 'Introduced through DONEOVERNIGHT.',
           heroCopy: 'You were invited through the DONEOVERNIGHT operator network. Continue with your existing account or create a private workspace to begin.',
           introducedBy: 'Introduced by',
-          networkIntro: 'Introduced through the DONEOVERNIGHT operator network.',
+          introducedThrough: 'Introduced through',
+          networkIntro: 'DONEOVERNIGHT Operations.',
           fallbackRole: 'Private referral access',
           fallbackNote: 'Private execution. Operational systems. Overnight delivery.',
           specialistLayer: 'Specialist layer',
@@ -642,7 +640,7 @@
           continueGoogle: 'Continue with Google',
           signIn: 'Sign In',
           createDivider: 'or create a new workspace',
-          createWorkspace: 'Create New Workspace',
+          createWorkspace: 'Create Private Workspace',
           nameLabel: 'Name',
           emailLabel: 'Email',
           usernameLabel: 'Username',
@@ -682,7 +680,8 @@
           heroTitle: 'Geïntroduceerd via DONEOVERNIGHT.',
           heroCopy: 'U bent uitgenodigd via het DONEOVERNIGHT operatornetwerk. Ga verder met uw bestaande account of maak een private werkomgeving aan om te beginnen.',
           introducedBy: 'Geïntroduceerd door',
-          networkIntro: 'Geïntroduceerd via het DONEOVERNIGHT operatornetwerk.',
+          introducedThrough: 'Geïntroduceerd via',
+          networkIntro: 'DONEOVERNIGHT Operations.',
           fallbackRole: 'Private referraltoegang',
           fallbackNote: 'Private uitvoering. Operationele systemen. Overnight delivery.',
           specialistLayer: 'Specialistische laag',
@@ -694,7 +693,7 @@
           continueGoogle: 'Doorgaan met Google',
           signIn: 'Inloggen',
           createDivider: 'of maak een nieuwe werkomgeving aan',
-          createWorkspace: 'Nieuwe werkomgeving aanmaken',
+          createWorkspace: 'Private werkomgeving aanmaken',
           nameLabel: 'Naam',
           emailLabel: 'E-mail',
           usernameLabel: 'Gebruikersnaam',
@@ -765,6 +764,33 @@
         };
       }
 
+      function persistOperatorReferral() {
+        if (!operatorReferral.operator_slug) return;
+        const payload = {
+          referring_operator_slug: operatorReferral.operator_slug,
+          operator_slug: operatorReferral.operator_slug,
+          operator_name: operatorReferral.operator_name || '',
+          operator_role: operatorReferral.operator_role || '',
+          referral_url: operatorReferral.referral_url || `https://client.doneovernight.com/@${encodeURIComponent(operatorReferral.operator_slug)}`,
+          source: 'operator_referral',
+          stored_at: new Date().toISOString()
+        };
+        try {
+          sessionStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(payload));
+          localStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(payload));
+        } catch (error) {}
+      }
+
+      function syncSignInHref() {
+        if (!existingWorkspaceLink) return;
+        const url = new URL('https://portal.doneovernight.com/');
+        if (operatorReferral.operator_slug) {
+          url.searchParams.set('operator', operatorReferral.operator_slug);
+          url.searchParams.set('source', 'operator_referral');
+        }
+        existingWorkspaceLink.href = url.toString();
+      }
+
       function activeLocale() {
         const runtimeLang = window.DONEOVERNIGHT_LANG?.get?.();
         const storedLang = (() => {
@@ -790,6 +816,7 @@
         });
         if (!submit.disabled) submit.textContent = l10n('submitButton');
         renderOperatorReferralCard();
+        syncSignInHref();
         updateProjectValidation();
       }
 
@@ -831,12 +858,15 @@
       function renderOperatorReferralCard() {
         if (!operatorReferral.operator_slug || !operatorReferralCard) return;
         operatorReferralCard.hidden = false;
+        persistOperatorReferral();
+        syncSignInHref();
         const hasProfile = Boolean(operatorReferral.operator_name || operatorReferral.profile_found);
         operatorReferralCard.classList.toggle('is-network', !hasProfile);
         if (!hasProfile) {
-          if (operatorReferralLabel) operatorReferralLabel.textContent = l10n('networkIntro');
-          operatorReferralName.textContent = '';
-          operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
+          if (operatorReferralLabel) operatorReferralLabel.textContent = l10n('introducedThrough');
+          operatorReferralName.textContent = l10n('networkIntro');
+          operatorReferralHandle.textContent = '';
+          operatorReferralHandle.hidden = true;
           operatorReferralRole.textContent = '';
           operatorReferralNote.textContent = '';
           return;
@@ -844,6 +874,7 @@
         if (operatorReferralLabel) operatorReferralLabel.textContent = l10n('introducedBy');
         operatorReferralName.textContent = operatorReferral.operator_name || '';
         operatorReferralHandle.textContent = `@${operatorReferral.operator_slug}`;
+        operatorReferralHandle.hidden = false;
         operatorReferralRole.textContent = operatorReferral.operator_role || l10n('specialistLayer');
         operatorReferralNote.textContent = operatorReferral.operator_note || l10n('fallbackNote');
       }
@@ -912,6 +943,34 @@
         const meta = user.user_metadata || {};
         googleAccessToken = session.access_token || '';
         googleProfileImage = meta.avatar_url || meta.picture || '';
+        if (operatorReferral.operator_slug) {
+          setMessage(activeLocale() === 'nl' ? 'Google bevestigd. Bestaande werkomgeving controleren…' : 'Google verified. Checking existing workspace…');
+          try {
+            const response = await fetch(WORKSPACE_DATA_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                action: 'google_access',
+                access_token: googleAccessToken,
+                operator_slug: operatorReferral.operator_slug,
+                operator_name: operatorReferral.operator_name,
+                operator_role: operatorReferral.operator_role,
+                referral_url: operatorReferral.referral_url
+              })
+            });
+            const workspaceData = await response.json().catch(() => ({}));
+            if (response.ok && workspaceData?.success === true && workspaceData.redirectTo) {
+              sessionStorage.setItem('portal_auth_method', 'google');
+              if (workspaceData.workspace?.email) sessionStorage.setItem('portal_email', workspaceData.workspace.email);
+              if (workspaceData.workspace?.name) sessionStorage.setItem('portal_name', workspaceData.workspace.name);
+              if (workspaceData.workspace?.slug) sessionStorage.setItem('doneovernight_workspace_slug', workspaceData.workspace.slug);
+              window.location.assign(workspaceData.redirectTo);
+              return;
+            }
+          } catch (error) {
+            // No active workspace was found; continue with new workspace preparation.
+          }
+        }
         const name = meta.full_name || meta.name || '';
         if (name && !document.getElementById('clientName').value.trim()) document.getElementById('clientName').value = name;
         if (user.email && !document.getElementById('clientEmail').value.trim()) document.getElementById('clientEmail').value = user.email;
@@ -925,6 +984,7 @@
           return;
         }
         googleButton.disabled = true;
+        persistOperatorReferral();
         setMessageKey('googleOpening');
         const { error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',

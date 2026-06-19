@@ -2462,6 +2462,43 @@
       letter-spacing: -.02em;
     }
 
+    .connected-operator-card {
+      display: grid;
+      gap: 10px;
+      max-width: 520px;
+    }
+
+    .connected-operator-card h3 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -.025em;
+    }
+
+    .connected-operator-handle {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .connected-operator-role {
+      color: rgba(245,241,234,.76);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .connected-operator-copy {
+      margin: 0;
+      color: rgba(245,241,234,.54);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
     .runtime-archive-card {
       border: 1px solid rgba(255,255,255,.08);
       border-radius: 10px;
@@ -3962,6 +3999,9 @@
       <div class="workspace-os-card" id="workspaceActiveProject">
         <div class="workspace-os-empty">Workspace is syncing…</div>
       </div>
+      <div class="workspace-os-card" id="workspaceConnectedOperatorPanel" hidden>
+        <div class="workspace-os-empty">Connected operator is syncing…</div>
+      </div>
       <div class="workspace-os-card workspace-task-history" id="workspaceAllTasksPanel">
         <div class="workspace-os-empty">Task history is syncing…</div>
       </div>
@@ -4452,6 +4492,7 @@
       const WORKSPACE_QUOTES_ENDPOINT = '../api/workspace-quotes';
       const WORKSPACE_SESSION_ENDPOINT = '../api/workspace-data';
       const WORKSPACE_PENDING_DEEP_LINK_KEY = 'doneovernight:pendingWorkspaceDeepLink';
+      const OPERATOR_REFERRAL_STORAGE_KEY = 'doneovernight:operatorReferral';
       const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const workspaceShell = document.getElementById('workspaceShell');
@@ -4469,6 +4510,7 @@
       const workspaceActivityFeed = document.getElementById('workspaceActivityFeed');
       const workspaceOs = document.getElementById('workspaceOs');
       const workspaceActiveProject = document.getElementById('workspaceActiveProject');
+      const workspaceConnectedOperatorPanel = document.getElementById('workspaceConnectedOperatorPanel');
       const workspaceAllTasksPanel = document.getElementById('workspaceAllTasksPanel');
       const workspaceNotificationsPanel = document.getElementById('workspaceNotificationsPanel');
       const workspaceFilesPanel = document.getElementById('workspaceFilesPanel');
@@ -4531,6 +4573,7 @@
       let workspaceReferrals = null;
       let workspaceBusinessProfile = null;
       let workspaceMemory = null;
+      let workspaceConnectedOperator = null;
       let localSubmittedWorkspaceTasks = [];
       let selectedWorkspaceTaskKey = '';
       let activeOperationUpdateTaskKey = '';
@@ -4590,6 +4633,63 @@
 
       function normalizeSlug(value) {
         return String(value || '').trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      }
+
+      function normalizeOperatorReferralHandle(value = '') {
+        const raw = String(value || '').trim().replace(/^@+/, '').toLowerCase();
+        const firstSegment = (raw.match(/[a-z0-9][a-z0-9_-]{1,48}/) || [''])[0];
+        if (/^doneovernight/i.test(raw) && /\s/.test(raw) && firstSegment.startsWith('doneovernight')) return 'doneovernight';
+        return firstSegment || '';
+      }
+
+      function storePendingOperatorReferral(payload = {}) {
+        const slug = normalizeOperatorReferralHandle(payload.operator_slug || payload.referring_operator_slug || payload.operator || payload.ref);
+        if (!slug) return null;
+        const stored = {
+          ...payload,
+          operator_slug: slug,
+          referring_operator_slug: slug,
+          source: payload.source || 'operator_referral',
+          stored_at: payload.stored_at || new Date().toISOString()
+        };
+        try {
+          sessionStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(stored));
+          localStorage.setItem(OPERATOR_REFERRAL_STORAGE_KEY, JSON.stringify(stored));
+        } catch (error) {}
+        return stored;
+      }
+
+      function getPendingOperatorReferral() {
+        const params = new URLSearchParams(window.location.search);
+        const querySlug = normalizeOperatorReferralHandle(
+          params.get('operator') ||
+          params.get('operator_handle') ||
+          params.get('referring_operator_slug') ||
+          params.get('specialist') ||
+          params.get('ref')
+        );
+        if (querySlug) {
+          return storePendingOperatorReferral({
+            operator_slug: querySlug,
+            referring_operator_slug: querySlug,
+            source: params.get('source') || 'operator_referral',
+            referral_url: window.location.href
+          });
+        }
+        try {
+          const stored = JSON.parse(sessionStorage.getItem(OPERATOR_REFERRAL_STORAGE_KEY) || localStorage.getItem(OPERATOR_REFERRAL_STORAGE_KEY) || 'null') || {};
+          const storedSlug = normalizeOperatorReferralHandle(stored.operator_slug || stored.referring_operator_slug);
+          return storedSlug ? { ...stored, operator_slug: storedSlug, referring_operator_slug: storedSlug } : null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function clearPendingOperatorReferral() {
+        try {
+          sessionStorage.removeItem(OPERATOR_REFERRAL_STORAGE_KEY);
+          localStorage.removeItem(OPERATOR_REFERRAL_STORAGE_KEY);
+        } catch (error) {}
       }
 
       function getWorkspaceSlugFromRoute() {
@@ -6366,8 +6466,67 @@
         window.setTimeout(() => { button.textContent = originalText; }, 1600);
       }
 
+      async function claimPendingOperatorReferral() {
+        const referral = getPendingOperatorReferral();
+        if (!referral?.operator_slug || workspaceConnectedOperator?.slug === referral.operator_slug) return null;
+        try {
+          const response = await fetch(WORKSPACE_DATA_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              action: 'claim_operator_referral',
+              operator_slug: referral.operator_slug,
+              referring_operator_slug: referral.operator_slug,
+              source: referral.source || 'operator_referral'
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) return null;
+          const operator = data.operator || data.connected_operator || data.operatorRelationship?.operator || null;
+          if (operator) {
+            workspaceConnectedOperator = operator;
+            clearPendingOperatorReferral();
+          }
+          return operator;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function renderConnectedOperator() {
+        if (!workspaceConnectedOperatorPanel) return;
+        const operator = workspaceConnectedOperator || null;
+        const handle = normalizeOperatorReferralHandle(operator?.slug || operator?.handle || operator?.operator_slug);
+        if (!operator || !handle) {
+          workspaceConnectedOperatorPanel.hidden = true;
+          workspaceConnectedOperatorPanel.innerHTML = '';
+          return;
+        }
+        const displayName = operator.display_name || operator.name || `@${handle}`;
+        const role = operator.role || operator.category || operator.specialization || 'Specialist layer';
+        const copy = operator.bio || operator.copy || 'Private execution. Operational systems. Overnight delivery.';
+        workspaceConnectedOperatorPanel.hidden = false;
+        workspaceConnectedOperatorPanel.innerHTML = `
+          <div class="workspace-os-head">
+            <div>
+              <p class="workspace-os-eyebrow">Execution Desk</p>
+              <h3 class="workspace-os-title" style="font-size:34px">Connected Operator</h3>
+            </div>
+            <span class="workspace-os-status">Active</span>
+          </div>
+          <div class="connected-operator-card">
+            <p class="workspace-os-eyebrow">Connected through</p>
+            <h3>${escapeHTML(displayName)}</h3>
+            <div class="connected-operator-handle">@${escapeHTML(handle)}</div>
+            <div class="connected-operator-role">${escapeHTML(role)}</div>
+            <p class="connected-operator-copy">${escapeHTML(copy)}</p>
+          </div>
+        `;
+      }
+
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
         if (!workspaceActiveProject) return;
+        renderConnectedOperator();
         const project = getPrimaryProject(tasks);
         const room = workspaceProjectRoom || {};
 
@@ -6566,6 +6725,19 @@
       }
 
       function getRuntimeOperatorProfile() {
+        const connectedHandle = normalizeOperatorReferralHandle(workspaceConnectedOperator?.slug || workspaceConnectedOperator?.handle || workspaceConnectedOperator?.operator_slug);
+        if (connectedHandle) {
+          const displayName = workspaceConnectedOperator.display_name || workspaceConnectedOperator.name || `@${connectedHandle}`;
+          const role = workspaceConnectedOperator.role || workspaceConnectedOperator.category || workspaceConnectedOperator.specialization || 'Specialist layer';
+          return {
+            name: displayName,
+            title: 'Specialist layer connected',
+            specialization: role,
+            status: 'Online',
+            signal: 'Connected',
+            copy: `${displayName} is connected as a private execution layer for this workspace. DONEOVERNIGHT Core remains the primary operating layer.`
+          };
+        }
         const params = new URLSearchParams(window.location.search);
         const cleanHandle = (value) => String(value || '')
           .trim()
@@ -7190,6 +7362,8 @@
           workspaceReferrals = payload.referrals || null;
           workspaceBusinessProfile = payload.businessProfile || payload.workspace?.business_profile || null;
           workspaceMemory = payload.workspaceMemory || null;
+          workspaceConnectedOperator = payload.connectedOperator || payload.workspace?.connected_operator || workspaceConnectedOperator || null;
+          await claimPendingOperatorReferral();
           tasks = payload.tasks || [];
           await loadWorkspaceMessages();
         } catch (error) {
@@ -7292,8 +7466,10 @@
             'doneovernight_workspace_username',
             'doneovernight_workspace_slug',
             'doneovernight:workspaceHandoff',
-            'doneovernight:accessCredentials'
+            'doneovernight:accessCredentials',
+            OPERATOR_REFERRAL_STORAGE_KEY
           ].forEach((key) => sessionStorage.removeItem(key));
+          clearPendingOperatorReferral();
           window.location.assign('../portal/');
         }
       }

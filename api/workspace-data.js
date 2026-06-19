@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
+const { claimOperatorClientRelationship, getConnectedOperatorForWorkspace, normalizeHandle } = require("../lib/operator-relationships");
 
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const ADMIN_AUTH_TIMEOUT_MS = 10_000;
@@ -267,6 +268,27 @@ async function createWorkspaceSessionForPortalRequest(req, res, portalRequest) {
   };
 }
 
+function getReferralOperatorSlug(input = {}) {
+  return normalizeHandle(
+    input.referring_operator_slug ||
+    input.operator_slug ||
+    input.operator_handle ||
+    input.operator ||
+    input.specialist ||
+    input.ref
+  );
+}
+
+async function claimOperatorReferralForPortalRequest(portalRequest = {}, input = {}) {
+  const operatorSlug = getReferralOperatorSlug(input);
+  if (!operatorSlug) return null;
+  return claimOperatorClientRelationship({
+    portalRequest,
+    operatorSlug,
+    source: "operator_referral"
+  });
+}
+
 async function accessWorkspaceWithKey(req, res, input) {
   const identifier = clean(input.identifier || input.email || input.username || "").toLowerCase().replace(/^@+/, "");
   const accessKey = normalizeAccessKey(input.access_key || input.accessKey);
@@ -285,7 +307,12 @@ async function accessWorkspaceWithKey(req, res, input) {
     throw error;
   }
 
-  return createWorkspaceSessionForPortalRequest(req, res, portalRequest);
+  const operatorRelationship = await claimOperatorReferralForPortalRequest(portalRequest, input).catch((error) => ({
+    success: false,
+    error: error.code || error.message || "OPERATOR_RELATIONSHIP_FAILED"
+  }));
+  const result = await createWorkspaceSessionForPortalRequest(req, res, operatorRelationship?.portal_request || portalRequest);
+  return { ...result, operatorRelationship };
 }
 
 async function accessWorkspaceWithGoogle(req, res, input) {
@@ -306,7 +333,43 @@ async function accessWorkspaceWithGoogle(req, res, input) {
     throw error;
   }
 
-  return createWorkspaceSessionForPortalRequest(req, res, portalRequest);
+  const operatorRelationship = await claimOperatorReferralForPortalRequest(portalRequest, input).catch((error) => ({
+    success: false,
+    error: error.code || error.message || "OPERATOR_RELATIONSHIP_FAILED"
+  }));
+  const result = await createWorkspaceSessionForPortalRequest(req, res, operatorRelationship?.portal_request || portalRequest);
+  return { ...result, operatorRelationship };
+}
+
+async function claimOperatorReferralFromSession(req, input = {}) {
+  const operatorSlug = getReferralOperatorSlug(input);
+  if (!operatorSlug) {
+    const error = new Error("Operator referral slug is required");
+    error.statusCode = 400;
+    error.code = "OPERATOR_REFERRAL_REQUIRED";
+    throw error;
+  }
+  const session = await getWorkspaceSessionFromRequest(req);
+  if (!session || !workspaceSessionMatchesRequest(session, {
+    email: clean(input.email || "").toLowerCase(),
+    slug: slugify(input.workspace_slug || input.slug || "")
+  })) {
+    const error = new Error("Private workspace access required");
+    error.statusCode = 401;
+    error.code = "WORKSPACE_SESSION_REQUIRED";
+    throw error;
+  }
+  const portalRequest = await findPortalRequest({
+    email: session.email,
+    slug: session.workspace_slug
+  });
+  if (!portalRequest || !isActiveClient(portalRequest)) {
+    const error = new Error("Workspace not found or access pending");
+    error.statusCode = 403;
+    error.code = "WORKSPACE_ACCESS_PENDING";
+    throw error;
+  }
+  return claimOperatorReferralForPortalRequest(portalRequest, { ...input, operator_slug: operatorSlug });
 }
 
 function normalizeTaskStatus(status = "") {
@@ -785,6 +848,11 @@ module.exports = async function handler(req, res) {
         return send(res, 200, { success: true, authMethod: "google", ...result });
       }
 
+      if (action === "claim_operator_referral") {
+        const result = await claimOperatorReferralFromSession(req, input);
+        return send(res, 200, { success: true, ...result });
+      }
+
       if (action === "logout") {
         clearWorkspaceCookie(res);
         return send(res, 200, { success: true, redirectTo: "/portal" });
@@ -832,6 +900,7 @@ module.exports = async function handler(req, res) {
     const notifications = buildNotificationEvents(signedTasks);
     const referrals = buildReferralCenter(signedTasks, workspaceSlug);
     const workspaceMemory = buildWorkspaceMemory({ tasks: signedTasks, projectRoom, businessProfile });
+    const connectedOperator = await getConnectedOperatorForWorkspace(portalRequest).catch(() => null);
     return send(res, 200, {
       success: true,
       workspace: {
@@ -842,8 +911,10 @@ module.exports = async function handler(req, res) {
         username: portalRequest.username || "",
         company: portalRequest.company || portalRequest.raw_payload?.project_name || "",
         status: portalRequest.status || "active",
-        business_profile: businessProfile
+        business_profile: businessProfile,
+        connected_operator: connectedOperator
       },
+      connectedOperator,
       activeProject: projectRoom.active_project,
       projectRoom,
       notifications,

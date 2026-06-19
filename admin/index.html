@@ -3488,6 +3488,35 @@ function getClientWorkspaceSummary(client = {}) {
   };
 }
 
+function normalizeOperatorHandleLabel(value = '') {
+  const handle = String(value || '').trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '').slice(0, 50);
+  return handle ? `@${handle}` : '';
+}
+
+function getClientConnectedOperator(client = {}, primaryTask = null) {
+  const candidates = [
+    client.raw_payload?.connected_operator,
+    client.connected_operator,
+    primaryTask?.raw_payload?.connected_operator,
+    primaryTask?.connected_operator
+  ].filter(Boolean);
+  const operator = candidates.find((item) => typeof item === 'object') || {};
+  const rawPayloads = [client.raw_payload || {}, primaryTask?.raw_payload || {}];
+  const handle = normalizeOperatorHandleLabel(
+    operator.slug ||
+    operator.handle ||
+    operator.operator_slug ||
+    client.raw_payload?.connected_operator_slug ||
+    client.raw_payload?.referring_operator_slug ||
+    primaryTask?.raw_payload?.connected_operator_slug ||
+    primaryTask?.raw_payload?.referring_operator_slug
+  );
+  if (!handle) return 'Not connected';
+  const displayName = operator.display_name || operator.name || operator.operator_name || '';
+  const role = operator.role || operator.category || operator.specialization || rawPayloads.find((raw) => raw.operator_role)?.operator_role || '';
+  return [displayName, handle, role].filter(Boolean).join(' · ');
+}
+
 function normalizeStatus(status) {
   return String(status || '').trim().toLowerCase();
 }
@@ -5626,6 +5655,7 @@ function renderClientRow(client) {
   const workspaceGrid = `
     <div class="admin-client-workspace-grid">
       <div class="admin-client-workspace-item"><span>Workspace</span><strong>${escapeHTML(workspaceSummary.workspaceSlug ? `@${workspaceSummary.workspaceSlug}` : 'Not active')}</strong></div>
+      <div class="admin-client-workspace-item"><span>Connected operator</span><strong>${escapeHTML(getClientConnectedOperator(client, primaryTask))}</strong></div>
       <div class="admin-client-workspace-item"><span>Status</span><strong>${escapeHTML(workspaceSummary.workspaceStatus)}</strong></div>
       <div class="admin-client-workspace-item"><span>Active projects</span><strong>${escapeHTML(String(workspaceSummary.activeProjectCount))}</strong></div>
       <div class="admin-client-workspace-item"><span>Latest project</span><strong>${escapeHTML(workspaceSummary.latestReference || 'No DON reference')}</strong></div>

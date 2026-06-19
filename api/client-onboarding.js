@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { buildTaskPayload } = require("../lib/tasks/model");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { syncAccessKeyCredential } = require("../lib/ops");
+const { claimOperatorClientRelationship, normalizeHandle } = require("../lib/operator-relationships");
 
 const SUPABASE_TIMEOUT_MS = 10_000;
 const SUPABASE_AUTH_TIMEOUT_MS = 10_000;
@@ -174,7 +175,7 @@ async function findPortalByUsername(username) {
 async function createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral = {} }) {
   const workspaceSlug = slugify(username || projectName || name || email);
   const now = new Date().toISOString();
-  const operatorSlug = slugify(operatorReferral.operator_slug || operatorReferral.operator_handle || operatorReferral.referral_operator_slug);
+  const operatorSlug = normalizeHandle(operatorReferral.operator_slug || operatorReferral.operator_handle || operatorReferral.referral_operator_slug || operatorReferral.referring_operator_slug);
   const basePayload = {
     email,
     name,
@@ -203,6 +204,7 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
       access_delivery: "email_todo",
       ...(operatorSlug ? {
         referral_source: "operator_referral",
+        referring_operator_slug: operatorSlug,
         referral_operator_slug: operatorSlug,
         operator_referral_slug: operatorSlug,
         operator_referral_name: clean(operatorReferral.operator_name || operatorReferral.operator_display_name),
@@ -311,7 +313,7 @@ module.exports = async function handler(req, res) {
     const projectName = clean(input.project_name || input.projectName);
     const notes = clean(input.notes);
     const source = clean(input.source) || "client_onboarding";
-    const operatorSlug = slugify(input.operator_slug || input.operator_handle || input.referral_operator_slug);
+    const operatorSlug = normalizeHandle(input.operator_slug || input.operator_handle || input.referral_operator_slug || input.referring_operator_slug);
     const operatorReferral = {
       operator_slug: operatorSlug,
       operator_name: clean(input.operator_name || input.operatorName),
@@ -388,6 +390,7 @@ module.exports = async function handler(req, res) {
       release_required: isSaiUniversityPreview,
       ...(operatorSlug ? {
         referral_source: "operator_referral",
+        referring_operator_slug: operatorSlug,
         referral_operator_slug: operatorSlug,
         operator_referral_slug: operatorSlug,
         operator_referral_name: operatorReferral.operator_name,
@@ -400,6 +403,16 @@ module.exports = async function handler(req, res) {
 
     const persistedTask = await saveTask(task);
     const portalLead = await createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral });
+    const operatorRelationship = operatorSlug
+      ? await claimOperatorClientRelationship({
+        portalRequest: portalLead,
+        operatorSlug,
+        source: "operator_referral"
+      }).catch((error) => ({
+        success: false,
+        error: error.code || error.message || "OPERATOR_RELATIONSHIP_FAILED"
+      }))
+      : null;
     await syncAccessKeyCredential(portalLead, portalLead?.access_key || accessKey).catch((error) => {
       console.warn(`Access key sync warning: ${error.code || error.message}`);
     });
@@ -419,6 +432,7 @@ module.exports = async function handler(req, res) {
       status: allowLegacySaiAccess ? "active" : "pending",
       workspacePath: `/workspace/@${workspaceSlug}`,
       workspaceSlug,
+      operatorRelationship,
       ...(workspaceSession ? { workspacePath: workspaceSession.workspacePath, workspaceSlug: workspaceSession.workspaceSlug } : {}),
       portalPath: "/portal.html",
       accessEmailStatus: "not_configured",
