@@ -607,7 +607,9 @@ async function listOperators() {
     const supportPings = activityRows.filter((item) => {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
       return rawPayload.message_type === "OPERATOR_SUPPORT_REQUEST"
-        || item.activity_type === "operator_support_request";
+        || rawPayload.category === "task_ping"
+        || item.activity_type === "operator_support_request"
+        || item.activity_type === "operator_task_ping";
     });
     const supportMessageRows = supportMessages.slice(0, 80).map((item) => {
       const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
@@ -657,7 +659,8 @@ async function listOperators() {
         unread_for_admin: unread,
         telegram_sent_at: item.telegram_sent_at || rawPayload.telegram_sent_at || "",
         telegram_ok: item.telegram_ok === true || rawPayload.telegram_ok === true,
-        telegram_error: clean(item.telegram_error || rawPayload.telegram_error)
+        telegram_error: clean(item.telegram_error || rawPayload.telegram_error),
+        telegram_provider: clean(rawPayload.telegram_provider || item.telegram_provider)
       };
     });
     const operatorMessages = activityRows.slice(0, 20).map((item) => {

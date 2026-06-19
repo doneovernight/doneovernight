@@ -6149,7 +6149,7 @@ function renderOperatorPingsInbox(operators = []) {
               <span>${escapeHTML(ping.created_at ? formatTaskDate(ping.created_at) : 'No date')}${ping.task_reference ? ` · ${escapeHTML(ping.task_reference)}` : ''}</span>
               <span>${escapeHTML(ping.message || 'No message body')}</span>
               <span class="admin-operator-ping-status">${escapeHTML(status)}</span>
-              <span>Telegram: ${escapeHTML(ping.telegram_ok ? 'sent' : ping.telegram_error ? `failed · ${ping.telegram_error}` : 'pending')}</span>
+              <span>Telegram: ${escapeHTML(ping.telegram_ok ? `sent${ping.telegram_provider ? ` · ${ping.telegram_provider}` : ''}` : ping.telegram_error ? `failed · ${ping.telegram_error}` : 'pending')}</span>
               <div class="admin-operator-message-actions">
                 ${status === 'unread' ? `
                   <button class="admin-client-action" type="button" data-operator-action="mark-ping-viewed" data-operator-email="${escapeHTML(ping.operator_email || '')}" data-operator-message-id="${escapeHTML(ping.id || '')}" data-operator-message-source="${escapeHTML(ping.source || '')}">Mark viewed</button>

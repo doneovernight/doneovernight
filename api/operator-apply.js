@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 
 const { clean, dispatchWebhook, getWebhookUrls, normalizeAccessKey, parseBody, send, supabaseFetch } = require("../lib/ops");
+const { sendTelegramMessage } = require("../heartbeat/telegram");
 const { sendNeedsInfoEmail } = require("../lib/email/needs-info-email");
 const {
   buildOperatorAvailabilityRawPayload,
@@ -705,11 +706,22 @@ function operatorSupportWebhookUrls() {
   ]);
 }
 
+function operatorSupportTelegramConfig() {
+  const botToken = clean(process.env.DONEOVERNIGHT_OPS_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN);
+  const chatId = clean(process.env.DONEOVERNIGHT_OPS_CHAT_ID || process.env.HEARTBEAT_TELEGRAM_CHAT_ID);
+  return {
+    botToken,
+    chatId,
+    tokenEnv: process.env.DONEOVERNIGHT_OPS_BOT_TOKEN ? "DONEOVERNIGHT_OPS_BOT_TOKEN" : process.env.TELEGRAM_BOT_TOKEN ? "TELEGRAM_BOT_TOKEN" : "",
+    chatEnv: process.env.DONEOVERNIGHT_OPS_CHAT_ID ? "DONEOVERNIGHT_OPS_CHAT_ID" : process.env.HEARTBEAT_TELEGRAM_CHAT_ID ? "HEARTBEAT_TELEGRAM_CHAT_ID" : ""
+  };
+}
+
 async function notifyOperatorSupport({ operator, message, taskReference, messageType, createdAt }) {
   const handle = operator?.handle ? `@${operator.handle}` : "@operator";
   const operatorName = operator?.display_name || operator?.name || "";
   const text = [
-    "🟣 OPERATOR SUPPORT REQUEST",
+    "🟣 OPERATOR TASK PING",
     "",
     `Operator: ${operatorName ? `${operatorName} / ${handle}` : handle}`,
     `Task: ${taskReference || "—"}`,
@@ -732,6 +744,7 @@ async function notifyOperatorSupport({ operator, message, taskReference, message
     payload: {
       event: "operator_support_request",
       email_type: "operator_support_request",
+      category: "task_ping",
       operator_slug: operator?.handle || "",
       operator_handle: operator?.handle || "",
       operator_name: operator?.display_name || operator?.name || "",
@@ -746,15 +759,38 @@ async function notifyOperatorSupport({ operator, message, taskReference, message
     },
     timeoutMs: OPERATOR_NOTIFY_TIMEOUT_MS
   });
+  const config = operatorSupportTelegramConfig();
+  const bot = config.botToken && config.chatId
+    ? await sendTelegramMessage({ botToken: config.botToken, chatId: config.chatId, text }).catch((error) => ({
+        sent: false,
+        status: "Failed",
+        reason: error.message,
+        provider: "bot_api"
+      }))
+    : {
+        sent: false,
+        status: "Not configured",
+        reason: "No operator support Telegram bot env configured",
+        provider: "none"
+      };
 
   return {
-    configured: result.attempted > 0,
-    delivered: result.fulfilled > 0,
+    configured: result.attempted > 0 || Boolean(config.botToken && config.chatId),
+    delivered: result.fulfilled > 0 || bot.sent === true,
     attempted: result.attempted,
     fulfilled: result.fulfilled,
     rejected: result.rejected || 0,
-    error: result.errors?.[0]?.message || "",
-    status: result.errors?.[0]?.status || null
+    error: result.errors?.[0]?.message || bot.reason || "",
+    status: result.errors?.[0]?.status || bot.status || null,
+    provider: result.fulfilled > 0 ? "webhook" : bot.sent ? "bot_api" : "none",
+    bot: {
+      sent: bot.sent === true,
+      status: bot.status || "Unknown",
+      provider: bot.provider || "none",
+      reason: bot.reason || "",
+      tokenEnv: config.tokenEnv || "",
+      chatEnv: config.chatEnv || ""
+    }
   };
 }
 
@@ -1274,8 +1310,9 @@ async function createOperatorHqMessage(req, input) {
 
   const message = clean(input.message || input.body || input.note).slice(0, 2000);
   const taskReference = clean(input.task_reference || input.don_reference || input.task_id || input.reference).toUpperCase().slice(0, 80);
-  const messageType = clean(input.message_type || input.intent || "support").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").slice(0, 80) || "support";
+  const messageType = clean(input.message_type || input.intent || "operator_support_request").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").slice(0, 80) || "operator_support_request";
   const isSupportMessage = messageType === "operator_support_message" || messageType === "support_message" || messageType === "general_support";
+  const isTaskPing = messageType === "support" || messageType === "operator_support_request" || messageType === "task_ping" || messageType === "operator_task_ping";
   const priority = ["urgent", "normal"].includes(clean(input.priority).toLowerCase()) ? clean(input.priority).toLowerCase() : "normal";
   const subject = clean(input.subject || input.title).slice(0, 160);
   if (!message) {
@@ -1286,14 +1323,14 @@ async function createOperatorHqMessage(req, input) {
   }
 
   const now = new Date().toISOString();
-  const title = messageType === "support" || messageType === "operator_support_request"
-    ? "Operator support request"
+  const title = isTaskPing
+    ? "Operator task ping"
     : isSupportMessage
       ? "Operator support message"
       : "Operator message";
   const storedMessageType = isSupportMessage
     ? "OPERATOR_SUPPORT_MESSAGE"
-    : messageType === "support" || messageType === "operator_support_request"
+    : isTaskPing
       ? "OPERATOR_SUPPORT_REQUEST"
       : messageType;
   const conversationId = isSupportMessage
@@ -1311,11 +1348,12 @@ async function createOperatorHqMessage(req, input) {
     sender_role: "operator",
     recipient_role: "admin",
     message_type: storedMessageType,
+    category: isTaskPing ? "task_ping" : isSupportMessage ? "support_message" : "operator_message",
     conversation_id: conversationId,
     thread_id: conversationId,
     subject,
     priority,
-    source: isSupportMessage ? "operator_support" : "operator_task_support",
+    source: isSupportMessage ? "operator_support" : isTaskPing ? "operator_task_ping" : "operator_task_support",
     status: "unread",
     unread_for_admin: true,
     viewed_at: null,
@@ -1329,7 +1367,7 @@ async function createOperatorHqMessage(req, input) {
   const insert = await insertOperatorRuntimeActivity({
     operator_profile_id: current.operator.id,
     operator_handle: current.operator.handle || "",
-    activity_type: isSupportMessage ? "operator_support_message" : messageType === "support" ? "operator_support_request" : messageType,
+    activity_type: isSupportMessage ? "operator_support_message" : isTaskPing ? "operator_support_request" : messageType,
     title,
     subject,
     body: message,
@@ -1352,7 +1390,7 @@ async function createOperatorHqMessage(req, input) {
     created_at: now,
     updated_at: now
   });
-  const telegram = (messageType === "support" || messageType === "operator_support_request")
+  const telegram = isTaskPing
     ? await notifyOperatorSupport({
       operator: current.operator,
       message,
@@ -1383,9 +1421,14 @@ async function createOperatorHqMessage(req, input) {
         telegram_sent_at: telegramSentAt,
         telegram_ok: Boolean(telegram.delivered),
         telegram_error: telegram.delivered ? "" : (telegram.error || (telegram.configured ? "OPERATOR_SUPPORT_TELEGRAM_NOT_DELIVERED" : "OPERATOR_SUPPORT_TELEGRAM_NOT_CONFIGURED")),
+        telegram_provider: telegram.provider || "none",
         telegram_attempted: Number(telegram.attempted || 0),
         telegram_fulfilled: Number(telegram.fulfilled || 0),
-        telegram_rejected: Number(telegram.rejected || 0)
+        telegram_rejected: Number(telegram.rejected || 0),
+        telegram_bot_sent: telegram.bot?.sent === true,
+        telegram_bot_status: telegram.bot?.status || "",
+        telegram_bot_provider: telegram.bot?.provider || "",
+        telegram_bot_error: telegram.bot?.reason || ""
       }
     : {};
   const metadataPatch = Object.keys(telegramMetadata).length

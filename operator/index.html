@@ -2268,7 +2268,7 @@
         <button class="operator-modal-close" type="button" data-operator-support-close aria-label="Close">×</button>
         <p class="eyebrow">Private HQ line</p>
         <h2 id="operatorSupportTitle">Ping DONEOVERNIGHT HQ.</h2>
-        <p>Ask for clarification, report a blocker, or attach a DON reference. This stays internal.</p>
+        <p id="operatorSupportCopy">Ask DONEOVERNIGHT HQ for fast help on a client blocker, DON reference, or task issue.</p>
         <label class="operator-login-field" data-support-field="subject" hidden>
           <span>Subject optional</span>
           <input id="operatorSupportSubject" placeholder="Payout question">
@@ -2371,6 +2371,7 @@
       const supportNewAction = document.getElementById('operatorSupportNewAction');
       const supportModal = document.getElementById('operatorSupportModal');
       const supportTitle = document.getElementById('operatorSupportTitle');
+      const supportCopy = document.getElementById('operatorSupportCopy');
       const supportSubject = document.getElementById('operatorSupportSubject');
       const supportPriority = document.getElementById('operatorSupportPriority');
       const supportMessage = document.getElementById('operatorSupportMessage');
@@ -2871,15 +2872,19 @@
       function openSupportModal({ taskReference = '', messageType = 'support' } = {}) {
         if (!supportModal) return;
         const isGeneralSupport = messageType === 'operator_support_message';
+        const isTaskPing = messageType === 'operator_support_request' || messageType === 'support' || messageType === 'task_ping';
         supportModal.hidden = false;
         supportModal.dataset.messageType = messageType;
-        if (supportTitle) supportTitle.textContent = isGeneralSupport ? 'Support / HQ.' : 'Ping DONEOVERNIGHT HQ.';
+        if (supportTitle) supportTitle.textContent = isGeneralSupport ? 'Support / HQ.' : 'Ping HQ about a task.';
+        if (supportCopy) supportCopy.textContent = isGeneralSupport
+          ? 'Ask for clarification, report a blocker, or send a private note to HQ. This stays internal.'
+          : 'Ask DONEOVERNIGHT HQ for fast help on a client blocker, DON reference, or task issue.';
         supportModal.querySelectorAll('[data-support-field]').forEach((field) => { field.hidden = !isGeneralSupport; });
         if (supportSubject) supportSubject.value = '';
         if (supportPriority) supportPriority.value = 'normal';
         if (supportReference) supportReference.value = taskReference || '';
         if (supportMessage) supportMessage.value = '';
-        if (supportMessage) supportMessage.placeholder = isGeneralSupport ? 'What should HQ know?' : 'What do you need from HQ?';
+        if (supportMessage) supportMessage.placeholder = isGeneralSupport ? 'What should HQ know?' : isTaskPing ? 'Ask DONEOVERNIGHT HQ for fast help on a client blocker, DON reference, or task issue.' : 'What do you need from HQ?';
         setSupportStatus('');
         window.setTimeout(() => (isGeneralSupport ? supportSubject || supportMessage : supportMessage)?.focus(), 80);
       }
@@ -2913,7 +2918,7 @@
         try {
           const data = await postOperatorAction({
             action: 'operator_hq_message',
-            message_type: messageType,
+            message_type: messageType === 'support' ? 'operator_support_request' : messageType,
             subject,
             priority,
             message: messageText,
@@ -2925,7 +2930,9 @@
           window.setTimeout(closeSupportModal, 900);
           if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'operator_message' }).catch(() => {});
         } catch (error) {
-          setSupportStatus(error.message || 'Could not send message to HQ.', 'error');
+          setSupportStatus(messageType === 'operator_support_message'
+            ? `Could not send message: ${error.message || 'OPERATOR_MESSAGE_FAILED'}`
+            : `Could not send ping: ${error.message || 'OPERATOR_PING_FAILED'}`, 'error');
         } finally {
           if (supportSend) {
             supportSend.disabled = false;
@@ -4078,7 +4085,7 @@
       });
 
       supportAction?.addEventListener('click', () => {
-        openSupportModal({ messageType: 'support' });
+        openSupportModal({ messageType: 'operator_support_request' });
       });
 
       supportInboxAction?.addEventListener('click', () => {
