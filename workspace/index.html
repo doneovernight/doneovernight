@@ -1729,6 +1729,21 @@
       line-height: 1.65;
     }
 
+    .referral-copy-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .referral-copy-actions .workspace-button,
+    .referral-invite-panel > .workspace-button {
+      min-height: 46px;
+      line-height: 1;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
     .referral-readonly-link {
       margin-top: 12px;
       color: rgba(255,255,255,.34);
@@ -4367,7 +4382,10 @@
         <div class="referral-invite-panel" id="referralCopyModePanel" role="tabpanel" aria-labelledby="referralCopyModeTab" data-referral-panel="copy">
           <div class="referral-copy-panel">
             <p>Copy your private referral link and send it directly. Attribution stays attached when the founder enters intake.</p>
-            <button class="workspace-button secondary" id="copyReferralInviteBtn" type="button">Copy Referral Link</button>
+            <div class="referral-copy-actions">
+              <button class="workspace-button secondary" id="copyReferralInviteBtn" type="button">Copy Referral Link</button>
+              <button class="workspace-button secondary" id="shareReferralInviteBtn" type="button">Share Directly</button>
+            </div>
             <div class="referral-readonly-link" id="referralInvitePreview" aria-live="polite">Referral link is prepared privately.</div>
           </div>
         </div>
@@ -4478,6 +4496,7 @@
       const referralInvitePreview = document.getElementById('referralInvitePreview');
       const referralInviteMessage = document.getElementById('referralInviteMessage');
       const copyReferralInviteBtn = document.getElementById('copyReferralInviteBtn');
+      const shareReferralInviteBtn = document.getElementById('shareReferralInviteBtn');
       const sendReferralInviteBtn = document.getElementById('sendReferralInviteBtn');
       const generateReferralNoteBtn = document.getElementById('generateReferralNoteBtn');
       const workspaceDonbot = document.getElementById('workspaceDonbot');
@@ -4510,6 +4529,7 @@
       let activeOperationUpdateTaskKey = '';
       let workspaceDeepLinkHandled = false;
       let activeReferralLink = '';
+      let referralNoteCycleIndex = 0;
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -6041,32 +6061,50 @@
       }
 
       const referralNoteTemplates = [
-        'I thought of you because DONEOVERNIGHT is built for founders who need execution without another meeting.',
-        'This might be useful if you want to hand off an urgent digital or operational task and get a clear plan back quickly.',
-        'I think this could help with the kind of execution work that usually stays stuck between ideas, inboxes, and unfinished systems.',
-        'Worth looking at if you need a private operator-style team for fast digital execution.'
+        {
+          style: 'Direct founder',
+          text: 'I thought of this because DONEOVERNIGHT is built for founders who need execution without adding another meeting.'
+        },
+        {
+          style: 'Private execution',
+          text: 'This could be useful when something needs to move fast, but you do not want another freelancer or dashboard to manage.'
+        },
+        {
+          style: 'Urgent handoff',
+          text: 'Worth looking at if you need a private operator-style team for urgent digital execution.'
+        },
+        {
+          style: 'Systems cleanup',
+          text: 'This might help with the kind of work that usually gets stuck between ideas, inboxes, and unfinished systems.'
+        },
+        {
+          style: 'No-meeting execution',
+          text: 'Useful if you want to hand off a clear operational request and get back scope, timing, and the next move.'
+        },
+        {
+          style: 'Premium operator support',
+          text: 'I thought this matched the kind of execution support a busy founder could use quietly and quickly.'
+        }
       ];
 
-      function getReferralNoteTemplate(values = {}) {
-        const seed = [values.name, values.company, workspaceSlug].filter(Boolean).join('').length;
-        const base = referralNoteTemplates[seed % referralNoteTemplates.length];
-        if (values.name && values.company) {
-          return `${values.name}, ${base.charAt(0).toLowerCase()}${base.slice(1)} It felt relevant for ${values.company}.`;
-        }
-        if (values.name) {
-          return `${values.name}, ${base.charAt(0).toLowerCase()}${base.slice(1)}`;
-        }
-        if (values.company) {
-          return `${base} It felt relevant for ${values.company}.`;
-        }
-        return base;
+      function appendReferralCompanyContext(note = '', values = {}) {
+        const company = String(values.company || '').trim();
+        if (!company) return note;
+        return `${note} It felt relevant for ${company}.`;
+      }
+
+      function getReferralNoteTemplate(values = {}, options = {}) {
+        const index = options.index ?? 0;
+        const template = referralNoteTemplates[index % referralNoteTemplates.length] || referralNoteTemplates[0];
+        return appendReferralCompanyContext(template.text, values);
       }
 
       function generateReferralNote() {
         const values = getReferralInviteValues();
         const note = document.getElementById('referralInviteNote');
         if (!note) return;
-        note.value = getReferralNoteTemplate(values);
+        note.value = getReferralNoteTemplate(values, { index: referralNoteCycleIndex });
+        referralNoteCycleIndex = (referralNoteCycleIndex + 1) % referralNoteTemplates.length;
         updateReferralInvitePreview();
       }
 
@@ -6121,6 +6159,7 @@
         referralInviteForm.reset();
         referralInviteMessage.textContent = '';
         referralInviteMessage.className = 'workspace-message';
+        referralNoteCycleIndex = 0;
         setReferralInviteMode('send');
         updateReferralInvitePreview();
         referralInviteModal.classList.add('is-open');
@@ -6141,7 +6180,33 @@
         if (!link) return;
         await navigator.clipboard?.writeText(link).catch(() => {});
         if (referralInviteMessage) {
-          referralInviteMessage.textContent = 'Referral invite link copied.';
+          referralInviteMessage.textContent = 'Referral link copied.';
+          referralInviteMessage.className = 'workspace-message is-success';
+        }
+      }
+
+      async function shareReferralInviteLink() {
+        const link = getReferralInviteLink();
+        if (!link) return;
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Private DONEOVERNIGHT Intake',
+              text: 'Private execution intake via DONEOVERNIGHT.',
+              url: link
+            });
+            if (referralInviteMessage) {
+              referralInviteMessage.textContent = 'Referral link ready to share.';
+              referralInviteMessage.className = 'workspace-message is-success';
+            }
+            return;
+          } catch (error) {
+            if (error?.name === 'AbortError') return;
+          }
+        }
+        await navigator.clipboard?.writeText(link).catch(() => {});
+        if (referralInviteMessage) {
+          referralInviteMessage.textContent = 'Referral link copied.';
           referralInviteMessage.className = 'workspace-message is-success';
         }
       }
@@ -7968,6 +8033,7 @@
         });
         generateReferralNoteBtn?.addEventListener('click', generateReferralNote);
         copyReferralInviteBtn?.addEventListener('click', copyReferralInviteLink);
+        shareReferralInviteBtn?.addEventListener('click', shareReferralInviteLink);
         workspaceAllTasksPanel?.addEventListener('click', handleWorkspaceTaskHistoryClick);
         renderRecommendations();
         recommendationRail?.addEventListener('click', (event) => {
