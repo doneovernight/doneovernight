@@ -3638,6 +3638,27 @@ function getClientConnectedOperator(client = {}, primaryTask = null) {
   return [displayName, handle, role].filter(Boolean).join(' · ');
 }
 
+function getTaskConnectedOperator(task = {}) {
+  const raw = task.raw_payload || {};
+  const operator = raw.connected_operator && typeof raw.connected_operator === 'object'
+    ? raw.connected_operator
+    : task.connected_operator && typeof task.connected_operator === 'object'
+      ? task.connected_operator
+      : {};
+  const handle = normalizeOperatorHandleLabel(
+    operator.slug ||
+    operator.handle ||
+    operator.operator_slug ||
+    raw.connected_operator_slug ||
+    raw.referring_operator_slug ||
+    raw.operator_referral_slug ||
+    task.connected_operator_slug
+  );
+  if (!handle) return '';
+  const displayName = operator.display_name || operator.name || operator.operator_name || '';
+  return [displayName, handle].filter(Boolean).join(' · ');
+}
+
 function getClientJoinLifecycleSummary(client = {}, primaryTask = null) {
   const raw = client.raw_payload || {};
   const taskRaw = primaryTask?.raw_payload || {};
@@ -6193,7 +6214,12 @@ function renderOperatorConnectedClients(operator = {}) {
             <strong>${escapeHTML(client.client_name || client.client_email || 'Client')}</strong>
             <span>${escapeHTML(client.client_email || 'No email')} · ${escapeHTML(client.workspace_slug ? `@${client.workspace_slug}` : 'No workspace')}</span>
             <span>${escapeHTML((Array.isArray(client.don_references) && client.don_references.length ? client.don_references.join(', ') : 'No DON reference yet'))}</span>
-            <span>${escapeHTML(client.relationship_created_at ? formatTaskDate(client.relationship_created_at) : 'No date')} · ${escapeHTML(client.source || 'operator referral')}</span>
+            <span>${escapeHTML(client.relationship_created_at ? formatTaskDate(client.relationship_created_at) : 'No date')} · ${escapeHTML(client.source || 'operator referral')} · ${escapeHTML(client.task_count ? `${client.task_count} tasks` : 'No tasks yet')}</span>
+            ${client.latest_task_status ? `<span>Latest task: ${escapeHTML(client.latest_task_reference || 'DON reference pending')} · ${escapeHTML(getStatusLabel(client.latest_task_status))}${client.latest_task_updated_at ? ` · ${escapeHTML(formatTaskDate(client.latest_task_updated_at) || '')}` : ''}</span>` : ''}
+            <div class="admin-operator-message-actions">
+              ${client.workspace_url ? `<a class="admin-client-action" href="${escapeHTML(client.workspace_url)}" target="_blank" rel="noopener noreferrer">Open workspace</a>` : ''}
+              ${client.latest_task_reference ? `<button class="admin-client-action" type="button" data-operator-action="open-related-task" data-task-reference="${escapeHTML(client.latest_task_reference)}">Open related task</button>` : ''}
+            </div>
           </div>
         `).join('') : '<div class="admin-operator-connected-item"><span>Client relationship details are not available yet.</span></div>'}
       </div>
@@ -6276,6 +6302,8 @@ function renderOperatorRow(operator) {
         ${renderOperatorFieldHtml('Availability', renderOperatorAvailability(operator))}
         ${renderOperatorField('Last active', operator.last_active_at ? formatTaskDate(operator.last_active_at) : '—')}
         ${renderOperatorField('Connected clients', operator.connected_clients || 0)}
+        ${renderOperatorField('Active clients', operator.active_connected_clients || operator.connected_clients || 0)}
+        ${renderOperatorField('Connected tasks', operator.connected_tasks || 0)}
         ${renderOperatorField('Assigned tasks', operator.active_assigned_tasks || 0)}
         ${renderOperatorField('Unread messages', operator.unread_operator_messages || 0)}
         ${renderOperatorField('Unread support', operator.unread_operator_support_messages || 0)}
@@ -6606,6 +6634,7 @@ function renderTasks(tasks) {
     const clientDisplayName = task.name || task.email || 'Unknown client';
     const taskReference = getTaskId(task);
     const clientIdentity = `${clientDisplayName} · ${task.email || 'No email'} · ${taskReference}`;
+    const connectedOperator = getTaskConnectedOperator(task);
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
@@ -6748,6 +6777,11 @@ function renderTasks(tasks) {
           <div class="admin-task-metric"><span>Client budget</span><strong>${clientBudgetLabel}</strong></div>
           <div class="admin-task-metric"><span>Source</span><strong>${escapeHTML(task.source || 'workspace')}</strong></div>
         </div>
+        ${connectedOperator ? `
+          <div class="admin-task-meta">
+            <div class="admin-task-metric"><span>Connected Operator</span><strong>${escapeHTML(connectedOperator)}</strong></div>
+          </div>
+        ` : ''}
         <div class="admin-task-activity">${escapeHTML(activityLabel)}</div>
         ${renderLifecycle(task.status)}
         ${planSentBanner}

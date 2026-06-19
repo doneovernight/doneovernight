@@ -535,14 +535,15 @@ function missingColumnName(error) {
 }
 
 async function listOperators() {
-  const [operators, profiles, applicationSnapshots, applications, runtimeActivity, assignments, relationships] = await Promise.all([
+  const [operators, profiles, applicationSnapshots, applications, runtimeActivity, assignments, relationships, taskRequests] = await Promise.all([
     safeSupabaseRows("operators?select=*&order=created_at.desc"),
     safeSupabaseRows("operator_profiles?select=*&order=created_at.desc"),
     safeSupabaseRows("operator_applications?select=*&order=created_at.desc"),
     safeSupabaseRows("portal_requests?source=eq.operator_apply&select=*&order=created_at.desc"),
     safeSupabaseRows("operator_runtime_activity?select=*&order=created_at.desc&limit=250"),
     safeSupabaseRows("operator_assignments?select=*&order=updated_at.desc&limit=250"),
-    safeSupabaseRows("operator_client_relationships?select=*&order=updated_at.desc&limit=250")
+    safeSupabaseRows("operator_client_relationships?select=*&order=updated_at.desc&limit=250"),
+    safeSupabaseRows("task_requests?select=*&order=updated_at.desc&limit=300")
   ]);
 
   const byEmail = new Map();
@@ -695,18 +696,42 @@ async function listOperators() {
       return key && rows.findIndex((row) => (row.id || `${row.operator_profile_id}:${row.client_id}:${row.workspace_slug}`) === key) === index;
     });
     const activeRelationships = relationshipRows.filter((item) => !["archived", "revoked", "inactive"].includes(clean(item.relationship_status || "active").toLowerCase()));
-    const connectedClients = activeRelationships.map((item) => ({
-      client_name: clean(item.client_name) || clean(item.workspace_slug) || "Client",
-      client_email: clean(item.client_email),
-      workspace_slug: clean(item.workspace_slug),
-      don_references: [
-        ...splitList(item.task_id || item.task_reference || item.don_reference || item.raw_payload?.task_id || item.raw_payload?.task_reference),
-        ...(Array.isArray(item.raw_payload?.task_references) ? item.raw_payload.task_references : []),
-        ...(Array.isArray(item.raw_payload?.don_references) ? item.raw_payload.don_references : [])
-      ].map(clean).filter(Boolean).filter((value, index, rows) => rows.indexOf(value) === index),
-      relationship_created_at: item.linked_at || item.created_at || item.updated_at,
-      source: clean(item.connection_source || item.source || item.raw_payload?.source) || "operator_referral"
-    }));
+    const connectedClients = activeRelationships.map((item) => {
+      const raw = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      const workspaceSlug = clean(item.workspace_slug);
+      const donReferences = [
+        ...splitList(item.task_id || item.task_reference || item.don_reference || raw.task_id || raw.task_reference),
+        ...(Array.isArray(raw.task_references) ? raw.task_references : []),
+        ...(Array.isArray(raw.don_references) ? raw.don_references : [])
+      ].map(clean).filter(Boolean).filter((value, index, rows) => rows.indexOf(value) === index);
+      const clientTasks = taskRequests.filter((task) => {
+        const taskRaw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+        const taskReference = clean(task.task_id || task.operational_id || task.id || taskRaw.task_id || taskRaw.reference);
+        const taskSlug = clean(task.workspace_slug || taskRaw.workspace_slug || taskRaw.slug);
+        const taskEmail = clean(task.email || taskRaw.email).toLowerCase();
+        return (workspaceSlug && taskSlug === workspaceSlug)
+          || (taskReference && donReferences.includes(taskReference))
+          || (clean(item.client_email).toLowerCase() && taskEmail === clean(item.client_email).toLowerCase());
+      });
+      const latestTask = clientTasks.slice().sort((a, b) => Date.parse(b.updated_at || b.created_at || 0) - Date.parse(a.updated_at || a.created_at || 0))[0] || null;
+      const latestReference = latestTask
+        ? clean(latestTask.task_id || latestTask.operational_id || latestTask.id || latestTask.raw_payload?.task_id || latestTask.raw_payload?.reference)
+        : donReferences[0] || "";
+      return {
+        client_name: clean(item.client_name) || clean(workspaceSlug) || "Client",
+        client_email: clean(item.client_email),
+        workspace_slug: workspaceSlug,
+        workspace_url: workspaceSlug ? `https://portal.doneovernight.com/@${encodeURIComponent(workspaceSlug)}` : "",
+        don_references: donReferences,
+        relationship_created_at: item.linked_at || item.created_at || item.updated_at,
+        source: clean(item.connection_source || item.source || raw.source) || "operator_referral",
+        task_count: clientTasks.length,
+        latest_task_reference: latestReference,
+        latest_task_status: latestTask ? clean(latestTask.status || latestTask.raw_payload?.status || "active") : "",
+        latest_task_updated_at: latestTask?.updated_at || latestTask?.created_at || ""
+      };
+    });
+    const connectedTaskCount = connectedClients.reduce((sum, client) => sum + Number(client.task_count || 0), 0);
     mergeOperatorRecord(byEmail, profile.email, {
       profile_id: profile.id,
       operator_id: profile.operator_id,
@@ -725,6 +750,8 @@ async function listOperators() {
       operator_availability_updated_at: availability.updated_at || null,
       last_active_at: profile.last_active_at || profile.updated_at || profile.created_at,
       connected_clients: connectedClients.length,
+      active_connected_clients: activeRelationships.length,
+      connected_tasks: connectedTaskCount,
       connected_clients_detail: connectedClients,
       active_assigned_tasks: activeAssignments.length,
       unread_operator_messages: unreadMessages.length,

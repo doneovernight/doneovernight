@@ -1966,13 +1966,30 @@
       </div>
     </section>
 
+    <section class="operator-section" id="client-portfolio" aria-labelledby="clientPortfolioTitle">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Client Portfolio</p>
+          <h2 id="clientPortfolioTitle">Clients connected to you.</h2>
+        </div>
+        <p data-runtime="portfolioSectionCopy">Real operator-client relationships from active workspace connections.</p>
+      </div>
+      <article class="operator-list-panel" id="clientPortfolioPanel">
+        <h3>Connected clients</h3>
+        <div class="operator-row">
+          <div><strong>No connected clients yet.</strong><span>Invite a client or wait for HQ assignment.</span></div>
+          <span class="status-pill is-muted">Clear</span>
+        </div>
+      </article>
+    </section>
+
     <section class="operator-section" id="assigned-work" aria-labelledby="clientsTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Assigned Work</p>
+          <p class="eyebrow">Assigned / Connected Tasks</p>
           <h2 id="clientsTitle">Execution routed to you.</h2>
         </div>
-        <p data-runtime="clientSectionCopy">Only operator-assigned tasks appear here. No marketplace, no client browsing.</p>
+        <p data-runtime="clientSectionCopy">Assigned work and tasks from your connected client portfolio.</p>
       </div>
       <div class="operator-two-column">
         <article class="operator-list-panel" id="assignedClientsPanel">
@@ -3268,6 +3285,7 @@
       function operatorRuntimeSlugs(runtime = {}) {
         return new Set([
           ...(runtime.assigned_clients || []).map((item) => item.workspace_slug),
+          ...(runtime.client_portfolio || []).map((item) => item.workspace_slug),
           ...(runtime.assignments || []).map((item) => item.workspace_slug),
           ...(runtime.tasks || []).map((item) => item.workspace_slug),
           ...(runtime.messages || []).map((item) => item.workspace_slug),
@@ -3314,6 +3332,7 @@
             operator_availability: state.operator_availability
           },
           clients: compactRows(runtime.assigned_clients),
+          client_portfolio: compactRows(runtime.client_portfolio),
           assignments: compactRows(runtime.assignments),
           tasks: compactRows(runtime.tasks),
           messages: compactRows(runtime.messages),
@@ -3511,9 +3530,12 @@
         text('[data-runtime="overviewCopy"]', owner
           ? 'Action-based operator state from assigned clients, task pressure, client updates, delivery windows, and payouts.'
           : 'Public operator preview. Sign in as this operator to unlock assigned clients, revenue, messages, and delivery windows.');
+        text('[data-runtime="portfolioSectionCopy"]', owner
+          ? 'Your active connected client base. These relationships come from operator referrals, existing account connections, and HQ routing.'
+          : 'Connected client portfolio remains private to the authenticated operator.');
         text('[data-runtime="clientSectionCopy"]', owner
-          ? 'Assigned work only. Each row is connected to a workspace, DON reference, deadline, and next operator action.'
-          : 'Assigned client state remains private until the operator owner is authenticated.');
+          ? 'Assigned work and connected-client tasks. Pricing, payment, ownership, and final delivery controls remain Admin-only.'
+          : 'Assigned and connected task state remains private until the operator owner is authenticated.');
         text('[data-runtime="financeSectionCopy"]', owner
           ? 'Payout visibility is synchronized from paid and pending operator-scoped work.'
           : 'Revenue and payout visibility remain private.');
@@ -3566,8 +3588,47 @@
           document.getElementById('operatorPublicBio').value = operator.bio || '';
         }
 
-        const assignedSource = runtimeAssignments.length ? runtimeAssignments : (runtimeTasks.length ? runtimeTasks : (runtime.assigned_clients || []));
-        const assignedRows = assignedSource.map((item) => {
+        const portfolioRows = (runtime.client_portfolio || []).map((client) => {
+          const workspaceSlug = client.workspace_slug || '';
+          const workspaceUrl = client.workspace_url || workspaceUrlForSlug(workspaceSlug);
+          const refs = Array.isArray(client.don_references) ? client.don_references.filter(Boolean) : [];
+          const reference = client.latest_task_reference || refs[0] || '';
+          const hasTaskReference = /^DON-\d{4}-\d{5}$/i.test(reference);
+          return `
+          <div class="operator-row">
+            <div>
+              <strong>${escapeHTML(client.client_name || workspaceSlug || 'Connected client')}${workspaceSlug ? ` · @${escapeHTML(workspaceSlug)}` : ''}</strong>
+              <span>${escapeHTML(client.client_email || 'No email')} · ${escapeHTML(client.source_label || client.source || 'Operator referral')}</span>
+              <small>Connected: ${escapeHTML(client.connected_date_label || 'No date')} · Tasks: ${escapeHTML(String(client.task_count || 0))} · Updates: ${escapeHTML(String(client.unread_client_updates || 0))} unread</small>
+              <small>Latest: ${escapeHTML(client.latest_task_reference || 'No DON reference yet')} · ${escapeHTML(client.latest_task_status || 'No active task')} · ${escapeHTML(client.latest_movement || 'Connected')}</small>
+              ${refs.length ? `<small>DON refs: ${escapeHTML(refs.slice(0, 5).join(', '))}</small>` : ''}
+              <div class="operator-row-actions">
+                ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open workspace context</a>` : ''}
+                <a class="operator-row-action" href="#tasks">View client tasks</a>
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="request_information" data-task-reference="${escapeHTML(reference)}">Request information</button>` : ''}
+                <button class="operator-row-action" type="button" data-operator-task-message="support" data-message-label="Ping HQ about client" data-task-reference="${escapeHTML(hasTaskReference ? reference : '')}">Ping HQ about client</button>
+              </div>
+            </div>
+            <span class="status-pill ${operatorStatusClass(client.relationship_status || 'active')}">${escapeHTML(client.relationship_status || 'Active')}</span>
+          </div>
+        `;
+        });
+        renderRows(document.getElementById('clientPortfolioPanel'), owner ? portfolioRows : [], `
+          <div class="operator-row">
+            <div><strong>No connected clients yet.</strong><span>Invite a client or wait for HQ assignment.</span></div>
+            <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
+          </div>
+        `);
+
+        const assignedSource = [
+          ...runtimeAssignments,
+          ...runtimeTasks
+        ].filter((item, index, rows) => {
+          const key = item.id || item.task_id || item.reference || `${item.workspace_slug}:${item.title || item.task_title}`;
+          return key && rows.findIndex((row) => (row.id || row.task_id || row.reference || `${row.workspace_slug}:${row.title || row.task_title}`) === key) === index;
+        });
+        const visibleAssignedSource = assignedSource.length ? assignedSource : (runtime.assigned_clients || []);
+        const assignedRows = visibleAssignedSource.map((item) => {
           const workspaceSlug = item.workspace_slug || item.client_workspace_slug || '';
           const workspaceUrl = workspaceUrlForSlug(workspaceSlug);
           const linkedReferences = Array.isArray(item.don_references) ? item.don_references.filter(Boolean) : [];
