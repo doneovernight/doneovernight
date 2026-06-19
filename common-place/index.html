@@ -25,6 +25,7 @@
       --dot-x: 0px;
       --lock-y: 0px;
       --lock-scale: 1;
+      --gallery-x: 0px;
     }
 
     * { box-sizing: border-box; }
@@ -75,7 +76,7 @@
       z-index: -3;
       background:
         linear-gradient(180deg, rgba(8,8,7,.06), rgba(8,8,7,.3)),
-        url("/assets/romypeters/romy-peters-04.jpg") center / cover no-repeat;
+        url("/assets/common-place/photo-05-opening.jpg") center / cover no-repeat;
       transform: scale(calc(1.08 - (var(--open) * .035)));
       filter: saturate(.82) contrast(1.04);
     }
@@ -248,7 +249,7 @@
     }
 
     .content {
-      min-height: 110vh;
+      min-height: 70vh;
       padding: clamp(74px, 10vw, 130px) 0;
       background: #0b0a09;
       color: var(--white);
@@ -274,6 +275,171 @@
       font-size: 15px;
       line-height: 1.75;
     }
+    .maker {
+      min-height: 100svh;
+      display: grid;
+      align-items: center;
+      background: var(--paper);
+      color: var(--ink);
+      padding: clamp(64px, 9vw, 118px) 0;
+    }
+    .maker-inner {
+      width: min(100% - 32px, 1220px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(280px, .68fr) minmax(0, .78fr);
+      gap: clamp(28px, 7vw, 104px);
+      align-items: end;
+    }
+    .maker-image {
+      margin: 0;
+      overflow: hidden;
+      background: #d8d0c4;
+    }
+    .maker-image img {
+      display: block;
+      width: 100%;
+      height: min(74vh, 820px);
+      object-fit: cover;
+      object-position: center;
+      filter: saturate(.92) contrast(.96);
+    }
+    .maker-copy {
+      padding-bottom: clamp(10px, 4vw, 58px);
+    }
+    .maker-kicker,
+    .gallery-kicker {
+      margin: 0 0 14px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .maker h2 {
+      max-width: 8ch;
+      margin: 0;
+      font-family: var(--industrial);
+      font-size: clamp(58px, 12vw, 152px);
+      line-height: .78;
+      letter-spacing: -.055em;
+      text-transform: lowercase;
+    }
+    .maker p:last-child {
+      max-width: 420px;
+      margin: 22px 0 0;
+      color: rgba(8, 8, 7, .62);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+    .gallery-scroll {
+      position: relative;
+      min-height: 280vh;
+      background: #0b0a09;
+      color: var(--white);
+    }
+    .gallery-pin {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      overflow: hidden;
+      display: grid;
+      align-items: center;
+    }
+    .gallery-head {
+      position: absolute;
+      left: clamp(16px, 4vw, 44px);
+      top: clamp(18px, 5vw, 52px);
+      z-index: 2;
+      max-width: 360px;
+      color: rgba(248, 243, 232, .74);
+    }
+    .gallery-head h2 {
+      margin: 0;
+      font-family: var(--industrial);
+      font-size: clamp(42px, 8vw, 116px);
+      line-height: .78;
+      letter-spacing: -.055em;
+      text-transform: lowercase;
+    }
+    .gallery-head p {
+      margin: 16px 0 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .gallery-rail {
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2vw, 28px);
+      width: max-content;
+      padding: 0 clamp(18px, 6vw, 96px);
+      transform: translate3d(var(--gallery-x), 0, 0);
+      will-change: transform;
+    }
+    .gallery-item {
+      position: relative;
+      flex: 0 0 auto;
+      width: clamp(250px, 31vw, 480px);
+      margin: 0;
+      overflow: hidden;
+      background: #181613;
+    }
+    .gallery-item.is-wide {
+      width: clamp(380px, 54vw, 860px);
+    }
+    .gallery-item.is-tall {
+      width: clamp(230px, 27vw, 390px);
+    }
+    .gallery-item img {
+      display: block;
+      width: 100%;
+      height: clamp(360px, 62vh, 720px);
+      object-fit: cover;
+      filter: saturate(.92) contrast(.98);
+    }
+    .gallery-item.is-wide img {
+      height: clamp(310px, 52vh, 620px);
+    }
+    .gallery-item figcaption {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      color: rgba(248, 243, 232, .76);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 16px rgba(0,0,0,.55);
+    }
+    .close {
+      min-height: 72vh;
+      display: grid;
+      align-items: end;
+      padding: clamp(52px, 8vw, 100px) 0;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .close-inner {
+      width: min(100% - 32px, 1180px);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+    .close h2 {
+      max-width: 9ch;
+      margin: 0;
+      font-family: var(--industrial);
+      font-size: clamp(64px, 13vw, 170px);
+      line-height: .76;
+      letter-spacing: -.055em;
+      text-transform: lowercase;
+    }
+    .close p {
+      max-width: 420px;
+      margin: 0;
+      color: rgba(8, 8, 7, .62);
+      font-size: 14px;
+      line-height: 1.65;
+    }
 
     @media (max-width: 720px) {
       .reveal-track { min-height: 390vh; }
@@ -298,6 +464,31 @@
       .locked-copy p {
         max-width: 300px;
       }
+      .maker-inner {
+        grid-template-columns: 1fr;
+      }
+      .maker-image img {
+        height: 62vh;
+      }
+      .gallery-scroll {
+        min-height: 240vh;
+      }
+      .gallery-head {
+        max-width: 270px;
+      }
+      .gallery-item {
+        width: clamp(230px, 72vw, 340px);
+      }
+      .gallery-item.is-wide {
+        width: clamp(320px, 88vw, 460px);
+      }
+      .gallery-item.is-tall {
+        width: clamp(220px, 68vw, 330px);
+      }
+      .gallery-item img,
+      .gallery-item.is-wide img {
+        height: 54vh;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -309,6 +500,9 @@
       .four,
       .logo-shadow,
       .mechanical-line {
+        transition: none !important;
+      }
+      .gallery-rail {
         transition: none !important;
       }
     }
@@ -351,10 +545,65 @@
         </div>
       </div>
     </section>
-    <section class="content" aria-labelledby="system-title">
-      <div class="content-inner">
-        <h2 id="system-title">Industrial. Editorial. Kinetic.</h2>
-        <p>This prototype uses requestAnimationFrame and transform-driven interpolation. The hidden wordmark is clipped inside the compact cp. mark, then mechanically expands until commonpl4ce. locks into place.</p>
+    <section class="maker" aria-labelledby="maker-title">
+      <div class="maker-inner">
+        <figure class="maker-image">
+          <img src="/assets/common-place/photo-04-romy.jpg" alt="Romy Peters holding a camera on a palm-lined beach" loading="lazy">
+        </figure>
+        <div class="maker-copy">
+          <p class="maker-kicker">Romy Peters</p>
+          <h2 id="maker-title">the girl behind the film</h2>
+          <p>Shot through travel, casting rooms and quiet in-between moments. Common Place lives where documentary instinct meets campaign energy.</p>
+        </div>
+      </div>
+    </section>
+    <section class="gallery-scroll" id="gallery" aria-labelledby="gallery-title">
+      <div class="gallery-pin">
+        <div class="gallery-head">
+          <p class="gallery-kicker">Archive roll</p>
+          <h2 id="gallery-title">slow frames</h2>
+          <p>The rest of the roll moves sideways as the page moves down.</p>
+        </div>
+        <div class="gallery-rail" id="galleryRail">
+          <figure class="gallery-item is-wide">
+            <img src="/assets/common-place/photo-01.jpg" alt="Three boys smiling on a beach at sunset" loading="lazy">
+            <figcaption>Rio</figcaption>
+          </figure>
+          <figure class="gallery-item is-wide">
+            <img src="/assets/common-place/photo-02.jpg" alt="Ocean waves rolling toward a mountain coastline at dusk" loading="lazy">
+            <figcaption>Film mood</figcaption>
+          </figure>
+          <figure class="gallery-item is-wide">
+            <img src="/assets/common-place/photo-03.jpg" alt="A person sitting near palm trees by the beach" loading="lazy">
+            <figcaption>Street</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="/assets/common-place/photo-06.jpg" alt="Two models in yellow tops seated against a dark wall" loading="lazy">
+            <figcaption>Campaign</figcaption>
+          </figure>
+          <figure class="gallery-item is-tall">
+            <img src="/assets/common-place/photo-07.jpg" alt="Model in yellow glasses seated in a chrome chair" loading="lazy">
+            <figcaption>Portrait</figcaption>
+          </figure>
+          <figure class="gallery-item is-tall">
+            <img src="/assets/common-place/photo-08.jpg" alt="Two models styled in yellow and grey in a studio" loading="lazy">
+            <figcaption>Lookbook</figcaption>
+          </figure>
+          <figure class="gallery-item is-tall">
+            <img src="/assets/common-place/photo-09.jpg" alt="Model standing in a yellow sweatshirt against a soft wall" loading="lazy">
+            <figcaption>Still</figcaption>
+          </figure>
+          <figure class="gallery-item is-tall">
+            <img src="/assets/common-place/photo-10.jpg" alt="Two models sitting on wooden studio benches" loading="lazy">
+            <figcaption>Common place</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+    <section class="close" aria-labelledby="close-title">
+      <div class="close-inner">
+        <h2 id="close-title">commonpl4ce.</h2>
+        <p>A rough-edged wordmark, a moving archive, and a visual system built from the roll itself.</p>
       </div>
     </section>
   </main>
@@ -364,11 +613,16 @@
       const track = document.getElementById("reveal");
       const leftLetters = document.getElementById("leftLetters");
       const rightLetters = document.getElementById("rightLetters");
+      const gallery = document.getElementById("gallery");
+      const galleryRail = document.getElementById("galleryRail");
 
       let target = 0;
       let current = 0;
+      let galleryTarget = 0;
+      let galleryCurrent = 0;
       let leftWidth = 0;
       let rightWidth = 0;
+      let galleryTravel = 0;
       let ticking = false;
 
       const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -377,6 +631,7 @@
       function measure() {
         leftWidth = leftLetters.getBoundingClientRect().width;
         rightWidth = rightLetters.getBoundingClientRect().width;
+        galleryTravel = Math.max(0, galleryRail.scrollWidth - window.innerWidth + 96);
         updateTarget();
         render(true);
       }
@@ -384,7 +639,10 @@
       function updateTarget() {
         const rect = track.getBoundingClientRect();
         const scrollable = Math.max(1, rect.height - window.innerHeight);
+        const galleryRect = gallery.getBoundingClientRect();
+        const galleryScrollable = Math.max(1, galleryRect.height - window.innerHeight);
         target = clamp(-rect.top / scrollable);
+        galleryTarget = clamp(-galleryRect.top / galleryScrollable);
         if (!ticking) {
           ticking = true;
           requestAnimationFrame(tick);
@@ -393,9 +651,11 @@
 
       function tick() {
         current += (target - current) * 0.12;
+        galleryCurrent += (galleryTarget - galleryCurrent) * 0.1;
         if (Math.abs(target - current) < 0.0008) current = target;
+        if (Math.abs(galleryTarget - galleryCurrent) < 0.0008) galleryCurrent = galleryTarget;
         render(false);
-        if (current !== target) {
+        if (current !== target || galleryCurrent !== galleryTarget) {
           requestAnimationFrame(tick);
         } else {
           ticking = false;
@@ -419,6 +679,7 @@
         root.style.setProperty("--four-y", `${(7 * fall).toFixed(2)}px`);
         root.style.setProperty("--lock-y", `${(-36 * lock).toFixed(2)}vh`);
         root.style.setProperty("--lock-scale", `${(1 - 0.58 * lock).toFixed(4)}`);
+        root.style.setProperty("--gallery-x", `${(-galleryTravel * ease(galleryCurrent)).toFixed(2)}px`);
 
         if (force && !ticking) {
           ticking = true;
