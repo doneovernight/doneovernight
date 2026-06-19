@@ -353,28 +353,6 @@
       margin: 0 auto;
       padding: clamp(48px, 8vh, 104px) 0 clamp(48px, 8vh, 96px);
     }
-    .shell:has(.form-card.is-revealed) {
-      width: min(1180px, 100%);
-      grid-template-columns: minmax(0, 0.92fr) minmax(470px, 0.86fr);
-      gap: clamp(30px, 5vw, 72px);
-      justify-items: stretch;
-    }
-    .shell:has(.form-card.is-revealed) .hero {
-      width: min(520px, 100%);
-      margin: 0;
-      text-align: left;
-    }
-    .shell:has(.form-card.is-revealed) h1,
-    .shell:has(.form-card.is-revealed) .subhead {
-      margin-left: 0;
-    }
-    .shell:has(.form-card.is-revealed) .actions,
-    .shell:has(.form-card.is-revealed) .service-line {
-      justify-content: flex-start;
-    }
-    .shell:has(.form-card.is-revealed) .trust-panel {
-      margin-left: 0;
-    }
     .hero {
       width: min(560px, 100%);
       margin: 0 auto;
@@ -526,6 +504,16 @@
       font-size: 0.85rem;
       line-height: 1.62;
       text-align: center;
+    }
+    .intake-final {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: clamp(46px, 7vw, 96px) 0 clamp(62px, 9vw, 124px);
+      scroll-margin-top: 72px;
+    }
+    .intake-final:has(.form-card:not(.is-revealed)) {
+      padding: 0;
+      min-height: 0;
     }
     .form-card {
       position: relative;
@@ -1545,26 +1533,6 @@
       .page { padding: 18px; }
       .header { padding-bottom: 18px; }
       .shell { min-height: auto; padding: 64px 0 42px; gap: 34px; }
-      .shell:has(.form-card.is-revealed) {
-        width: min(720px, 100%);
-        grid-template-columns: 1fr;
-      }
-      .shell:has(.form-card.is-revealed) .hero {
-        width: min(560px, 100%);
-        margin: 0 auto;
-        text-align: center;
-      }
-      .shell:has(.form-card.is-revealed) h1,
-      .shell:has(.form-card.is-revealed) .subhead {
-        margin-left: auto;
-      }
-      .shell:has(.form-card.is-revealed) .actions,
-      .shell:has(.form-card.is-revealed) .service-line {
-        justify-content: center;
-      }
-      .shell:has(.form-card.is-revealed) .trust-panel {
-        margin-left: auto;
-      }
       h1 { max-width: 12.2ch; }
       .grid,
       .grid.deadline-budget-grid { grid-template-columns: 1fr; }
@@ -1747,63 +1715,6 @@
           </div>
         </div>
       </div>
-
-      <aside class="form-card" id="task-intake" aria-label="Ask DONEOVERNIGHT" aria-hidden="true" inert>
-        <div class="form-inner">
-          <div class="form-head">
-            <h2>Send the ask.</h2>
-            <span class="live">Operations online</span>
-          </div>
-
-          <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
-            <input type="hidden" name="source" value="ask_intake">
-            <input type="hidden" name="intakeVersion" value="ask_page_v1">
-            <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
-
-            <div class="field" data-field="task_description">
-              <label for="startTask">What should we handle overnight?</label>
-              <textarea id="startTask" name="task_description" required placeholder="e.g. Fix my landing page funnel before tomorrow morning, connect the signup automation, and tighten the copy."></textarea>
-            </div>
-
-            <div class="field" data-field="references">
-              <label for="startReferences">Files / References (optional)</label>
-              <textarea id="startReferences" name="files_link" placeholder="Google Drive, Dropbox, WeTransfer,
-Loom, Figma, Notion, GitHub or Website URL"></textarea>
-            </div>
-
-            <div class="grid deadline-budget-grid">
-              <div class="field">
-                <label for="startDeadline">Deadline / urgency</label>
-                <input id="startDeadline" name="deadline" type="hidden" value="Tonight">
-                <div class="deadline-chips" role="group" aria-label="Deadline or urgency">
-                  <button class="deadline-chip" type="button" data-deadline="Tonight" aria-pressed="true">Tonight</button>
-                  <button class="deadline-chip" type="button" data-deadline="48h" aria-pressed="false">48h</button>
-                  <button class="deadline-chip" type="button" data-deadline="This week" aria-pressed="false">This week</button>
-                  <button class="deadline-chip" type="button" data-deadline="Flexible" aria-pressed="false">Flexible</button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="startBudget">Budget</label>
-                <input id="startBudget" name="budget" type="text" inputmode="text" autocomplete="off" placeholder="Optional">
-              </div>
-            </div>
-
-            <div class="grid">
-              <div class="field" data-field="name">
-                <label for="startName">Name</label>
-                <input id="startName" name="name" type="text" autocomplete="name" required placeholder="Your name">
-              </div>
-              <div class="field" data-field="email">
-                <label for="startEmail">Email</label>
-                <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
-              </div>
-            </div>
-
-            <button class="submit" id="startSubmit" type="submit">Send the ask</button>
-            <p class="fine">No payment required to ask. We review first, then reply with scope, timing, and the next move.</p>
-          </form>
-        </div>
-      </aside>
     </section>
 
     <section class="activity" data-scroll-reveal aria-label="DONEOVERNIGHT overnight execution layer">
@@ -2022,6 +1933,65 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           </details>
         </div>
       </div>
+    </section>
+
+    <section class="intake-final" aria-label="Send the ask">
+      <aside class="form-card" id="task-intake" aria-label="Ask DONEOVERNIGHT" aria-hidden="true" inert>
+        <div class="form-inner">
+          <div class="form-head">
+            <h2>Send the ask.</h2>
+            <span class="live">Operations online</span>
+          </div>
+
+          <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
+            <input type="hidden" name="source" value="ask_intake">
+            <input type="hidden" name="intakeVersion" value="ask_page_v1">
+            <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
+
+            <div class="field" data-field="task_description">
+              <label for="startTask">What should we handle overnight?</label>
+              <textarea id="startTask" name="task_description" required placeholder="e.g. Fix my landing page funnel before tomorrow morning, connect the signup automation, and tighten the copy."></textarea>
+            </div>
+
+            <div class="field" data-field="references">
+              <label for="startReferences">Files / References (optional)</label>
+              <textarea id="startReferences" name="files_link" placeholder="Google Drive, Dropbox, WeTransfer,
+Loom, Figma, Notion, GitHub or Website URL"></textarea>
+            </div>
+
+            <div class="grid deadline-budget-grid">
+              <div class="field">
+                <label for="startDeadline">Deadline / urgency</label>
+                <input id="startDeadline" name="deadline" type="hidden" value="Tonight">
+                <div class="deadline-chips" role="group" aria-label="Deadline or urgency">
+                  <button class="deadline-chip" type="button" data-deadline="Tonight" aria-pressed="true">Tonight</button>
+                  <button class="deadline-chip" type="button" data-deadline="48h" aria-pressed="false">48h</button>
+                  <button class="deadline-chip" type="button" data-deadline="This week" aria-pressed="false">This week</button>
+                  <button class="deadline-chip" type="button" data-deadline="Flexible" aria-pressed="false">Flexible</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="startBudget">Budget</label>
+                <input id="startBudget" name="budget" type="text" inputmode="text" autocomplete="off" placeholder="Optional">
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="field" data-field="name">
+                <label for="startName">Name</label>
+                <input id="startName" name="name" type="text" autocomplete="name" required placeholder="Your name">
+              </div>
+              <div class="field" data-field="email">
+                <label for="startEmail">Email</label>
+                <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
+              </div>
+            </div>
+
+            <button class="submit" id="startSubmit" type="submit">Send the ask</button>
+            <p class="fine">No payment required to ask. We review first, then reply with scope, timing, and the next move.</p>
+          </form>
+        </div>
+      </aside>
     </section>
 
     <footer class="footer" aria-label="DONEOVERNIGHT links">
