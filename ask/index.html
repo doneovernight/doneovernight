@@ -1682,7 +1682,7 @@
         <div class="form-inner">
           <div class="form-head">
             <h2>Send the ask.</h2>
-            <span class="live">Overnight active</span>
+            <span class="live">Operators online</span>
           </div>
 
           <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
@@ -1704,6 +1704,11 @@
             <div class="field" data-field="task_description">
               <label for="startTask">What should we handle overnight?</label>
               <textarea id="startTask" name="task_description" required placeholder="e.g. Fix my landing page funnel before tomorrow morning, connect the signup automation, and tighten the copy."></textarea>
+            </div>
+
+            <div class="field" data-field="references">
+              <label for="startReferences">Files / References (optional)</label>
+              <textarea id="startReferences" name="files_link" placeholder="Paste a Google Drive, Dropbox, WeTransfer, Loom, Figma, Notion, GitHub, or website link."></textarea>
             </div>
 
             <div class="grid">
@@ -1732,7 +1737,7 @@
 
     <section class="activity" data-scroll-reveal aria-label="DONEOVERNIGHT overnight execution layer">
       <div class="activity-stage">
-        <p class="activity-kicker">Overnight active</p>
+        <p class="activity-kicker">Operators online</p>
         <div class="activity-words" aria-label="Intake. Review. Plan. Execution.">
           <span>Intake.</span>
           <span>Review.</span>
@@ -2098,6 +2103,13 @@
         return document.querySelector(selector)?.value.trim() || "";
       }
 
+      function readReferenceLinks() {
+        return read("#startReferences")
+          .split(/[\n,]+/)
+          .map((value) => value.trim())
+          .filter(Boolean);
+      }
+
       function setMessage(text, success = false, detail = "", reference = "", confirmation = "") {
         message.textContent = "";
         message.classList.toggle("is-visible", Boolean(text || detail || reference || confirmation));
@@ -2215,10 +2227,15 @@
       }
 
       function payload() {
+        const referenceLinks = readReferenceLinks();
+        const referenceText = referenceLinks.join("\n");
         return {
           name: read("#startName"),
           email: read("#startEmail"),
           task_description: read("#startTask"),
+          links: referenceLinks,
+          files_link: referenceText,
+          reference_links: referenceLinks,
           deadline: read("#startDeadline"),
           budget: read("#startBudget"),
           source: "ask_intake",
