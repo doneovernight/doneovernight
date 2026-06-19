@@ -3103,6 +3103,23 @@
     .workspace-message.is-error { color: #f4b0a8; }
     .workspace-message.is-success { color: rgba(139,224,173,.9); }
 
+    .workspace-deeplink-notice {
+      margin: 14px 0 0;
+      border: 1px solid rgba(233,196,138,.18);
+      border-radius: 8px;
+      background: rgba(233,196,138,.045);
+      color: rgba(245,241,234,.72);
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .workspace-deeplink-notice.is-error {
+      border-color: rgba(244,176,168,.24);
+      background: rgba(244,176,168,.045);
+      color: #f4b0a8;
+    }
+
     .deadline-pills {
       display: flex;
       flex-wrap: wrap;
@@ -4445,6 +4462,7 @@
       const WORKSPACE_MESSAGES_ENDPOINT = '../api/workspace-messages';
       const WORKSPACE_QUOTES_ENDPOINT = '../api/workspace-quotes';
       const WORKSPACE_SESSION_ENDPOINT = '../api/workspace-data';
+      const WORKSPACE_PENDING_DEEP_LINK_KEY = 'doneovernight:pendingWorkspaceDeepLink';
       const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const workspaceShell = document.getElementById('workspaceShell');
@@ -4528,6 +4546,7 @@
       let selectedWorkspaceTaskKey = '';
       let activeOperationUpdateTaskKey = '';
       let workspaceDeepLinkHandled = false;
+      let workspaceDeepLinkNotice = null;
       let activeReferralLink = '';
       let referralNoteCycleIndex = 0;
       let selectedWorkspaceDeadline = 'Tonight';
@@ -4624,6 +4643,7 @@
       }
 
       function renderWorkspacePendingState(message = 'Open the secure portal to verify access.') {
+        const pendingDeepLink = getWorkspaceDeepLinkRequest();
         const lockedMessage = /access key|private workspace access required|workspace_session_required|request a fresh/i.test(String(message || ''))
           ? 'Open the secure portal with your issued credentials to continue into the private workspace.'
           : message;
@@ -4632,12 +4652,14 @@
         workspaceConnection.classList.remove('is-live');
         workspaceConnection.classList.add('is-syncing');
         workspaceTitle.textContent = 'Private workspace';
-        workspaceHeroCopy.textContent = 'This operating environment is protected. Verify through the portal before requests, quotes, files, updates, and delivery movement are revealed.';
+        workspaceHeroCopy.textContent = pendingDeepLink?.taskReference
+          ? `Workspace access is required before adding information to ${pendingDeepLink.taskReference}.`
+          : 'This operating environment is protected. Verify through the portal before requests, quotes, files, updates, and delivery movement are revealed.';
         workspaceName.textContent = 'Secure access required';
         workspaceSubcopy.textContent = lockedMessage || 'Open the secure portal with your issued credentials to continue into the private workspace.';
         const routeSlug = getWorkspaceSlugFromRoute();
         if (portalAccessLink) {
-          portalAccessLink.textContent = 'Continue to Portal →';
+          portalAccessLink.textContent = pendingDeepLink?.taskReference ? 'Continue to add information →' : 'Continue to Portal →';
           portalAccessLink.href = routeSlug ? `../portal/?workspace=${encodeURIComponent(routeSlug)}` : '../portal/';
         }
         if (requestPanel) requestPanel.classList.remove('is-expanded');
@@ -4648,6 +4670,7 @@
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
         if (!token) return true;
+        const pendingDeepLink = getWorkspaceDeepLinkRequest();
         if (workspaceConnection) {
           workspaceConnection.textContent = 'Verifying access';
           workspaceConnection.classList.add('is-syncing');
@@ -4673,7 +4696,8 @@
               company: payload.workspace.company || ''
             });
           }
-          window.location.replace(payload.redirectTo || window.location.pathname);
+          const redirectBase = payload.redirectTo || window.location.pathname;
+          window.location.replace(pendingDeepLink?.taskReference ? buildWorkspaceRedirectWithDeepLink(redirectBase) : redirectBase);
           return false;
         } catch (error) {
           renderWorkspacePendingState('This private workspace link is invalid or expired. Request a fresh link from operations.');
@@ -5639,6 +5663,7 @@
             </div>
             ${historyItems.length ? `<span class="workspace-os-status">${escapeHTML(historyItems.length)} task${historyItems.length === 1 ? '' : 's'}</span>` : ''}
           </div>
+          ${renderWorkspaceDeepLinkNotice()}
           ${historyItems.length ? `
             <div class="workspace-task-history-list" aria-label="All workspace tasks">
               ${historyItems.map((task) => {
@@ -5671,33 +5696,164 @@
         return getTaskHistoryItems(workspaceTasks).find((task) => getWorkspaceOperationKey(task) === key) || null;
       }
 
+      function normalizeWorkspaceTaskReference(value = '') {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const donMatch = raw.match(/DON-\d{4}-\d{5}/i);
+        if (donMatch) return donMatch[0].toUpperCase();
+        if (/^\d{5}$/.test(raw)) return raw;
+        return raw.toLowerCase();
+      }
+
+      function getWorkspaceTaskReferenceKeys(task = {}) {
+        const raw = task.raw_payload || task.rawPayload || {};
+        return new Set([
+          task.task_id,
+          task.taskId,
+          task.reference,
+          task.task_reference,
+          task.taskReference,
+          task.don_reference,
+          task.donReference,
+          task.operational_id,
+          task.operationalId,
+          raw.task_id,
+          raw.taskId,
+          raw.reference,
+          raw.task_reference,
+          raw.taskReference,
+          raw.don_reference,
+          raw.donReference,
+          raw.operational_id,
+          raw.operationalId,
+          task.id,
+          getTaskId(task),
+          getWorkspaceOperationKey(task)
+        ].map(normalizeWorkspaceTaskReference).filter(Boolean));
+      }
+
+      function doesWorkspaceTaskMatchReference(task = {}, reference = '') {
+        const normalized = normalizeWorkspaceTaskReference(reference);
+        if (!normalized) return false;
+        const keys = getWorkspaceTaskReferenceKeys(task);
+        if (keys.has(normalized)) return true;
+        if (/^\d{5}$/.test(normalized)) {
+          return [...keys].some((key) => key.endsWith(`-${normalized}`));
+        }
+        return false;
+      }
+
+      function normalizeWorkspaceDeepLinkAction(value = '') {
+        const action = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+        if (action === 'add-information' || action === 'update-operation') return 'add-information';
+        return action || 'select';
+      }
+
+      function readStoredWorkspaceDeepLink() {
+        try {
+          const raw = sessionStorage.getItem(WORKSPACE_PENDING_DEEP_LINK_KEY) || localStorage.getItem(WORKSPACE_PENDING_DEEP_LINK_KEY) || '';
+          const parsed = raw ? JSON.parse(raw) : null;
+          if (!parsed?.createdAt) return parsed;
+          const age = Date.now() - new Date(parsed.createdAt).getTime();
+          if (Number.isFinite(age) && age > 24 * 60 * 60 * 1000) {
+            clearStoredWorkspaceDeepLink();
+            return null;
+          }
+          return parsed;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function clearStoredWorkspaceDeepLink() {
+        sessionStorage.removeItem(WORKSPACE_PENDING_DEEP_LINK_KEY);
+        localStorage.removeItem(WORKSPACE_PENDING_DEEP_LINK_KEY);
+      }
+
+      function storeWorkspaceDeepLinkRequest(request = {}) {
+        if (!request.taskReference) return null;
+        const payload = {
+          taskReference: request.taskReference,
+          normalizedTaskReference: normalizeWorkspaceTaskReference(request.taskReference),
+          action: normalizeWorkspaceDeepLinkAction(request.action),
+          slug: normalizeSlug(request.slug || getWorkspaceSlugFromRoute() || workspaceSlug),
+          createdAt: request.createdAt || new Date().toISOString(),
+          attempts: Number(request.attempts || 0)
+        };
+        const serialized = JSON.stringify(payload);
+        sessionStorage.setItem(WORKSPACE_PENDING_DEEP_LINK_KEY, serialized);
+        localStorage.setItem(WORKSPACE_PENDING_DEEP_LINK_KEY, serialized);
+        return payload;
+      }
+
       function getWorkspaceDeepLinkRequest() {
         const params = new URLSearchParams(window.location.search);
         const taskReference = String(params.get('task') || params.get('operation') || params.get('don') || '').trim();
-        const action = String(params.get('action') || '').trim().toLowerCase();
-        if (!taskReference) return null;
-        return { taskReference, action };
+        const action = normalizeWorkspaceDeepLinkAction(params.get('action'));
+        if (taskReference) {
+          return storeWorkspaceDeepLinkRequest({
+            taskReference,
+            action,
+            slug: getWorkspaceSlugFromRoute()
+          });
+        }
+        return readStoredWorkspaceDeepLink();
+      }
+
+      function buildWorkspaceRedirectWithDeepLink(basePath = window.location.pathname) {
+        const request = getWorkspaceDeepLinkRequest();
+        if (!request?.taskReference) return basePath;
+        try {
+          const url = new URL(basePath, window.location.origin);
+          url.searchParams.delete('token');
+          url.searchParams.set('task', request.taskReference);
+          url.searchParams.set('action', request.action || 'add-information');
+          return `${url.pathname}${url.search}${url.hash}`;
+        } catch (error) {
+          const separator = String(basePath).includes('?') ? '&' : '?';
+          return `${basePath}${separator}task=${encodeURIComponent(request.taskReference)}&action=${encodeURIComponent(request.action || 'add-information')}`;
+        }
       }
 
       function findWorkspaceTaskByReference(reference = '', tasks = workspaceTasks) {
-        const normalized = String(reference || '').trim().toLowerCase();
-        if (!normalized) return null;
-        return getTaskHistoryItems(tasks).find((task) => {
-          const taskId = getTaskId(task).toLowerCase();
-          const key = getWorkspaceOperationKey(task).toLowerCase();
-          return taskId === normalized || key === normalized;
-        }) || null;
+        if (!normalizeWorkspaceTaskReference(reference)) return null;
+        return getTaskHistoryItems(tasks).find((task) => doesWorkspaceTaskMatchReference(task, reference)) || null;
       }
 
-      function handleWorkspaceDeepLink(tasks = workspaceTasks) {
-        if (workspaceDeepLinkHandled) return;
+      function setWorkspaceDeepLinkNotice(message = '', type = '') {
+        workspaceDeepLinkNotice = message ? { message, type } : null;
+      }
+
+      function renderWorkspaceDeepLinkNotice() {
+        if (!workspaceDeepLinkNotice?.message) return '';
+        const className = workspaceDeepLinkNotice.type === 'error' ? ' is-error' : '';
+        return `<div class="workspace-deeplink-notice${className}" role="status">${escapeHTML(workspaceDeepLinkNotice.message)}</div>`;
+      }
+
+      function handleWorkspaceDeepLink(tasks = workspaceTasks, options = {}) {
+        if (workspaceDeepLinkHandled && !options.force) return;
         const request = getWorkspaceDeepLinkRequest();
-        if (!request) return;
+        if (!request?.taskReference) return;
         const task = findWorkspaceTaskByReference(request.taskReference, tasks);
-        if (!task) return;
+
+        if (!task) {
+          const attempts = Number(request.attempts || 0) + 1;
+          const nextRequest = storeWorkspaceDeepLinkRequest({ ...request, attempts });
+          if ((tasks || []).length && attempts >= 2) {
+            setWorkspaceDeepLinkNotice(`Could not find this operation in your workspace: ${request.taskReference}.`, 'error');
+            workspaceDeepLinkHandled = true;
+            clearStoredWorkspaceDeepLink();
+            renderWorkspaceAllTasks(tasks);
+          } else if (nextRequest && !workspaceDeepLinkHandled) {
+            window.setTimeout(() => handleWorkspaceDeepLink(workspaceTasks, { force: true }), 240);
+          }
+          return;
+        }
 
         workspaceDeepLinkHandled = true;
+        clearStoredWorkspaceDeepLink();
         selectedWorkspaceTaskKey = getWorkspaceOperationKey(task);
+        setWorkspaceDeepLinkNotice(`Add information to ${getTaskId(task)}.`, 'ready');
         renderWorkspaceAllTasks(tasks);
         window.requestAnimationFrame(() => {
           const selectedRow = workspaceAllTasksPanel?.querySelector('.workspace-task-history-row.is-selected');
@@ -5705,8 +5861,8 @@
             behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
             block: 'center'
           });
-          if (request.action === 'add-information' || request.action === 'add_information' || request.action === 'update-operation') {
-            window.setTimeout(() => openOperationUpdateModal(task), 240);
+          if (request.action === 'add-information') {
+            window.setTimeout(() => openOperationUpdateModal(task), 260);
           } else {
             workspaceAllTasksPanel?.querySelector('[data-task-detail-action="update-operation"]')?.focus({ preventScroll: true });
           }
