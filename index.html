@@ -4664,6 +4664,46 @@ if (window.location.hash === '#cta') {
     return 'Something went wrong. Please email ask@doneovernight.com directly.';
   }
 
+  const intakeQualityMessage = 'Please provide a real request. Tell us what needs to be done.';
+
+  function looksRepeatedInput(value) {
+    const compact = String(value || '').replace(/\s+/g, '').toLowerCase();
+    return compact.length >= 10 && (/^(.)\1{9,}$/.test(compact) || /^(..{1,4})\1{2,}$/.test(compact) || /^(asdf|qwer|zxcv|test|abcd){2,}$/i.test(compact));
+  }
+
+  function looksRandomInput(value) {
+    const compact = String(value || '').replace(/\s+/g, '');
+    if (compact.length < 12 || /^\d+$/.test(compact)) return false;
+    const letters = compact.replace(/[^a-z]/gi, '');
+    if (letters.length < 10) return false;
+    const uniqueRatio = new Set(compact.toLowerCase().split('')).size / compact.length;
+    const vowels = letters.match(/[aeiou]/gi) || [];
+    const vowelRatio = vowels.length / letters.length;
+    const mixedCase = /[a-z]/.test(compact) && /[A-Z]/.test(compact);
+    const hasIntent = /\b(fix|build|make|create|connect|review|improve|polish|repair|setup|automate|automation|landing|website|page|form|email|telegram|crm|funnel|portal|workflow|brand|help|urgent|tonight)\b/i.test(value);
+    return uniqueRatio > 0.55 && (mixedCase || vowelRatio < 0.28) && !hasIntent;
+  }
+
+  function looksLikeUrlInput(value) {
+    return /^(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]{2,})/i.test(String(value || '').trim());
+  }
+
+  function hasExecutableRequest(value) {
+    const words = String(value || '').toLowerCase().match(/[a-z0-9]+/g) || [];
+    const meaningful = words.filter((word) => word.length > 1 && !/^\d+$/.test(word));
+    const hasIntent = /\b(fix|build|make|create|connect|review|improve|polish|repair|setup|set|automate|automation|integrate|redesign|design|landing|website|page|form|email|telegram|slack|crm|funnel|portal|dashboard|workflow|brand|help|audit|clean|restore|deploy)\b/i.test(value);
+    return meaningful.length >= 3 || (meaningful.length >= 2 && hasIntent);
+  }
+
+  function isObviousInvalidRequest() {
+    const task = form.querySelector('[name="task"]')?.value.trim() || '';
+    const budget = form.querySelector('[name="budget"]')?.value.trim() || '';
+    const links = String(form.querySelector('[name="file_link"]')?.value || '').split(/[\n,\s]+/).map((item) => item.trim()).filter(Boolean);
+    const randomLinks = links.filter((link) => !looksLikeUrlInput(link) && (looksRandomInput(link) || looksRepeatedInput(link))).length;
+    const randomBudget = budget && !/^(€|\$|eur|usd)?\s*\d{1,7}([.,]\d{1,2})?\s*(€|\$|eur|usd)?$/i.test(budget) && (looksRandomInput(budget) || looksRepeatedInput(budget));
+    return looksRepeatedInput(task) || looksRandomInput(task) || (!hasExecutableRequest(task) && (randomLinks > 0 || randomBudget));
+  }
+
   function validateRequired() {
     const task = form.querySelector('[name="task"]');
     const name = form.querySelector('[name="name"]');
@@ -4683,6 +4723,10 @@ if (window.location.hash === '#cta') {
     const invalid = validateRequired();
     if (invalid.length) {
       showError('Complete the required fields to start your overnight cycle.', invalid);
+      return;
+    }
+    if (isObviousInvalidRequest()) {
+      showError(intakeQualityMessage, [form.querySelector('[name="task"]')].filter(Boolean));
       return;
     }
 

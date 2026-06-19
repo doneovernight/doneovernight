@@ -1,6 +1,11 @@
 const crypto = require("crypto");
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const {
+  analyzeIntakeQuality,
+  INVALID_REQUEST,
+  LOW_CONFIDENCE_INTAKE
+} = require("../lib/intake-quality");
+const {
   dispatchWebhook,
   findPortalRequest,
   getWebhookUrls,
@@ -14,6 +19,7 @@ const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
+const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 const { resolveTaskLanguage } = require("../lib/language");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
@@ -673,6 +679,110 @@ async function notifyOperations(task) {
   }
 }
 
+function applyIntakeQuality(task, intakeQuality = {}) {
+  if (intakeQuality.valid) {
+    return {
+      ...task,
+      rawPayload: {
+        ...(task.rawPayload || {}),
+        intake_quality: intakeQuality,
+        intake_quality_status: intakeQuality.status,
+        intake_quality_checked_at: new Date().toISOString()
+      }
+    };
+  }
+
+  const status = intakeQuality.status === INVALID_REQUEST ? "invalid_request" : "low_confidence_intake";
+  const now = new Date().toISOString();
+
+  return {
+    ...task,
+    status,
+    queueState: "intake_quality_review",
+    automationHooks: {
+      ...(task.automationHooks || {}),
+      operatorDashboard: "blocked_intake_quality",
+      queueUpdates: "blocked_intake_quality",
+      quoteCreation: "blocked_intake_quality",
+      internalEstimate: "blocked_intake_quality"
+    },
+    rawPayload: {
+      ...(task.rawPayload || {}),
+      status,
+      review_state: status,
+      queue_state: "intake_quality_review",
+      intake_quality: intakeQuality,
+      intake_quality_status: intakeQuality.status,
+      intake_quality_checked_at: now,
+      invalid_request_email_required: true,
+      normal_operations_notification_blocked: true,
+      normal_telegram_blocked: true
+    }
+  };
+}
+
+async function notifyLowConfidenceIntake(task, intakeQuality = {}) {
+  const urls = getWebhookUrls([
+    "LOW_CONFIDENCE_INTAKE_WEBHOOK_URL",
+    "INTAKE_QUALITY_WEBHOOK_URL",
+    "TASK_SUBMIT_WEBHOOK_URL"
+  ]);
+  const reasons = Array.isArray(intakeQuality.reasons) && intakeQuality.reasons.length
+    ? intakeQuality.reasons.join(", ")
+    : "not_enough_executable_context";
+  const telegramMessage = [
+    "🟠 LOW CONFIDENCE INTAKE",
+    `Status: ${intakeQuality.status || LOW_CONFIDENCE_INTAKE}`,
+    `Reference: ${task.taskId}`,
+    `Name: ${task.name || "Unknown"}`,
+    `Email: ${task.email || "Unknown"}`,
+    `Source: ${task.source || "task_intake"}`,
+    `Reasons: ${reasons}`,
+    "",
+    "Request:",
+    task.taskSummary || "Not provided"
+  ].join("\n");
+
+  const result = await dispatchWebhook({
+    tag: "[INTAKE_QUALITY_WARNING]",
+    event: "low_confidence_intake",
+    urls,
+    payload: {
+      event: "low_confidence_intake",
+      event_type: "intake_quality_warning",
+      notification_type: "intake_quality_warning",
+      id: task.taskId,
+      task_id: task.taskId,
+      task_reference: task.taskId,
+      operational_id: task.taskId,
+      status: task.status,
+      intake_quality_status: intakeQuality.status,
+      intake_quality_reasons: intakeQuality.reasons || [],
+      name: task.name,
+      client_name: task.name,
+      email: task.email,
+      client_email: task.email,
+      source: task.source,
+      task_summary: task.taskSummary,
+      task_description: task.taskSummary,
+      telegram_message: telegramMessage,
+      operator_message: telegramMessage,
+      message: telegramMessage,
+      confirmation_email_required: false,
+      normal_intake: false,
+      raw_payload: task.rawPayload
+    },
+    timeoutMs: WEBHOOK_TIMEOUT_MS
+  });
+
+  return {
+    configured: result.attempted > 0,
+    delivered: result.fulfilled > 0,
+    reason: result.fulfilled > 0 ? "sent" : (result.attempted ? "failed" : "not_configured"),
+    status: result
+  };
+}
+
 function getClientConfirmationEmailUrls() {
   return getWebhookUrls([
     "TASK_CONFIRMATION_EMAIL_WEBHOOK_URL",
@@ -1233,11 +1343,68 @@ module.exports = async function handler(req, res) {
 
     const now = new Date();
     const taskId = getRequestedTaskId(input) || createTaskId(now);
-    const { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
+    let { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
+    const intakeQuality = analyzeIntakeQuality(input, task);
+    task = applyIntakeQuality(task, intakeQuality);
 
     // Future operational handoffs: quote generation, payment session generation,
     // portal linking, operator assignment, and realtime client status updates.
     const persistedTask = await saveTask(task);
+
+    if (!intakeQuality.valid) {
+      let qualityNotification = {
+        configured: false,
+        delivered: false,
+        reason: "not_configured"
+      };
+      let clientEmail = {
+        configured: false,
+        sent: false,
+        delivered: false,
+        reason: "not_configured",
+        provider: "none"
+      };
+
+      try {
+        qualityNotification = await notifyLowConfidenceIntake(task, intakeQuality);
+      } catch (notificationError) {
+        console.warn(`Intake quality notification warning: ${notificationError.message}`);
+        qualityNotification = {
+          configured: true,
+          delivered: false,
+          reason: "failed",
+          error: "INTAKE_QUALITY_NOTIFICATION_FAILED"
+        };
+      }
+
+      try {
+        clientEmail = await sendInvalidRequestEmail(task);
+      } catch (emailError) {
+        console.warn(`Invalid request email warning: ${emailError.message}`);
+        clientEmail = {
+          configured: true,
+          sent: false,
+          delivered: false,
+          reason: "failed",
+          provider: process.env.RESEND_API_KEY && process.env.TASK_CONFIRMATION_FROM ? "resend" : "none",
+          error: "INVALID_REQUEST_EMAIL_FAILED"
+        };
+      }
+
+      return send(res, 200, {
+        success: true,
+        taskId,
+        task,
+        persistedTask,
+        intakeQuality,
+        intakeQualityStatus: intakeQuality.status,
+        operationalQueue: false,
+        normalTelegramSent: false,
+        notification: qualityNotification,
+        clientEmail,
+        message: "Additional information required"
+      });
+    }
 
     let notification = {
       configured: false,

@@ -2110,6 +2110,46 @@
           .filter(Boolean);
       }
 
+      const intakeQualityMessage = "Please provide a real request. Tell us what needs to be done.";
+
+      function looksRepeatedInput(value) {
+        const compact = String(value || "").replace(/\s+/g, "").toLowerCase();
+        return compact.length >= 10 && (/^(.)\1{9,}$/.test(compact) || /^(..{1,4})\1{2,}$/.test(compact) || /^(asdf|qwer|zxcv|test|abcd){2,}$/i.test(compact));
+      }
+
+      function looksRandomInput(value) {
+        const compact = String(value || "").replace(/\s+/g, "");
+        if (compact.length < 12 || /^\d+$/.test(compact)) return false;
+        const letters = compact.replace(/[^a-z]/gi, "");
+        if (letters.length < 10) return false;
+        const uniqueRatio = new Set(compact.toLowerCase().split("")).size / compact.length;
+        const vowels = letters.match(/[aeiou]/gi) || [];
+        const vowelRatio = vowels.length / letters.length;
+        const mixedCase = /[a-z]/.test(compact) && /[A-Z]/.test(compact);
+        const hasIntent = /\b(fix|build|make|create|connect|review|improve|polish|repair|setup|automate|automation|landing|website|page|form|email|telegram|crm|funnel|portal|workflow|brand|help|urgent|tonight)\b/i.test(value);
+        return uniqueRatio > 0.55 && (mixedCase || vowelRatio < 0.28) && !hasIntent;
+      }
+
+      function looksLikeUrlInput(value) {
+        return /^(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]{2,})/i.test(String(value || "").trim());
+      }
+
+      function hasExecutableRequest(value) {
+        const words = String(value || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+        const meaningful = words.filter((word) => word.length > 1 && !/^\d+$/.test(word));
+        const hasIntent = /\b(fix|build|make|create|connect|review|improve|polish|repair|setup|set|automate|automation|integrate|redesign|design|landing|website|page|form|email|telegram|slack|crm|funnel|portal|dashboard|workflow|brand|help|audit|clean|restore|deploy)\b/i.test(value);
+        return meaningful.length >= 3 || (meaningful.length >= 2 && hasIntent);
+      }
+
+      function isObviousInvalidRequest() {
+        const task = read("#startTask");
+        const budget = read("#startBudget");
+        const links = readReferenceLinks();
+        const randomLinks = links.filter((link) => !looksLikeUrlInput(link) && (looksRandomInput(link) || looksRepeatedInput(link))).length;
+        const randomBudget = budget && !/^(€|\$|eur|usd)?\s*\d{1,7}([.,]\d{1,2})?\s*(€|\$|eur|usd)?$/i.test(budget) && (looksRandomInput(budget) || looksRepeatedInput(budget));
+        return looksRepeatedInput(task) || looksRandomInput(task) || (!hasExecutableRequest(task) && (randomLinks > 0 || randomBudget));
+      }
+
       function setMessage(text, success = false, detail = "", reference = "", confirmation = "") {
         message.textContent = "";
         message.classList.toggle("is-visible", Boolean(text || detail || reference || confirmation));
@@ -2161,6 +2201,13 @@
           email.closest(".field")?.classList.add("is-invalid");
           email.focus({ preventScroll: true });
           setMessage("Enter a valid email so we can get back to you.");
+          return false;
+        }
+        if (isObviousInvalidRequest()) {
+          const task = document.querySelector("#startTask");
+          task?.closest(".field")?.classList.add("is-invalid");
+          task?.focus({ preventScroll: true });
+          setMessage(intakeQualityMessage);
           return false;
         }
         return true;
