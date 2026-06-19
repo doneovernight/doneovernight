@@ -508,15 +508,19 @@
     .form-card {
       position: relative;
       overflow: hidden;
-      width: min(620px, 100%);
+      width: min(720px, 100%);
       max-height: 0;
       margin: 0 auto;
-      border: 1px solid rgba(245, 241, 234, 0.09);
+      border: 1px solid rgba(245, 241, 234, 0.105);
       border-radius: 6px;
       background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
-        rgba(8, 9, 12, 0.78);
-      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+        radial-gradient(circle at 22% -12%, rgba(233, 196, 138, 0.12), transparent 18rem),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.016)),
+        rgba(7, 8, 11, 0.84);
+      box-shadow:
+        0 36px 86px -22px rgba(0, 0, 0, 0.72),
+        0 18px 54px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(245, 241, 234, 0.055);
       backdrop-filter: blur(28px);
       opacity: 0;
       pointer-events: none;
@@ -525,7 +529,7 @@
       transition: max-height 620ms cubic-bezier(0.22, 0.68, 0.26, 1), opacity 420ms ease, transform 520ms ease, visibility 0ms linear 620ms;
     }
     .form-card.is-revealed {
-      max-height: 980px;
+      max-height: 1180px;
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
@@ -534,24 +538,27 @@
     }
     .form-card::before {
       position: absolute;
-      inset: 0;
+      top: -1px;
+      right: 12%;
+      left: 12%;
+      height: 1px;
       pointer-events: none;
-      background:
-        radial-gradient(circle at 22% 0%, rgba(233, 196, 138, 0.12), transparent 24rem),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent 30%);
+      background: linear-gradient(90deg, transparent, rgba(233, 196, 138, 0.46), transparent);
       content: "";
     }
-    .form-inner { position: relative; padding: clamp(20px, 3.2vw, 30px); }
+    .form-inner { position: relative; padding: clamp(28px, 4vw, 42px); }
     .form-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
-      margin-bottom: 18px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(245, 241, 234, 0.085);
     }
     .form-head h2 {
       font-family: var(--serif);
-      font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+      font-size: clamp(1.72rem, 2.6vw, 2.24rem);
       font-weight: 400;
       line-height: 1.08;
       letter-spacing: -0.025em;
@@ -562,12 +569,13 @@
       gap: 8px;
       flex: 0 0 auto;
       margin-top: 6px;
-      color: rgba(139, 224, 173, 0.9);
+      color: rgba(233, 196, 138, 0.82);
       font-family: var(--mono);
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       font-weight: 700;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .live::before {
       width: 7px;
@@ -577,28 +585,29 @@
       box-shadow: 0 0 12px rgba(139, 224, 173, 0.3);
       content: "";
     }
-    form { display: grid; gap: 12px; }
-    .field { display: grid; gap: 8px; }
+    form { display: grid; gap: 15px; }
+    .field { display: grid; gap: 9px; }
     .field label {
-      color: rgba(245, 241, 234, 0.66);
+      color: rgba(245, 241, 234, 0.62);
       font-family: var(--mono);
-      font-size: 0.64rem;
+      font-size: 0.62rem;
       font-weight: 800;
-      letter-spacing: 0.13em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
     }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     input, textarea {
       width: 100%;
-      border: 1px solid rgba(245, 241, 234, 0.09);
+      border: 1px solid rgba(245, 241, 234, 0.105);
       border-radius: 4px;
       outline: 0;
-      background: rgba(255, 255, 255, 0.032);
+      background: rgba(255, 255, 255, 0.028);
       color: rgba(245, 241, 234, 0.9);
       transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
     }
-    input { height: 46px; padding: 0 14px; }
-    textarea { min-height: 132px; resize: vertical; padding: 14px; line-height: 1.55; }
+    input { height: 50px; padding: 0 15px; }
+    textarea { min-height: 144px; resize: vertical; padding: 15px; line-height: 1.58; }
+    #startReferences { min-height: 252px; }
     input::placeholder, textarea::placeholder { color: rgba(245, 241, 234, 0.34); }
     input:focus, textarea:focus {
       border-color: rgba(233, 196, 138, 0.4);
@@ -612,12 +621,13 @@
     .deadline-chips {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 6px;
+      gap: 8px;
     }
     .deadline-chip {
-      padding: 10px 8px;
-      background: rgba(245, 241, 234, 0.03);
-      border: 1px solid var(--line);
+      min-height: 44px;
+      padding: 11px 9px;
+      background: rgba(245, 241, 234, 0.032);
+      border: 1px solid rgba(245, 241, 234, 0.105);
       border-radius: 100px;
       font-family: var(--mono);
       font-size: 10px;
@@ -626,7 +636,7 @@
       color: var(--ink-dim);
       text-align: center;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: border-color 0.28s ease, background 0.28s ease, color 0.28s ease, box-shadow 0.28s ease;
     }
     .deadline-chip:hover,
     .deadline-chip:focus-visible {
@@ -639,24 +649,29 @@
       color: #050608;
       border-color: var(--amber);
       font-weight: 600;
+      box-shadow:
+        0 0 24px rgba(233, 196, 138, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
     }
     .submit {
       position: relative;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 52px;
-      margin-top: 4px;
+      min-height: 58px;
+      margin-top: 8px;
       border: 1px solid rgba(233, 196, 138, 0.45);
       border-radius: 999px;
       background: rgba(233, 196, 138, 0.08);
       color: #f4d28a;
       cursor: pointer;
-      font-size: 0.86rem;
+      font-size: 0.84rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      box-shadow: 0 0 18px rgba(233, 196, 138, 0.12), inset 0 1px 0 rgba(255,255,255,0.08);
+      box-shadow:
+        0 0 24px rgba(233, 196, 138, 0.16),
+        inset 0 1px 0 rgba(255,255,255,0.08);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease, transform 0.25s ease;
@@ -667,7 +682,10 @@
       outline: 0;
       background: rgba(233, 196, 138, 0.14);
       color: #ffe3ad;
-      box-shadow: 0 0 28px rgba(233, 196, 138, 0.24), 0 0 74px rgba(233, 196, 138, 0.1), inset 0 1px 0 rgba(255,255,255,0.12);
+      box-shadow:
+        0 0 34px rgba(233, 196, 138, 0.34),
+        0 0 86px rgba(233, 196, 138, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.12);
     }
     .submit:active { transform: scale(0.98); }
     .submit:disabled { cursor: wait; opacity: 0.72; }
@@ -712,8 +730,9 @@
       text-transform: uppercase;
     }
     .fine {
-      color: rgba(245, 241, 234, 0.42);
-      font-size: 0.78rem;
+      margin-top: -2px;
+      color: rgba(245, 241, 234, 0.46);
+      font-size: 0.76rem;
       line-height: 1.5;
       text-align: center;
     }
@@ -1414,7 +1433,7 @@
         padding-block: 30px;
       }
       .form-card {
-        width: min(680px, 100%);
+        width: min(740px, 100%);
         margin-top: clamp(30px, 5vh, 58px);
       }
       .activity {
@@ -1552,12 +1571,13 @@
       .status-block strong { font-size: 0.64rem; letter-spacing: 0.13em; }
       .service-line { display: grid; justify-items: center; gap: 4px; margin-top: 10px; font-size: 0.63rem; line-height: 1.72; letter-spacing: 0.09em; }
       .trust { margin-top: 20px; font-size: 0.78rem; line-height: 1.6; }
-      .form-inner { padding: 18px; }
+      .form-inner { padding: 20px; }
       .form-head { display: grid; }
       .live { margin-top: 0; }
       form { gap: 10px; }
-      input { height: 44px; }
-      textarea { min-height: 108px; }
+      input { height: 46px; }
+      textarea { min-height: 112px; }
+      #startReferences { min-height: 236px; }
       .deadline-chips { grid-template-columns: 1fr 1fr; }
       .activity {
         min-height: auto;
@@ -1682,7 +1702,7 @@
         <div class="form-inner">
           <div class="form-head">
             <h2>Send the ask.</h2>
-            <span class="live">Operators online</span>
+            <span class="live">Private desk active</span>
           </div>
 
           <form id="startTaskForm" action="/api/task-submit" method="POST" novalidate>
@@ -1708,7 +1728,15 @@
 
             <div class="field" data-field="references">
               <label for="startReferences">Files / References (optional)</label>
-              <textarea id="startReferences" name="files_link" placeholder="Paste a Google Drive, Dropbox, WeTransfer, Loom, Figma, Notion, GitHub, or website link."></textarea>
+              <textarea id="startReferences" name="files_link" placeholder="Paste:
+Google Drive
+Dropbox
+WeTransfer
+Loom
+Figma
+Notion
+GitHub
+Website URL"></textarea>
             </div>
 
             <div class="grid">
@@ -1737,7 +1765,7 @@
 
     <section class="activity" data-scroll-reveal aria-label="DONEOVERNIGHT overnight execution layer">
       <div class="activity-stage">
-        <p class="activity-kicker">Operators online</p>
+        <p class="activity-kicker">Private desk active</p>
         <div class="activity-words" aria-label="Intake. Review. Plan. Execution.">
           <span>Intake.</span>
           <span>Review.</span>
