@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMMON PL4CE — Reveal</title>
+  <meta name="description" content="Scroll-driven COMMON PL4CE mechanical brand reveal.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <style>
+    :root {
+      --ink: #080807;
+      --paper: #efeadf;
+      --white: #f8f3e8;
+      --muted: rgba(248, 243, 232, .62);
+      --industrial: Impact, "Arial Black", "Helvetica Neue Condensed Black", "Arial Narrow", sans-serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --open: 0;
+      --left-reveal: 0px;
+      --right-reveal: 0px;
+      --left-slide: -92px;
+      --right-slide: -74px;
+      --four-rotate: 0deg;
+      --four-y: 0px;
+      --lock-y: 0px;
+      --lock-scale: 1;
+    }
+
+    * { box-sizing: border-box; }
+    html {
+      min-height: 100%;
+      background: var(--ink);
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--ink);
+      color: var(--white);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      opacity: .12;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.62'/%3E%3C/svg%3E");
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .reveal-track {
+      position: relative;
+      min-height: 420vh;
+      background: var(--ink);
+    }
+    .pin {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .background {
+      position: absolute;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(180deg, rgba(8,8,7,.2), rgba(8,8,7,.66)),
+        url("/assets/romypeters/romy-peters-04.jpg") center / cover no-repeat;
+      transform: scale(calc(1.08 - (var(--open) * .035)));
+      filter: saturate(.82) contrast(1.04);
+    }
+    .pin::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(circle at 50% 43%, rgba(248,243,232,.34), transparent 23%),
+        linear-gradient(90deg, rgba(239,234,223,.82), rgba(239,234,223,.58) 32%, rgba(239,234,223,.46) 62%, rgba(239,234,223,.76));
+      opacity: calc(.92 - (var(--open) * .18));
+    }
+    .pin::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, rgba(8,8,7,.28), transparent 28%, transparent 72%, rgba(8,8,7,.28)),
+        linear-gradient(180deg, rgba(8,8,7,.18), transparent 42%, rgba(8,8,7,.26));
+    }
+
+    .brand-stage {
+      width: min(92vw, 1480px);
+      display: grid;
+      place-items: center;
+      transform: translate3d(0, var(--lock-y), 0) scale(var(--lock-scale));
+      transform-origin: center;
+      will-change: transform;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      color: var(--ink);
+      font-family: var(--industrial);
+      font-size: clamp(72px, 15vw, 244px);
+      font-weight: 900;
+      line-height: .78;
+      letter-spacing: -.055em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+    .core {
+      position: relative;
+      z-index: 2;
+      display: inline-block;
+    }
+    .c-core { margin-right: .05em; }
+    .p-core { margin-left: clamp(.1em, 2.3vw, .22em); }
+    .reveal-window {
+      display: inline-block;
+      overflow: hidden;
+      width: var(--window);
+      vertical-align: baseline;
+      will-change: width;
+    }
+    .left-window { --window: var(--left-reveal); }
+    .right-window { --window: var(--right-reveal); }
+    .revealed {
+      display: inline-flex;
+      align-items: baseline;
+      transform: translate3d(var(--slide), 0, 0);
+      will-change: transform;
+    }
+    .left-window .revealed { --slide: var(--left-slide); }
+    .right-window .revealed { --slide: var(--right-slide); }
+    .letter {
+      display: inline-block;
+    }
+    .four {
+      display: inline-block;
+      width: .68em;
+      height: .83em;
+      margin: 0 -.02em 0 .01em;
+      transform: translate3d(0, var(--four-y), 0) rotate(var(--four-rotate));
+      transform-origin: 50% 100%;
+      will-change: transform;
+      vertical-align: -.07em;
+    }
+    .four svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .four path {
+      fill: currentColor;
+      shape-rendering: geometricPrecision;
+    }
+
+    .logo-shadow {
+      position: absolute;
+      left: 50%;
+      top: calc(50% + clamp(42px, 8vw, 112px));
+      width: min(72vw, 840px);
+      height: 18px;
+      background: rgba(8, 8, 7, .28);
+      border-radius: 999px;
+      filter: blur(18px);
+      transform: translateX(-50%) scaleX(calc(.42 + var(--open) * .58));
+      opacity: calc(.52 - var(--open) * .12);
+      will-change: transform, opacity;
+    }
+    .mechanical-line {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(28px, 5vw, 56px);
+      width: min(72vw, 760px);
+      height: 1px;
+      background: rgba(8, 8, 7, .26);
+      transform: translateX(-50%) scaleX(calc(.18 + var(--open) * .82));
+      transform-origin: center;
+    }
+    .scroll-note {
+      position: absolute;
+      right: clamp(16px, 4vw, 44px);
+      bottom: clamp(18px, 4vw, 40px);
+      color: rgba(8, 8, 7, .55);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      writing-mode: vertical-rl;
+    }
+
+    .locked-copy {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      min-height: 100vh;
+      display: grid;
+      align-items: end;
+      pointer-events: none;
+    }
+    .locked-copy-inner {
+      width: min(100% - 32px, 1280px);
+      margin: 0 auto;
+      padding: 0 0 clamp(38px, 7vw, 82px);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      color: rgba(248, 243, 232, .82);
+      font-size: clamp(13px, 1.2vw, 16px);
+      line-height: 1.55;
+    }
+    .locked-copy strong {
+      color: var(--white);
+      font-family: var(--industrial);
+      font-size: clamp(38px, 8vw, 106px);
+      line-height: .85;
+      letter-spacing: -.045em;
+      text-transform: uppercase;
+    }
+    .locked-copy p {
+      max-width: 380px;
+      margin: 0;
+      align-self: end;
+    }
+
+    .content {
+      min-height: 110vh;
+      padding: clamp(74px, 10vw, 130px) 0;
+      background: #0b0a09;
+      color: var(--white);
+    }
+    .content-inner {
+      width: min(100% - 32px, 1180px);
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+    .content h2 {
+      margin: 0;
+      font-family: var(--industrial);
+      font-size: clamp(52px, 11vw, 142px);
+      line-height: .82;
+      letter-spacing: -.05em;
+      text-transform: uppercase;
+    }
+    .content p {
+      max-width: 600px;
+      margin: 0;
+      color: rgba(248, 243, 232, .66);
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    @media (max-width: 720px) {
+      .reveal-track { min-height: 390vh; }
+      .brand-stage { width: 96vw; }
+      .logo {
+        font-size: clamp(58px, 18.4vw, 104px);
+        letter-spacing: -.06em;
+      }
+      .p-core { margin-left: .13em; }
+      .scroll-note {
+        writing-mode: horizontal-tb;
+        right: auto;
+        left: 14px;
+      }
+      .mechanical-line {
+        width: calc(100% - 28px);
+      }
+      .locked-copy-inner {
+        display: grid;
+      }
+      .locked-copy p {
+        max-width: 300px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .background,
+      .brand-stage,
+      .logo,
+      .revealed,
+      .four,
+      .logo-shadow,
+      .mechanical-line {
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="reveal-track" id="reveal">
+      <div class="pin">
+        <div class="background" aria-hidden="true"></div>
+        <div class="brand-stage" aria-label="COMMON PL4CE scroll reveal">
+          <div class="logo" id="logo" aria-hidden="true">
+            <span class="core c-core">C</span>
+            <span class="reveal-window left-window" id="leftWindow">
+              <span class="revealed" id="leftLetters">OMMON</span>
+            </span>
+            <span class="core p-core">P</span>
+            <span class="reveal-window right-window" id="rightWindow">
+              <span class="revealed" id="rightLetters">
+                <span class="letter">L</span><span class="four" id="fallenFour"><svg viewBox="0 0 140 180" focusable="false" aria-hidden="true"><path d="M20 174 H51 L104 6 H73 Z"/><path d="M34 92 L127 72 L132 99 L39 119 Z"/><path d="M92 174 H123 L108 34 H77 Z"/></svg></span><span class="letter">CE</span>
+              </span>
+            </span>
+          </div>
+          <div class="logo-shadow" aria-hidden="true"></div>
+        </div>
+        <div class="mechanical-line" aria-hidden="true"></div>
+        <div class="scroll-note">Scroll to open</div>
+      </div>
+      <div class="locked-copy">
+        <div class="locked-copy-inner">
+          <strong>Locked</strong>
+          <p>The monogram has opened into the full COMMON PL4CE wordmark. The 4 loses balance, settles left, and stays readable.</p>
+        </div>
+      </div>
+    </section>
+    <section class="content" aria-labelledby="system-title">
+      <div class="content-inner">
+        <h2 id="system-title">Industrial. Editorial. Kinetic.</h2>
+        <p>This prototype uses requestAnimationFrame and transform-driven interpolation. The hidden wordmark is clipped inside the compact CP, then mechanically expands until COMMON PL4CE locks into place.</p>
+      </div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const track = document.getElementById("reveal");
+      const leftLetters = document.getElementById("leftLetters");
+      const rightLetters = document.getElementById("rightLetters");
+
+      let target = 0;
+      let current = 0;
+      let leftWidth = 0;
+      let rightWidth = 0;
+      let ticking = false;
+
+      const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+      const ease = (t) => t * t * (3 - 2 * t);
+
+      function measure() {
+        leftWidth = leftLetters.getBoundingClientRect().width;
+        rightWidth = rightLetters.getBoundingClientRect().width;
+        updateTarget();
+        render(true);
+      }
+
+      function updateTarget() {
+        const rect = track.getBoundingClientRect();
+        const scrollable = Math.max(1, rect.height - window.innerHeight);
+        target = clamp(-rect.top / scrollable);
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(tick);
+        }
+      }
+
+      function tick() {
+        current += (target - current) * 0.12;
+        if (Math.abs(target - current) < 0.0008) current = target;
+        render(false);
+        if (current !== target) {
+          requestAnimationFrame(tick);
+        } else {
+          ticking = false;
+        }
+      }
+
+      function render(force) {
+        const open = ease(clamp(current / 0.78));
+        const leftOpen = ease(clamp(current / 0.66));
+        const rightOpen = ease(clamp((current - 0.04) / 0.68));
+        const fall = ease(clamp((current - 0.78) / 0.2));
+        const lock = ease(clamp((current - 0.86) / 0.14));
+
+        root.style.setProperty("--open", open.toFixed(4));
+        root.style.setProperty("--left-reveal", `${(leftWidth * leftOpen).toFixed(2)}px`);
+        root.style.setProperty("--right-reveal", `${(rightWidth * rightOpen).toFixed(2)}px`);
+        root.style.setProperty("--left-slide", `${((-1 + leftOpen) * 92).toFixed(2)}px`);
+        root.style.setProperty("--right-slide", `${((-1 + rightOpen) * 74).toFixed(2)}px`);
+        root.style.setProperty("--four-rotate", `${(-12 * fall).toFixed(2)}deg`);
+        root.style.setProperty("--four-y", `${(12 * fall).toFixed(2)}px`);
+        root.style.setProperty("--lock-y", `${(-36 * lock).toFixed(2)}vh`);
+        root.style.setProperty("--lock-scale", `${(1 - 0.58 * lock).toFixed(4)}`);
+
+        if (force && !ticking) {
+          ticking = true;
+          requestAnimationFrame(tick);
+        }
+      }
+
+      window.addEventListener("scroll", updateTarget, { passive: true });
+      window.addEventListener("resize", measure);
+      window.addEventListener("orientationchange", measure);
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(measure);
+      } else {
+        window.addEventListener("load", measure);
+      }
+      measure();
+    })();
+  </script>
+</body>
+</html>
