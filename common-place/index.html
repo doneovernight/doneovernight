@@ -4,16 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>COMMONPL4CE — Campaign Archive</title>
-  <meta name="description" content="COMMONPL4CE is a campaign archive and booking experience for fashion, travel, lifestyle and editorial imagery.">
+  <meta name="description" content="COMMONPL4CE creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="preload" as="image" href="/assets/common-place/final/opening.jpg">
+  <link rel="preload" as="image" href="/assets/common-place/final/yellow-sweater.jpg">
   <style>
     :root {
       --black: #060606;
       --ink: #0a0a09;
       --paper: #ede6d8;
+      --light: #f1eadc;
+      --light-ink: #080807;
       --muted: rgba(237, 230, 216, .64);
       --line: rgba(237, 230, 216, .18);
+      --light-muted: rgba(8, 8, 7, .62);
+      --light-line: rgba(8, 8, 7, .16);
       --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --serif: Georgia, "Times New Roman", serif;
       --archive-x: 0px;
@@ -42,13 +48,14 @@
       inset: 0;
       z-index: 80;
       pointer-events: none;
-      opacity: .11;
+      opacity: .08;
       mix-blend-mode: soft-light;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
     }
     img { display: block; max-width: 100%; }
     a { color: inherit; text-decoration: none; }
     button, input, select, textarea {
+      border-radius: 0;
       font: inherit;
       color: inherit;
     }
@@ -76,12 +83,12 @@
       height: auto;
     }
     .book-link {
-      border: 0;
       padding: 0;
+      border: 0;
       background: transparent;
       color: var(--paper);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       line-height: 1;
       letter-spacing: .14em;
       text-transform: uppercase;
@@ -101,7 +108,6 @@
     .intro-screen img {
       width: min(82vw, 1040px);
       height: auto;
-      filter: none;
       opacity: 0;
       animation: introLogo 1000ms ease 220ms forwards;
     }
@@ -165,187 +171,220 @@
 
     .vertical {
       position: relative;
-      background: var(--ink);
+      background: var(--light);
+      color: var(--light-ink);
     }
-    .archive-intro {
+    .light-section,
+    .dark-section {
+      padding: clamp(78px, 12vw, 176px) clamp(20px, 8vw, 140px);
+    }
+    .dark-section {
+      background: var(--ink);
+      color: var(--paper);
+    }
+    .story {
       min-height: 92svh;
       display: grid;
       align-items: center;
-      background: #f1eadc;
-      color: #080807;
-      padding: clamp(76px, 12vw, 176px) clamp(20px, 8vw, 140px);
     }
-    .archive-intro-inner {
-      max-width: 980px;
+    .section-inner {
+      width: min(100%, 1180px);
+      margin: 0 auto;
     }
-    .archive-intro h1 {
+    .narrow {
+      max-width: 880px;
       margin: 0;
-      max-width: 760px;
-      font-size: clamp(54px, 10vw, 156px);
-      font-weight: 850;
-      line-height: .82;
-      letter-spacing: -.055em;
     }
-    .archive-intro p {
-      max-width: 780px;
+    .kicker {
+      margin: 0 0 18px;
+      color: currentColor;
+      opacity: .58;
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .display-title {
+      margin: 0;
+      max-width: 900px;
+      font-size: clamp(50px, 9vw, 150px);
+      font-weight: 850;
+      line-height: .84;
+      letter-spacing: -.055em;
+      text-transform: uppercase;
+    }
+    .section-title {
+      margin: 0;
+      font-size: clamp(38px, 6.4vw, 104px);
+      font-weight: 850;
+      line-height: .86;
+      letter-spacing: -.045em;
+      text-transform: uppercase;
+    }
+    .lead {
+      max-width: 820px;
       margin: clamp(26px, 4vw, 46px) 0 0;
-      color: rgba(8, 8, 7, .72);
+      color: var(--light-muted);
       font-family: var(--serif);
       font-size: clamp(20px, 2.5vw, 34px);
       line-height: 1.18;
     }
-    .archive-intro .sales-line {
-      max-width: 620px;
-      color: rgba(8, 8, 7, .62);
-      font-family: var(--sans);
-      font-size: clamp(13px, 1.35vw, 18px);
-      font-weight: 700;
-      line-height: 1.35;
-      letter-spacing: .02em;
+    .small-line,
+    .body-copy {
+      max-width: 660px;
+      margin: 22px 0 0;
+      color: var(--light-muted);
+      font-size: clamp(14px, 1.35vw, 18px);
+      font-weight: 650;
+      line-height: 1.42;
     }
-    .archive-intro-cta {
+    .dark-section .lead,
+    .dark-section .small-line,
+    .dark-section .body-copy {
+      color: var(--muted);
+    }
+    .text-cta {
       display: inline-flex;
-      margin-top: clamp(28px, 4vw, 52px);
+      margin-top: clamp(30px, 4vw, 54px);
       border-bottom: 1px solid currentColor;
       padding-bottom: 6px;
-      color: #080807;
       font-size: 12px;
       font-weight: 850;
       letter-spacing: .14em;
       text-transform: uppercase;
     }
-    .archive-intro-cta:hover {
-      color: rgba(8, 8, 7, .58);
-    }
-    .section {
-      padding: clamp(74px, 10vw, 160px) clamp(18px, 5vw, 76px);
-    }
-    .project {
-      min-height: 100svh;
+    .text-cta:hover { opacity: .6; }
+
+    .editorial-grid {
       display: grid;
-      grid-template-columns: minmax(150px, .42fr) minmax(0, 1fr);
-      gap: clamp(22px, 5vw, 76px);
-      align-items: center;
-      border-top: 1px solid var(--line);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(30px, 6vw, 92px) clamp(24px, 8vw, 120px);
+      margin-top: clamp(48px, 8vw, 112px);
     }
-    .project-kicker,
-    .eyebrow {
-      margin: 0 0 10px;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .18em;
-      text-transform: uppercase;
+    .text-block {
+      border-top: 1px solid var(--light-line);
+      padding-top: 18px;
     }
-    .project-title,
-    .section-title {
+    .dark-section .text-block {
+      border-top-color: var(--line);
+    }
+    .text-block h3 {
       margin: 0;
-      color: var(--paper);
-      font-size: clamp(34px, 7vw, 112px);
-      font-weight: 800;
-      line-height: .86;
-      letter-spacing: -.035em;
-      text-transform: uppercase;
-    }
-    .project-note,
-    .body-copy {
-      max-width: 620px;
-      margin: 18px 0 0;
-      color: var(--muted);
-      font-family: var(--serif);
-      font-size: clamp(17px, 2vw, 26px);
-      line-height: 1.25;
-    }
-    .image-stack {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: clamp(10px, 1.4vw, 22px);
-      align-items: end;
-    }
-    .image-stack img {
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      object-fit: cover;
-      background: #111;
-    }
-    .span-7 { grid-column: span 7; height: min(76svh, 780px); }
-    .span-5 { grid-column: span 5; height: min(56svh, 600px); }
-    .span-4 { grid-column: span 4; height: min(46svh, 500px); }
-    .span-8 { grid-column: span 8; height: min(64svh, 700px); }
-    .offset-top { align-self: start; }
-
-    .rio {
-      background: #0f1111;
-    }
-    .rio-layout {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: clamp(14px, 2vw, 28px);
-      align-items: end;
-      margin-top: clamp(34px, 5vw, 76px);
-    }
-    .rio-layout img:first-child { height: min(72svh, 760px); object-fit: cover; }
-    .rio-pair {
-      display: grid;
-      gap: clamp(14px, 2vw, 28px);
-    }
-    .rio-pair img { height: min(38svh, 380px); object-fit: cover; }
-
-    .behind {
-      display: grid;
-      grid-template-columns: minmax(0, .86fr) minmax(280px, .72fr);
-      gap: clamp(28px, 7vw, 110px);
-      align-items: center;
-      border-top: 1px solid var(--line);
-    }
-    .behind img {
-      width: 100%;
-      height: min(82svh, 820px);
-      object-fit: cover;
-    }
-
-    .why {
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: clamp(24px, 6vw, 92px);
-    }
-    .why h3 {
-      margin: 0;
-      font-size: clamp(28px, 4vw, 58px);
+      font-size: clamp(24px, 3.2vw, 48px);
+      font-weight: 850;
       line-height: .92;
       letter-spacing: -.035em;
       text-transform: uppercase;
     }
-    .why p {
+    .text-block p {
+      max-width: 430px;
       margin: 14px 0 0;
+      color: var(--light-muted);
+      font-family: var(--serif);
+      font-size: clamp(17px, 1.7vw, 24px);
+      line-height: 1.22;
+    }
+    .dark-section .text-block p {
+      color: var(--muted);
+    }
+    .process-list {
+      display: grid;
+      gap: 0;
+      margin-top: clamp(46px, 7vw, 100px);
+      border-bottom: 1px solid var(--line);
+    }
+    .process-item {
+      display: grid;
+      grid-template-columns: minmax(90px, .22fr) minmax(0, 1fr);
+      gap: clamp(22px, 5vw, 78px);
+      border-top: 1px solid var(--line);
+      padding: clamp(24px, 4vw, 52px) 0;
+    }
+    .process-item span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .process-item h3 {
+      margin: 0;
+      font-size: clamp(28px, 4.2vw, 62px);
+      font-weight: 850;
+      line-height: .9;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+    .process-item p {
+      max-width: 680px;
+      margin: 16px 0 0;
       color: var(--muted);
       font-family: var(--serif);
-      font-size: clamp(16px, 1.5vw, 22px);
-      line-height: 1.25;
+      font-size: clamp(18px, 1.8vw, 26px);
+      line-height: 1.22;
+    }
+
+    .audience-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      max-width: 900px;
+      margin: clamp(34px, 5vw, 68px) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .audience-list li {
+      border-bottom: 1px solid currentColor;
+      padding-bottom: 4px;
+      font-size: clamp(18px, 2vw, 28px);
+      font-weight: 850;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+    }
+
+    .availability {
+      text-align: center;
+    }
+    .availability h2 {
+      margin: 0;
+      font-size: clamp(38px, 7vw, 112px);
+      font-weight: 850;
+      line-height: .86;
+      letter-spacing: -.05em;
+      text-transform: uppercase;
+    }
+    .availability p {
+      margin: 24px 0 0;
+      color: var(--light-muted);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .18em;
+      line-height: 1.8;
+      text-transform: uppercase;
     }
 
     .booking {
       display: grid;
-      grid-template-columns: minmax(220px, .6fr) minmax(0, 1fr);
+      grid-template-columns: minmax(220px, .62fr) minmax(0, 1fr);
       gap: clamp(34px, 7vw, 120px);
       align-items: start;
     }
     .intake {
       display: grid;
-      gap: 34px;
+      gap: 30px;
     }
     .step {
+      border: 0;
       border-top: 1px solid var(--line);
-      padding-top: 18px;
+      padding: 18px 0 0;
+      margin: 0;
     }
     .step-label {
+      display: block;
       margin: 0 0 14px;
       color: var(--muted);
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 850;
       letter-spacing: .16em;
       text-transform: uppercase;
     }
@@ -369,7 +408,7 @@
       background: transparent;
       color: var(--paper);
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
       transition: border-color 180ms ease, background 180ms ease;
@@ -377,14 +416,13 @@
     .choice-row input:checked + span,
     .choice-row span:hover,
     .field:focus {
-      border-color: rgba(237,230,216,.82);
+      border-color: rgba(237,230,216,.84);
       background: rgba(237,230,216,.07);
       outline: none;
     }
     .field {
       width: 100%;
       appearance: none;
-      border-radius: 0;
     }
     textarea.field {
       min-height: 116px;
@@ -395,7 +433,7 @@
       line-height: 1.4;
     }
     .cal-block {
-      margin-top: 18px;
+      margin-top: 8px;
       border-top: 1px solid var(--line);
       padding-top: 22px;
     }
@@ -404,12 +442,14 @@
       align-items: center;
       min-height: 48px;
       padding: 14px 18px;
+      border: 0;
       background: var(--paper);
       color: var(--black);
       font-size: 12px;
-      font-weight: 800;
+      font-weight: 850;
       letter-spacing: .12em;
       text-transform: uppercase;
+      cursor: pointer;
     }
     .cal-note {
       max-width: 520px;
@@ -419,29 +459,6 @@
       line-height: 1.45;
     }
 
-    .availability {
-      min-height: 56svh;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      background: #eee6d8;
-      color: #080807;
-    }
-    .availability h2 {
-      margin: 0;
-      font-size: clamp(34px, 8vw, 118px);
-      line-height: .86;
-      letter-spacing: -.04em;
-      text-transform: uppercase;
-    }
-    .availability p {
-      margin: 22px 0 0;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-    }
-
     .footer {
       display: grid;
       grid-template-columns: auto 1fr auto;
@@ -449,6 +466,7 @@
       align-items: end;
       padding: clamp(28px, 5vw, 64px);
       background: #080807;
+      color: var(--paper);
       border-top: 1px solid var(--line);
     }
     .footer img {
@@ -475,7 +493,7 @@
       gap: 12px;
       justify-items: end;
       font-size: 11px;
-      font-weight: 800;
+      font-weight: 850;
       letter-spacing: .14em;
       text-transform: uppercase;
     }
@@ -484,51 +502,40 @@
       .intro-screen img,
       .archive-wordmark { width: 90vw; }
       .archive-frame { width: 100vw; height: 100svh; }
-      .project,
-      .behind,
-      .booking,
-      .rio-layout,
-      .why,
+      .light-section,
+      .dark-section {
+        padding: 82px 20px;
+      }
+      .story {
+        min-height: 86svh;
+      }
+      .editorial-grid,
+      .booking {
+        grid-template-columns: 1fr;
+      }
+      .process-item {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
       .footer {
         grid-template-columns: 1fr;
       }
-      .project {
-        align-content: center;
-        gap: 30px;
-      }
-      .image-stack { grid-template-columns: repeat(6, 1fr); }
-      .span-7,
-      .span-5,
-      .span-4,
-      .span-8 {
-        grid-column: 1 / -1;
-        height: auto;
-        aspect-ratio: 3 / 4;
-      }
-      .rio-layout img:first-child,
-      .rio-pair img,
-      .behind img {
-        height: auto;
-        aspect-ratio: 3 / 4;
-      }
       .footer-actions {
         justify-items: start;
-      }
-      .archive-intro {
-        min-height: 86svh;
-        padding: 84px 20px;
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
+      .intro-screen { display: none; }
+      .archive-wordmark { opacity: 1; }
       .archive-rail { transform: none !important; }
       .archive-scroll { min-height: auto !important; }
       .archive-pin {
         position: relative;
         height: auto;
         overflow-x: auto;
-        padding: 48px 0;
+        padding: 0;
       }
       .site-header {
         opacity: 1;
@@ -556,7 +563,7 @@
         <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
         <div class="archive-rail" id="archiveRail">
           <figure class="archive-frame"><img src="/assets/common-place/final/opening.jpg" alt="Romy standing with her back toward the camera" loading="eager"></figure>
-          <figure class="archive-frame"><img src="/assets/common-place/final/yellow-sweater.jpg" alt="Yellow sweater portrait on film" loading="lazy"></figure>
+          <figure class="archive-frame"><img src="/assets/common-place/final/yellow-sweater.jpg" alt="Yellow sweater portrait on film" loading="eager"></figure>
           <figure class="archive-frame"><img src="/assets/common-place/final/hoodie-front.jpg" alt="Hoodie portrait seated on a bench" loading="lazy"></figure>
           <figure class="archive-frame"><img src="/assets/common-place/final/chair-detail.jpg" alt="Editorial chair and styling detail" loading="lazy"></figure>
           <figure class="archive-frame"><img src="/assets/common-place/final/duo-portrait.jpg" alt="Duo portrait in yellow campaign styling" loading="lazy"></figure>
@@ -567,105 +574,117 @@
     </section>
 
     <div class="vertical">
-      <section class="archive-intro" aria-labelledby="feeling-title">
-        <div class="archive-intro-inner">
-          <h1 id="feeling-title">Shot with feeling.</h1>
-          <p>COMMONPL4CE creates visual stories for brands, campaigns and people who want their imagery to feel real. Romy Peters works with digital and film, including Kodak stock, to preserve texture, atmosphere and the small imperfections that make a moment believable.</p>
-          <p class="sales-line">For brands that need more than clean content — imagery with mood, memory and presence.</p>
-          <a class="archive-intro-cta" href="#start-project">Start your project</a>
+      <section class="light-section story" aria-labelledby="feeling-title">
+        <div class="section-inner narrow">
+          <h1 class="display-title" id="feeling-title">Shot with feeling.</h1>
+          <p class="lead">COMMONPL4CE creates visual stories for brands, campaigns and people who want their imagery to feel real.</p>
+          <p class="lead">Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.</p>
+          <p class="small-line">For brands that need more than clean content — imagery with mood, memory and presence.</p>
+          <a class="text-cta" href="#start-project">Start your project</a>
         </div>
       </section>
 
-      <section class="section project" aria-labelledby="novateur-title">
-        <div>
-          <p class="project-kicker">COMMONPL4CE 001</p>
-          <h1 class="project-title" id="novateur-title">Novateur</h1>
-        </div>
-        <div class="image-stack">
-          <img class="span-7" src="/assets/common-place/final/campaign-couch.jpg" alt="Novateur campaign image on couch" loading="lazy">
-          <img class="span-5 offset-top" src="/assets/common-place/final/chair-detail.jpg" alt="Novateur editorial styling detail" loading="lazy">
-        </div>
-      </section>
-
-      <section class="section project" aria-labelledby="portraits-title">
-        <div>
-          <p class="project-kicker">COMMONPL4CE 002</p>
-          <h2 class="project-title" id="portraits-title">Portraits</h2>
-        </div>
-        <div class="image-stack">
-          <img class="span-5" src="/assets/common-place/final/yellow-sweater.jpg" alt="Yellow sweater portrait" loading="lazy">
-          <img class="span-7 offset-top" src="/assets/common-place/final/duo-portrait.jpg" alt="Close duo portrait" loading="lazy">
-        </div>
-      </section>
-
-      <section class="section project" aria-labelledby="editorial-title">
-        <div>
-          <p class="project-kicker">COMMONPL4CE 003</p>
-          <h2 class="project-title" id="editorial-title">Editorial</h2>
-        </div>
-        <div class="image-stack">
-          <img class="span-8" src="/assets/common-place/photo-06.jpg" alt="Editorial seated campaign image" loading="lazy">
-          <img class="span-4 offset-top" src="/assets/common-place/final/hoodie-side.jpg" alt="Hoodie side profile" loading="lazy">
-        </div>
-      </section>
-
-      <section class="section project" aria-labelledby="campaign-title">
-        <div>
-          <p class="project-kicker">COMMONPL4CE 004</p>
-          <h2 class="project-title" id="campaign-title">Campaign</h2>
-        </div>
-        <div class="image-stack">
-          <img class="span-5 offset-top" src="/assets/common-place/final/hoodie-front.jpg" alt="Hoodie front campaign portrait" loading="lazy">
-          <img class="span-7" src="/assets/common-place/photo-10.jpg" alt="Campaign image on wooden bench" loading="lazy">
-        </div>
-      </section>
-
-      <section class="section rio" aria-labelledby="rio-title">
-        <p class="project-kicker">COMMONPL4CE 005</p>
-        <h2 class="project-title" id="rio-title">Rio</h2>
-        <div class="rio-layout">
-          <img src="/assets/common-place/photo-01.jpg" alt="Rio beach portrait with children" loading="lazy">
-          <div class="rio-pair">
-            <img src="/assets/common-place/photo-02.jpg" alt="Rio ocean at dusk" loading="lazy">
-            <img src="/assets/common-place/photo-03.jpg" alt="Beach portrait under palm trees" loading="lazy">
+      <section class="light-section" aria-labelledby="create-title">
+        <div class="section-inner">
+          <p class="kicker">What we create</p>
+          <h2 class="section-title" id="create-title">Visuals that keep a pulse.</h2>
+          <div class="editorial-grid">
+            <div class="text-block">
+              <h3>Campaigns</h3>
+              <p>Visual stories for launches, collections and brand moments.</p>
+            </div>
+            <div class="text-block">
+              <h3>Editorials</h3>
+              <p>Images with atmosphere, rhythm and point of view.</p>
+            </div>
+            <div class="text-block">
+              <h3>Brand Stories</h3>
+              <p>Content that feels lived-in instead of overproduced.</p>
+            </div>
+            <div class="text-block">
+              <h3>Travel Narratives</h3>
+              <p>Location-based imagery for brands moving beyond one place.</p>
+            </div>
+            <div class="text-block">
+              <h3>Portraits</h3>
+              <p>People captured with softness, presence and intention.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="section behind" aria-labelledby="behind-title">
-        <img src="/assets/common-place/photo-04-romy.jpg" alt="Romy Peters photographing on a beach" loading="lazy">
-        <div>
-          <p class="eyebrow">COMMONPL4CE</p>
+      <section class="dark-section" aria-labelledby="process-title">
+        <div class="section-inner">
+          <p class="kicker">Process</p>
+          <h2 class="section-title" id="process-title">Calm direction before the shutter.</h2>
+          <div class="process-list">
+            <div class="process-item">
+              <span>01</span>
+              <div>
+                <h3>Direction</h3>
+                <p>Mood, references, location and the feeling the images need to carry.</p>
+              </div>
+            </div>
+            <div class="process-item">
+              <span>02</span>
+              <div>
+                <h3>Production</h3>
+                <p>A calm shoot process shaped around light, styling, movement and timing.</p>
+              </div>
+            </div>
+            <div class="process-item">
+              <span>03</span>
+              <div>
+                <h3>Delivery</h3>
+                <p>A curated selection of images ready for socials, campaigns, websites or press.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="light-section" aria-labelledby="for-title">
+        <div class="section-inner narrow">
+          <p class="kicker">Who this is for</p>
+          <h2 class="section-title" id="for-title">Intentional, not overproduced.</h2>
+          <ul class="audience-list">
+            <li>Fashion</li>
+            <li>Hospitality</li>
+            <li>Creative Brands</li>
+            <li>Artists</li>
+            <li>Founders</li>
+            <li>Lifestyle Projects</li>
+          </ul>
+          <p class="body-copy">For brands and people who want visuals that feel intentional without losing the realness of the moment.</p>
+        </div>
+      </section>
+
+      <section class="dark-section" aria-labelledby="behind-title">
+        <div class="section-inner narrow">
+          <p class="kicker">COMMONPL4CE</p>
           <h2 class="section-title" id="behind-title">Behind the Film</h2>
-          <p class="body-copy">Romy Peters works between fashion, travel and documentary storytelling.</p>
-          <p class="body-copy">Selected projects are captured on Kodak film to preserve texture, atmosphere and imperfections that digital often removes.</p>
+          <p class="lead">COMMONPL4CE is shaped by Romy Peters, working between fashion, lifestyle, travel and documentary storytelling.</p>
+          <p class="body-copy">Selected projects can be captured on Kodak film to preserve grain, atmosphere and the feeling of a real moment.</p>
         </div>
       </section>
 
-      <section class="section why" aria-label="Why COMMONPL4CE">
-        <div>
-          <h3>Real</h3>
-          <p>Campaigns that feel lived-in.</p>
-        </div>
-        <div>
-          <h3>Editorial</h3>
-          <p>Imagery with atmosphere and depth.</p>
-        </div>
-        <div>
-          <h3>Worldwide</h3>
-          <p>Available in the Netherlands and internationally.</p>
+      <section class="light-section availability" aria-label="Availability">
+        <div class="section-inner">
+          <h2>Currently Booking</h2>
+          <p>Netherlands<br>Europe<br>Worldwide</p>
+          <p class="body-copy" style="margin-left:auto;margin-right:auto;">Available for selected projects, campaigns and content days.</p>
         </div>
       </section>
 
-      <section class="section booking" id="start-project" aria-labelledby="start-title">
+      <section class="dark-section booking" id="start-project" aria-labelledby="start-title">
         <div>
-          <p class="eyebrow">Booking</p>
+          <p class="kicker">Booking</p>
           <h2 class="section-title" id="start-title">Start Your Project</h2>
-          <p class="body-copy">A short intake before routing into the right booking flow.</p>
+          <p class="body-copy">Tell us what you want to create, where it needs to happen and when you are looking to shoot.</p>
         </div>
         <form class="intake" action="https://cal.com/commonpl4ce/project" method="get">
           <fieldset class="step">
-            <legend class="step-label">Step 1 · Project type</legend>
+            <legend class="step-label">Project type</legend>
             <div class="choice-row">
               <label><input type="radio" name="project" value="fashion"><span>Fashion</span></label>
               <label><input type="radio" name="project" value="campaign"><span>Campaign</span></label>
@@ -676,43 +695,39 @@
             </div>
           </fieldset>
           <fieldset class="step">
-            <legend class="step-label">Step 2 · Location</legend>
+            <legend class="step-label">Location</legend>
             <div class="choice-row">
               <label><input type="radio" name="location" value="netherlands"><span>Netherlands</span></label>
               <label><input type="radio" name="location" value="europe"><span>Europe</span></label>
               <label><input type="radio" name="location" value="worldwide"><span>Worldwide</span></label>
             </div>
           </fieldset>
+          <fieldset class="step">
+            <legend class="step-label">Preferred date</legend>
+            <div class="choice-row">
+              <label><input type="radio" name="date" value="this-month"><span>This month</span></label>
+              <label><input type="radio" name="date" value="next-month"><span>Next month</span></label>
+              <label><input type="radio" name="date" value="flexible"><span>Flexible</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="step">
+            <legend class="step-label">Budget</legend>
+            <div class="choice-row">
+              <label><input type="radio" name="budget" value="500"><span>€500+</span></label>
+              <label><input type="radio" name="budget" value="1000"><span>€1.000+</span></label>
+              <label><input type="radio" name="budget" value="2500"><span>€2.500+</span></label>
+              <label><input type="radio" name="budget" value="5000"><span>€5.000+</span></label>
+            </div>
+          </fieldset>
           <label class="step">
-            <span class="step-label">Step 3 · Preferred date</span>
-            <input class="field" type="text" name="date" placeholder="Month / date / flexible">
-          </label>
-          <label class="step">
-            <span class="step-label">Step 4 · Budget</span>
-            <select class="field" name="budget">
-              <option value="">Select range</option>
-              <option>Under €1,000</option>
-              <option>€1,000–€2,500</option>
-              <option>€2,500–€5,000</option>
-              <option>€5,000+</option>
-            </select>
-          </label>
-          <label class="step">
-            <span class="step-label">Step 5 · References</span>
-            <textarea class="field" name="references" placeholder="Paste links, notes or visual references."></textarea>
+            <span class="step-label">References</span>
+            <textarea class="field" name="references" placeholder="Add links / describe the feeling"></textarea>
           </label>
           <div class="cal-block">
             <button class="cal-button" type="submit">Continue to booking</button>
-            <p class="cal-note">Cal.com routing form placeholder: replace with the final COMMONPL4CE Cal.com routing link when it is available.</p>
+            <p class="cal-note">Cal.com placeholder: replace <code>https://cal.com/commonpl4ce/project</code> with the final routing form URL when ready.</p>
           </div>
         </form>
-      </section>
-
-      <section class="section availability" aria-label="Availability">
-        <div>
-          <h2>Currently Booking</h2>
-          <p>Netherlands · Europe · Worldwide</p>
-        </div>
       </section>
     </div>
   </main>
@@ -724,8 +739,7 @@
       <p class="footer-meta">Built by <a href="https://doneovernight.com">DONEOVERNIGHT</a></p>
     </div>
     <div class="footer-actions">
-      <a href="#start-project">Book</a>
-      <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+      <a href="#start-project">Start your project</a>
     </div>
   </footer>
 
