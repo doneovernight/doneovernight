@@ -643,6 +643,28 @@
       display: none;
     }
 
+    .workspace-shell.is-authenticated .workspace-signal-grid,
+    .workspace-shell.is-authenticated #portalAccessLink {
+      display: none;
+    }
+
+    .workspace-shell.is-authenticated .workspace-hero {
+      grid-template-columns: minmax(0, 1.08fr) minmax(280px, .48fr);
+      padding-bottom: clamp(24px, 4vw, 42px);
+    }
+
+    .workspace-shell.is-authenticated .workspace-card {
+      border-color: rgba(233,196,138,.085);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.024), rgba(255,255,255,.006)),
+        rgba(5,6,8,.48);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 28px 72px -54px rgba(0,0,0,.9);
+    }
+
+    .workspace-shell.is-authenticated .workspace-card::before {
+      opacity: .42;
+    }
+
     .workspace-os {
       display: none;
       gap: 22px;
@@ -683,6 +705,22 @@
     .workspace-os-card > * {
       position: relative;
       z-index: 1;
+    }
+
+    #workspaceActiveProject {
+      overflow: visible;
+      border: none;
+      background: transparent;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    #workspaceActiveProject::before {
+      display: none;
+    }
+
+    #workspaceActiveProject .workspace-os-head {
+      padding: 0 2px;
     }
 
     .workspace-os-head {
@@ -1127,6 +1165,19 @@
       letter-spacing: .12em;
       text-transform: uppercase;
       white-space: nowrap;
+    }
+
+    .workspace-referral-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .workspace-referral-actions .workspace-button {
+      width: 100%;
+      min-height: 44px;
+      padding-inline: 12px;
     }
 
     .workspace-donbot {
@@ -2983,6 +3034,7 @@
       .workspace-operation-meta-grid { grid-template-columns: 1fr; }
       .workspace-progress-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .workspace-progress-step:nth-child(2n)::after { display: none; }
+      .workspace-referral-actions { grid-template-columns: 1fr; }
       .workspace-link-grid { grid-template-columns: 1fr; }
       .workspace-task-drawer { border-left: none; }
       .workspace-donbot {
@@ -4566,7 +4618,7 @@
               <div class="workspace-readonly-row"><span>Converted</span><strong>${escapeHTML(referralStats.converted)}</strong></div>
               <div class="workspace-readonly-row"><span>Reward balance</span><strong>${escapeHTML(referralStats.reward)}</strong></div>
             </div>` : '<p class="workspace-os-scope" style="margin-top:0">Invite founders. Earn credits for successful introductions.</p>'}
-            <div class="workspace-actions" style="margin-top:14px">
+            <div class="workspace-referral-actions">
               <button class="workspace-button secondary" type="button" data-copy-referral-link="${escapeHTML(referralStats.link)}" ${referralStats.link ? '' : 'disabled'}>Copy referral link</button>
               <a class="workspace-button secondary" href="${referralStats.link ? `mailto:?subject=${encodeURIComponent('DONEOVERNIGHT referral')}&body=${encodeURIComponent(`Thought this might be useful: ${referralStats.link}`)}` : 'mailto:ask@doneovernight.com'}">Invite founder</a>
             </div>
