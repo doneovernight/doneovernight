@@ -28,8 +28,8 @@ const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
 const TASK_ID_PATTERN = /^DON-\d{4}-\d{5}$/i;
 const ATTACHMENT_BUCKET = "task-attachments";
-const MAX_ATTACHMENT_UPLOAD_BYTES = 12 * 1024 * 1024;
-const MAX_ATTACHMENT_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_ATTACHMENT_UPLOAD_BYTES = 4 * 1024 * 1024;
+const MAX_ATTACHMENT_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_ATTACHMENT_FILES = 6;
 const ATTACHMENT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const ANALYTICS_EVENT_TABLE = "analytics_events";
@@ -782,6 +782,13 @@ function isWorkspaceAttachmentUploadRequest(req) {
   return String(req.url || "").includes("workspace_attachment_upload=1");
 }
 
+function createUploadLimitError(message = "Upload limit exceeded", code = "UPLOAD_LIMIT_EXCEEDED") {
+  const error = new Error(message);
+  error.statusCode = 413;
+  error.code = code;
+  return error;
+}
+
 function getSupabaseStorageConfig() {
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -934,10 +941,16 @@ function readMultipartBuffer(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let total = 0;
+    const declaredLength = Number.parseInt(req.headers["content-length"] || "0", 10);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_ATTACHMENT_UPLOAD_BYTES) {
+      reject(createUploadLimitError("Upload limit exceeded"));
+      req.destroy();
+      return;
+    }
     req.on("data", (chunk) => {
       total += chunk.length;
       if (total > MAX_ATTACHMENT_UPLOAD_BYTES) {
-        reject(Object.assign(new Error("Upload too large"), { statusCode: 413, code: "UPLOAD_TOO_LARGE" }));
+        reject(createUploadLimitError("Upload limit exceeded"));
         req.destroy();
         return;
       }
@@ -1004,10 +1017,7 @@ function parseMultipartUpload(buffer, contentType = "") {
         throw error;
       }
       if (body.length > MAX_ATTACHMENT_FILE_BYTES) {
-        const error = new Error("File too large");
-        error.statusCode = 413;
-        error.code = "FILE_TOO_LARGE";
-        throw error;
+        throw createUploadLimitError("File too large", "FILE_TOO_LARGE");
       }
       files.push({ field: name, name: filename, type, size: body.length, data: body });
     } else {
@@ -1109,6 +1119,8 @@ async function handleWorkspaceAttachmentUpload(req, res) {
       code: error.code || "FILE_UPLOAD_FAILED",
       stage: uploadStage,
       error: statusCode < 500 ? error.message : "File upload failed",
+      max_file_bytes: statusCode === 413 ? MAX_ATTACHMENT_FILE_BYTES : undefined,
+      max_upload_bytes: statusCode === 413 ? MAX_ATTACHMENT_UPLOAD_BYTES : undefined,
       storage_operation: error.storageOperation || undefined,
       storage_path: error.storagePath || undefined,
       detail: error.detail || undefined

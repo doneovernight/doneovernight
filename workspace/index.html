@@ -4233,6 +4233,8 @@
       const TASKS_ENDPOINT = 'https://n8n.doneovernight.com/webhook/portal-tasks';
       const WORKSPACE_DATA_ENDPOINT = '../api/workspace-data';
       const WORKSPACE_ATTACHMENT_UPLOAD_ENDPOINT = '../api/task-submit?workspace_attachment_upload=1';
+      const WORKSPACE_MAX_ATTACHMENT_FILE_BYTES = 4 * 1024 * 1024;
+      const WORKSPACE_MAX_ATTACHMENT_UPLOAD_BYTES = 4 * 1024 * 1024;
       const WORKSPACE_MESSAGES_ENDPOINT = '../api/workspace-messages';
       const WORKSPACE_QUOTES_ENDPOINT = '../api/workspace-quotes';
       const WORKSPACE_SESSION_ENDPOINT = '../api/workspace-data';
@@ -5766,8 +5768,8 @@
           renderWorkspaceAllTasks(workspaceTasks);
           window.setTimeout(closeOperationUpdateModal, 520);
         } catch (error) {
-          operationUpdateStatus.textContent = error.message === 'FILE_UPLOAD_FAILED'
-            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
+          operationUpdateStatus.textContent = error.message === 'FILE_UPLOAD_FAILED' || error.code
+            ? formatWorkspaceUploadError(error)
             : 'Could not attach update to this operation.';
           operationUpdateStatus.classList.add('is-error');
         } finally {
@@ -6932,10 +6934,45 @@
         }));
       }
 
+      function formatBytes(bytes = 0) {
+        const value = Number(bytes) || 0;
+        if (value >= 1024 * 1024) return `${Math.round((value / 1024 / 1024) * 10) / 10} MB`;
+        if (value >= 1024) return `${Math.round(value / 1024)} KB`;
+        return `${value} B`;
+      }
+
+      function createWorkspaceUploadLimitError(code = 'UPLOAD_LIMIT_EXCEEDED', file = null) {
+        const error = new Error(code);
+        error.code = code;
+        error.fileName = file?.name || '';
+        error.fileSize = file?.size || 0;
+        error.maxFileBytes = WORKSPACE_MAX_ATTACHMENT_FILE_BYTES;
+        error.maxUploadBytes = WORKSPACE_MAX_ATTACHMENT_UPLOAD_BYTES;
+        return error;
+      }
+
+      function validateWorkspaceAttachmentFiles(files = []) {
+        const totalSize = files.reduce((sum, file) => sum + (Number(file.size) || 0), 0);
+        const oversizedFile = files.find((file) => Number(file.size) > WORKSPACE_MAX_ATTACHMENT_FILE_BYTES);
+        if (oversizedFile) throw createWorkspaceUploadLimitError('FILE_TOO_LARGE', oversizedFile);
+        if (totalSize > WORKSPACE_MAX_ATTACHMENT_UPLOAD_BYTES) throw createWorkspaceUploadLimitError('UPLOAD_LIMIT_EXCEEDED');
+      }
+
+      function formatWorkspaceUploadError(error = {}) {
+        const code = error.code || (error.status === 413 ? 'UPLOAD_LIMIT_EXCEEDED' : 'FILE_UPLOAD_FAILED');
+        if (code === 'FILE_TOO_LARGE' || code === 'UPLOAD_LIMIT_EXCEEDED' || code === 'UPLOAD_TOO_LARGE') {
+          const limit = formatBytes(error.maxFileBytes || error.maxUploadBytes || WORKSPACE_MAX_ATTACHMENT_FILE_BYTES);
+          const name = error.fileName ? ` ${error.fileName}` : '';
+          return `${code}. File${name} is too large. Upload a smaller file under ${limit} or add a WeTransfer/Drive link.`;
+        }
+        return `FILE_UPLOAD_FAILED${code ? ` · ${code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`;
+      }
+
       async function uploadWorkspaceAttachmentsFromInput(inputId, taskId = '') {
         const input = document.getElementById(inputId);
         const files = Array.from(input?.files || []);
         if (!files.length) return { taskId, files: [] };
+        validateWorkspaceAttachmentFiles(files);
 
         const form = new FormData();
         const session = getSession();
@@ -6951,9 +6988,12 @@
         const data = await response.json().catch(() => ({}));
         if (!response.ok || data?.success !== true) {
           const error = new Error('FILE_UPLOAD_FAILED');
-          error.code = data?.code || 'FILE_UPLOAD_FAILED';
+          error.code = data?.code || (response.status === 413 ? 'UPLOAD_LIMIT_EXCEEDED' : 'FILE_UPLOAD_FAILED');
           error.stage = data?.stage || '';
           error.detail = data?.detail || '';
+          error.status = response.status;
+          error.maxFileBytes = data?.max_file_bytes || WORKSPACE_MAX_ATTACHMENT_FILE_BYTES;
+          error.maxUploadBytes = data?.max_upload_bytes || WORKSPACE_MAX_ATTACHMENT_UPLOAD_BYTES;
           throw error;
         }
 
@@ -7073,8 +7113,8 @@
           await loadTasks({ silent: true });
           window.setTimeout(closeWorkspaceTaskDrawer, 450);
         } catch (error) {
-          drawerRequestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
-            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
+          drawerRequestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED' || error.code
+            ? formatWorkspaceUploadError(error)
             : 'Could not send task. Please try again.';
           drawerRequestMessage.classList.add('is-error');
         } finally {
@@ -7202,8 +7242,8 @@
           document.getElementById('otherDeadlinePanel').classList.remove('is-visible');
           await loadTasks({ silent: true });
         } catch (error) {
-          requestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED'
-            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
+          requestMessage.textContent = error.message === 'FILE_UPLOAD_FAILED' || error.code
+            ? formatWorkspaceUploadError(error)
             : 'Could not send task. Please try again.';
           requestMessage.classList.add('is-error');
         } finally {
