@@ -3043,6 +3043,56 @@
       line-height: 1.55;
     }
 
+    .operation-large-file-fallback {
+      display: grid;
+      gap: 14px;
+      border: 1px solid rgba(233,196,138,.18);
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(233,196,138,.065), rgba(255,255,255,.018));
+      padding: 16px;
+    }
+
+    .operation-large-file-fallback h3 {
+      margin: 0 0 6px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .operation-large-file-fallback p {
+      margin: 0;
+      color: var(--ink-dim);
+      font-size: 12px;
+      line-height: 1.58;
+    }
+
+    .operation-large-file-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .operation-large-file-actions .workspace-button {
+      min-height: 38px;
+      padding: 0 13px;
+      font-size: 10px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .operation-large-file-copy {
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top: 12px;
+    }
+
+    .operation-large-file-copy strong {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
     .request-panel.is-shaking,
     .field-group.is-invalid textarea {
       animation: workspaceShake .32s ease both;
@@ -4135,6 +4185,22 @@
           </div>
         </div>
 
+        <div class="operation-large-file-fallback" aria-label="Large file fallback">
+          <div>
+            <h3>Large files?</h3>
+            <p>If your file is too large to upload here, send it with WeTransfer and paste the transfer link below.</p>
+          </div>
+          <div class="operation-large-file-actions">
+            <a class="workspace-button secondary" href="https://wetransfer.com/" target="_blank" rel="noopener noreferrer">Open WeTransfer</a>
+            <button class="workspace-button secondary" type="button" data-operation-copy="email">Copy DONEOVERNIGHT email</button>
+            <button class="workspace-button secondary" type="button" data-operation-copy="reference">Copy operation reference</button>
+          </div>
+          <p class="operation-large-file-copy">
+            Use <strong>ask@doneovernight.com</strong> as the recipient and include the operation reference in the message:
+            <strong id="operationUpdateFallbackReference">—</strong>. Then paste the WeTransfer link in the Links field before sending the update.
+          </p>
+        </div>
+
         <div class="field-group">
           <label for="operationUpdateLinks">Links</label>
           <textarea id="operationUpdateLinks" rows="3" placeholder="Paste WeTransfer, Google Drive, iCloud, Dropbox, or reference links."></textarea>
@@ -4281,6 +4347,7 @@
       const operationUpdateReference = document.getElementById('operationUpdateReference');
       const operationUpdateWorkspace = document.getElementById('operationUpdateWorkspace');
       const operationUpdateContext = document.getElementById('operationUpdateContext');
+      const operationUpdateFallbackReference = document.getElementById('operationUpdateFallbackReference');
       const operationUpdateStatus = document.getElementById('operationUpdateMessageStatus');
       const operationUpdateSubmit = document.getElementById('operationUpdateSubmit');
       const referralInviteModal = document.getElementById('referralInviteModal');
@@ -5649,6 +5716,7 @@
         operationUpdateStatus.className = 'workspace-message';
         operationUpdateReference.textContent = reference;
         operationUpdateWorkspace.textContent = workspaceSlug ? `@${workspaceSlug}` : '@workspace';
+        if (operationUpdateFallbackReference) operationUpdateFallbackReference.textContent = reference;
         operationUpdateContext.textContent = `Add information to ${reference}. This update stays attached to the existing operation.`;
         operationUpdateModal.classList.add('is-open');
         operationUpdateModal.removeAttribute('aria-hidden');
@@ -5842,6 +5910,16 @@
           referralInviteMessage.textContent = 'Referral invite link copied.';
           referralInviteMessage.className = 'workspace-message is-success';
         }
+      }
+
+      async function copyOperationUpdateFallbackValue(type, button) {
+        const reference = operationUpdateReference?.textContent?.trim() || '';
+        const value = type === 'email' ? 'ask@doneovernight.com' : reference;
+        if (!button || !value || value === '—') return;
+        const originalText = button.textContent;
+        await navigator.clipboard?.writeText(value).catch(() => {});
+        button.textContent = type === 'email' ? 'Email copied' : 'Reference copied';
+        window.setTimeout(() => { button.textContent = originalText; }, 1600);
       }
 
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
@@ -6961,9 +7039,7 @@
       function formatWorkspaceUploadError(error = {}) {
         const code = error.code || (error.status === 413 ? 'UPLOAD_LIMIT_EXCEEDED' : 'FILE_UPLOAD_FAILED');
         if (code === 'FILE_TOO_LARGE' || code === 'UPLOAD_LIMIT_EXCEEDED' || code === 'UPLOAD_TOO_LARGE') {
-          const limit = formatBytes(error.maxFileBytes || error.maxUploadBytes || WORKSPACE_MAX_ATTACHMENT_FILE_BYTES);
-          const name = error.fileName ? ` ${error.fileName}` : '';
-          return `${code}. File${name} is too large. Upload a smaller file under ${limit} or add a WeTransfer/Drive link.`;
+          return 'File is too large. Use WeTransfer and paste the transfer link in Links.';
         }
         return `FILE_UPLOAD_FAILED${code ? ` · ${code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`;
       }
@@ -7602,6 +7678,11 @@
           if (event.target === workspaceTaskDrawer) closeWorkspaceTaskDrawer();
         });
         operationUpdateModal?.addEventListener('click', (event) => {
+          const copyButton = event.target.closest('[data-operation-copy]');
+          if (copyButton) {
+            copyOperationUpdateFallbackValue(copyButton.dataset.operationCopy, copyButton);
+            return;
+          }
           if (event.target === operationUpdateModal) closeOperationUpdateModal();
         });
         referralInviteModal?.addEventListener('click', (event) => {
