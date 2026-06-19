@@ -3900,6 +3900,51 @@
     </aside>
   </div>
 
+  <div class="workspace-task-drawer-backdrop" id="operationUpdateModal" aria-hidden="true">
+    <aside class="workspace-task-drawer operation-update-modal" role="dialog" aria-modal="true" aria-labelledby="operationUpdateTitle">
+      <div class="workspace-task-drawer-head">
+        <div>
+          <p class="eyebrow">Operation update</p>
+          <h2 class="workspace-task-drawer-title" id="operationUpdateTitle">Update Operation</h2>
+        </div>
+        <button class="workspace-drawer-close" id="closeOperationUpdateModal" type="button" aria-label="Close operation update">×</button>
+      </div>
+      <p class="workspace-drawer-copy" id="operationUpdateContext">Add information to this operation. The DON reference stays attached automatically.</p>
+      <form class="request-form" id="operationUpdateForm" novalidate>
+        <div class="workspace-task-detail-grid" aria-label="Operation update context">
+          <div class="workspace-task-detail-fact"><span>Operation</span><strong id="operationUpdateReference">—</strong></div>
+          <div class="workspace-task-detail-fact"><span>Workspace</span><strong id="operationUpdateWorkspace">—</strong></div>
+        </div>
+
+        <div class="field-group">
+          <label for="operationUpdateMessage">Message</label>
+          <textarea id="operationUpdateMessage" rows="5" placeholder="Add context, examples, files, or clarification for this operation."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="operationUpdateFileUpload">Files</label>
+          <div class="file-support">
+            <input id="operationUpdateFileUpload" name="attachments" type="file" accept=".pdf,.doc,.docx,.zip,.rar,.7z,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/x-7z-compressed" multiple>
+            <p class="field-helper">Files are attached securely to this operation, not submitted as a new task.</p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="operationUpdateLinks">Links</label>
+          <textarea id="operationUpdateLinks" rows="3" placeholder="Paste WeTransfer, Google Drive, iCloud, Dropbox, or reference links."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="operationUpdateNotes">Additional notes <span style="color:rgba(255,255,255,.34);font-weight:400">optional</span></label>
+          <textarea id="operationUpdateNotes" rows="2" placeholder="Anything DONEOVERNIGHT Operations should know."></textarea>
+        </div>
+
+        <div class="workspace-message" id="operationUpdateMessageStatus" aria-live="polite"></div>
+        <button class="workspace-button primary-command" id="operationUpdateSubmit" type="submit">Send Update</button>
+      </form>
+    </aside>
+  </div>
+
   <button class="workspace-donbot" id="workspaceDonbot" type="button" aria-expanded="false">
     <strong>DONBOT</strong>
     <span>STANDBY</span>
@@ -3986,6 +4031,13 @@
       const workspaceTaskDrawerForm = document.getElementById('workspaceTaskDrawerForm');
       const drawerRequestMessage = document.getElementById('drawerRequestMessage');
       const drawerSubmitRequestBtn = document.getElementById('drawerSubmitRequestBtn');
+      const operationUpdateModal = document.getElementById('operationUpdateModal');
+      const operationUpdateForm = document.getElementById('operationUpdateForm');
+      const operationUpdateReference = document.getElementById('operationUpdateReference');
+      const operationUpdateWorkspace = document.getElementById('operationUpdateWorkspace');
+      const operationUpdateContext = document.getElementById('operationUpdateContext');
+      const operationUpdateStatus = document.getElementById('operationUpdateMessageStatus');
+      const operationUpdateSubmit = document.getElementById('operationUpdateSubmit');
       const workspaceDonbot = document.getElementById('workspaceDonbot');
       const workspaceDonbotPanel = document.getElementById('workspaceDonbotPanel');
       const workspaceDonbotContent = document.getElementById('workspaceDonbotContent');
@@ -4013,6 +4065,7 @@
       let workspaceMemory = null;
       let localSubmittedWorkspaceTasks = [];
       let selectedWorkspaceTaskKey = '';
+      let activeOperationUpdateTaskKey = '';
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -4958,6 +5011,70 @@
         `;
       }
 
+      function parseWorkspaceLinks(value = '') {
+        return String(value || '')
+          .split(/[\n,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function getOperationUpdates(task = {}) {
+        const reference = getTaskId(task);
+        return (workspaceMessages || [])
+          .filter((message) => {
+            const messageTaskId = message.task_id || message.taskId || message.metadata?.task_id || message.metadata?.operation;
+            if (!reference || !messageTaskId || String(messageTaskId) !== String(reference)) return false;
+            const type = String(message.message_type || message.messageType || '').toLowerCase();
+            return type.includes('client_update') ||
+              type.includes('client update') ||
+              type.includes('operator_note') ||
+              type.includes('delivery') ||
+              type.includes('file');
+          })
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      }
+
+      function renderOperationUpdateAssets(update = {}) {
+        const metadata = update.metadata || {};
+        const files = dedupeWorkspaceFiles(collectWorkspaceItems(metadata.attachments, metadata.files));
+        const links = Array.isArray(metadata.links) ? metadata.links : [];
+        const assets = [
+          ...files.map((file) => ({
+            label: file.title || file.name || 'Attached file',
+            href: file.href || file.signed_url || file.url || ''
+          })),
+          ...links.map((link) => ({ label: 'Reference link', href: link }))
+        ].filter((asset) => asset.href);
+        if (!assets.length) return '';
+        return `<div class="workspace-secondary-chips">${assets.map((asset) => `<a class="workspace-secondary-chip" href="${escapeHTML(asset.href)}" target="_blank" rel="noopener noreferrer">${escapeHTML(asset.label)}</a>`).join('')}</div>`;
+      }
+
+      function renderWorkspaceOperationUpdates(task = {}) {
+        const updates = getOperationUpdates(task);
+        if (!updates.length) return '<p class="workspace-task-detail-copy">No operation updates yet.</p>';
+        return `
+          <ul class="workspace-os-list is-compact">
+            ${updates.map((update) => {
+              const metadata = update.metadata || {};
+              const isClient = String(update.author_role || '').toLowerCase() === 'client';
+              const title = isClient ? 'Client update received' : 'DONEOVERNIGHT update';
+              const message = metadata.client_message || metadata.notes || update.message || 'Operation updated.';
+              return `
+                <li class="workspace-os-row">
+                  <span class="workspace-os-dot" aria-hidden="true"></span>
+                  <div>
+                    <strong>${escapeHTML(title)}</strong>
+                    <span>${escapeHTML(update.created_at ? formatDate(update.created_at) : 'Just now')}</span>
+                    <p class="workspace-task-detail-copy" style="margin-top:6px">${escapeHTML(message)}</p>
+                    ${renderOperationUpdateAssets(update)}
+                  </div>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        `;
+      }
+
       function getSelectedWorkspaceTask(historyItems = []) {
         if (!selectedWorkspaceTaskKey) return null;
         return historyItems.find((task) => getWorkspaceOperationKey(task) === selectedWorkspaceTaskKey) || null;
@@ -5004,6 +5121,10 @@
               <p class="workspace-task-detail-copy">${escapeHTML(getOperationNextStep(task))}</p>
             </div>
             <div class="workspace-task-detail-section">
+              <span>Operation Updates</span>
+              ${renderWorkspaceOperationUpdates(task)}
+            </div>
+            <div class="workspace-task-detail-section">
               <span>Client Files</span>
               ${renderWorkspaceTaskDetailFiles(files)}
             </div>
@@ -5016,7 +5137,7 @@
               ${renderWorkspaceTaskDetailInvoices(invoices)}
             </div>
             <div class="workspace-task-detail-actions">
-              <button class="workspace-button secondary" type="button" data-task-detail-action="more-info" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Send more information</button>
+              <button class="workspace-button secondary" type="button" data-task-detail-action="update-operation" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Add Information</button>
               <button class="workspace-button secondary" type="button" data-task-detail-action="print" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Print task information</button>
               <button class="workspace-button secondary" type="button" data-task-detail-action="download" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Download task summary</button>
             </div>
@@ -5109,21 +5230,13 @@
         URL.revokeObjectURL(link.href);
       }
 
-      function prefillWorkspaceMoreInformation(task = {}) {
-        openWorkspaceTaskDrawer();
-        const summary = document.getElementById('drawerRequestSummary');
-        if (!summary) return;
-        summary.value = `Additional information for ${getTaskId(task)}:\n\n`;
-        summary.focus({ preventScroll: true });
-      }
-
       function handleWorkspaceTaskHistoryClick(event) {
         const actionButton = event.target.closest('[data-task-detail-action]');
         if (actionButton) {
           const task = findWorkspaceTaskByKey(actionButton.dataset.taskHistoryKey || selectedWorkspaceTaskKey);
           if (!task) return;
           const action = actionButton.dataset.taskDetailAction;
-          if (action === 'more-info') prefillWorkspaceMoreInformation(task);
+          if (action === 'update-operation') openOperationUpdateModal(task);
           if (action === 'print') window.print();
           if (action === 'download') downloadWorkspaceTaskSummary(task);
           return;
@@ -5132,6 +5245,144 @@
         if (!row) return;
         selectedWorkspaceTaskKey = row.dataset.taskHistoryKey || '';
         renderWorkspaceAllTasks(workspaceTasks);
+      }
+
+      function openOperationUpdateModal(task = {}) {
+        if (!operationUpdateModal || !operationUpdateForm) return;
+        const reference = getTaskId(task);
+        activeOperationUpdateTaskKey = getWorkspaceOperationKey(task);
+        operationUpdateForm.reset();
+        operationUpdateStatus.textContent = '';
+        operationUpdateStatus.className = 'workspace-message';
+        operationUpdateReference.textContent = reference;
+        operationUpdateWorkspace.textContent = workspaceSlug ? `@${workspaceSlug}` : '@workspace';
+        operationUpdateContext.textContent = `Add information to ${reference}. This update stays attached to the existing operation.`;
+        operationUpdateModal.classList.add('is-open');
+        operationUpdateModal.removeAttribute('aria-hidden');
+        document.body.style.overflow = 'hidden';
+        window.setTimeout(() => document.getElementById('operationUpdateMessage')?.focus({ preventScroll: true }), 120);
+      }
+
+      function closeOperationUpdateModal() {
+        if (!operationUpdateModal) return;
+        operationUpdateModal.classList.remove('is-open');
+        operationUpdateModal.setAttribute('aria-hidden', 'true');
+        activeOperationUpdateTaskKey = '';
+        document.body.style.overflow = '';
+      }
+
+      function getOperationUpdateAttachmentMetadata() {
+        const input = document.getElementById('operationUpdateFileUpload');
+        return Array.from(input?.files || []).map((file) => ({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size
+        }));
+      }
+
+      function buildAdminClientUpdateMessage({ task, session, message, notes, links, attachments }) {
+        const lines = [
+          'CLIENT UPDATE RECEIVED',
+          '',
+          'Operation:',
+          getTaskId(task),
+          '',
+          'Client:',
+          session.name || session.email || 'Workspace client',
+          '',
+          'Message:',
+          message || 'Client added operation context.'
+        ];
+        if (notes) lines.push('', 'Notes:', notes);
+        if (attachments.length) lines.push('', 'Files:', ...attachments.map((file) => file.name || file.filename || 'Attached file'));
+        if (links.length) lines.push('', 'Links:', ...links);
+        return lines.join('\n');
+      }
+
+      async function submitOperationUpdate(event) {
+        event.preventDefault();
+        const task = findWorkspaceTaskByKey(activeOperationUpdateTaskKey || selectedWorkspaceTaskKey);
+        const session = getSession();
+        const message = document.getElementById('operationUpdateMessage').value.trim();
+        const notes = document.getElementById('operationUpdateNotes').value.trim();
+        const links = parseWorkspaceLinks(document.getElementById('operationUpdateLinks').value);
+        let attachments = getOperationUpdateAttachmentMetadata();
+        if (!task || !session.email) {
+          operationUpdateStatus.textContent = 'Private workspace access is required before sending.';
+          operationUpdateStatus.classList.add('is-error');
+          return;
+        }
+        if (!message && !notes && !links.length && !attachments.length) {
+          operationUpdateStatus.textContent = 'Add a message, file, or link before sending.';
+          operationUpdateStatus.classList.add('is-error');
+          return;
+        }
+
+        operationUpdateSubmit.disabled = true;
+        operationUpdateSubmit.textContent = attachments.length ? 'Uploading files…' : 'Sending…';
+        operationUpdateStatus.textContent = '';
+        operationUpdateStatus.className = 'workspace-message';
+        try {
+          const uploadResult = await uploadWorkspaceAttachmentsFromInput('operationUpdateFileUpload', getTaskId(task));
+          attachments = uploadResult.files.length ? uploadResult.files : attachments;
+          operationUpdateSubmit.textContent = 'Sending…';
+          const createdAt = new Date().toISOString();
+          const response = await fetch(WORKSPACE_MESSAGES_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+              workspace_slug: workspaceSlug || session.slug,
+              email: session.email,
+              task_id: getTaskId(task),
+              author_role: 'client',
+              message_type: 'CLIENT UPDATE RECEIVED',
+              message: buildAdminClientUpdateMessage({ task, session, message, notes, links, attachments }),
+              metadata: {
+                source: 'operation_update',
+                update_type: 'client_update',
+                task_id: getTaskId(task),
+                operation: getTaskId(task),
+                workspace_slug: workspaceSlug || session.slug,
+                client_name: session.name || '',
+                client_email: session.email || '',
+                client_message: message || 'Client added operation context.',
+                notes,
+                links,
+                attachments,
+                attachment_names: attachments.map((file) => file.name || file.filename || 'Attached file'),
+                submitted_at: createdAt
+              }
+            })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data?.success !== true) throw new Error(data?.code || data?.error || 'OPERATION_UPDATE_FAILED');
+          const savedMessage = data.message || {
+            id: `local-${createdAt}`,
+            workspace_slug: workspaceSlug || session.slug,
+            task_id: getTaskId(task),
+            email: session.email,
+            author_role: 'client',
+            message_type: 'CLIENT UPDATE RECEIVED',
+            message,
+            metadata: { client_message: message, notes, links, attachments },
+            created_at: createdAt
+          };
+          workspaceMessages = [savedMessage, ...workspaceMessages.filter((item) => item.id !== savedMessage.id)];
+          operationUpdateStatus.textContent = 'Update attached to this operation.';
+          operationUpdateStatus.classList.add('is-success');
+          renderWorkspaceAllTasks(workspaceTasks);
+          await loadWorkspaceMessages().catch(() => {});
+          renderWorkspaceAllTasks(workspaceTasks);
+          window.setTimeout(closeOperationUpdateModal, 520);
+        } catch (error) {
+          operationUpdateStatus.textContent = error.message === 'FILE_UPLOAD_FAILED'
+            ? `FILE_UPLOAD_FAILED${error.code ? ` · ${error.code}` : ''}${error.stage ? ` · ${error.stage}` : ''}. Remove the file or try again before sending.`
+            : 'Could not attach update to this operation.';
+          operationUpdateStatus.classList.add('is-error');
+        } finally {
+          operationUpdateSubmit.disabled = false;
+          operationUpdateSubmit.textContent = 'Send Update';
+        }
       }
 
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
@@ -5154,9 +5405,7 @@
 
         const activeProjects = getWorkspaceOperationTasks(tasks);
         const operations = activeProjects.length ? activeProjects : [project];
-        const [primaryOperation, ...secondaryOperations] = operations;
-        const visibleSecondaryOperations = secondaryOperations.slice(0, 3);
-        const additionalSecondaryCount = Math.max(0, secondaryOperations.length - visibleSecondaryOperations.length);
+        const [primaryOperation] = operations;
         const scope = primaryOperation.quote_note || primaryOperation.task_description || primaryOperation.task_summary || 'Project scope is attached to this workspace.';
         const headerStatus = operations.some(isWorkspaceActiveProject)
           ? 'Project Active'
@@ -5191,22 +5440,6 @@
               <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(primaryOperation)}</div>
               <p class="workspace-os-scope"><strong>Project scope</strong>${escapeHTML(scope)}</p>
             </article>
-            ${visibleSecondaryOperations.length ? `
-              <div class="workspace-secondary-operations" aria-label="Secondary operations">
-                <div class="workspace-secondary-label">Other Requests</div>
-                ${visibleSecondaryOperations.map((operation) => `
-                  <div class="workspace-secondary-operation">
-                    <div>
-                      <strong>${escapeHTML(operation.display_title || operation.project_title || operation.task_summary || getTaskSummary(operation))}</strong>
-                      <span>${escapeHTML([getTaskId(operation), getOperationTimeline(operation)].filter(Boolean).join(' · '))}</span>
-                      ${getOperationAttachmentCount(operation) ? `<div class="workspace-secondary-chips"><span class="workspace-secondary-chip">${escapeHTML(getOperationAttachmentCount(operation))} attachment${getOperationAttachmentCount(operation) === 1 ? '' : 's'}</span></div>` : ''}
-                    </div>
-                    <em class="workspace-secondary-status">${escapeHTML(operation.client_status || getWorkspaceClientStatus(operation))}</em>
-                  </div>
-                `).join('')}
-                ${additionalSecondaryCount ? `<div class="workspace-secondary-operation"><div><strong>${escapeHTML(additionalSecondaryCount)} more task${additionalSecondaryCount === 1 ? '' : 's'} in Task History</strong><span>Complete workspace history below</span></div><em class="workspace-secondary-status">All Tasks</em></div>` : ''}
-              </div>
-            ` : ''}
           </div>
         `;
 
@@ -6862,11 +7095,16 @@
         });
         document.getElementById('newRequestBtn').addEventListener('click', openWorkspaceTaskDrawer);
         document.getElementById('closeWorkspaceTaskDrawer')?.addEventListener('click', closeWorkspaceTaskDrawer);
+        document.getElementById('closeOperationUpdateModal')?.addEventListener('click', closeOperationUpdateModal);
         workspaceTaskDrawer?.addEventListener('click', (event) => {
           if (event.target === workspaceTaskDrawer) closeWorkspaceTaskDrawer();
         });
+        operationUpdateModal?.addEventListener('click', (event) => {
+          if (event.target === operationUpdateModal) closeOperationUpdateModal();
+        });
         document.addEventListener('keydown', (event) => {
           if (event.key === 'Escape' && workspaceTaskDrawer?.classList.contains('is-open')) closeWorkspaceTaskDrawer();
+          if (event.key === 'Escape' && operationUpdateModal?.classList.contains('is-open')) closeOperationUpdateModal();
         });
         document.getElementById('drawerDeadlinePills')?.addEventListener('click', (event) => {
           const button = event.target.closest('[data-drawer-deadline]');
@@ -6964,6 +7202,7 @@
         });
         requestForm.addEventListener('submit', submitWorkspaceRequest);
         workspaceTaskDrawerForm?.addEventListener('submit', submitWorkspaceDrawerTask);
+        operationUpdateForm?.addEventListener('submit', submitOperationUpdate);
         workspaceReplyForm.addEventListener('submit', submitWorkspaceReply);
         document.addEventListener('visibilitychange', handleVisibilityPolling);
         showAccessCredentials();
