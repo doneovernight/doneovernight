@@ -485,6 +485,67 @@
       opacity: .62;
     }
 
+    .operator-availability-control {
+      margin-top: 18px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 20%, rgba(255,255,255,.07));
+      border-radius: 8px;
+      background: rgba(255,255,255,.022);
+      padding: 12px;
+    }
+
+    .operator-availability-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-availability-head strong {
+      color: color-mix(in srgb, var(--operator-accent) 72%, rgba(245,241,234,.78));
+      font-size: 9px;
+      text-align: right;
+    }
+
+    .operator-status-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 11px;
+    }
+
+    .operator-status-option {
+      min-height: 34px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      background: rgba(0,0,0,.16);
+      color: rgba(245,241,234,.58);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .11em;
+      padding: 0 10px;
+      text-transform: uppercase;
+    }
+
+    .operator-status-option.is-active {
+      border-color: color-mix(in srgb, var(--operator-accent) 44%, rgba(255,255,255,.08));
+      background: color-mix(in srgb, var(--operator-accent) 10%, rgba(255,255,255,.03));
+      color: rgba(255,255,255,.88);
+      box-shadow: 0 0 22px color-mix(in srgb, var(--operator-accent) 10%, transparent);
+    }
+
+    .operator-status-option:disabled {
+      cursor: default;
+      opacity: .54;
+    }
+
     .runtime-chip {
       display: inline-flex;
       align-items: center;
@@ -1143,6 +1204,89 @@
       line-height: 1.45;
     }
 
+    .operator-modal[hidden] { display: none; }
+
+    .operator-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+    }
+
+    .operator-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(18px);
+    }
+
+    .operator-modal-card {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 520px);
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 24%, rgba(255,255,255,.08));
+      border-radius: 10px;
+      background: rgba(7,8,9,.96);
+      box-shadow: 0 24px 80px rgba(0,0,0,.42);
+      padding: 24px;
+    }
+
+    .operator-modal-card h2 {
+      margin: 8px 0 8px;
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 400;
+    }
+
+    .operator-modal-card p {
+      color: rgba(245,241,234,.56);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .operator-modal-card .operator-login-field {
+      display: block;
+      margin-top: 14px;
+    }
+
+    .operator-modal-card .operator-login-field span {
+      display: block;
+      margin-bottom: 7px;
+      color: rgba(245,241,234,.36);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-modal-card textarea {
+      width: 100%;
+      min-height: 118px;
+      border: 1px solid rgba(255,255,255,.105);
+      border-radius: 7px;
+      background: rgba(0,0,0,.22);
+      color: rgba(255,255,255,.9);
+      padding: 12px 13px;
+      resize: vertical;
+      outline: none;
+    }
+
+    .operator-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+      color: rgba(245,241,234,.68);
+      cursor: pointer;
+    }
+
     @keyframes signalDrift { 50% { background-position: 140% 0; opacity: .28; } }
     @keyframes livePulse { 0%, 100% { opacity: .62; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.16); } }
     @keyframes chamberDrift { 50% { background-position: 82% 44%; opacity: .9; } }
@@ -1249,7 +1393,18 @@
           <span class="runtime-chip" data-runtime="lastActive">Awaiting first activity</span>
           <span class="runtime-chip" data-runtime="deliveryWindow">No active delivery</span>
         </div>
-        <button class="operator-availability-toggle" id="operatorAvailabilityToggle" type="button" aria-pressed="true">Available for routing</button>
+        <div class="operator-availability-control" aria-label="Operator availability">
+          <div class="operator-availability-head">
+            <span>Availability</span>
+            <strong id="operatorAvailabilityLabel">Always Available</strong>
+          </div>
+          <div class="operator-status-options" id="operatorAvailabilityOptions">
+            <button class="operator-status-option" type="button" data-availability="always_available">Always Available</button>
+            <button class="operator-status-option" type="button" data-availability="available">Available</button>
+            <button class="operator-status-option" type="button" data-availability="busy">Busy</button>
+            <button class="operator-status-option" type="button" data-availability="offline">Offline</button>
+          </div>
+        </div>
         <div class="operator-state-grid" aria-label="Operator state summary">
           <div class="operator-state-item"><span>Assigned work</span><strong data-runtime="stateAssignments">0 active</strong></div>
           <div class="operator-state-item"><span>Client updates</span><strong data-runtime="stateUpdates">0 unread</strong></div>
@@ -1259,6 +1414,7 @@
         <div class="operator-actions">
           <a class="operator-button" href="/apply">Apply as operator →</a>
           <a class="operator-button" id="operatorRuntimeAction" href="#assigned-work" hidden>Open assigned work →</a>
+          <button class="operator-button secondary" id="operatorSupportAction" type="button" hidden>Need Help / Ping HQ</button>
           <button class="operator-button secondary" id="operatorInviteClientAction" type="button" hidden>Invite new client →</button>
           <a class="operator-button secondary" href="#profile">Operator profile</a>
         </div>
@@ -1543,6 +1699,28 @@
       </div>
     </section>
     </div>
+    <div class="operator-modal" id="operatorSupportModal" hidden>
+      <div class="operator-modal-backdrop" data-operator-support-close></div>
+      <div class="operator-modal-card" role="dialog" aria-modal="true" aria-labelledby="operatorSupportTitle">
+        <button class="operator-modal-close" type="button" data-operator-support-close aria-label="Close">×</button>
+        <p class="eyebrow">Private HQ line</p>
+        <h2 id="operatorSupportTitle">Ping DONEOVERNIGHT HQ.</h2>
+        <p>Ask for clarification, report a blocker, or attach a DON reference. This stays internal.</p>
+        <label class="operator-login-field">
+          <span>DON reference optional</span>
+          <input id="operatorSupportReference" placeholder="DON-2026-00000">
+        </label>
+        <label class="operator-login-field">
+          <span>Message</span>
+          <textarea id="operatorSupportMessage" rows="5" placeholder="What do you need from HQ?"></textarea>
+        </label>
+        <div class="operator-actions">
+          <button class="operator-button" id="operatorSupportSend" type="button">Send to HQ →</button>
+          <button class="operator-button secondary" type="button" data-operator-support-close>Cancel</button>
+        </div>
+        <p class="operator-login-message" id="operatorSupportStatus" role="status" aria-live="polite"></p>
+      </div>
+    </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -1562,7 +1740,14 @@
       const runtimeAction = document.getElementById('operatorRuntimeAction');
       const inviteClientAction = document.getElementById('operatorInviteClientAction');
       const inviteMessage = document.getElementById('operatorInviteMessage');
-      const availabilityToggle = document.getElementById('operatorAvailabilityToggle');
+      const availabilityOptions = document.getElementById('operatorAvailabilityOptions');
+      const availabilityLabel = document.getElementById('operatorAvailabilityLabel');
+      const supportAction = document.getElementById('operatorSupportAction');
+      const supportModal = document.getElementById('operatorSupportModal');
+      const supportMessage = document.getElementById('operatorSupportMessage');
+      const supportReference = document.getElementById('operatorSupportReference');
+      const supportSend = document.getElementById('operatorSupportSend');
+      const supportStatus = document.getElementById('operatorSupportStatus');
       const headerStatus = document.getElementById('operatorHeaderStatus');
       const profileSettings = document.getElementById('operatorProfileSettings');
       const profileMessage = document.getElementById('operatorProfileMessage');
@@ -1932,6 +2117,77 @@
         }
       }
 
+      async function postOperatorAction(payload) {
+        const response = await fetch('../api/operator-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.success !== true) {
+          throw new Error(data?.error || 'Operator request failed');
+        }
+        return data;
+      }
+
+      function setSupportStatus(text, type = '') {
+        if (!supportStatus) return;
+        supportStatus.textContent = text || '';
+        supportStatus.className = `operator-login-message${type ? ` is-${type}` : ''}`;
+      }
+
+      function openSupportModal({ taskReference = '', messageType = 'support' } = {}) {
+        if (!supportModal) return;
+        supportModal.hidden = false;
+        supportModal.dataset.messageType = messageType;
+        if (supportReference) supportReference.value = taskReference || '';
+        if (supportMessage) supportMessage.value = '';
+        setSupportStatus('');
+        window.setTimeout(() => supportMessage?.focus(), 80);
+      }
+
+      function closeSupportModal() {
+        if (!supportModal) return;
+        supportModal.hidden = true;
+        delete supportModal.dataset.messageType;
+        if (supportMessage) supportMessage.value = '';
+        if (supportReference) supportReference.value = '';
+        setSupportStatus('');
+      }
+
+      async function sendSupportMessage() {
+        const messageText = supportMessage?.value.trim() || '';
+        const reference = supportReference?.value.trim() || '';
+        const messageType = supportModal?.dataset.messageType || 'support';
+        if (!messageText) {
+          setSupportStatus('Write a short message for HQ.', 'error');
+          return;
+        }
+        if (supportSend) {
+          supportSend.disabled = true;
+          supportSend.textContent = 'Sending...';
+        }
+        setSupportStatus('');
+        try {
+          const data = await postOperatorAction({
+            action: 'operator_hq_message',
+            message_type: messageType,
+            message: messageText,
+            task_reference: reference
+          });
+          setSupportStatus(data.telegram?.delivered ? 'Sent to HQ. Telegram alerted.' : 'Sent to HQ. Telegram not configured or not confirmed.', 'success');
+          window.setTimeout(closeSupportModal, 900);
+          if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'operator_message' }).catch(() => {});
+        } catch (error) {
+          setSupportStatus(error.message || 'Could not send message to HQ.', 'error');
+        } finally {
+          if (supportSend) {
+            supportSend.disabled = false;
+            supportSend.textContent = 'Send to HQ →';
+          }
+        }
+      }
+
       function formatLastActive(value) {
         if (!value) return 'Not yet';
         const date = new Date(value);
@@ -1973,14 +2229,25 @@
         return 'Standing by';
       }
 
-      function setAvailabilityState(available) {
-        if (!availabilityToggle) return;
-        availabilityToggle.classList.toggle('is-unavailable', !available);
-        availabilityToggle.setAttribute('aria-pressed', available ? 'true' : 'false');
-        availabilityToggle.textContent = available ? 'Available for routing' : 'Unavailable for routing';
-        try {
-          localStorage.setItem('doneovernight_operator_available', available ? 'true' : 'false');
-        } catch (error) {}
+      const availabilityLabels = {
+        always_available: 'Always Available',
+        available: 'Available',
+        busy: 'Busy',
+        offline: 'Offline'
+      };
+
+      function normalizeAvailability(value) {
+        const key = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+        return Object.prototype.hasOwnProperty.call(availabilityLabels, key) ? key : 'always_available';
+      }
+
+      function setAvailabilityState(value, { disabled = false, pending = false } = {}) {
+        const key = normalizeAvailability(value);
+        if (availabilityLabel) availabilityLabel.textContent = pending ? 'Saving...' : availabilityLabels[key];
+        availabilityOptions?.querySelectorAll('[data-availability]').forEach((button) => {
+          button.classList.toggle('is-active', button.dataset.availability === key);
+          button.disabled = disabled || pending;
+        });
       }
 
       function operatorRuntimeSlugs(runtime = {}) {
@@ -2016,7 +2283,8 @@
             accent_tint: data.operator?.accent_tint || '',
             portfolio: data.operator?.portfolio || '',
             instagram: data.operator?.instagram || data.operator?.instagram_handle || '',
-            last_active_at: data.operator?.last_active_at || ''
+            last_active_at: data.operator?.last_active_at || '',
+            operator_availability: data.operator?.operator_availability || ''
           },
           metrics,
           state: {
@@ -2026,6 +2294,8 @@
             next_delivery_label: state.next_delivery_label,
             operational_state: state.operational_state,
             presence_label: state.presence_label
+            ,
+            operator_availability: state.operator_availability
           },
           clients: compactRows(runtime.assigned_clients),
           assignments: compactRows(runtime.assignments),
@@ -2193,6 +2463,7 @@
         hq?.classList.add('is-visible');
         if (logoutButton) logoutButton.hidden = !owner;
         if (runtimeAction) runtimeAction.hidden = !owner;
+        if (supportAction) supportAction.hidden = !owner;
         if (inviteClientAction) {
           inviteClientAction.hidden = !owner;
           inviteClientAction.dataset.inviteUrl = owner && operator.handle
@@ -2211,18 +2482,8 @@
         const runtimeAssignments = runtime.assignments || [];
         const runtimeMessages = runtime.messages || [];
         const nextAction = nextOperatorAction({ state, tasks: runtimeTasks, messages: runtimeMessages });
-        const localAvailability = (() => {
-          try {
-            return localStorage.getItem('doneovernight_operator_available') !== 'false';
-          } catch (error) {
-            return true;
-          }
-        })();
-        setAvailabilityState(owner ? localAvailability : false);
-        if (availabilityToggle) {
-          availabilityToggle.disabled = !owner;
-          if (!owner) availabilityToggle.textContent = 'Availability private';
-        }
+        setAvailabilityState(owner ? (operator.operator_availability || state.operator_availability || 'always_available') : 'offline', { disabled: !owner });
+        if (!owner && availabilityLabel) availabilityLabel.textContent = 'Private';
 
         text('[data-runtime="overviewCopy"]', owner
           ? 'Action-based operator state from assigned clients, task pressure, client updates, delivery windows, and payouts.'
@@ -2299,6 +2560,9 @@
               <small>${escapeHTML(status)} · Deadline: ${escapeHTML(deadline)} · Next: ${escapeHTML(rowAction)}</small>
               <div class="operator-row-actions">
                 ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
+                <button class="operator-row-action" type="button" data-operator-task-message="request_information" data-message-label="Request more information" data-task-reference="${escapeHTML(taskId)}">Request info</button>
+                <button class="operator-row-action" type="button" data-operator-task-message="prepare_execution_plan" data-message-label="Prepare execution plan" data-task-reference="${escapeHTML(taskId)}">Prepare plan</button>
+                <button class="operator-row-action" type="button" data-operator-task-message="ready_for_admin_review" data-message-label="Ready for admin review" data-task-reference="${escapeHTML(taskId)}">Ready for review</button>
                 ${Number(state.unread_messages || 0) ? '<span class="operator-row-action">Updates</span>' : ''}
               </div>
             </div>
@@ -2329,7 +2593,11 @@
                 <div class="module-line"><span>Deadline</span><b>${escapeHTML(task.deadline || 'No deadline')}</b></div>
                 <div class="module-line"><span>Next</span><b>${escapeHTML(/deliver|ready/i.test(status) ? 'Prepare handoff' : nextAction)}</b></div>
               </div>
-              ${workspaceUrl ? `<div class="operator-row-actions"><a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a></div>` : ''}
+              <div class="operator-row-actions">
+                ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
+                <button class="operator-row-action" type="button" data-operator-task-message="upload_deliverable" data-message-label="Upload deliverable" data-task-reference="${escapeHTML(task.id || '')}">Deliverable</button>
+                <button class="operator-row-action" type="button" data-operator-task-message="ready_for_admin_review" data-message-label="Ready for admin review" data-task-reference="${escapeHTML(task.id || '')}">Ready for review</button>
+              </div>
             </article>
           `;
           }).join('') : `
@@ -2708,12 +2976,49 @@
         shareOperatorInvite();
       });
 
-      availabilityToggle?.addEventListener('click', () => {
-        const available = availabilityToggle.getAttribute('aria-pressed') !== 'true';
-        setAvailabilityState(available);
+      availabilityOptions?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-availability]');
+        if (!button || button.disabled) return;
+        const nextAvailability = normalizeAvailability(button.dataset.availability);
+        setAvailabilityState(nextAvailability, { pending: true });
+        try {
+          const data = await postOperatorAction({
+            action: 'operator_availability_update',
+            operator_availability: nextAvailability
+          });
+          storeOperator(data.operator);
+          setAvailabilityState(data.operator?.operator_availability || nextAvailability);
+          if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'availability' }).catch(() => {});
+        } catch (error) {
+          showRuntimeAlert(error.message || 'Could not update operator availability.');
+          setAvailabilityState('always_available');
+        }
+      });
+
+      supportAction?.addEventListener('click', () => {
+        openSupportModal({ messageType: 'support' });
+      });
+
+      supportSend?.addEventListener('click', sendSupportMessage);
+
+      supportModal?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-operator-support-close]')) closeSupportModal();
       });
 
       document.addEventListener('click', (event) => {
+        const taskAction = event.target.closest?.('[data-operator-task-message]');
+        if (taskAction) {
+          const reference = taskAction.dataset.taskReference || '';
+          const actionType = taskAction.dataset.operatorTaskMessage || 'operator_task_message';
+          const label = taskAction.dataset.messageLabel || taskAction.textContent || 'Task update';
+          openSupportModal({
+            taskReference: reference,
+            messageType: actionType
+          });
+          if (supportMessage) supportMessage.value = `${label}: `;
+          return;
+        }
+
         const button = event.target.closest?.('[data-operator-mark-viewed]');
         if (!button) return;
         const row = button.closest('.operator-row');

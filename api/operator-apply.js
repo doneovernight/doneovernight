@@ -87,6 +87,18 @@ function missingColumnName(error) {
     || "";
 }
 
+function normalizeOperatorAvailability(value) {
+  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+  const labels = {
+    available: "Available",
+    busy: "Busy",
+    offline: "Offline",
+    always_available: "Always Available"
+  };
+  const key = Object.prototype.hasOwnProperty.call(labels, normalized) ? normalized : "always_available";
+  return { value: key, label: labels[key] };
+}
+
 function normalizeUsername(value) {
   return clean(value)
     .toLowerCase()
@@ -178,6 +190,8 @@ function clearOperatorCookie(res) {
 function sanitizeOperator(profile = {}) {
   const handle = canonicalProfileHandle(profile);
   const publicLinks = profileLinksFromRecord(profile);
+  const rawPayload = profile.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
+  const availability = normalizeOperatorAvailability(rawPayload.operator_availability || rawPayload.availability_status || rawPayload.availability);
   return {
     id: profile.id || "",
     email: profile.email || "",
@@ -193,7 +207,10 @@ function sanitizeOperator(profile = {}) {
     role_type: profile.role_type || profile.role || "",
     skills: profile.skills || profile.specialties || [],
     timezone: profile.timezone || "",
-    status: profile.status || ""
+    status: profile.status || "",
+    operator_availability: availability.value,
+    operator_availability_label: availability.label,
+    operator_availability_updated_at: rawPayload.operator_availability_updated_at || null
   };
 }
 
@@ -478,6 +495,206 @@ async function updateOperatorPublicProfile(req, input) {
   };
 }
 
+async function loadOperatorProfileRow(operatorId) {
+  const rows = await supabaseFetch([
+    `operator_profiles?id=eq.${encodeURIComponent(operatorId)}`,
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+async function updateOperatorAvailability(req, input) {
+  const current = await getOperatorSession(req);
+  if (!current?.operator?.id) {
+    const error = new Error("Operator login required");
+    error.statusCode = 401;
+    error.code = "OPERATOR_SESSION_REQUIRED";
+    throw error;
+  }
+
+  const availability = normalizeOperatorAvailability(input.operator_availability || input.availability || input.status);
+  const now = new Date().toISOString();
+  const profile = await loadOperatorProfileRow(current.operator.id);
+  const rawPayload = profile?.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
+  const rows = await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(current.operator.id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      raw_payload: {
+        ...rawPayload,
+        operator_availability: availability.value,
+        operator_availability_label: availability.label,
+        operator_availability_updated_at: now,
+        operator_availability_source: "operator_os"
+      },
+      updated_at: now
+    })
+  });
+  const updatedProfile = Array.isArray(rows) ? rows[0] : rows;
+  return {
+    operator: sanitizeOperator(updatedProfile || { ...profile, raw_payload: rawPayload }),
+    availability,
+    updated_at: now
+  };
+}
+
+async function insertOperatorRuntimeActivity(payload) {
+  let activePayload = { ...payload };
+  const droppedColumns = [];
+  const maxAttempts = Object.keys(activePayload).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const rows = await supabaseFetch("operator_runtime_activity", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(activePayload)
+      });
+      return {
+        row: Array.isArray(rows) ? rows[0] : rows,
+        persisted_fields: Object.keys(activePayload),
+        skipped_missing_columns: droppedColumns
+      };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) throw error;
+      droppedColumns.push(column);
+      delete activePayload[column];
+    }
+  }
+  const error = new Error("Operator message could not be stored");
+  error.statusCode = 500;
+  error.code = "OPERATOR_RUNTIME_ACTIVITY_INSERT_FAILED";
+  throw error;
+}
+
+function operatorSupportWebhookUrls() {
+  return getWebhookUrls([
+    "OPERATOR_SUPPORT_TELEGRAM_WEBHOOK_URL",
+    "OPERATOR_RUNTIME_TELEGRAM_WEBHOOK_URL",
+    "DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"
+  ]);
+}
+
+async function notifyOperatorSupport({ operator, message, taskReference, messageType, createdAt }) {
+  const handle = operator?.handle ? `@${operator.handle}` : "@operator";
+  const text = [
+    "🟣 OPERATOR SUPPORT REQUEST",
+    "",
+    `Operator: ${handle}`,
+    `Task: ${taskReference || "Not attached"}`,
+    `Type: ${messageType || "support"}`,
+    "",
+    "Message:",
+    message || "No message provided.",
+    "",
+    `Submitted: ${createdAt}`
+  ].join("\n");
+
+  const result = await dispatchWebhook({
+    tag: "[OPERATOR_SUPPORT_TELEGRAM]",
+    event: "operator_support_request",
+    urls: operatorSupportWebhookUrls(),
+    payload: {
+      event: "operator_support_request",
+      email_type: "operator_support_request",
+      operator_slug: operator?.handle || "",
+      operator_handle: operator?.handle || "",
+      operator_name: operator?.display_name || operator?.name || "",
+      operator_email: operator?.email || "",
+      task_reference: taskReference || "",
+      task_id: taskReference || "",
+      message_type: messageType || "support",
+      message,
+      telegram_message: text,
+      text,
+      created_at: createdAt
+    },
+    timeoutMs: OPERATOR_NOTIFY_TIMEOUT_MS
+  });
+
+  return {
+    configured: result.attempted > 0,
+    delivered: result.fulfilled > 0,
+    attempted: result.attempted,
+    fulfilled: result.fulfilled
+  };
+}
+
+async function createOperatorHqMessage(req, input) {
+  const current = await getOperatorSession(req);
+  if (!current?.operator?.id) {
+    const error = new Error("Operator login required");
+    error.statusCode = 401;
+    error.code = "OPERATOR_SESSION_REQUIRED";
+    throw error;
+  }
+
+  const message = clean(input.message || input.body || input.note).slice(0, 2000);
+  const taskReference = clean(input.task_reference || input.don_reference || input.task_id || input.reference).toUpperCase().slice(0, 80);
+  const messageType = clean(input.message_type || input.intent || "support").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").slice(0, 80) || "support";
+  if (!message) {
+    const error = new Error("Enter a message for HQ.");
+    error.statusCode = 400;
+    error.code = "OPERATOR_MESSAGE_REQUIRED";
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const title = messageType === "support" || messageType === "operator_support_request"
+    ? "Operator support request"
+    : "Operator message";
+  const rawPayload = {
+    operator_slug: current.operator.handle || "",
+    operator_email: current.operator.email || "",
+    task_reference: taskReference,
+    task_id: taskReference,
+    sender_role: "operator",
+    message_type: messageType,
+    unread_for_admin: true,
+    sent_at: now
+  };
+  const insert = await insertOperatorRuntimeActivity({
+    operator_profile_id: current.operator.id,
+    operator_handle: current.operator.handle || "",
+    activity_type: messageType === "support" ? "operator_support_request" : messageType,
+    title,
+    body: message,
+    message,
+    detail: message,
+    actor_role: "operator",
+    sender_role: "operator",
+    task_id: taskReference,
+    task_reference: taskReference,
+    don_reference: taskReference,
+    unread_for_admin: true,
+    unread_for_operator: false,
+    raw_payload: rawPayload,
+    created_at: now,
+    updated_at: now
+  });
+  const telegram = (messageType === "support" || messageType === "operator_support_request")
+    ? await notifyOperatorSupport({
+      operator: current.operator,
+      message,
+      taskReference,
+      messageType,
+      createdAt: now
+    }).catch((error) => ({
+      configured: false,
+      delivered: false,
+      error: error.message || "OPERATOR_SUPPORT_TELEGRAM_FAILED"
+    }))
+    : null;
+
+  return {
+    message: insert.row,
+    persisted_fields: insert.persisted_fields,
+    skipped_missing_columns: insert.skipped_missing_columns,
+    telegram
+  };
+}
+
 async function accessOperatorWithKey(res, input) {
   const identifier = input.identifier || input.email || input.username;
   const accessKey = normalizeAccessKey(input.access_key || input.accessKey);
@@ -746,6 +963,16 @@ module.exports = async function handler(req, res) {
 
     if (action === "operator_profile_update") {
       const result = await updateOperatorPublicProfile(req, input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "operator_availability_update") {
+      const result = await updateOperatorAvailability(req, input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "operator_hq_message") {
+      const result = await createOperatorHqMessage(req, input);
       return send(res, 200, { success: true, ...result });
     }
 

@@ -462,15 +462,53 @@ function getOperatorStatusGroup(status) {
   return "pending";
 }
 
+function normalizeOperatorAvailability(value) {
+  const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
+  const labels = {
+    available: "Available",
+    busy: "Busy",
+    offline: "Offline",
+    always_available: "Always Available"
+  };
+  const key = Object.prototype.hasOwnProperty.call(labels, normalized) ? normalized : "always_available";
+  return { value: key, label: labels[key] };
+}
+
+function missingColumnName(error) {
+  const detail = String(error?.detail || error?.message || "");
+  return detail.match(/'([^']+)' column/)?.[1]
+    || detail.match(/column "([^"]+)"/i)?.[1]
+    || detail.match(/Could not find the '([^']+)'/i)?.[1]
+    || "";
+}
+
 async function listOperators() {
-  const [operators, profiles, applicationSnapshots, applications] = await Promise.all([
+  const [operators, profiles, applicationSnapshots, applications, runtimeActivity, assignments] = await Promise.all([
     safeSupabaseRows("operators?select=*&order=created_at.desc"),
     safeSupabaseRows("operator_profiles?select=*&order=created_at.desc"),
     safeSupabaseRows("operator_applications?select=*&order=created_at.desc"),
-    safeSupabaseRows("portal_requests?source=eq.operator_apply&select=*&order=created_at.desc")
+    safeSupabaseRows("portal_requests?source=eq.operator_apply&select=*&order=created_at.desc"),
+    safeSupabaseRows("operator_runtime_activity?select=*&order=created_at.desc&limit=250"),
+    safeSupabaseRows("operator_assignments?select=*&order=updated_at.desc&limit=250")
   ]);
 
   const byEmail = new Map();
+  const activityByProfileId = new Map();
+  const activityByHandle = new Map();
+  const assignmentsByProfileId = new Map();
+  const assignmentsByHandle = new Map();
+  runtimeActivity.forEach((item) => {
+    const profileId = clean(item.operator_profile_id);
+    const handle = clean(item.operator_handle).toLowerCase().replace(/^@+/, "");
+    if (profileId) activityByProfileId.set(profileId, [...(activityByProfileId.get(profileId) || []), item]);
+    if (handle) activityByHandle.set(handle, [...(activityByHandle.get(handle) || []), item]);
+  });
+  assignments.forEach((item) => {
+    const profileId = clean(item.operator_profile_id || item.assigned_operator_id);
+    const handle = clean(item.operator_handle).toLowerCase().replace(/^@+/, "");
+    if (profileId) assignmentsByProfileId.set(profileId, [...(assignmentsByProfileId.get(profileId) || []), item]);
+    if (handle) assignmentsByHandle.set(handle, [...(assignmentsByHandle.get(handle) || []), item]);
+  });
 
   operators.forEach((operator) => {
     mergeOperatorRecord(byEmail, operator.email, {
@@ -486,11 +524,36 @@ async function listOperators() {
   });
 
   profiles.forEach((profile) => {
+    const raw = profile.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
+    const availability = normalizeOperatorAvailability(raw.operator_availability || raw.availability_status || raw.availability || profile.availability);
+    const handle = clean(profile.handle || profile.handle_normalized || profile.username).toLowerCase().replace(/^@+/, "");
+    const activityRows = [
+      ...(activityByProfileId.get(clean(profile.id)) || []),
+      ...(handle ? activityByHandle.get(handle) || [] : [])
+    ].filter((item, index, rows) => {
+      const key = item.id || `${item.created_at}:${item.activity_type}:${item.body || item.message || ""}`;
+      return rows.findIndex((row) => (row.id || `${row.created_at}:${row.activity_type}:${row.body || row.message || ""}`) === key) === index;
+    });
+    const unreadMessages = activityRows.filter((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      return rawPayload.unread_for_admin === true || item.unread_for_admin === true || (!item.admin_read_at && clean(item.actor_role).toLowerCase() === "operator");
+    });
+    const supportPings = activityRows.filter((item) => /support|ping|hq/i.test(`${item.activity_type || ""} ${item.title || ""}`));
+    const assignmentRows = [
+      ...(assignmentsByProfileId.get(clean(profile.id)) || []),
+      ...(handle ? assignmentsByHandle.get(handle) || [] : [])
+    ].filter((item, index, rows) => {
+      const key = item.id || `${item.workspace_slug}:${item.task_id || item.task_title}`;
+      return rows.findIndex((row) => (row.id || `${row.workspace_slug}:${row.task_id || row.task_title}`) === key) === index;
+    });
+    const activeAssignments = assignmentRows.filter((item) => !["archived", "revoked", "inactive", "completed", "delivered"].includes(clean(item.relationship_status || item.operational_state || item.status).toLowerCase()));
+    const pendingDeliveries = activeAssignments.filter((item) => /delivery|ready|review/i.test(`${item.delivery_state || ""} ${item.operational_state || ""} ${item.status || ""}`));
     mergeOperatorRecord(byEmail, profile.email, {
       profile_id: profile.id,
       operator_id: profile.operator_id,
       name: profile.full_name || profile.display_name,
       username: profile.username,
+      handle: profile.handle || profile.handle_normalized || profile.username,
       role_type: profile.role_type || profile.role,
       skills: splitList(profile.skills || profile.specialties),
       country: profile.location,
@@ -498,6 +561,14 @@ async function listOperators() {
       payout_email: profile.payout_email,
       tools: splitList(profile.tools),
       availability: profile.availability,
+      operator_availability: availability.value,
+      operator_availability_label: availability.label,
+      operator_availability_updated_at: raw.operator_availability_updated_at || null,
+      last_active_at: profile.last_active_at || profile.updated_at || profile.created_at,
+      active_assigned_tasks: activeAssignments.length,
+      unread_operator_messages: unreadMessages.length,
+      support_pings: supportPings.length,
+      pending_deliveries: pendingDeliveries.length,
       portfolio: profile.portfolio_url,
       notes: profile.notes,
       profile_image: profile.profile_image,
@@ -737,6 +808,82 @@ async function updateOperatorStatus(input) {
   const operators = await listOperators();
   const operator = operators.find((item) => clean(item.email).toLowerCase() === email) || { email, status };
   return { ...operator, credential_email_status: emailStatus, credential_sync_status: credentialSyncStatus, credential_webhook_status: webhookStatus };
+}
+
+async function insertOperatorRuntimeActivity(payload) {
+  let activePayload = { ...payload };
+  const droppedColumns = [];
+  const maxAttempts = Object.keys(activePayload).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const rows = await supabaseFetch("operator_runtime_activity", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(activePayload)
+      });
+      return {
+        row: Array.isArray(rows) ? rows[0] : rows,
+        persisted_fields: Object.keys(activePayload),
+        skipped_missing_columns: droppedColumns
+      };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) throw error;
+      droppedColumns.push(column);
+      delete activePayload[column];
+    }
+  }
+  const error = new Error("Operator message could not be stored");
+  error.statusCode = 500;
+  throw error;
+}
+
+async function createOperatorMessage(input) {
+  const email = clean(input.email).toLowerCase();
+  const message = clean(input.message || input.body || input.note).slice(0, 2000);
+  const taskReference = clean(input.task_reference || input.don_reference || input.task_id || input.reference).toUpperCase().slice(0, 80);
+  if (!email || !message) {
+    const error = new Error("Operator email and message are required");
+    error.statusCode = 400;
+    throw error;
+  }
+  const profile = await findOperatorProfileByEmail(email);
+  if (!profile?.id) {
+    const error = new Error("Operator profile was not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const handle = clean(profile.handle || profile.handle_normalized || profile.username).toLowerCase().replace(/^@+/, "");
+  return insertOperatorRuntimeActivity({
+    operator_profile_id: profile.id,
+    operator_handle: handle,
+    activity_type: "admin_operator_message",
+    title: "HQ instruction",
+    body: message,
+    message,
+    detail: message,
+    actor_role: "admin",
+    sender_role: "admin",
+    task_id: taskReference,
+    task_reference: taskReference,
+    don_reference: taskReference,
+    unread_for_operator: true,
+    unread_for_admin: false,
+    raw_payload: {
+      operator_slug: handle,
+      operator_email: email,
+      task_reference: taskReference,
+      task_id: taskReference,
+      sender_role: "admin",
+      message_type: "admin_instruction",
+      unread_for_operator: true,
+      sent_at: now
+    },
+    created_at: now,
+    updated_at: now
+  });
 }
 
 async function createWorkspaceMessage(input) {
@@ -988,6 +1135,11 @@ module.exports = async function handler(req, res) {
     if (action === "update_operator_status") {
       const operator = await updateOperatorStatus(input);
       return send(res, 200, { success: true, operator });
+    }
+
+    if (action === "create_operator_message") {
+      const result = await createOperatorMessage(input);
+      return send(res, 200, { success: true, ...result });
     }
 
     if (action === "create_message") {

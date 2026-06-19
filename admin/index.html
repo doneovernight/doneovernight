@@ -3621,6 +3621,7 @@ function getOperatorActions(status) {
       { type: 'reject', label: 'Reject', status: 'rejected' }
     ],
     active: [
+      { type: 'message', label: 'Message operator', status: '' },
       { type: 'revoke', label: 'Revoke', status: 'revoked' }
     ],
     inactive: [
@@ -3628,6 +3629,22 @@ function getOperatorActions(status) {
     ]
   };
   return actions[group] || [];
+}
+
+function getOperatorAvailabilityLabel(operator = {}) {
+  const labels = {
+    always_available: 'Always Available',
+    available: 'Available',
+    busy: 'Busy',
+    offline: 'Offline'
+  };
+  const key = String(operator.operator_availability || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return operator.operator_availability_label || labels[key] || operator.availability || 'Always Available';
+}
+
+function getOperatorHandleLabel(operator = {}) {
+  const handle = String(operator.handle || operator.username || '').trim().replace(/^@+/, '');
+  return handle ? `@${handle}` : 'No handle';
 }
 
 function getStatusClass(status) {
@@ -5745,7 +5762,7 @@ function renderOperatorRow(operator) {
           class="admin-client-action"
           type="button"
           data-operator-action="${action.type}"
-          data-operator-status="${action.status}"
+          data-operator-status="${escapeHTML(action.status || '')}"
           data-operator-email="${escapeHTML(operator.email)}"
         >${action.label}</button>
       `).join('')}
@@ -5758,7 +5775,7 @@ function renderOperatorRow(operator) {
       <div class="admin-client-top">
         <div>
           <h3 class="admin-client-name">${escapeHTML(operator.name || 'Unnamed operator')}</h3>
-          <div class="admin-client-email">${escapeHTML(operator.email || 'No email')}</div>
+          <div class="admin-client-email">${escapeHTML(operator.email || 'No email')} · ${escapeHTML(getOperatorHandleLabel(operator))}</div>
         </div>
         <span class="admin-status-pill ${getStatusClass(getOperatorResolvedStatus(operator))}">${getOperatorStatusLabel(getOperatorResolvedStatus(operator))}</span>
       </div>
@@ -5771,7 +5788,12 @@ function renderOperatorRow(operator) {
         ${renderOperatorField('Payout email', operator.payout_email)}
         ${renderOperatorField('Tools', operator.tools)}
         ${renderOperatorField('Timezone', operator.timezone)}
-        ${renderOperatorField('Availability', operator.availability)}
+        ${renderOperatorField('Availability', getOperatorAvailabilityLabel(operator))}
+        ${renderOperatorField('Last active', operator.last_active_at ? formatTaskDate(operator.last_active_at) : '—')}
+        ${renderOperatorField('Assigned tasks', operator.active_assigned_tasks || 0)}
+        ${renderOperatorField('Unread messages', operator.unread_operator_messages || 0)}
+        ${renderOperatorField('Support pings', operator.support_pings || 0)}
+        ${renderOperatorField('Pending deliveries', operator.pending_deliveries || 0)}
         ${renderOperatorField('Portfolio', operator.portfolio)}
         ${renderOperatorField('Signup', operator.signup_method || operator.source)}
       </div>
@@ -7616,12 +7638,38 @@ adminOperatorsList?.addEventListener('click', async (event) => {
 
   const email = button.dataset.operatorEmail;
   const status = button.dataset.operatorStatus;
-  if (!email || !status) return;
+  const operatorAction = button.dataset.operatorAction || '';
+  if (!email) return;
 
   const row = button.closest('.admin-operator-row');
   const actions = row?.querySelectorAll('[data-operator-action]') || [];
   const message = row?.querySelector('.admin-client-message');
   const previousText = button.textContent;
+
+  if (operatorAction === 'message') {
+    const note = window.prompt('Message this operator privately?');
+    if (!note || !note.trim()) return;
+    actions.forEach((action) => { action.disabled = true; });
+    button.textContent = 'Sending...';
+    if (message) message.textContent = '';
+    try {
+      await adminOperatorRequest({
+        action: 'create_operator_message',
+        email,
+        message: note.trim()
+      });
+      if (message) message.textContent = 'Operator message sent.';
+      await loadOperators({ silent: true });
+    } catch (error) {
+      if (message) message.textContent = 'Could not message operator.';
+    } finally {
+      actions.forEach((action) => { action.disabled = false; });
+      button.textContent = previousText;
+    }
+    return;
+  }
+
+  if (!status) return;
 
   actions.forEach((action) => { action.disabled = true; });
   button.textContent = 'Processing...';
