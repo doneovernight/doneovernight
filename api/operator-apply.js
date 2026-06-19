@@ -745,6 +745,26 @@ async function createOperatorHqMessage(req, input) {
   };
 }
 
+async function patchOperatorRuntimeActivityViewed(path, payload) {
+  let activePayload = { ...payload };
+  const maxAttempts = Object.keys(activePayload).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      await supabaseFetch(path, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(activePayload)
+      });
+      return { updated: true, persisted_fields: Object.keys(activePayload) };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) throw error;
+      delete activePayload[column];
+    }
+  }
+  return { updated: false, persisted_fields: [] };
+}
+
 async function markOperatorMessageViewed(req, input) {
   const current = await getOperatorSession(req);
   if (!current?.operator?.id) {
@@ -793,18 +813,14 @@ async function markOperatorMessageViewed(req, input) {
     });
     return { message_id: messageId, source, viewed_at: now };
   }
-  await supabaseFetch([
+  await patchOperatorRuntimeActivityViewed([
     `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
     `operator_profile_id=eq.${encodeURIComponent(current.operator.id)}`
   ].join("&"), {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      read_at: now,
-      operator_read_at: now,
-      unread_for_operator: false,
-      updated_at: now
-    })
+    read_at: now,
+    operator_read_at: now,
+    unread_for_operator: false,
+    updated_at: now
   });
   return { message_id: messageId, source: "operator_runtime_activity", viewed_at: now };
 }

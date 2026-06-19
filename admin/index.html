@@ -1394,6 +1394,23 @@ body.is-admin .admin-dashboard { display: block; }
   font-size: 13px;
 }
 
+.admin-operator-message {
+  border-top: 1px solid rgba(245, 241, 234, 0.06);
+  padding-top: 9px;
+}
+
+.admin-operator-message:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.admin-operator-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 7px;
+}
+
 .admin-operator-availability {
   display: inline-flex;
   align-items: center;
@@ -5884,6 +5901,41 @@ function renderOperatorConnectedClients(operator = {}) {
   `;
 }
 
+function renderOperatorInternalMessages(operator = {}) {
+  const messages = Array.isArray(operator.operator_messages_detail) ? operator.operator_messages_detail : [];
+  if (!messages.length) return '';
+  const unread = messages.filter((message) => message.unread_for_admin).length;
+  return `
+    <details class="admin-operator-connected" ${unread ? 'open' : ''}>
+      <summary>
+        <span>Internal messages</span>
+        <strong>${escapeHTML(unread ? `${unread} unread` : `${messages.length} total`)}</strong>
+      </summary>
+      <div class="admin-operator-connected-list">
+        ${messages.map((message) => `
+          <div class="admin-operator-connected-item admin-operator-message">
+            <strong>${escapeHTML(message.title || 'Operator message')}</strong>
+            <span>${escapeHTML(message.created_at ? formatTaskDate(message.created_at) : 'No date')} · ${escapeHTML(message.sender_role || 'operator')} ${message.task_reference ? `· ${escapeHTML(message.task_reference)}` : ''}</span>
+            <span>${escapeHTML(message.message || 'No message body')}</span>
+            <div class="admin-operator-message-actions">
+              ${message.unread_for_admin ? `
+                <button
+                  class="admin-client-action"
+                  type="button"
+                  data-operator-action="mark-message-viewed"
+                  data-operator-email="${escapeHTML(operator.email || '')}"
+                  data-operator-message-id="${escapeHTML(message.id || '')}"
+                  data-operator-message-source="${escapeHTML(message.source || '')}"
+                >Mark viewed</button>
+              ` : '<span class="status-pill is-muted">Viewed</span>'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </details>
+  `;
+}
+
 function renderOperatorRow(operator) {
   const createdAt = formatTaskDate(operator.created_at);
   const actions = operator.email ? getOperatorActions(getOperatorResolvedStatus(operator)) : [];
@@ -5932,6 +5984,7 @@ function renderOperatorRow(operator) {
         ${renderOperatorField('Signup', operator.signup_method || operator.source)}
       </div>
       ${renderOperatorConnectedClients(operator)}
+      ${renderOperatorInternalMessages(operator)}
       ${operator.notes ? `<div class="admin-operator-notes">${escapeHTML(operator.notes)}</div>` : ''}
       ${actionMarkup}
     </article>
@@ -7778,6 +7831,30 @@ adminOperatorsList?.addEventListener('click', async (event) => {
   const actions = row?.querySelectorAll('[data-operator-action]') || [];
   const message = row?.querySelector('.admin-client-message');
   const previousText = button.textContent;
+
+  if (operatorAction === 'mark-message-viewed') {
+    const messageId = button.dataset.operatorMessageId || '';
+    const source = button.dataset.operatorMessageSource || '';
+    if (!messageId) return;
+    button.disabled = true;
+    button.textContent = 'Saving...';
+    if (message) message.textContent = '';
+    try {
+      await adminOperatorRequest({
+        action: 'mark_operator_message_viewed',
+        email,
+        message_id: messageId,
+        source
+      });
+      if (message) message.textContent = 'Operator message marked viewed.';
+      await loadOperators({ silent: true });
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = previousText;
+      if (message) message.textContent = 'Could not mark operator message viewed.';
+    }
+    return;
+  }
 
   if (operatorAction === 'message') {
     const note = window.prompt('Message this operator privately?');

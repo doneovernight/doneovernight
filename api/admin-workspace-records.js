@@ -577,6 +577,21 @@ async function listOperators() {
       return rawPayload.unread_for_admin === true || item.unread_for_admin === true || (!item.admin_read_at && clean(item.actor_role).toLowerCase() === "operator");
     });
     const supportPings = activityRows.filter((item) => /support|ping|hq/i.test(`${item.activity_type || ""} ${item.title || ""}`));
+    const operatorMessages = activityRows.slice(0, 20).map((item) => {
+      const rawPayload = item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {};
+      const role = clean(item.actor_role || item.sender_role || rawPayload.sender_role).toLowerCase();
+      return {
+        id: clean(item.id),
+        source: rawPayload.profile_raw_payload_fallback ? "profile_raw_payload" : "operator_runtime_activity",
+        title: clean(item.title || item.activity_type) || "Operator message",
+        message: clean(item.body || item.message || item.detail).slice(0, 600),
+        task_reference: clean(item.task_reference || item.don_reference || item.task_id || rawPayload.task_reference || rawPayload.task_id),
+        sender_role: role || "operator",
+        message_type: clean(item.activity_type || rawPayload.message_type),
+        created_at: item.created_at || rawPayload.sent_at || "",
+        unread_for_admin: rawPayload.unread_for_admin === true || item.unread_for_admin === true || (!item.admin_read_at && role === "operator")
+      };
+    });
     const assignmentRows = [
       ...(assignmentsByProfileId.get(clean(profile.id)) || []),
       ...(handle ? assignmentsByHandle.get(handle) || [] : [])
@@ -624,6 +639,7 @@ async function listOperators() {
       active_assigned_tasks: activeAssignments.length,
       unread_operator_messages: unreadMessages.length,
       support_pings: supportPings.length,
+      operator_messages_detail: operatorMessages,
       pending_deliveries: pendingDeliveries.length,
       portfolio: profile.portfolio_url,
       notes: profile.notes,
@@ -991,6 +1007,82 @@ async function createOperatorMessage(input) {
   });
 }
 
+async function patchOperatorRuntimeActivityViewed(path, payload) {
+  let activePayload = { ...payload };
+  const maxAttempts = Object.keys(activePayload).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      await supabaseFetch(path, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(activePayload)
+      });
+      return { updated: true, persisted_fields: Object.keys(activePayload) };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) throw error;
+      delete activePayload[column];
+    }
+  }
+  return { updated: false, persisted_fields: [] };
+}
+
+async function markOperatorMessageViewed(input) {
+  const email = clean(input.email).toLowerCase();
+  const messageId = clean(input.message_id || input.id);
+  const source = clean(input.source || "operator_runtime_activity");
+  if (!email || !messageId) {
+    const error = new Error("Operator email and message id are required");
+    error.statusCode = 400;
+    throw error;
+  }
+  const profile = await findOperatorProfileByEmail(email);
+  if (!profile?.id) {
+    const error = new Error("Operator profile was not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  const now = new Date().toISOString();
+  if (source === "profile_raw_payload") {
+    const rawPayload = rawPayloadOf(profile);
+    const rows = Array.isArray(rawPayload.operator_runtime_activity) ? rawPayload.operator_runtime_activity : [];
+    const updatedRows = rows.map((item) => String(item.id || "") === messageId
+      ? {
+          ...item,
+          admin_read_at: item.admin_read_at || now,
+          unread_for_admin: false,
+          raw_payload: {
+            ...(item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {}),
+            unread_for_admin: false,
+            admin_read_at: item.raw_payload?.admin_read_at || now
+          }
+        }
+      : item);
+    await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profile.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        raw_payload: {
+          ...rawPayload,
+          operator_runtime_activity: updatedRows,
+          operator_runtime_activity_admin_viewed_at: now
+        },
+        updated_at: now
+      })
+    });
+    return { message_id: messageId, source, viewed_at: now };
+  }
+  await patchOperatorRuntimeActivityViewed([
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    `operator_profile_id=eq.${encodeURIComponent(profile.id)}`
+  ].join("&"), {
+    admin_read_at: now,
+    unread_for_admin: false,
+    updated_at: now
+  });
+  return { message_id: messageId, source: "operator_runtime_activity", viewed_at: now };
+}
+
 async function createWorkspaceMessage(input) {
   const message = clean(input.message);
   if (!message) {
@@ -1244,6 +1336,11 @@ module.exports = async function handler(req, res) {
 
     if (action === "create_operator_message") {
       const result = await createOperatorMessage(input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "mark_operator_message_viewed") {
+      const result = await markOperatorMessageViewed(input);
       return send(res, 200, { success: true, ...result });
     }
 
