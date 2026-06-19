@@ -4508,6 +4508,7 @@
       let localSubmittedWorkspaceTasks = [];
       let selectedWorkspaceTaskKey = '';
       let activeOperationUpdateTaskKey = '';
+      let workspaceDeepLinkHandled = false;
       let activeReferralLink = '';
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
@@ -5648,6 +5649,48 @@
       function findWorkspaceTaskByKey(key = '') {
         if (!key) return null;
         return getTaskHistoryItems(workspaceTasks).find((task) => getWorkspaceOperationKey(task) === key) || null;
+      }
+
+      function getWorkspaceDeepLinkRequest() {
+        const params = new URLSearchParams(window.location.search);
+        const taskReference = String(params.get('task') || params.get('operation') || params.get('don') || '').trim();
+        const action = String(params.get('action') || '').trim().toLowerCase();
+        if (!taskReference) return null;
+        return { taskReference, action };
+      }
+
+      function findWorkspaceTaskByReference(reference = '', tasks = workspaceTasks) {
+        const normalized = String(reference || '').trim().toLowerCase();
+        if (!normalized) return null;
+        return getTaskHistoryItems(tasks).find((task) => {
+          const taskId = getTaskId(task).toLowerCase();
+          const key = getWorkspaceOperationKey(task).toLowerCase();
+          return taskId === normalized || key === normalized;
+        }) || null;
+      }
+
+      function handleWorkspaceDeepLink(tasks = workspaceTasks) {
+        if (workspaceDeepLinkHandled) return;
+        const request = getWorkspaceDeepLinkRequest();
+        if (!request) return;
+        const task = findWorkspaceTaskByReference(request.taskReference, tasks);
+        if (!task) return;
+
+        workspaceDeepLinkHandled = true;
+        selectedWorkspaceTaskKey = getWorkspaceOperationKey(task);
+        renderWorkspaceAllTasks(tasks);
+        window.requestAnimationFrame(() => {
+          const selectedRow = workspaceAllTasksPanel?.querySelector('.workspace-task-history-row.is-selected');
+          selectedRow?.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            block: 'center'
+          });
+          if (request.action === 'add-information' || request.action === 'add_information' || request.action === 'update-operation') {
+            window.setTimeout(() => openOperationUpdateModal(task), 240);
+          } else {
+            workspaceAllTasksPanel?.querySelector('[data-task-detail-action="update-operation"]')?.focus({ preventScroll: true });
+          }
+        });
       }
 
       function getWorkspaceLifecycleSummaryItems(task = {}) {
@@ -6887,6 +6930,7 @@
         updateWorkspaceHero(workspaceTasks);
         updateWorkspaceRuntimeEngine(workspaceTasks);
         renderWorkspaceProjectRoom(workspaceTasks);
+        handleWorkspaceDeepLink(workspaceTasks);
 
         taskFeed.innerHTML = activeTasks.length ? renderTaskList(activeTasks) : renderEmptyState();
         completedHistoryFeed.innerHTML = completedTasks.length
