@@ -1239,8 +1239,23 @@
       grid-template-columns: minmax(0, 1fr) minmax(132px, .32fr);
       gap: 18px;
       align-items: center;
+      width: 100%;
+      border: 0;
       background: rgba(5,6,8,.60);
+      color: inherit;
+      font: inherit;
       padding: 15px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: background .2s, box-shadow .2s;
+    }
+
+    .workspace-task-history-row:hover,
+    .workspace-task-history-row:focus-visible,
+    .workspace-task-history-row.is-selected {
+      background: rgba(233,196,138,.045);
+      box-shadow: inset 2px 0 0 rgba(233,196,138,.44);
+      outline: none;
     }
 
     .workspace-task-history-title {
@@ -1284,6 +1299,117 @@
       background: var(--green);
       box-shadow: 0 0 12px rgba(139,224,173,.25);
       content: "";
+    }
+
+    .workspace-task-detail {
+      margin-top: 18px;
+      border: 1px solid rgba(233,196,138,.10);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.024), rgba(255,255,255,.006)),
+        rgba(5,6,8,.58);
+      padding: clamp(18px, 2.4vw, 24px);
+    }
+
+    .workspace-task-detail-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .workspace-task-detail-title {
+      margin: 0;
+      color: rgba(255,255,255,.90);
+      font-family: var(--serif);
+      font-size: clamp(28px, 3.8vw, 42px);
+      font-weight: 400;
+      line-height: 1.03;
+    }
+
+    .workspace-task-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin: 18px 0;
+      border-top: 1px solid rgba(255,255,255,.065);
+      border-bottom: 1px solid rgba(255,255,255,.065);
+      background: rgba(255,255,255,.032);
+    }
+
+    .workspace-task-detail-fact {
+      min-width: 0;
+      background: rgba(5,6,8,.62);
+      padding: 13px 12px;
+    }
+
+    .workspace-task-detail-fact span,
+    .workspace-task-detail-section span {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .workspace-task-detail-fact strong {
+      display: block;
+      margin-top: 7px;
+      color: rgba(255,255,255,.82);
+      font-size: 12px;
+      font-weight: 620;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-task-detail-section {
+      margin-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      padding-top: 16px;
+    }
+
+    .workspace-task-detail-copy {
+      margin: 8px 0 0;
+      color: rgba(255,255,255,.64);
+      font-size: 13px;
+      line-height: 1.72;
+      max-width: 78ch;
+      white-space: pre-wrap;
+    }
+
+    .workspace-task-detail-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .workspace-task-detail-actions .workspace-button {
+      min-height: 42px;
+      padding-inline: 14px;
+      font-size: 10px;
+    }
+
+    .workspace-link-button {
+      align-self: center;
+      border: 1px solid rgba(233,196,138,.20);
+      border-radius: 999px;
+      color: rgba(233,196,138,.90);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .11em;
+      padding: 9px 12px;
+      text-decoration: none;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .workspace-os-list.is-compact .workspace-os-row {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
     }
 
     .workspace-referral-actions {
@@ -3180,6 +3306,8 @@
       .workspace-progress-step:nth-child(2n)::after { display: none; }
       .workspace-task-history-row { grid-template-columns: 1fr; }
       .workspace-task-history-status { justify-self: start; text-align: left; }
+      .workspace-task-detail-head { flex-direction: column; }
+      .workspace-task-detail-grid { grid-template-columns: 1fr; }
       .workspace-referral-actions { grid-template-columns: 1fr; }
       .workspace-link-grid { grid-template-columns: 1fr; }
       .workspace-task-drawer { border-left: none; }
@@ -3884,6 +4012,7 @@
       let workspaceBusinessProfile = null;
       let workspaceMemory = null;
       let localSubmittedWorkspaceTasks = [];
+      let selectedWorkspaceTaskKey = '';
       let selectedWorkspaceDeadline = 'Tonight';
       let selectedDrawerDeadline = 'Tonight';
       let localRevisionState = sessionStorage.getItem('doneovernight:runtimeRevisionState') || '';
@@ -4745,9 +4874,160 @@
         `).join('')}</ul>`;
       }
 
+      function getClientSafeTaskSource(task = {}) {
+        const source = String(task.source || task.raw_payload?.source || '').trim().toLowerCase();
+        const labels = {
+          client_workspace: 'Workspace request',
+          workspace_task_drawer: 'Workspace request',
+          ask_intake: 'Ask intake',
+          ask: 'Ask intake',
+          start: 'Start request',
+          start_intake: 'Start request',
+          review: 'Review update'
+        };
+        if (labels[source]) return labels[source];
+        return source ? source.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Client request';
+      }
+
+      function getClientSafeTaskScope(task = {}) {
+        return task.scope ||
+          task.quote_note ||
+          task.task_description ||
+          task.task_summary ||
+          task.description ||
+          task.raw_payload?.task_description ||
+          task.raw_payload?.taskSummary ||
+          task.raw_payload?.submitted_request ||
+          task.raw_payload?.request ||
+          'Scope details are being reviewed by DONEOVERNIGHT Operations.';
+      }
+
+      function renderWorkspaceTaskDetailFiles(files = []) {
+        const safeFiles = dedupeWorkspaceFiles(files);
+        if (!safeFiles.length) return '<p class="workspace-task-detail-copy">No client files attached to this task.</p>';
+        return `
+          <ul class="workspace-os-list is-compact">
+            ${safeFiles.map((file) => `
+              <li class="workspace-os-row">
+                <span class="workspace-os-dot" aria-hidden="true"></span>
+                <div>
+                  <strong>${escapeHTML(file.title || 'Attached file')}</strong>
+                  <span>${escapeHTML(file.timestamp ? formatDate(file.timestamp) : 'Client file')}</span>
+                </div>
+                ${file.href ? `<a class="workspace-link-button" href="${escapeHTML(file.href)}" target="_blank" rel="noopener noreferrer">Open file</a>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        `;
+      }
+
+      function renderWorkspaceTaskDetailDeliverables(deliverables = []) {
+        const safeDeliverables = dedupeWorkspaceDeliverables(deliverables);
+        if (!safeDeliverables.length) return '<p class="workspace-task-detail-copy">No deliverables ready yet.</p>';
+        return `
+          <ul class="workspace-os-list is-compact">
+            ${safeDeliverables.map((item) => `
+              <li class="workspace-os-row">
+                <span class="workspace-os-dot" aria-hidden="true"></span>
+                <div>
+                  <strong>${escapeHTML(item.title || 'Deliverable')}</strong>
+                  <span>${escapeHTML(item.delivered_at ? formatDate(item.delivered_at) : 'Ready when delivered')}</span>
+                </div>
+                ${item.delivery_link ? `<a class="workspace-link-button" href="${escapeHTML(item.delivery_link)}" target="_blank" rel="noopener noreferrer">Open deliverable</a>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        `;
+      }
+
+      function renderWorkspaceTaskDetailInvoices(invoices = []) {
+        if (!invoices.length) return '<p class="workspace-task-detail-copy">No documents available yet.</p>';
+        return `
+          <ul class="workspace-os-list is-compact">
+            ${invoices.map((invoice) => `
+              <li class="workspace-os-row">
+                <span class="workspace-os-dot" aria-hidden="true"></span>
+                <div>
+                  <strong>${escapeHTML(invoice.invoice_number || 'Invoice')}</strong>
+                  <span>${escapeHTML([invoice.invoice_amount, invoice.status, invoice.invoice_created_at ? formatDate(invoice.invoice_created_at) : ''].filter(Boolean).join(' · '))}</span>
+                </div>
+                ${invoice.invoice_pdf_url ? `<a class="workspace-link-button" href="${escapeHTML(invoice.invoice_pdf_url)}" target="_blank" rel="noopener noreferrer">Download PDF</a>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        `;
+      }
+
+      function getSelectedWorkspaceTask(historyItems = []) {
+        if (!selectedWorkspaceTaskKey) return null;
+        return historyItems.find((task) => getWorkspaceOperationKey(task) === selectedWorkspaceTaskKey) || null;
+      }
+
+      function renderWorkspaceTaskDetail(task = {}) {
+        const title = task.display_title || task.project_title || task.task_summary || getTaskSummary(task);
+        const reference = getTaskId(task);
+        const status = task.client_status || getWorkspaceClientStatus(task);
+        const created = task.created_at || task.createdAt || task.raw_payload?.created_at || '';
+        const deadline = getOperationTimeline(task);
+        const investment = getOperationInvestment(task);
+        const source = getClientSafeTaskSource(task);
+        const files = getWorkspaceFiles(task, {});
+        const deliverables = getWorkspaceDeliverables(task, {});
+        const invoices = getTaskInvoices(task);
+        return `
+          <article class="workspace-task-detail" aria-label="Task detail">
+            <div class="workspace-task-detail-head">
+              <div>
+                <p class="workspace-os-eyebrow">Task Detail</p>
+                <h4 class="workspace-task-detail-title">${escapeHTML(title)}</h4>
+              </div>
+              <em class="workspace-task-history-status">${escapeHTML(status)}</em>
+            </div>
+            <div class="workspace-task-detail-grid">
+              <div class="workspace-task-detail-fact"><span>Reference</span><strong>${escapeHTML(reference)}</strong></div>
+              <div class="workspace-task-detail-fact"><span>Created</span><strong>${escapeHTML(created ? formatDate(created) : 'Not available')}</strong></div>
+              <div class="workspace-task-detail-fact"><span>Deadline</span><strong>${escapeHTML(deadline && deadline !== 'Timeline updating' ? deadline : 'Timeline updating')}</strong></div>
+              <div class="workspace-task-detail-fact"><span>Investment</span><strong>${escapeHTML(investment || 'Not provided')}</strong></div>
+              <div class="workspace-task-detail-fact"><span>Status</span><strong>${escapeHTML(status)}</strong></div>
+              <div class="workspace-task-detail-fact"><span>Source</span><strong>${escapeHTML(source)}</strong></div>
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Scope</span>
+              <p class="workspace-task-detail-copy">${escapeHTML(getClientSafeTaskScope(task))}</p>
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Progress</span>
+              <div class="workspace-operation-rail">${renderWorkspaceLifecycleRail(task)}</div>
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Next Step</span>
+              <p class="workspace-task-detail-copy">${escapeHTML(getOperationNextStep(task))}</p>
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Client Files</span>
+              ${renderWorkspaceTaskDetailFiles(files)}
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Deliverables</span>
+              ${renderWorkspaceTaskDetailDeliverables(deliverables)}
+            </div>
+            <div class="workspace-task-detail-section">
+              <span>Documents</span>
+              ${renderWorkspaceTaskDetailInvoices(invoices)}
+            </div>
+            <div class="workspace-task-detail-actions">
+              <button class="workspace-button secondary" type="button" data-task-detail-action="more-info" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Send more information</button>
+              <button class="workspace-button secondary" type="button" data-task-detail-action="print" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Print task information</button>
+              <button class="workspace-button secondary" type="button" data-task-detail-action="download" data-task-history-key="${escapeHTML(getWorkspaceOperationKey(task))}">Download task summary</button>
+            </div>
+          </article>
+        `;
+      }
+
       function renderWorkspaceAllTasks(tasks = workspaceTasks) {
         if (!workspaceAllTasksPanel) return;
         const historyItems = getTaskHistoryItems(tasks);
+        const selectedTask = getSelectedWorkspaceTask(historyItems);
         workspaceAllTasksPanel.innerHTML = `
           <div class="workspace-os-head">
             <div>
@@ -4764,20 +5044,94 @@
                 const timeline = getOperationTimeline(task);
                 const investment = getOperationInvestment(task);
                 const lastActivity = getTaskLastActivity(task);
+                const key = getWorkspaceOperationKey(task);
+                const isSelected = selectedWorkspaceTaskKey && key === selectedWorkspaceTaskKey;
                 return `
-                  <article class="workspace-task-history-row">
+                  <button class="workspace-task-history-row ${isSelected ? 'is-selected' : ''}" type="button" data-task-history-key="${escapeHTML(key)}" aria-expanded="${isSelected ? 'true' : 'false'}">
                     <div>
                       <strong class="workspace-task-history-title">${escapeHTML(task.display_title || task.project_title || task.task_summary || getTaskSummary(task))}</strong>
                       <span class="workspace-task-history-meta">${escapeHTML([reference, lastActivity ? formatDate(lastActivity) : '', timeline && timeline !== 'Timeline updating' ? timeline : ''].filter(Boolean).join(' · '))}</span>
                       <span class="workspace-task-history-detail">${escapeHTML([investment && investment !== 'Investment confirmed' ? investment : '', attachmentCount ? `${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · '))}</span>
                     </div>
                     <em class="workspace-task-history-status">${escapeHTML(task.client_status || getWorkspaceClientStatus(task))}</em>
-                  </article>
+                  </button>
                 `;
               }).join('')}
             </div>
+            ${selectedTask ? renderWorkspaceTaskDetail(selectedTask) : '<div class="workspace-os-empty is-quiet" style="margin-top:14px">Select a task to inspect the client-safe details.</div>'}
           ` : '<div class="workspace-os-empty is-quiet">No tasks are linked to this workspace yet.</div>'}
         `;
+      }
+
+      function findWorkspaceTaskByKey(key = '') {
+        if (!key) return null;
+        return getTaskHistoryItems(workspaceTasks).find((task) => getWorkspaceOperationKey(task) === key) || null;
+      }
+
+      function buildWorkspaceTaskSummary(task = {}) {
+        const lines = [
+          'DONEOVERNIGHT Task Summary',
+          '',
+          `Task: ${task.display_title || task.project_title || task.task_summary || getTaskSummary(task)}`,
+          `Reference: ${getTaskId(task)}`,
+          `Status: ${task.client_status || getWorkspaceClientStatus(task)}`,
+          `Created: ${task.created_at || task.createdAt ? formatDate(task.created_at || task.createdAt) : 'Not available'}`,
+          `Deadline: ${getOperationTimeline(task)}`,
+          `Investment: ${getOperationInvestment(task) || 'Not provided'}`,
+          `Source: ${getClientSafeTaskSource(task)}`,
+          '',
+          'Scope',
+          getClientSafeTaskScope(task),
+          '',
+          'Next Step',
+          getOperationNextStep(task)
+        ];
+        const files = dedupeWorkspaceFiles(getWorkspaceFiles(task, {}));
+        if (files.length) {
+          lines.push('', 'Client Files', ...files.map((file) => `- ${file.title || 'Attached file'}`));
+        }
+        const deliverables = dedupeWorkspaceDeliverables(getWorkspaceDeliverables(task, {}));
+        if (deliverables.length) {
+          lines.push('', 'Deliverables', ...deliverables.map((item) => `- ${item.title || 'Deliverable'}`));
+        }
+        return lines.join('\n');
+      }
+
+      function downloadWorkspaceTaskSummary(task = {}) {
+        const reference = getTaskId(task).replace(/[^a-z0-9-]+/gi, '-').replace(/^-+|-+$/g, '') || 'workspace-task';
+        const blob = new Blob([buildWorkspaceTaskSummary(task)], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${reference}-summary.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(link.href);
+      }
+
+      function prefillWorkspaceMoreInformation(task = {}) {
+        openWorkspaceTaskDrawer();
+        const summary = document.getElementById('drawerRequestSummary');
+        if (!summary) return;
+        summary.value = `Additional information for ${getTaskId(task)}:\n\n`;
+        summary.focus({ preventScroll: true });
+      }
+
+      function handleWorkspaceTaskHistoryClick(event) {
+        const actionButton = event.target.closest('[data-task-detail-action]');
+        if (actionButton) {
+          const task = findWorkspaceTaskByKey(actionButton.dataset.taskHistoryKey || selectedWorkspaceTaskKey);
+          if (!task) return;
+          const action = actionButton.dataset.taskDetailAction;
+          if (action === 'more-info') prefillWorkspaceMoreInformation(task);
+          if (action === 'print') window.print();
+          if (action === 'download') downloadWorkspaceTaskSummary(task);
+          return;
+        }
+        const row = event.target.closest('.workspace-task-history-row[data-task-history-key]');
+        if (!row) return;
+        selectedWorkspaceTaskKey = row.dataset.taskHistoryKey || '';
+        renderWorkspaceAllTasks(workspaceTasks);
       }
 
       function renderWorkspaceProjectRoom(tasks = workspaceTasks) {
@@ -6541,6 +6895,7 @@
           button.textContent = 'Referral link copied';
           window.setTimeout(() => { button.textContent = 'Copy referral link'; }, 1800);
         });
+        workspaceAllTasksPanel?.addEventListener('click', handleWorkspaceTaskHistoryClick);
         renderRecommendations();
         recommendationRail?.addEventListener('click', (event) => {
           const item = event.target.closest('[data-recommendation-index]');
