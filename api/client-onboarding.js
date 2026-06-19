@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const { buildTaskPayload } = require("../lib/tasks/model");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
-const { syncAccessKeyCredential } = require("../lib/ops");
+const { dispatchWebhook, getWebhookUrls, syncAccessKeyCredential } = require("../lib/ops");
 const { claimOperatorClientRelationship, normalizeHandle } = require("../lib/operator-relationships");
 
 const SUPABASE_TIMEOUT_MS = 10_000;
@@ -172,10 +172,45 @@ async function findPortalByUsername(username) {
   return Array.isArray(rows) ? rows[0] : null;
 }
 
+async function sendClientJoinedTelegram({ name, email, workspaceSlug, source, taskId }) {
+  const client = [clean(name) || "New client", normalizeEmail(email)].filter(Boolean).join(" / ");
+  const text = [
+    "🟢 NEW CLIENT JOINED",
+    `Client: ${client}`,
+    workspaceSlug ? `Workspace: @${workspaceSlug}` : "",
+    taskId ? `Task: ${taskId}` : "",
+    `Source: ${source || "direct"}`
+  ].filter(Boolean).join("\n");
+  const result = await dispatchWebhook({
+    tag: "[NEW_CLIENT_JOINED_TELEGRAM]",
+    event: "client_joined",
+    urls: getWebhookUrls(["DONEOVERNIGHT_OPS_TELEGRAM_WEBHOOK_URL"]),
+    payload: {
+      event: "client_joined",
+      notification_type: "new_client_joined",
+      client_name: clean(name),
+      client_email: normalizeEmail(email),
+      workspace_slug: workspaceSlug,
+      task_id: taskId,
+      source: source || "direct",
+      telegram_message: text,
+      text
+    },
+    timeoutMs: SUPABASE_TIMEOUT_MS
+  });
+  return {
+    sent: result.fulfilled > 0,
+    attempted: result.attempted,
+    fulfilled: result.fulfilled,
+    status: result.fulfilled > 0 ? "sent_to_provider" : result.attempted > 0 ? "delivery_not_confirmed" : "not_configured"
+  };
+}
+
 async function createPortalLead({ email, name, username, accessKey, projectName, taskId, notes, source, allowLegacySaiAccess, operatorReferral = {} }) {
   const workspaceSlug = slugify(username || projectName || name || email);
   const now = new Date().toISOString();
   const operatorSlug = normalizeHandle(operatorReferral.operator_slug || operatorReferral.operator_handle || operatorReferral.referral_operator_slug || operatorReferral.referring_operator_slug);
+  const shouldAutoActivate = allowLegacySaiAccess || Boolean(operatorSlug);
   const basePayload = {
     email,
     name,
@@ -183,7 +218,7 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
     access_key: accessKey,
     workspace_slug: workspaceSlug,
     credentials_issued_at: now,
-    status: allowLegacySaiAccess ? "active" : "pending",
+    status: shouldAutoActivate ? "active" : "pending",
     source,
     signup_method: "project_preview",
     marketing_consent: false,
@@ -217,6 +252,7 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
 
   const existingByEmail = await findPortalByEmail(email);
   if (existingByEmail) {
+    const existingRaw = existingByEmail.raw_payload && typeof existingByEmail.raw_payload === "object" ? existingByEmail.raw_payload : {};
     try {
       const rows = await supabaseFetch(`portal_requests?id=eq.${encodeURIComponent(existingByEmail.id)}`, {
         method: "PATCH",
@@ -227,13 +263,20 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
           access_key: existingByEmail.access_key || accessKey,
           workspace_slug: existingByEmail.workspace_slug || workspaceSlug,
           credentials_issued_at: existingByEmail.credentials_issued_at || now,
-          status: allowLegacySaiAccess ? "active" : (existingByEmail.status || "pending"),
+          status: shouldAutoActivate ? "active" : (existingByEmail.status || "pending"),
           company: projectName,
           intake_task_id: taskId,
-          raw_payload: enrichedPayload.raw_payload
+          raw_payload: {
+            ...existingRaw,
+            ...enrichedPayload.raw_payload,
+            ...(operatorSlug ? {
+              operator_referral_auto_accepted: true,
+              operator_referral_auto_accepted_at: existingRaw.operator_referral_auto_accepted_at || now
+            } : {})
+          }
         })
       });
-      if (Array.isArray(rows) && rows.length) return rows[0];
+      if (Array.isArray(rows) && rows.length) return { ...rows[0], _created: false };
     } catch (error) {
       if (error.statusCode === 409) {
         error.code = "CLIENT_USERNAME_TAKEN";
@@ -247,16 +290,27 @@ async function createPortalLead({ email, name, username, accessKey, projectName,
     const rows = await supabaseFetch("portal_requests", {
       method: "POST",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify(enrichedPayload)
+      body: JSON.stringify({
+        ...enrichedPayload,
+        raw_payload: {
+          ...enrichedPayload.raw_payload,
+          ...(operatorSlug ? {
+            operator_referral_auto_accepted: true,
+            operator_referral_auto_accepted_at: now
+          } : {})
+        }
+      })
     });
-    return Array.isArray(rows) ? rows[0] : rows;
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return row ? { ...row, _created: true } : row;
   } catch (error) {
     const rows = await supabaseFetch("portal_requests", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(basePayload)
     });
-    return Array.isArray(rows) ? rows[0] : rows;
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return row ? { ...row, _created: true } : row;
   }
 }
 
@@ -416,7 +470,16 @@ module.exports = async function handler(req, res) {
     await syncAccessKeyCredential(portalLead, portalLead?.access_key || accessKey).catch((error) => {
       console.warn(`Access key sync warning: ${error.code || error.message}`);
     });
-    const workspaceSession = allowLegacySaiAccess
+    const newClientTelegram = (!operatorSlug && portalLead?._created)
+      ? await sendClientJoinedTelegram({
+        name,
+        email,
+        workspaceSlug: portalLead.workspace_slug || username,
+        source,
+        taskId
+      }).catch((error) => ({ sent: false, status: error.code || error.message || "CLIENT_JOINED_TELEGRAM_FAILED" }))
+      : null;
+    const workspaceSession = (allowLegacySaiAccess || Boolean(operatorSlug))
       ? await createWorkspaceSessionForLead(res, portalLead).catch(() => null)
       : null;
     const workspaceSlug = slugify(portalLead?.workspace_slug || portalLead?.username || username || projectName);
@@ -429,10 +492,11 @@ module.exports = async function handler(req, res) {
       username: portalLead?.username || username,
       accessKey: portalLead?.access_key || accessKey,
       projectName,
-      status: allowLegacySaiAccess ? "active" : "pending",
+      status: (allowLegacySaiAccess || Boolean(operatorSlug)) ? "active" : "pending",
       workspacePath: `/workspace/@${workspaceSlug}`,
       workspaceSlug,
       operatorRelationship,
+      newClientTelegram,
       ...(workspaceSession ? { workspacePath: workspaceSession.workspacePath, workspaceSlug: workspaceSession.workspaceSlug } : {}),
       portalPath: "/portal.html",
       accessEmailStatus: "not_configured",

@@ -274,6 +274,34 @@ function rawPayloadOf(record = {}) {
   return record.raw_payload && typeof record.raw_payload === "object" ? record.raw_payload : {};
 }
 
+async function patchOperatorProfileById(profileId, patch) {
+  let activePatch = { ...patch };
+  const droppedColumns = [];
+  const maxAttempts = Object.keys(activePatch).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const rows = await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profileId)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(activePatch)
+      });
+      return {
+        row: Array.isArray(rows) ? rows[0] : rows,
+        persisted_fields: Object.keys(activePatch),
+        skipped_missing_columns: droppedColumns
+      };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePatch, column)) throw error;
+      droppedColumns.push(column);
+      delete activePatch[column];
+    }
+  }
+  const error = new Error("Operator profile could not be updated");
+  error.statusCode = 500;
+  throw error;
+}
+
 function fallbackOperatorActivity(profile = {}) {
   const raw = rawPayloadOf(profile);
   const rows = [
@@ -503,7 +531,14 @@ function normalizeOperatorAvailability(value) {
 }
 
 function missingColumnName(error) {
-  const detail = String(error?.detail || error?.message || "");
+  const detail = [
+    error?.detail,
+    error?.details,
+    error?.hint,
+    error?.message,
+    error?.body,
+    error?.responseText
+  ].filter(Boolean).join(" ");
   return detail.match(/'([^']+)' column/)?.[1]
     || detail.match(/column "([^"]+)"/i)?.[1]
     || detail.match(/Could not find the '([^']+)'/i)?.[1]
@@ -613,7 +648,11 @@ async function listOperators() {
       client_name: clean(item.client_name) || clean(item.workspace_slug) || "Client",
       client_email: clean(item.client_email),
       workspace_slug: clean(item.workspace_slug),
-      don_references: splitList(item.task_id || item.task_reference || item.don_reference || item.raw_payload?.task_id || item.raw_payload?.task_reference),
+      don_references: [
+        ...splitList(item.task_id || item.task_reference || item.don_reference || item.raw_payload?.task_id || item.raw_payload?.task_reference),
+        ...(Array.isArray(item.raw_payload?.task_references) ? item.raw_payload.task_references : []),
+        ...(Array.isArray(item.raw_payload?.don_references) ? item.raw_payload.don_references : [])
+      ].map(clean).filter(Boolean).filter((value, index, rows) => rows.indexOf(value) === index),
       relationship_created_at: item.linked_at || item.created_at || item.updated_at,
       source: clean(item.connection_source || item.source || item.raw_payload?.source) || "operator_referral"
     }));
@@ -936,23 +975,19 @@ async function appendOperatorRuntimeActivityFallback(payload, sourceError) {
       primary_insert_error: clean(sourceError?.message || "").slice(0, 180)
     }
   };
-  await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profile.id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      raw_payload: {
-        ...rawPayload,
-        operator_runtime_activity: [record, ...existing].slice(0, 120),
-        operator_runtime_activity_storage: "profile_raw_payload_fallback",
-        operator_runtime_activity_storage_updated_at: now
-      },
-      updated_at: now
-    })
+  const patch = await patchOperatorProfileById(profile.id, {
+    raw_payload: {
+      ...rawPayload,
+      operator_runtime_activity: [record, ...existing].slice(0, 120),
+      operator_runtime_activity_storage: "profile_raw_payload_fallback",
+      operator_runtime_activity_storage_updated_at: now
+    },
+    updated_at: now
   });
   return {
     row: record,
-    persisted_fields: ["operator_profiles.raw_payload.operator_runtime_activity"],
-    skipped_missing_columns: [],
+    persisted_fields: patch.persisted_fields,
+    skipped_missing_columns: patch.skipped_missing_columns,
     storage_fallback: true,
     primary_error_code: sourceError?.code || sourceError?.statusCode || "",
     primary_error: clean(sourceError?.message || "").slice(0, 180)
@@ -1058,17 +1093,13 @@ async function markOperatorMessageViewed(input) {
           }
         }
       : item);
-    await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profile.id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        raw_payload: {
-          ...rawPayload,
-          operator_runtime_activity: updatedRows,
-          operator_runtime_activity_admin_viewed_at: now
-        },
-        updated_at: now
-      })
+    await patchOperatorProfileById(profile.id, {
+      raw_payload: {
+        ...rawPayload,
+        operator_runtime_activity: updatedRows,
+        operator_runtime_activity_admin_viewed_at: now
+      },
+      updated_at: now
     });
     return { message_id: messageId, source, viewed_at: now };
   }

@@ -81,7 +81,14 @@ function profileLinksFromRecord(profile = {}) {
 }
 
 function missingColumnName(error) {
-  const detail = String(error?.detail || error?.message || "");
+  const detail = [
+    error?.detail,
+    error?.details,
+    error?.hint,
+    error?.message,
+    error?.body,
+    error?.responseText
+  ].filter(Boolean).join(" ");
   return detail.match(/'([^']+)' column/)?.[1]
     || detail.match(/column "([^"]+)"/i)?.[1]
     || detail.match(/Could not find the '([^']+)'/i)?.[1]
@@ -509,6 +516,35 @@ function rawPayloadOf(record = {}) {
   return record.raw_payload && typeof record.raw_payload === "object" ? record.raw_payload : {};
 }
 
+async function patchOperatorProfileById(profileId, patch) {
+  let activePatch = { ...patch };
+  const droppedColumns = [];
+  const maxAttempts = Object.keys(activePatch).length + 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const rows = await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profileId)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(activePatch)
+      });
+      return {
+        row: Array.isArray(rows) ? rows[0] : rows,
+        persisted_fields: Object.keys(activePatch),
+        skipped_missing_columns: droppedColumns
+      };
+    } catch (error) {
+      const column = missingColumnName(error);
+      if (!column || !Object.prototype.hasOwnProperty.call(activePatch, column)) throw error;
+      droppedColumns.push(column);
+      delete activePatch[column];
+    }
+  }
+  const error = new Error("Operator profile could not be updated");
+  error.statusCode = 500;
+  error.code = "OPERATOR_PROFILE_UPDATE_FAILED";
+  throw error;
+}
+
 async function updateOperatorAvailability(req, input) {
   const current = await getOperatorSession(req);
   if (!current?.operator?.id) {
@@ -522,25 +558,24 @@ async function updateOperatorAvailability(req, input) {
   const now = new Date().toISOString();
   const profile = await loadOperatorProfileRow(current.operator.id);
   const rawPayload = profile?.raw_payload && typeof profile.raw_payload === "object" ? profile.raw_payload : {};
-  const rows = await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(current.operator.id)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      raw_payload: {
-        ...rawPayload,
-        operator_availability: availability.value,
-        operator_availability_label: availability.label,
-        operator_availability_updated_at: now,
-        operator_availability_source: "operator_os"
-      },
-      updated_at: now
-    })
+  const patch = await patchOperatorProfileById(current.operator.id, {
+    availability: availability.value,
+    raw_payload: {
+      ...rawPayload,
+      operator_availability: availability.value,
+      operator_availability_label: availability.label,
+      operator_availability_updated_at: now,
+      operator_availability_source: "operator_os"
+    },
+    updated_at: now
   });
-  const updatedProfile = Array.isArray(rows) ? rows[0] : rows;
+  const updatedProfile = patch.row;
   return {
     operator: sanitizeOperator(updatedProfile || { ...profile, raw_payload: rawPayload }),
     availability,
-    updated_at: now
+    updated_at: now,
+    persisted_fields: patch.persisted_fields,
+    skipped_missing_columns: patch.skipped_missing_columns
   };
 }
 
@@ -565,23 +600,19 @@ async function appendOperatorRuntimeActivityFallback(payload, sourceError) {
       primary_insert_error: clean(sourceError?.message || "").slice(0, 180)
     }
   };
-  await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profileId)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
-      raw_payload: {
-        ...rawPayload,
-        operator_runtime_activity: [record, ...existing].slice(0, 120),
-        operator_runtime_activity_storage: "profile_raw_payload_fallback",
-        operator_runtime_activity_storage_updated_at: now
-      },
-      updated_at: now
-    })
+  const patch = await patchOperatorProfileById(profileId, {
+    raw_payload: {
+      ...rawPayload,
+      operator_runtime_activity: [record, ...existing].slice(0, 120),
+      operator_runtime_activity_storage: "profile_raw_payload_fallback",
+      operator_runtime_activity_storage_updated_at: now
+    },
+    updated_at: now
   });
   return {
     row: record,
-    persisted_fields: ["operator_profiles.raw_payload.operator_runtime_activity"],
-    skipped_missing_columns: [],
+    persisted_fields: patch.persisted_fields,
+    skipped_missing_columns: patch.skipped_missing_columns,
     storage_fallback: true,
     primary_error_code: sourceError?.code || sourceError?.statusCode || "",
     primary_error: clean(sourceError?.message || "").slice(0, 180)
@@ -1151,14 +1182,20 @@ async function createOperatorHqMessage(req, input) {
   const title = messageType === "support" || messageType === "operator_support_request"
     ? "Operator support request"
     : "Operator message";
+  const storedMessageType = messageType === "support" || messageType === "operator_support_request"
+    ? "OPERATOR_SUPPORT_REQUEST"
+    : messageType;
   const rawPayload = {
     operator_slug: current.operator.handle || "",
+    operator_name: current.operator.display_name || current.operator.name || "",
     operator_email: current.operator.email || "",
     task_reference: taskReference,
     task_id: taskReference,
     sender_role: "operator",
-    message_type: messageType,
+    message_type: storedMessageType,
+    don_reference: taskReference,
     unread_for_admin: true,
+    viewed: false,
     sent_at: now
   };
   const insert = await insertOperatorRuntimeActivity({
@@ -1256,17 +1293,13 @@ async function markOperatorMessageViewed(req, input) {
           }
         }
       : item);
-    await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(current.operator.id)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        raw_payload: {
-          ...rawPayload,
-          operator_runtime_activity: updatedRows,
-          operator_runtime_activity_viewed_at: now
-        },
-        updated_at: now
-      })
+    await patchOperatorProfileById(current.operator.id, {
+      raw_payload: {
+        ...rawPayload,
+        operator_runtime_activity: updatedRows,
+        operator_runtime_activity_viewed_at: now
+      },
+      updated_at: now
     });
     return { message_id: messageId, source, viewed_at: now };
   }

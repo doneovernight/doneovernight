@@ -29,6 +29,7 @@ const {
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
+const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -1294,6 +1295,26 @@ function getRequestedTaskId(input = {}) {
   return value;
 }
 
+async function getConnectedOperatorMetadata(input = {}) {
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || input.slug || input.raw_payload?.workspace_slug || "");
+  const email = clean(input.email || input.client_email || input.raw_payload?.email).toLowerCase();
+  if (!workspaceSlug && !email) return null;
+  const portalRequest = await findPortalRequest({ email, slug: workspaceSlug }).catch(() => null);
+  if (!portalRequest || !isActiveClient(portalRequest)) return null;
+  const operator = await getConnectedOperatorForWorkspace(portalRequest).catch(() => null);
+  if (!operator?.slug) return null;
+  return {
+    portal_request_id: portalRequest.id || "",
+    workspace_slug: workspaceSlug || slugify(portalRequest.workspace_slug || portalRequest.username || ""),
+    slug: operator.slug,
+    handle: operator.handle || operator.slug,
+    display_name: operator.display_name,
+    role: operator.role,
+    source: operator.source || "operator_referral",
+    connected_at: operator.connected_at || null
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
@@ -1364,12 +1385,34 @@ module.exports = async function handler(req, res) {
     const now = new Date();
     const taskId = getRequestedTaskId(input) || createTaskId(now);
     let { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
+    const connectedOperator = await getConnectedOperatorMetadata(input);
+    if (connectedOperator) {
+      task.rawPayload = {
+        ...(task.rawPayload || {}),
+        connected_operator: connectedOperator,
+        connected_operator_slug: connectedOperator.slug,
+        connected_operator_source: connectedOperator.source,
+        connected_operator_task_visible: true
+      };
+    }
     const intakeQuality = analyzeIntakeQuality(input, task);
     task = applyIntakeQuality(task, intakeQuality);
 
     // Future operational handoffs: quote generation, payment session generation,
     // portal linking, operator assignment, and realtime client status updates.
     const persistedTask = await saveTask(task);
+    if (connectedOperator?.portal_request_id) {
+      appendOperatorRelationshipTaskReference({
+        portalRequest: {
+          id: connectedOperator.portal_request_id,
+          email: input.email,
+          workspace_slug: connectedOperator.workspace_slug || input.workspace_slug || input.workspaceSlug
+        },
+        taskId
+      }).catch((error) => {
+        console.warn(`Operator relationship task reference warning: ${error.code || error.message}`);
+      });
+    }
 
     if (!intakeQuality.valid) {
       let qualityNotification = {

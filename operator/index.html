@@ -3480,12 +3480,16 @@
           document.getElementById('operatorPublicBio').value = operator.bio || '';
         }
 
-        const assignedRows = (runtimeAssignments.length ? runtimeAssignments : runtimeTasks).map((item) => {
+        const assignedSource = runtimeAssignments.length ? runtimeAssignments : (runtimeTasks.length ? runtimeTasks : (runtime.assigned_clients || []));
+        const assignedRows = assignedSource.map((item) => {
           const workspaceSlug = item.workspace_slug || item.client_workspace_slug || '';
           const workspaceUrl = workspaceUrlForSlug(workspaceSlug);
-          const taskId = item.id || item.task_id || item.reference || 'Pending reference';
+          const linkedReferences = Array.isArray(item.don_references) ? item.don_references.filter(Boolean) : [];
+          const taskId = item.id || item.task_id || item.reference || linkedReferences[0] || 'Pending reference';
+          const hasTaskReference = /^DON-\d{4}-\d{5}$/i.test(taskId);
           const title = item.task_title || item.title || item.task_summary || 'Assigned task';
           const clientName = item.client_name || item.client || workspaceSlug || 'Assigned client';
+          const clientEmail = item.client_email || '';
           const status = item.operational_state || item.status || 'Awaiting operator';
           const deadline = item.due_label || item.deadline || 'No deadline';
           const rowAction = /revision/i.test(status) ? 'Review requested changes' : (/delivery|active|progress/i.test(status) ? 'Continue execution' : nextAction);
@@ -3497,19 +3501,22 @@
           <div class="operator-row">
             <div>
               <strong>${escapeHTML(clientName)}${workspaceSlug ? ` · @${escapeHTML(workspaceSlug)}` : ''}</strong>
-              <span>${escapeHTML(taskId)} · ${escapeHTML(title)}</span>
+              <span>${escapeHTML(clientEmail ? `${clientEmail} · ` : '')}${escapeHTML(taskId)} · ${escapeHTML(title)}</span>
               <small>${escapeHTML(status)} · Deadline: ${escapeHTML(deadline)} · Next: ${escapeHTML(rowAction)}</small>
+              ${linkedReferences.length ? `<small>DON refs: ${escapeHTML(linkedReferences.slice(0, 4).join(', '))}</small>` : ''}
+              ${item.source ? `<small>Source: ${escapeHTML(item.source)}${item.relationship_created_at ? ` · ${escapeHTML(item.relationship_created_at)}` : ''}</small>` : ''}
               <small>${escapeHTML(item.scope ? `Scope: ${item.scope}` : 'Scope available inside task context.')}</small>
               <small>${escapeHTML(item.timeline ? `Timeline: ${item.timeline}` : 'Timeline pending')} · ${escapeHTML(payoutLabel)}</small>
               <div class="operator-row-actions">
-                ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
-                <button class="operator-row-action" type="button" data-operator-task-action="request_information" data-task-reference="${escapeHTML(taskId)}">Request info</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="client_update" data-task-reference="${escapeHTML(taskId)}">Send update</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="execution_plan_draft" data-task-reference="${escapeHTML(taskId)}">Draft plan</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="submit_execution_plan" data-task-reference="${escapeHTML(taskId)}">Submit plan</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="upload_deliverable" data-task-reference="${escapeHTML(taskId)}">Deliverable</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="ready_for_admin_review" data-task-reference="${escapeHTML(taskId)}">Ready for review</button>
-                <button class="operator-row-action" type="button" data-operator-task-action="archive_personal_view" data-task-reference="${escapeHTML(taskId)}">Archive view</button>
+                ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open client context</a>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="request_information" data-task-reference="${escapeHTML(taskId)}">Request info</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="client_update" data-task-reference="${escapeHTML(taskId)}">Send update</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="execution_plan_draft" data-task-reference="${escapeHTML(taskId)}">Draft plan</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="submit_execution_plan" data-task-reference="${escapeHTML(taskId)}">Submit plan</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="upload_deliverable" data-task-reference="${escapeHTML(taskId)}">Deliverable</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="ready_for_admin_review" data-task-reference="${escapeHTML(taskId)}">Ready for review</button>` : ''}
+                ${hasTaskReference ? `<button class="operator-row-action" type="button" data-operator-task-action="archive_personal_view" data-task-reference="${escapeHTML(taskId)}">Archive view</button>` : ''}
+                <button class="operator-row-action" type="button" data-operator-task-message="support" data-message-label="Message HQ" data-task-reference="${escapeHTML(hasTaskReference ? taskId : '')}">Message HQ</button>
                 ${attachmentCount ? `<span class="operator-row-action">${attachmentCount} files</span>` : ''}
                 ${clientUpdateCount ? `<span class="operator-row-action">${clientUpdateCount} updates</span>` : ''}
                 ${planCount ? `<span class="operator-row-action">${planCount} plans</span>` : ''}
