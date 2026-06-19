@@ -1521,6 +1521,13 @@ body.is-admin .admin-dashboard { display: block; }
   margin-top: 8px;
 }
 
+.admin-task-client {
+  color: rgba(245, 241, 234, 0.72);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 650;
+}
+
 .admin-task-email,
 .admin-task-meta,
 .admin-client-email,
@@ -3354,6 +3361,8 @@ let adminTrafficSignalsData = null;
 let adminHeartbeatGeneratedAt = null;
 let workspaceRecords = { messages: [], quotes: [] };
 const adminClientUpdateReadPending = new Set();
+const adminClientUpdatesOpenTasks = new Set();
+const adminClientUpdateCollapseTimers = new Map();
 let adminTaskPollingInterval = null;
 let adminTasksLoading = false;
 let adminClientsLoading = false;
@@ -4047,20 +4056,24 @@ function renderAdminOperationUpdates(task = {}) {
   if (!updates.length) return '';
   const reference = getTaskId(task);
   const counts = getAdminOperationUpdateCounts(task);
-  const unreadLabel = counts.unread ? `NEW INFORMATION (${counts.unread})` : `CLIENT UPDATES (${counts.total})`;
+  const unreadLabel = counts.unread ? `NEW INFORMATION (${counts.unread})` : 'CLIENT UPDATES';
+  const isPanelOpen = adminClientUpdatesOpenTasks.has(reference);
   return `
-    <details class="admin-task-detail admin-client-updates" data-client-updates-panel data-task-id="${escapeHTML(reference)}">
+    <details class="admin-task-detail admin-client-updates" data-client-updates-panel data-task-id="${escapeHTML(reference)}" ${isPanelOpen ? 'open' : ''}>
       <summary class="admin-client-updates-summary" data-client-updates-summary data-task-id="${escapeHTML(reference)}">
         <strong>Client Updates</strong>
         <span class="${counts.unread ? 'is-unread' : ''}">${escapeHTML(unreadLabel)}</span>
       </summary>
       <div class="admin-client-updates-body">
-      ${updates.map((record) => {
+      ${updates.map((record, index) => {
         const metadata = record.metadata || {};
+        const updateLabel = updates.length > 1
+          ? (index === 0 ? 'LATEST UPDATE' : `UPDATE #${updates.length - index}`)
+          : 'CLIENT UPDATE';
         return `
           <div class="admin-task-update">
             <div class="admin-task-update-head">
-              <strong>CLIENT UPDATE</strong>
+              <strong>${escapeHTML(updateLabel)}</strong>
               <time>${escapeHTML(formatTaskDate(record.created_at) || 'Just now')}</time>
             </div>
             <div class="admin-task-update-field">
@@ -4071,18 +4084,6 @@ function renderAdminOperationUpdates(task = {}) {
               <div class="admin-task-update-field">
                 <span>Notes</span>
                 <strong>${escapeHTML(metadata.notes)}</strong>
-              </div>
-            ` : ''}
-            ${metadata.workspace_slug || record.workspace_slug ? `
-              <div class="admin-task-update-field">
-                <span>Workspace</span>
-                <strong>@${escapeHTML(metadata.workspace_slug || record.workspace_slug)}</strong>
-              </div>
-            ` : ''}
-            ${metadata.client_name || metadata.client_email || record.email ? `
-              <div class="admin-task-update-field">
-                <span>Client</span>
-                <strong>${escapeHTML([metadata.client_name, metadata.client_email || record.email].filter(Boolean).join(' / '))}</strong>
               </div>
             ` : ''}
             ${renderRecordLinks(record)}
@@ -5803,6 +5804,42 @@ async function loadWorkspaceRecords(options = {}) {
   }
 }
 
+function clearAdminClientUpdatesCollapseTimer(taskId) {
+  const reference = String(taskId || '').trim();
+  const timer = adminClientUpdateCollapseTimers.get(reference);
+  if (timer) window.clearTimeout(timer);
+  adminClientUpdateCollapseTimers.delete(reference);
+}
+
+function closeAdminClientUpdatesPanel(taskId, panel = null) {
+  const reference = String(taskId || '').trim();
+  if (!reference) return;
+  clearAdminClientUpdatesCollapseTimer(reference);
+  adminClientUpdatesOpenTasks.delete(reference);
+  if (panel) panel.open = false;
+  document.querySelectorAll('[data-client-updates-panel]').forEach((item) => {
+    if (item.dataset.taskId === reference) item.open = false;
+  });
+}
+
+function scheduleAdminClientUpdatesCollapse(taskId, panel = null) {
+  const reference = String(taskId || '').trim();
+  if (!reference) return;
+  clearAdminClientUpdatesCollapseTimer(reference);
+  const timer = window.setTimeout(() => {
+    closeAdminClientUpdatesPanel(reference, panel);
+  }, 15000);
+  adminClientUpdateCollapseTimers.set(reference, timer);
+}
+
+function openAdminClientUpdatesPanel(taskId, panel) {
+  const reference = String(taskId || '').trim();
+  if (!reference || !panel) return;
+  adminClientUpdatesOpenTasks.add(reference);
+  panel.open = true;
+  scheduleAdminClientUpdatesCollapse(reference, panel);
+}
+
 async function markAdminClientUpdatesViewed(taskId) {
   const reference = String(taskId || '').trim();
   if (!reference || adminClientUpdateReadPending.has(reference)) return;
@@ -5954,6 +5991,8 @@ function renderTasks(tasks) {
     const paymentStatus = getPaymentStatusLabel(task.payment_status);
     const availability = getTaskActionAvailability(task);
     const workspaceSlug = getTaskWorkspaceSlug(task);
+    const clientDisplayName = task.name || task.email || 'Unknown client';
+    const clientIdentity = workspaceSlug ? `${clientDisplayName} · @${workspaceSlug}` : clientDisplayName;
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
@@ -6051,7 +6090,7 @@ function renderTasks(tasks) {
         type="button"
         data-client-updates-open
         data-task-id="${escapeHTML(getTaskId(task))}"
-      >${escapeHTML(clientUpdateCounts.unread ? `Client update (${clientUpdateCounts.unread})` : `Client updates (${clientUpdateCounts.total})`)}</button>
+      >${escapeHTML(clientUpdateCounts.unread ? `Client updates (${clientUpdateCounts.unread})` : 'Client updates')}</button>
     ` : '';
     const actionMarkup = actions.length ? `
       <div class="admin-task-actions">
@@ -6076,6 +6115,7 @@ function renderTasks(tasks) {
           <div>
             <h3 class="admin-task-title">${escapeHTML(getTaskTitle(task))}</h3>
             <div class="admin-task-identity">
+              <span class="admin-task-client">${escapeHTML(clientIdentity)}</span>
               <span class="admin-task-email">${escapeHTML(task.email || 'No email')}</span>
               <span class="admin-task-id">${escapeHTML(getTaskId(task))}</span>
             </div>
@@ -7664,7 +7704,7 @@ adminTasksList.addEventListener('click', async (e) => {
     const row = openUpdatesButton.closest('.admin-task-row');
     const panel = row?.querySelector('[data-client-updates-panel]');
     if (panel) {
-      panel.open = true;
+      openAdminClientUpdatesPanel(openUpdatesButton.dataset.taskId, panel);
       panel.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
       markAdminClientUpdatesViewed(openUpdatesButton.dataset.taskId);
     }
@@ -7675,7 +7715,12 @@ adminTasksList.addEventListener('click', async (e) => {
   if (updatesSummary) {
     window.setTimeout(() => {
       const panel = updatesSummary.closest('[data-client-updates-panel]');
-      if (panel?.open) markAdminClientUpdatesViewed(updatesSummary.dataset.taskId);
+      if (panel?.open) {
+        openAdminClientUpdatesPanel(updatesSummary.dataset.taskId, panel);
+        markAdminClientUpdatesViewed(updatesSummary.dataset.taskId);
+      } else {
+        closeAdminClientUpdatesPanel(updatesSummary.dataset.taskId, panel);
+      }
     }, 0);
     return;
   }
