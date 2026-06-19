@@ -413,6 +413,78 @@
       margin-top: 18px;
     }
 
+    .operator-state-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .operator-state-item {
+      border-top: 1px solid rgba(255,255,255,.06);
+      padding-top: 11px;
+    }
+
+    .operator-state-item span {
+      display: block;
+      color: rgba(245,241,234,.34);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .operator-state-item strong {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .operator-availability-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      margin-top: 18px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 28%, transparent);
+      border-radius: 999px;
+      background: rgba(255,255,255,.026);
+      color: rgba(245,241,234,.72);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      padding: 9px 10px 9px 14px;
+      text-transform: uppercase;
+    }
+
+    .operator-availability-toggle::after {
+      width: 38px;
+      height: 20px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 72% 50%, var(--green) 0 5px, transparent 6px),
+        rgba(139,224,173,.08);
+      box-shadow: inset 0 0 0 1px rgba(139,224,173,.08);
+      content: "";
+    }
+
+    .operator-availability-toggle.is-unavailable::after {
+      background:
+        radial-gradient(circle at 28% 50%, rgba(245,241,234,.44) 0 5px, transparent 6px),
+        rgba(255,255,255,.04);
+    }
+
+    .operator-availability-toggle:disabled {
+      cursor: default;
+      opacity: .62;
+    }
+
     .runtime-chip {
       display: inline-flex;
       align-items: center;
@@ -601,6 +673,40 @@
       color: rgba(245,241,234,.4);
       font-size: 11px;
       line-height: 1.5;
+    }
+
+    .operator-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 9px;
+    }
+
+    .operator-row-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      border: 1px solid color-mix(in srgb, var(--operator-accent) 28%, transparent);
+      border-radius: 999px;
+      color: var(--operator-accent);
+      font-family: var(--mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      padding: 0 10px;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    button.operator-row-action {
+      background: rgba(255,255,255,.018);
+      cursor: pointer;
+    }
+
+    button.operator-row-action:disabled {
+      cursor: default;
+      opacity: .55;
     }
 
     .status-pill {
@@ -1135,7 +1241,7 @@
       </div>
 
       <aside class="operator-panel">
-        <p class="eyebrow">Access state</p>
+        <p class="eyebrow">Operator state</p>
         <h2 data-runtime="accessState">Synchronizing operator layer...</h2>
         <p data-runtime="accessSummary">Runtime presence is connecting to the private operator layer.</p>
         <div class="runtime-strip" aria-label="Runtime presence">
@@ -1143,9 +1249,16 @@
           <span class="runtime-chip" data-runtime="lastActive">Awaiting first activity</span>
           <span class="runtime-chip" data-runtime="deliveryWindow">No active delivery</span>
         </div>
+        <button class="operator-availability-toggle" id="operatorAvailabilityToggle" type="button" aria-pressed="true">Available for routing</button>
+        <div class="operator-state-grid" aria-label="Operator state summary">
+          <div class="operator-state-item"><span>Assigned work</span><strong data-runtime="stateAssignments">0 active</strong></div>
+          <div class="operator-state-item"><span>Client updates</span><strong data-runtime="stateUpdates">0 unread</strong></div>
+          <div class="operator-state-item"><span>Next action</span><strong data-runtime="stateNextAction">Standing by</strong></div>
+          <div class="operator-state-item"><span>Payout state</span><strong data-runtime="statePayout">Private</strong></div>
+        </div>
         <div class="operator-actions">
           <a class="operator-button" href="/apply">Apply as operator →</a>
-          <a class="operator-button" id="operatorRuntimeAction" href="#overview" hidden>Workspace actions →</a>
+          <a class="operator-button" id="operatorRuntimeAction" href="#assigned-work" hidden>Open assigned work →</a>
           <button class="operator-button secondary" id="operatorInviteClientAction" type="button" hidden>Invite new client →</button>
           <a class="operator-button secondary" href="#profile">Operator profile</a>
         </div>
@@ -1156,22 +1269,27 @@
     <section class="operator-section" id="overview" aria-labelledby="overviewTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Overview</p>
-          <h2 id="overviewTitle">Command Center</h2>
+          <p class="eyebrow">Operator Command Center</p>
+          <h2 id="overviewTitle">What requires action.</h2>
         </div>
-        <p data-runtime="overviewCopy">High-signal operational state only. Counts connect to assigned work once operator sessions and assignments are activated.</p>
+        <p data-runtime="overviewCopy">Action-based state from assigned work, client movement, delivery windows, and payout visibility.</p>
       </div>
 
       <div class="command-grid" aria-label="Operator command metrics">
         <article class="operator-metric">
-          <div class="metric-label">Active clients</div>
+          <div class="metric-label">Assigned Clients</div>
           <div class="metric-value" data-metric="active_clients">0</div>
-          <p class="metric-note">Assigned workspace count.</p>
+          <p class="metric-note">Workspace relationships routed to you.</p>
         </article>
         <article class="operator-metric">
-          <div class="metric-label">Pending tasks</div>
+          <div class="metric-label">Tasks Requiring Action</div>
           <div class="metric-value" data-metric="pending_tasks">0</div>
-          <p class="metric-note">Requires operator action.</p>
+          <p class="metric-note">Open assignments, active work, or waiting handoff.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Client Updates</div>
+          <div class="metric-value" data-metric="messages">0</div>
+          <p class="metric-note">Unread or recent client movement.</p>
         </article>
         <article class="operator-metric">
           <div class="metric-label">Revisions</div>
@@ -1179,34 +1297,29 @@
           <p class="metric-note">Revision or approval pressure.</p>
         </article>
         <article class="operator-metric">
-          <div class="metric-label">Updates</div>
-          <div class="metric-value" data-metric="messages">0</div>
-          <p class="metric-note">Unread client movement.</p>
-        </article>
-        <article class="operator-metric">
-          <div class="metric-label">Revenue</div>
-          <div class="metric-value" data-metric="revenue">Private</div>
-          <p class="metric-note">Paid and pending payouts.</p>
-        </article>
-        <article class="operator-metric">
-          <div class="metric-label">Deadlines</div>
+          <div class="metric-label">Delivery Windows</div>
           <div class="metric-value" data-metric="deadlines">No active delivery</div>
           <p class="metric-note">Nearest delivery window.</p>
+        </article>
+        <article class="operator-metric">
+          <div class="metric-label">Pending Payout</div>
+          <div class="metric-value" data-metric="revenue">Private</div>
+          <p class="metric-note">Paid and pending payout visibility.</p>
         </article>
       </div>
     </section>
 
-    <section class="operator-section" id="clients" aria-labelledby="clientsTitle">
+    <section class="operator-section" id="assigned-work" aria-labelledby="clientsTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Clients</p>
-          <h2 id="clientsTitle">Assigned client layer</h2>
+          <p class="eyebrow">Assigned Work</p>
+          <h2 id="clientsTitle">Execution routed to you.</h2>
         </div>
-        <p data-runtime="clientSectionCopy">Assigned clients, project state, recent activity, and quick workspace access connect after runtime authentication.</p>
+        <p data-runtime="clientSectionCopy">Only operator-assigned tasks appear here. No marketplace, no client browsing.</p>
       </div>
       <div class="operator-two-column">
         <article class="operator-list-panel" id="assignedClientsPanel">
-          <h3>Assigned clients</h3>
+          <h3>Assigned tasks</h3>
           <div class="operator-row">
             <div><strong>No active assignments yet</strong><span>Operator layer synchronized. Assigned clients will appear here after activation routing.</span></div>
             <span class="status-pill is-muted">Idle</span>
@@ -1218,18 +1331,10 @@
         </article>
 
         <article class="operator-list-panel" id="roleContextPanel">
-          <h3>Role-aware context</h3>
+          <h3>Next operator action</h3>
           <div class="operator-row">
-            <div><strong>Videographer</strong><span>Deliveries, revisions, licensing, export gates.</span></div>
-            <span class="status-pill is-muted">Module</span>
-          </div>
-          <div class="operator-row">
-            <div><strong>Designer</strong><span>Brand assets, approvals, final handoff, revision cycles.</span></div>
-            <span class="status-pill is-muted">Module</span>
-          </div>
-          <div class="operator-row">
-            <div><strong>Trainer</strong><span>Programs, check-ins, client progress, recurring sessions.</span></div>
-            <span class="status-pill is-muted">Module</span>
+            <div><strong>Standing by</strong><span>Next required operator action appears here when assigned work moves.</span></div>
+            <span class="status-pill is-muted">Clear</span>
           </div>
         </article>
       </div>
@@ -1238,17 +1343,17 @@
     <section class="operator-section" id="tasks" aria-labelledby="tasksTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Tasks &amp; deliveries</p>
-          <h2 id="tasksTitle">Execution pipeline</h2>
+          <p class="eyebrow">Delivery Desk</p>
+          <h2 id="tasksTitle">Delivery windows and handoff state.</h2>
         </div>
-        <p data-runtime="taskSectionCopy">Delivery movement, approvals, revision pressure, and archived completion history are scoped to assigned work.</p>
+        <p data-runtime="taskSectionCopy">Tasks near delivery, revision pressure, ready-to-send work, and handoff state stay scoped to assigned work.</p>
       </div>
 
       <div class="module-grid" id="taskRuntimeGrid">
         <article class="operator-module">
-          <div class="module-label">Runtime state</div>
-          <h3>No active tasks</h3>
-          <p>Operator layer synchronized. Assigned tasks will appear when a delivery cycle opens.</p>
+          <div class="module-label">Delivery state</div>
+          <h3>No delivery window active</h3>
+          <p>Assigned delivery windows appear here when work is routed to you.</p>
           <div class="module-lines">
             <div class="module-line"><span>Current state</span><b>Idle</b></div>
             <div class="module-line"><span>Revision pressure</span><b>Clear</b></div>
@@ -1256,9 +1361,9 @@
           </div>
         </article>
         <article class="operator-module">
-          <div class="module-label">Client updates</div>
-          <h3>No unread updates</h3>
-          <p>Client movement and operator-facing messages will surface here.</p>
+          <div class="module-label">Review</div>
+          <h3>No review pressure</h3>
+          <p>Needs review, ready to send, and delivered states surface here.</p>
           <div class="module-lines">
             <div class="module-line"><span>Inbox</span><b>Synchronized</b></div>
             <div class="module-line"><span>Client replies</span><b>Clear</b></div>
@@ -1281,10 +1386,10 @@
     <section class="operator-section" id="finance" aria-labelledby="financeTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Payments &amp; revenue</p>
+          <p class="eyebrow">Payout Visibility</p>
           <h2 id="financeTitle">Payout visibility</h2>
         </div>
-        <p data-runtime="financeSectionCopy">Paid revenue, pending approvals, and payout visibility stay scoped to authenticated operator sessions.</p>
+        <p data-runtime="financeSectionCopy">Paid work, pending payout basis, and payout profile details stay private to the authenticated operator.</p>
       </div>
 
       <div class="module-grid">
@@ -1321,15 +1426,15 @@
     <section class="operator-section" id="messages-contracts" aria-labelledby="communicationTitle">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Communication &amp; trust</p>
-          <h2 id="communicationTitle">Messages and contracts</h2>
+          <p class="eyebrow">Client Updates Inbox</p>
+          <h2 id="communicationTitle">Client movement requiring attention.</h2>
         </div>
-        <p data-runtime="communicationSectionCopy">Client communication and contract states are operator-scoped and connected to assigned work.</p>
+        <p data-runtime="communicationSectionCopy">Latest client updates connected to your assigned tasks. Recent Messages remains operational, but action starts here.</p>
       </div>
 
       <div class="operator-two-column">
         <article class="operator-list-panel" id="messagesPanel">
-          <h3>Messages</h3>
+          <h3>Client updates</h3>
           <div class="operator-row">
             <div><strong>No unread client updates</strong><span>Workspace messages, delivery notes, and revision threads will appear here.</span></div>
             <span class="status-pill is-muted">Clear</span>
@@ -1340,7 +1445,7 @@
           </div>
         </article>
         <article class="operator-list-panel" id="contractsPanel">
-          <h3>Contracts</h3>
+          <h3>Approvals and contracts</h3>
           <div class="operator-row">
             <div><strong>No contract action pending</strong><span>Signed agreements, quote approvals, and licensing states stay attached to workspaces.</span></div>
             <span class="status-pill is-muted">Clear</span>
@@ -1357,9 +1462,9 @@
       <div class="section-head">
         <div>
           <p class="eyebrow">Operator profile</p>
-          <h2 id="profileTitle">Identity and operating preferences</h2>
+          <h2 id="profileTitle">Profile shown to DONEOVERNIGHT.</h2>
         </div>
-        <p data-runtime="profileSectionCopy">Identity settings remain lightweight and connected to operator runtime.</p>
+        <p data-runtime="profileSectionCopy">Public profile state, specialist role, categories, image, portfolio, and payout identity stay connected to this operator handle.</p>
       </div>
 
       <div class="profile-shell">
@@ -1457,6 +1562,7 @@
       const runtimeAction = document.getElementById('operatorRuntimeAction');
       const inviteClientAction = document.getElementById('operatorInviteClientAction');
       const inviteMessage = document.getElementById('operatorInviteMessage');
+      const availabilityToggle = document.getElementById('operatorAvailabilityToggle');
       const headerStatus = document.getElementById('operatorHeaderStatus');
       const profileSettings = document.getElementById('operatorProfileSettings');
       const profileMessage = document.getElementById('operatorProfileMessage');
@@ -1845,6 +1951,38 @@
         panel.innerHTML = `${title}${body}`;
       }
 
+      function workspaceUrlForSlug(slug = '') {
+        const cleanSlug = String(slug || '').trim().replace(/^@+/, '');
+        return cleanSlug ? `https://portal.doneovernight.com/@${encodeURIComponent(cleanSlug)}` : '';
+      }
+
+      function operatorStatusClass(value = '') {
+        const status = String(value || '').toLowerCase();
+        if (/revision|waiting|pending|review|attention|unread/.test(status)) return 'is-waiting';
+        if (/active|online|assigned|delivery|synced|open/.test(status)) return 'is-live';
+        if (/ready|approval|contract/.test(status)) return 'is-review';
+        return 'is-muted';
+      }
+
+      function nextOperatorAction({ state = {}, tasks = [], messages = [] } = {}) {
+        if (Number(state.revisions_pending || 0) > 0) return 'Review requested changes';
+        if (Number(state.unread_messages || 0) > 0 || messages.some((item) => String(item.status || '').toLowerCase() === 'unread')) return 'Read client update';
+        const deliveryTask = tasks.find((task) => /delivery|ready|review|in progress|active/i.test(`${task.status || ''} ${task.deadline || ''}`));
+        if (deliveryTask) return 'Continue delivery work';
+        if (tasks.length) return 'Open assigned task';
+        return 'Standing by';
+      }
+
+      function setAvailabilityState(available) {
+        if (!availabilityToggle) return;
+        availabilityToggle.classList.toggle('is-unavailable', !available);
+        availabilityToggle.setAttribute('aria-pressed', available ? 'true' : 'false');
+        availabilityToggle.textContent = available ? 'Available for routing' : 'Unavailable for routing';
+        try {
+          localStorage.setItem('doneovernight_operator_available', available ? 'true' : 'false');
+        } catch (error) {}
+      }
+
       function operatorRuntimeSlugs(runtime = {}) {
         return new Set([
           ...(runtime.assigned_clients || []).map((item) => item.workspace_slug),
@@ -2069,11 +2207,28 @@
           : operator.bio || 'DONEOVERNIGHT operator workspace.');
         text('[data-runtime="profileName"]', operator.display_name || 'Specialist profile');
         text('[data-runtime="profileBio"]', operator.bio || 'Short operational intro.');
+        const runtimeTasks = runtime.tasks || [];
+        const runtimeAssignments = runtime.assignments || [];
+        const runtimeMessages = runtime.messages || [];
+        const nextAction = nextOperatorAction({ state, tasks: runtimeTasks, messages: runtimeMessages });
+        const localAvailability = (() => {
+          try {
+            return localStorage.getItem('doneovernight_operator_available') !== 'false';
+          } catch (error) {
+            return true;
+          }
+        })();
+        setAvailabilityState(owner ? localAvailability : false);
+        if (availabilityToggle) {
+          availabilityToggle.disabled = !owner;
+          if (!owner) availabilityToggle.textContent = 'Availability private';
+        }
+
         text('[data-runtime="overviewCopy"]', owner
-          ? 'Live operator-scoped state from assignments, messages, revision pressure, revenue, and delivery movement.'
+          ? 'Action-based operator state from assigned clients, task pressure, client updates, delivery windows, and payouts.'
           : 'Public operator preview. Sign in as this operator to unlock assigned clients, revenue, messages, and delivery windows.');
         text('[data-runtime="clientSectionCopy"]', owner
-          ? 'Assigned clients, revision state, delivery status, and recent movement from the private operator layer.'
+          ? 'Assigned work only. Each row is connected to a workspace, DON reference, deadline, and next operator action.'
           : 'Assigned client state remains private until the operator owner is authenticated.');
         text('[data-runtime="financeSectionCopy"]', owner
           ? 'Payout visibility is synchronized from paid and pending operator-scoped work.'
@@ -2095,8 +2250,12 @@
         text('[data-runtime="deliveryWindow"]', state.next_delivery_label || 'No active delivery');
         text('[data-runtime="taskLastActive"]', state.last_active_label || 'Awaiting first activity');
         text('[data-runtime="taskSectionCopy"]', owner
-          ? 'Live task movement, delivery windows, approvals, and revision pressure from assigned workspaces.'
+          ? 'Delivery due, needs-review, ready-to-send, sent, and delivered states from assigned work.'
           : 'Private task movement is visible only to the authenticated operator.');
+        text('[data-runtime="stateAssignments"]', owner ? `${runtimeAssignments.length || Number(state.active_tasks || 0)} active` : 'Private');
+        text('[data-runtime="stateUpdates"]', owner ? `${Number(state.unread_messages || 0)} unread` : 'Private');
+        text('[data-runtime="stateNextAction"]', owner ? nextAction : 'Private');
+        text('[data-runtime="statePayout"]', owner ? runtime.finance?.pending || '€0 pending' : 'Private');
 
         metric('active_clients', owner ? metrics.active_clients : 0);
         metric('pending_tasks', owner ? metrics.pending_tasks : 0);
@@ -2123,37 +2282,61 @@
           document.getElementById('operatorPublicBio').value = operator.bio || '';
         }
 
-        const clientRows = (runtime.assigned_clients || []).map((client) => `
+        const assignedRows = (runtimeAssignments.length ? runtimeAssignments : runtimeTasks).map((item) => {
+          const workspaceSlug = item.workspace_slug || item.client_workspace_slug || '';
+          const workspaceUrl = workspaceUrlForSlug(workspaceSlug);
+          const taskId = item.id || item.task_id || item.reference || 'Pending reference';
+          const title = item.task_title || item.title || item.task_summary || 'Assigned task';
+          const clientName = item.client_name || item.client || workspaceSlug || 'Assigned client';
+          const status = item.operational_state || item.status || 'Awaiting operator';
+          const deadline = item.due_label || item.deadline || 'No deadline';
+          const rowAction = /revision/i.test(status) ? 'Review requested changes' : (/delivery|active|progress/i.test(status) ? 'Continue execution' : nextAction);
+          return `
           <div class="operator-row">
-            <div><strong>${escapeHTML(client.workspace_slug || 'Assigned workspace')}</strong><span>${escapeHTML(client.task_state || 'No active task')} · ${escapeHTML(client.revision_state || 'Revision clear')} · ${escapeHTML(client.delivery_state || 'Standing by')}</span><small>${escapeHTML(client.recent_activity || 'No recent activity')}</small></div>
-            <span class="status-pill is-live">${escapeHTML(client.status || 'active')}</span>
+            <div>
+              <strong>${escapeHTML(clientName)}${workspaceSlug ? ` · @${escapeHTML(workspaceSlug)}` : ''}</strong>
+              <span>${escapeHTML(taskId)} · ${escapeHTML(title)}</span>
+              <small>${escapeHTML(status)} · Deadline: ${escapeHTML(deadline)} · Next: ${escapeHTML(rowAction)}</small>
+              <div class="operator-row-actions">
+                ${workspaceUrl ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
+                ${Number(state.unread_messages || 0) ? '<span class="operator-row-action">Updates</span>' : ''}
+              </div>
+            </div>
+            <span class="status-pill ${operatorStatusClass(status)}">${escapeHTML(status)}</span>
           </div>
-        `);
-        renderRows(document.getElementById('assignedClientsPanel'), owner ? clientRows : [], `
+        `;
+        });
+        renderRows(document.getElementById('assignedClientsPanel'), owner ? assignedRows : [], `
           <div class="operator-row">
-            <div><strong>Private assignments</strong><span>Assigned clients appear after owner authentication.</span></div>
-            <span class="status-pill is-muted">Private</span>
+            <div><strong>No assigned work</strong><span>No client tasks are currently routed to this operator.</span></div>
+            <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
           </div>
         `);
 
         const taskGrid = document.getElementById('taskRuntimeGrid');
         if (taskGrid && owner) {
-          const tasks = runtime.tasks || [];
-          taskGrid.innerHTML = tasks.length ? tasks.map((task) => `
+          const tasks = runtimeTasks;
+          taskGrid.innerHTML = tasks.length ? tasks.map((task) => {
+            const status = task.status || 'Assigned';
+            const workspaceUrl = workspaceUrlForSlug(task.workspace_slug);
+            return `
             <article class="operator-module">
-              <div class="module-label">${escapeHTML(task.status || 'Task')}</div>
+              <div class="module-label">${escapeHTML(status)}</div>
               <h3>${escapeHTML(task.title || 'Assigned task')}</h3>
-              <p>${escapeHTML(task.workspace_slug || 'Workspace')} is connected to this operator runtime.</p>
+              <p>${escapeHTML(task.workspace_slug ? `@${task.workspace_slug}` : 'Assigned workspace')} · ${escapeHTML(task.type || 'Execution')}</p>
               <div class="module-lines">
                 <div class="module-line"><span>Task ID</span><b>${escapeHTML(task.id || 'Pending')}</b></div>
                 <div class="module-line"><span>Deadline</span><b>${escapeHTML(task.deadline || 'No deadline')}</b></div>
+                <div class="module-line"><span>Next</span><b>${escapeHTML(/deliver|ready/i.test(status) ? 'Prepare handoff' : nextAction)}</b></div>
               </div>
+              ${workspaceUrl ? `<div class="operator-row-actions"><a class="operator-row-action" href="${escapeHTML(workspaceUrl)}" target="_blank" rel="noopener noreferrer">Open task</a></div>` : ''}
             </article>
-          `).join('') : `
+          `;
+          }).join('') : `
             <article class="operator-module">
               <div class="module-label">${escapeHTML(state.operational_state || 'Idle')}</div>
-              <h3>No active tasks</h3>
-              <p>Operator layer synchronized. Assigned tasks will appear when a delivery cycle opens.</p>
+              <h3>No delivery window active</h3>
+              <p>No assigned task is near delivery right now.</p>
               <div class="module-lines">
                 <div class="module-line"><span>Current state</span><b>${escapeHTML(state.presence_label || 'Idle')}</b></div>
                 <div class="module-line"><span>Revision pressure</span><b>${Number(state.revisions_pending || 0) ? 'Pending' : 'Clear'}</b></div>
@@ -2161,17 +2344,17 @@
               </div>
             </article>
             <article class="operator-module">
-              <div class="module-label">Updates</div>
-              <h3>${Number(state.unread_messages || 0) ? `${state.unread_messages} unread updates` : 'No unread updates'}</h3>
-              <p>Client movement and operator-facing messages will surface here.</p>
+              <div class="module-label">Review</div>
+              <h3>${Number(state.revisions_pending || 0) ? `${state.revisions_pending} revisions` : 'No review pressure'}</h3>
+              <p>Needs review and ready-to-send states will appear here.</p>
               <div class="module-lines">
-                <div class="module-line"><span>Inbox</span><b>Synchronized</b></div>
+                <div class="module-line"><span>Needs review</span><b>${Number(state.revisions_pending || 0)}</b></div>
                 <div class="module-line"><span>Last activity</span><b>${escapeHTML(state.last_active_label || 'Awaiting first activity')}</b></div>
               </div>
             </article>
             <article class="operator-module">
-              <div class="module-label">Delivery</div>
-              <h3>Delivery layer</h3>
+              <div class="module-label">Handoff</div>
+              <h3>${Number(state.upcoming_deliveries || 0) ? `${state.upcoming_deliveries} delivery states` : 'Nothing ready to send'}</h3>
               <p>Delivery links and handoff signals attach to assigned tasks.</p>
               <div class="module-lines">
                 <div class="module-line"><span>Upcoming deliveries</span><b>${Number(state.upcoming_deliveries || 0)}</b></div>
@@ -2184,25 +2367,33 @@
         const rolePanel = document.getElementById('roleContextPanel');
         renderRows(rolePanel, [`
           <div class="operator-row">
-            <div><strong>${escapeHTML(operator.role || 'Operator')}</strong><span>${owner ? 'Runtime modules adapt to assigned work and delivery states.' : 'Public role context only.'}</span></div>
-            <span class="status-pill is-review">${owner ? 'Dynamic' : 'Public'}</span>
+            <div><strong>${escapeHTML(nextAction)}</strong><span>${owner ? 'Based on revision pressure, unread updates, assigned work, and delivery window.' : 'Private action state unlocks after authentication.'}</span></div>
+            <span class="status-pill ${operatorStatusClass(nextAction)}">${owner ? 'Live' : 'Private'}</span>
           </div>
           <div class="operator-row">
-            <div><strong>${escapeHTML(operator.timezone || 'Europe/Amsterdam')}</strong><span>${owner ? 'Greeting, delivery windows, and activity labels use operator timezone.' : 'Timezone-aware public identity.'}</span></div>
+            <div><strong>${escapeHTML(operator.role || 'Operator')}</strong><span>${owner ? 'Role shown for DONEOVERNIGHT routing and profile context.' : 'Public role context only.'}</span></div>
             <span class="status-pill is-live">${owner ? 'Synced' : 'Visible'}</span>
           </div>
         `], '');
 
         const messageRows = (runtime.messages || []).map((item) => `
           <div class="operator-row">
-            <div><strong>${escapeHTML(item.title || 'Client update')}</strong><span>${escapeHTML(item.workspace_slug || 'workspace')} · ${escapeHTML(item.detail || 'Workspace message received.')}</span><small>${escapeHTML(item.created_at || '')}</small></div>
+            <div>
+              <strong>${escapeHTML(item.title || 'Client update')}</strong>
+              <span>${escapeHTML(item.workspace_slug ? `@${item.workspace_slug}` : 'workspace')} · ${escapeHTML(item.detail || 'Workspace message received.')}</span>
+              <small>${escapeHTML(item.created_at || '')}</small>
+              <div class="operator-row-actions">
+                ${workspaceUrlForSlug(item.workspace_slug) ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrlForSlug(item.workspace_slug))}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
+                <button class="operator-row-action" type="button" data-operator-mark-viewed>Mark viewed</button>
+              </div>
+            </div>
             <span class="status-pill ${item.status === 'Unread' ? 'is-waiting' : 'is-muted'}">${escapeHTML(item.status || 'Update')}</span>
           </div>
         `);
         renderRows(document.getElementById('messagesPanel'), owner ? messageRows : [], `
           <div class="operator-row">
-            <div><strong>Private client updates</strong><span>Messages and revision threads unlock for the authenticated owner.</span></div>
-            <span class="status-pill is-muted">Private</span>
+            <div><strong>${owner ? 'No client updates' : 'Private client updates'}</strong><span>${owner ? 'No client movement needs attention right now.' : 'Messages and revision threads unlock for the authenticated owner.'}</span></div>
+            <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
           </div>
         `);
 
@@ -2214,8 +2405,8 @@
         `);
         renderRows(document.getElementById('contractsPanel'), owner ? contractRows : [], `
           <div class="operator-row">
-            <div><strong>Private contract states</strong><span>Quote approvals, signatures, and licensing states unlock for the authenticated owner.</span></div>
-            <span class="status-pill is-muted">Private</span>
+            <div><strong>${owner ? 'No approvals pending' : 'Private contract states'}</strong><span>${owner ? 'Quote approvals, signatures, and licensing states are clear.' : 'Quote approvals, signatures, and licensing states unlock for the authenticated owner.'}</span></div>
+            <span class="status-pill is-muted">${owner ? 'Clear' : 'Private'}</span>
           </div>
         `);
       }
@@ -2515,6 +2706,24 @@
       inviteClientAction?.addEventListener('click', (event) => {
         event.preventDefault();
         shareOperatorInvite();
+      });
+
+      availabilityToggle?.addEventListener('click', () => {
+        const available = availabilityToggle.getAttribute('aria-pressed') !== 'true';
+        setAvailabilityState(available);
+      });
+
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest?.('[data-operator-mark-viewed]');
+        if (!button) return;
+        const row = button.closest('.operator-row');
+        const pill = row?.querySelector('.status-pill');
+        if (pill) {
+          pill.textContent = 'Read';
+          pill.className = 'status-pill is-muted';
+        }
+        button.textContent = 'Viewed';
+        button.disabled = true;
       });
 
       logoutButton?.addEventListener('click', async () => {
