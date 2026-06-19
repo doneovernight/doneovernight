@@ -1352,6 +1352,67 @@ body.is-admin .admin-dashboard { display: block; }
   line-height: 1.55;
 }
 
+.admin-operator-connected {
+  margin-top: 10px;
+  border: 1px solid rgba(245, 241, 234, 0.075);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.admin-operator-connected summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  color: rgba(245, 241, 234, 0.78);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.admin-operator-connected-list {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(245, 241, 234, 0.065);
+  padding: 10px 12px 12px;
+}
+
+.admin-operator-connected-item {
+  display: grid;
+  gap: 4px;
+  color: rgba(245, 241, 234, 0.58);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-operator-connected-item strong {
+  color: rgba(245, 241, 234, 0.82);
+  font-size: 13px;
+}
+
+.admin-operator-availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-operator-availability::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.38);
+}
+
+.admin-operator-availability.is-always-available::before { background: #6fd6a5; box-shadow: 0 0 12px rgba(111, 214, 165, .32); }
+.admin-operator-availability.is-available::before { background: #4fbf82; }
+.admin-operator-availability.is-busy::before { background: #e9c48a; }
+.admin-operator-availability.is-offline::before { background: #8f4d4d; }
+
 .admin-task-list {
   display: grid;
   gap: 18px;
@@ -5781,6 +5842,48 @@ function renderOperatorField(label, value) {
   `;
 }
 
+function renderOperatorFieldHtml(label, html) {
+  return `
+    <div class="admin-operator-detail">
+      <span>${escapeHTML(label)}</span>
+      <strong>${html || '—'}</strong>
+    </div>
+  `;
+}
+
+function getOperatorAvailabilityClass(operator = {}) {
+  const key = String(operator.operator_availability || operator.availability || '').trim().toLowerCase().replace(/[\s-]+/g, '_') || 'always_available';
+  return `is-${key.replace(/_/g, '-')}`;
+}
+
+function renderOperatorAvailability(operator = {}) {
+  return `<span class="admin-operator-availability ${escapeHTML(getOperatorAvailabilityClass(operator))}">${escapeHTML(getOperatorAvailabilityLabel(operator))}</span>`;
+}
+
+function renderOperatorConnectedClients(operator = {}) {
+  const clients = Array.isArray(operator.connected_clients_detail) ? operator.connected_clients_detail : [];
+  const count = Number(operator.connected_clients || clients.length || 0);
+  if (!count) return '';
+  return `
+    <details class="admin-operator-connected">
+      <summary>
+        <span>Connected clients</span>
+        <strong>${escapeHTML(count)}</strong>
+      </summary>
+      <div class="admin-operator-connected-list">
+        ${clients.length ? clients.map((client) => `
+          <div class="admin-operator-connected-item">
+            <strong>${escapeHTML(client.client_name || client.client_email || 'Client')}</strong>
+            <span>${escapeHTML(client.client_email || 'No email')} · ${escapeHTML(client.workspace_slug ? `@${client.workspace_slug}` : 'No workspace')}</span>
+            <span>${escapeHTML((Array.isArray(client.don_references) && client.don_references.length ? client.don_references.join(', ') : 'No DON reference yet'))}</span>
+            <span>${escapeHTML(client.relationship_created_at ? formatTaskDate(client.relationship_created_at) : 'No date')} · ${escapeHTML(client.source || 'operator referral')}</span>
+          </div>
+        `).join('') : '<div class="admin-operator-connected-item"><span>Client relationship details are not available yet.</span></div>'}
+      </div>
+    </details>
+  `;
+}
+
 function renderOperatorRow(operator) {
   const createdAt = formatTaskDate(operator.created_at);
   const actions = operator.email ? getOperatorActions(getOperatorResolvedStatus(operator)) : [];
@@ -5818,8 +5921,9 @@ function renderOperatorRow(operator) {
         ${renderOperatorField('Payout email', operator.payout_email)}
         ${renderOperatorField('Tools', operator.tools)}
         ${renderOperatorField('Timezone', operator.timezone)}
-        ${renderOperatorField('Availability', getOperatorAvailabilityLabel(operator))}
+        ${renderOperatorFieldHtml('Availability', renderOperatorAvailability(operator))}
         ${renderOperatorField('Last active', operator.last_active_at ? formatTaskDate(operator.last_active_at) : '—')}
+        ${renderOperatorField('Connected clients', operator.connected_clients || 0)}
         ${renderOperatorField('Assigned tasks', operator.active_assigned_tasks || 0)}
         ${renderOperatorField('Unread messages', operator.unread_operator_messages || 0)}
         ${renderOperatorField('Support pings', operator.support_pings || 0)}
@@ -5827,6 +5931,7 @@ function renderOperatorRow(operator) {
         ${renderOperatorField('Portfolio', operator.portfolio)}
         ${renderOperatorField('Signup', operator.signup_method || operator.source)}
       </div>
+      ${renderOperatorConnectedClients(operator)}
       ${operator.notes ? `<div class="admin-operator-notes">${escapeHTML(operator.notes)}</div>` : ''}
       ${actionMarkup}
     </article>
@@ -6145,7 +6250,7 @@ function renderTasks(tasks) {
     const workspaceSlug = getTaskWorkspaceSlug(task);
     const clientDisplayName = task.name || task.email || 'Unknown client';
     const taskReference = getTaskId(task);
-    const clientIdentity = `${clientDisplayName} · ${workspaceSlug ? `@${workspaceSlug}` : 'no workspace'} · ${taskReference}`;
+    const clientIdentity = `${clientDisplayName} · ${task.email || 'No email'} · ${taskReference}`;
     const actions = task.id
       ? [
           ...(availability.canOpenReview ? [{ type: 'open-review', label: 'Open review' }] : []),
@@ -6269,8 +6374,6 @@ function renderTasks(tasks) {
             <h3 class="admin-task-title">${escapeHTML(getTaskTitle(task))}</h3>
             <div class="admin-task-identity">
               <span class="admin-task-client">${escapeHTML(clientIdentity)}</span>
-              <span class="admin-task-email">${escapeHTML(task.email || 'No email')}</span>
-              <span class="admin-task-id">${escapeHTML(taskReference)}</span>
             </div>
             <span class="admin-task-priority ${priority.className}">${priority.label} priority</span>
             ${clientUpdateBadge}
@@ -7679,6 +7782,7 @@ adminOperatorsList?.addEventListener('click', async (event) => {
   if (operatorAction === 'message') {
     const note = window.prompt('Message this operator privately?');
     if (!note || !note.trim()) return;
+    const taskReference = window.prompt('Attach DON reference? Optional.') || '';
     actions.forEach((action) => { action.disabled = true; });
     button.textContent = 'Sending...';
     if (message) message.textContent = '';
@@ -7686,7 +7790,8 @@ adminOperatorsList?.addEventListener('click', async (event) => {
       await adminOperatorRequest({
         action: 'create_operator_message',
         email,
-        message: note.trim()
+        message: note.trim(),
+        task_reference: taskReference.trim()
       });
       if (message) message.textContent = 'Operator message sent.';
       await loadOperators({ silent: true });

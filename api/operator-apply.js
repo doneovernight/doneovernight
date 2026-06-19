@@ -504,6 +504,10 @@ async function loadOperatorProfileRow(operatorId) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
+function rawPayloadOf(record = {}) {
+  return record.raw_payload && typeof record.raw_payload === "object" ? record.raw_payload : {};
+}
+
 async function updateOperatorAvailability(req, input) {
   const current = await getOperatorSession(req);
   if (!current?.operator?.id) {
@@ -539,6 +543,50 @@ async function updateOperatorAvailability(req, input) {
   };
 }
 
+async function appendOperatorRuntimeActivityFallback(payload, sourceError) {
+  const profileId = clean(payload.operator_profile_id);
+  if (!profileId) throw sourceError;
+  const profile = await loadOperatorProfileRow(profileId);
+  if (!profile?.id) throw sourceError;
+  const rawPayload = rawPayloadOf(profile);
+  const now = new Date().toISOString();
+  const existing = Array.isArray(rawPayload.operator_runtime_activity) ? rawPayload.operator_runtime_activity : [];
+  const record = {
+    id: payload.id || `profile_activity_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    ...payload,
+    created_at: payload.created_at || now,
+    updated_at: payload.updated_at || now,
+    raw_payload: {
+      ...(payload.raw_payload && typeof payload.raw_payload === "object" ? payload.raw_payload : {}),
+      profile_raw_payload_fallback: true,
+      primary_insert_failed: true,
+      primary_insert_error_code: sourceError?.code || sourceError?.statusCode || "",
+      primary_insert_error: clean(sourceError?.message || "").slice(0, 180)
+    }
+  };
+  await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(profileId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      raw_payload: {
+        ...rawPayload,
+        operator_runtime_activity: [record, ...existing].slice(0, 120),
+        operator_runtime_activity_storage: "profile_raw_payload_fallback",
+        operator_runtime_activity_storage_updated_at: now
+      },
+      updated_at: now
+    })
+  });
+  return {
+    row: record,
+    persisted_fields: ["operator_profiles.raw_payload.operator_runtime_activity"],
+    skipped_missing_columns: [],
+    storage_fallback: true,
+    primary_error_code: sourceError?.code || sourceError?.statusCode || "",
+    primary_error: clean(sourceError?.message || "").slice(0, 180)
+  };
+}
+
 async function insertOperatorRuntimeActivity(payload) {
   let activePayload = { ...payload };
   const droppedColumns = [];
@@ -557,7 +605,9 @@ async function insertOperatorRuntimeActivity(payload) {
       };
     } catch (error) {
       const column = missingColumnName(error);
-      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) throw error;
+      if (!column || !Object.prototype.hasOwnProperty.call(activePayload, column)) {
+        return appendOperatorRuntimeActivityFallback(payload, error);
+      }
       droppedColumns.push(column);
       delete activePayload[column];
     }
@@ -565,7 +615,7 @@ async function insertOperatorRuntimeActivity(payload) {
   const error = new Error("Operator message could not be stored");
   error.statusCode = 500;
   error.code = "OPERATOR_RUNTIME_ACTIVITY_INSERT_FAILED";
-  throw error;
+  return appendOperatorRuntimeActivityFallback(payload, error);
 }
 
 function operatorSupportWebhookUrls() {
@@ -693,6 +743,70 @@ async function createOperatorHqMessage(req, input) {
     skipped_missing_columns: insert.skipped_missing_columns,
     telegram
   };
+}
+
+async function markOperatorMessageViewed(req, input) {
+  const current = await getOperatorSession(req);
+  if (!current?.operator?.id) {
+    const error = new Error("Operator login required");
+    error.statusCode = 401;
+    error.code = "OPERATOR_SESSION_REQUIRED";
+    throw error;
+  }
+  const messageId = clean(input.message_id || input.id);
+  const source = clean(input.source || "operator_runtime_activity");
+  if (!messageId) {
+    const error = new Error("Message id is required");
+    error.statusCode = 400;
+    error.code = "OPERATOR_MESSAGE_ID_REQUIRED";
+    throw error;
+  }
+  const now = new Date().toISOString();
+  if (source === "profile_raw_payload") {
+    const profile = await loadOperatorProfileRow(current.operator.id);
+    const rawPayload = rawPayloadOf(profile || {});
+    const rows = Array.isArray(rawPayload.operator_runtime_activity) ? rawPayload.operator_runtime_activity : [];
+    const updatedRows = rows.map((item) => String(item.id || "") === messageId
+      ? {
+          ...item,
+          read_at: item.read_at || now,
+          operator_read_at: item.operator_read_at || now,
+          unread_for_operator: false,
+          raw_payload: {
+            ...(item.raw_payload && typeof item.raw_payload === "object" ? item.raw_payload : {}),
+            unread_for_operator: false,
+            operator_read_at: item.raw_payload?.operator_read_at || now
+          }
+        }
+      : item);
+    await supabaseFetch(`operator_profiles?id=eq.${encodeURIComponent(current.operator.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        raw_payload: {
+          ...rawPayload,
+          operator_runtime_activity: updatedRows,
+          operator_runtime_activity_viewed_at: now
+        },
+        updated_at: now
+      })
+    });
+    return { message_id: messageId, source, viewed_at: now };
+  }
+  await supabaseFetch([
+    `operator_runtime_activity?id=eq.${encodeURIComponent(messageId)}`,
+    `operator_profile_id=eq.${encodeURIComponent(current.operator.id)}`
+  ].join("&"), {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      read_at: now,
+      operator_read_at: now,
+      unread_for_operator: false,
+      updated_at: now
+    })
+  });
+  return { message_id: messageId, source: "operator_runtime_activity", viewed_at: now };
 }
 
 async function accessOperatorWithKey(res, input) {
@@ -973,6 +1087,11 @@ module.exports = async function handler(req, res) {
 
     if (action === "operator_hq_message") {
       const result = await createOperatorHqMessage(req, input);
+      return send(res, 200, { success: true, ...result });
+    }
+
+    if (action === "operator_message_viewed") {
+      const result = await markOperatorMessageViewed(req, input);
       return send(res, 200, { success: true, ...result });
     }
 

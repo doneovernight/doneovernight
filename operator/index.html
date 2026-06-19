@@ -640,6 +640,28 @@
       box-shadow: 0 0 22px color-mix(in srgb, var(--operator-accent) 10%, transparent);
     }
 
+    .operator-status-option.is-active[data-availability="always_available"] {
+      border-color: rgba(111, 214, 165, .48);
+      background: rgba(111, 214, 165, .095);
+      box-shadow: 0 0 24px rgba(111, 214, 165, .16);
+    }
+
+    .operator-status-option.is-active[data-availability="available"] {
+      border-color: rgba(139, 224, 173, .46);
+      background: rgba(139, 224, 173, .08);
+    }
+
+    .operator-status-option.is-active[data-availability="busy"] {
+      border-color: rgba(233, 196, 138, .48);
+      background: rgba(233, 196, 138, .09);
+    }
+
+    .operator-status-option.is-active[data-availability="offline"] {
+      border-color: rgba(143, 77, 77, .46);
+      background: rgba(143, 77, 77, .095);
+      color: rgba(245,241,234,.72);
+    }
+
     .operator-status-option:disabled {
       cursor: default;
       opacity: .54;
@@ -2299,6 +2321,7 @@
       let liveHeartbeatTimer = null;
       let liveHeartbeatActive = false;
       let liveRuntimeFingerprint = '';
+      let currentAvailability = 'always_available';
       const TIER_ATMOSPHERES = {
         graphite: '#7c858b',
         emerald: '#6fd6a5',
@@ -2951,6 +2974,7 @@
 
       function setAvailabilityState(value, { disabled = false, pending = false } = {}) {
         const key = normalizeAvailability(value);
+        if (!pending) currentAvailability = key;
         if (availabilityLabel) availabilityLabel.textContent = pending ? 'Saving...' : availabilityLabels[key];
         availabilityOptions?.querySelectorAll('[data-availability]').forEach((button) => {
           button.classList.toggle('is-active', button.dataset.availability === key);
@@ -3362,7 +3386,8 @@
               <small>${escapeHTML(item.created_at || '')}</small>
               <div class="operator-row-actions">
                 ${workspaceUrlForSlug(item.workspace_slug) ? `<a class="operator-row-action" href="${escapeHTML(workspaceUrlForSlug(item.workspace_slug))}" target="_blank" rel="noopener noreferrer">Open task</a>` : ''}
-                <button class="operator-row-action" type="button" data-operator-mark-viewed>Mark viewed</button>
+                ${String(item.sender_role || '').toLowerCase() === 'admin' ? `<button class="operator-row-action" type="button" data-operator-task-message="operator_reply" data-message-label="Reply to HQ" data-task-reference="${escapeHTML(item.task_reference || '')}">Reply</button>` : ''}
+                <button class="operator-row-action" type="button" data-operator-mark-viewed data-message-id="${escapeHTML(item.id || '')}" data-message-source="${escapeHTML(item.source || '')}">Mark viewed</button>
               </div>
             </div>
             <span class="status-pill ${item.status === 'Unread' ? 'is-waiting' : 'is-muted'}">${escapeHTML(item.status || 'Update')}</span>
@@ -3723,7 +3748,7 @@
         if (tier) setRoadmapPreview(tier.dataset.tierPreview || 'graphite');
       });
 
-      document.addEventListener('click', (event) => {
+      document.addEventListener('click', async (event) => {
         const tier = event.target.closest?.('[data-tier-index]');
         if (tier) setActiveTier(tier.dataset.tierIndex || 0);
       });
@@ -3743,7 +3768,7 @@
           if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'availability' }).catch(() => {});
         } catch (error) {
           showRuntimeAlert(error.message || 'Could not update operator availability.');
-          setAvailabilityState('always_available');
+          setAvailabilityState(currentAvailability);
         }
       });
 
@@ -3757,7 +3782,7 @@
         if (event.target.closest('[data-operator-support-close]')) closeSupportModal();
       });
 
-      document.addEventListener('click', (event) => {
+      document.addEventListener('click', async (event) => {
         const taskAction = event.target.closest?.('[data-operator-task-message]');
         if (taskAction) {
           const reference = taskAction.dataset.taskReference || '';
@@ -3775,12 +3800,31 @@
         if (!button) return;
         const row = button.closest('.operator-row');
         const pill = row?.querySelector('.status-pill');
+        const messageId = button.dataset.messageId || '';
+        const source = button.dataset.messageSource || '';
+        button.disabled = true;
+        const previousText = button.textContent;
+        button.textContent = 'Saving...';
+        if (messageId) {
+          try {
+            await postOperatorAction({
+              action: 'operator_message_viewed',
+              message_id: messageId,
+              source
+            });
+            if (runtimeHandle) loadOperatorRuntime({ quiet: true, reason: 'message_viewed' }).catch(() => {});
+          } catch (error) {
+            button.textContent = previousText;
+            button.disabled = false;
+            showRuntimeAlert(error.message || 'Could not mark message viewed.');
+            return;
+          }
+        }
         if (pill) {
           pill.textContent = 'Read';
           pill.className = 'status-pill is-muted';
         }
         button.textContent = 'Viewed';
-        button.disabled = true;
       });
 
       logoutButton?.addEventListener('click', async () => {
