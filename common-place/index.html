@@ -3,43 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>COMMON PL4CE — Reveal</title>
-  <meta name="description" content="Scroll-driven COMMON PL4CE mechanical brand reveal.">
+  <title>COMMONPL4CE — Campaign Archive</title>
+  <meta name="description" content="COMMONPL4CE is a campaign archive and booking experience for fashion, travel, lifestyle and editorial imagery.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <style>
     :root {
-      --ink: #080807;
-      --paper: #efeadf;
-      --white: #f8f3e8;
-      --muted: rgba(248, 243, 232, .62);
-      --industrial: Impact, "Arial Black", "Helvetica Neue Condensed Black", "Arial Narrow", sans-serif;
+      --black: #060606;
+      --ink: #0a0a09;
+      --paper: #ede6d8;
+      --muted: rgba(237, 230, 216, .64);
+      --line: rgba(237, 230, 216, .18);
       --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --open: 0;
-      --left-reveal: 0px;
-      --right-reveal: 0px;
-      --left-slide: -92px;
-      --right-slide: -74px;
-      --four-rotate: 0deg;
-      --four-y: 0px;
-      --dot-x: 0px;
-      --lock-y: 0px;
-      --lock-scale: 1;
-      --gallery-x: 0px;
+      --serif: Georgia, "Times New Roman", serif;
+      --archive-x: 0px;
     }
 
     * { box-sizing: border-box; }
     html {
       min-height: 100%;
-      background: var(--ink);
+      background: var(--black);
       scroll-behavior: smooth;
     }
     body {
       margin: 0;
       min-height: 100vh;
       overflow-x: hidden;
-      background: var(--ink);
-      color: var(--white);
+      background: var(--black);
+      color: var(--paper);
       font-family: var(--sans);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -48,651 +39,708 @@
       content: "";
       position: fixed;
       inset: 0;
-      z-index: 50;
+      z-index: 80;
       pointer-events: none;
-      opacity: .12;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.62'/%3E%3C/svg%3E");
+      opacity: .11;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.72'/%3E%3C/svg%3E");
     }
+    img { display: block; max-width: 100%; }
     a { color: inherit; text-decoration: none; }
-
-    .reveal-track {
-      position: relative;
-      min-height: 420vh;
-      background: var(--ink);
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
     }
-    .pin {
-      position: sticky;
-      top: 0;
-      height: 100svh;
+
+    .site-header {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: clamp(16px, 2.4vw, 30px);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(0, -10px, 0);
+      transition: opacity 700ms ease, transform 700ms ease;
+    }
+    .site-header.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0);
+    }
+    .header-logo {
+      width: clamp(34px, 4vw, 50px);
+      height: auto;
+    }
+    .book-link {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--paper);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .book-link:hover { color: #fff; }
+
+    .opening {
+      position: relative;
+      min-height: 100svh;
       display: grid;
       place-items: center;
       overflow: hidden;
       isolation: isolate;
+      background: var(--black);
     }
-    .background {
-      position: absolute;
-      inset: 0;
-      z-index: -3;
-      background:
-        linear-gradient(180deg, rgba(8,8,7,.06), rgba(8,8,7,.3)),
-        url("/assets/common-place/photo-05-opening.jpg") center / cover no-repeat;
-      transform: scale(calc(1.08 - (var(--open) * .035)));
-      filter: saturate(.82) contrast(1.04);
-    }
-    .pin::before {
+    .opening::before {
       content: "";
       position: absolute;
       inset: 0;
       z-index: -2;
       background:
-        radial-gradient(circle at 50% 44%, rgba(248,243,232,.72), transparent 22%),
-        linear-gradient(90deg, rgba(241,236,226,.96), rgba(241,236,226,.72) 32%, rgba(241,236,226,.58) 62%, rgba(241,236,226,.9));
-      opacity: calc(.98 - (var(--open) * .08));
+        linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.2)),
+        url("/assets/common-place/final/opening.jpg") center / cover no-repeat;
+      filter: saturate(.92) contrast(1.04);
+      transform: scale(1.01);
     }
-    .pin::after {
+    .opening::after {
       content: "";
       position: absolute;
       inset: 0;
       z-index: -1;
       background:
-        linear-gradient(90deg, rgba(8,8,7,.28), transparent 28%, transparent 72%, rgba(8,8,7,.28)),
-        linear-gradient(180deg, rgba(8,8,7,.18), transparent 42%, rgba(8,8,7,.26));
+        radial-gradient(circle at 50% 44%, rgba(0,0,0,.04), rgba(0,0,0,.36) 75%),
+        linear-gradient(90deg, rgba(0,0,0,.34), transparent 34%, transparent 66%, rgba(0,0,0,.34));
+    }
+    .opening-wordmark {
+      width: min(82vw, 1040px);
+      height: auto;
+      filter: none;
     }
 
-    .brand-stage {
-      width: min(94vw, 1320px);
-      display: grid;
-      place-items: center;
-      transform: translate3d(0, var(--lock-y), 0) scale(var(--lock-scale));
-      transform-origin: center;
-      will-change: transform;
-    }
-    .logo {
-      --unit: clamp(78px, 13.2vw, 184px);
-      display: inline-flex;
-      align-items: flex-end;
-      justify-content: center;
-      height: calc(var(--unit) * 1.04);
-      white-space: nowrap;
-      transform: translate3d(0, 0, 0);
-      will-change: transform;
-    }
-    .logo-piece {
+    .archive-scroll {
       position: relative;
-      z-index: 1;
-      flex: 0 0 auto;
-      display: block;
-      width: calc(var(--unit) * var(--w, .9));
-      height: var(--unit);
-      margin-left: calc(var(--unit) * var(--kern, -.14));
-      transform: translate3d(0, 0, 0);
-      will-change: transform;
+      min-height: 360svh;
+      background: var(--black);
     }
-    .logo-piece:first-child { margin-left: 0; }
-    .logo-piece img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      pointer-events: none;
-      user-select: none;
-    }
-    .logo-piece.c { --w: .96; }
-    .logo-piece.o { --w: .92; --kern: -.2; }
-    .logo-piece.m { --w: 1.06; --kern: -.2; }
-    .logo-piece.n { --w: .98; --kern: -.19; }
-    .logo-piece.p { --w: .9; --kern: .02; z-index: 3; }
-    .logo-piece.l { --w: .64; --kern: -.14; }
-    .logo-piece.four {
-      --w: .76;
-      --kern: -.18;
-      z-index: 4;
-      transform: translate3d(0, var(--four-y), 0) rotate(var(--four-rotate));
-      transform-origin: 54% 100%;
-    }
-    .logo-piece.e { --w: .82; --kern: -.18; }
-    .logo-piece.dot {
-      --w: .38;
-      --kern: -.07;
-      z-index: 5;
-      transform: translate3d(var(--dot-x), 0, 0);
-    }
-    .reveal-window {
-      display: inline-block;
-      overflow: hidden;
-      width: var(--window);
-      flex: 0 0 auto;
-      will-change: width;
-    }
-    .left-window { --window: var(--left-reveal); }
-    .right-window { --window: var(--right-reveal); }
-    .revealed {
-      display: inline-flex;
-      align-items: flex-end;
-      height: calc(var(--unit) * 1.04);
-      transform: translate3d(var(--slide), 0, 0);
-      will-change: transform;
-    }
-    .left-window .revealed { --slide: var(--left-slide); }
-    .right-window .revealed { --slide: var(--right-slide); }
-
-    .logo-shadow {
-      position: absolute;
-      left: 50%;
-      top: calc(50% + clamp(42px, 8vw, 112px));
-      width: min(72vw, 840px);
-      height: 18px;
-      background: rgba(8, 8, 7, .2);
-      border-radius: 999px;
-      filter: blur(18px);
-      transform: translateX(-50%) scaleX(calc(.24 + var(--open) * .76));
-      opacity: calc(.52 - var(--open) * .12);
-      will-change: transform, opacity;
-    }
-    .mechanical-line {
-      position: absolute;
-      left: 50%;
-      bottom: clamp(28px, 5vw, 56px);
-      width: min(72vw, 760px);
-      height: 1px;
-      background: rgba(8, 8, 7, .18);
-      transform: translateX(-50%) scaleX(calc(.18 + var(--open) * .82));
-      transform-origin: center;
-    }
-    .scroll-note {
-      position: absolute;
-      right: clamp(16px, 4vw, 44px);
-      bottom: clamp(18px, 4vw, 40px);
-      color: rgba(8, 8, 7, .55);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      writing-mode: vertical-rl;
-    }
-
-    .locked-copy {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      min-height: 100vh;
-      display: grid;
-      align-items: end;
-      pointer-events: none;
-    }
-    .locked-copy-inner {
-      width: min(100% - 32px, 1280px);
-      margin: 0 auto;
-      padding: 0 0 clamp(38px, 7vw, 82px);
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 24px;
-      color: rgba(248, 243, 232, .82);
-      font-size: clamp(13px, 1.2vw, 16px);
-      line-height: 1.55;
-    }
-    .locked-copy strong {
-      color: var(--white);
-      font-family: var(--industrial);
-      font-size: clamp(38px, 8vw, 106px);
-      line-height: .85;
-      letter-spacing: -.045em;
-      text-transform: uppercase;
-    }
-    .locked-copy p {
-      max-width: 380px;
-      margin: 0;
-      align-self: end;
-    }
-
-    .content {
-      min-height: 70vh;
-      padding: clamp(74px, 10vw, 130px) 0;
-      background: #0b0a09;
-      color: var(--white);
-    }
-    .content-inner {
-      width: min(100% - 32px, 1180px);
-      margin: 0 auto;
-      display: grid;
-      gap: 28px;
-    }
-    .content h2 {
-      margin: 0;
-      font-family: var(--industrial);
-      font-size: clamp(52px, 11vw, 142px);
-      line-height: .82;
-      letter-spacing: -.05em;
-      text-transform: uppercase;
-    }
-    .content p {
-      max-width: 600px;
-      margin: 0;
-      color: rgba(248, 243, 232, .66);
-      font-size: 15px;
-      line-height: 1.75;
-    }
-    .maker {
-      min-height: 100svh;
-      display: grid;
-      align-items: center;
-      background: var(--paper);
-      color: var(--ink);
-      padding: clamp(64px, 9vw, 118px) 0;
-    }
-    .maker-inner {
-      width: min(100% - 32px, 1220px);
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: minmax(280px, .68fr) minmax(0, .78fr);
-      gap: clamp(28px, 7vw, 104px);
-      align-items: end;
-    }
-    .maker-image {
-      margin: 0;
-      overflow: hidden;
-      background: #d8d0c4;
-    }
-    .maker-image img {
-      display: block;
-      width: 100%;
-      height: min(74vh, 820px);
-      object-fit: cover;
-      object-position: center;
-      filter: saturate(.92) contrast(.96);
-    }
-    .maker-copy {
-      padding-bottom: clamp(10px, 4vw, 58px);
-    }
-    .maker-kicker,
-    .gallery-kicker {
-      margin: 0 0 14px;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-    }
-    .maker h2 {
-      max-width: 8ch;
-      margin: 0;
-      font-family: var(--industrial);
-      font-size: clamp(58px, 12vw, 152px);
-      line-height: .78;
-      letter-spacing: -.055em;
-      text-transform: lowercase;
-    }
-    .maker p:last-child {
-      max-width: 420px;
-      margin: 22px 0 0;
-      color: rgba(8, 8, 7, .62);
-      font-size: 15px;
-      line-height: 1.65;
-    }
-    .gallery-scroll {
-      position: relative;
-      min-height: 280vh;
-      background: #0b0a09;
-      color: var(--white);
-    }
-    .gallery-pin {
+    .archive-pin {
       position: sticky;
       top: 0;
       height: 100svh;
       overflow: hidden;
-      display: grid;
-      align-items: center;
-    }
-    .gallery-head {
-      position: absolute;
-      left: clamp(16px, 4vw, 44px);
-      top: clamp(18px, 5vw, 52px);
-      z-index: 2;
-      max-width: 360px;
-      color: rgba(248, 243, 232, .74);
-    }
-    .gallery-head h2 {
-      margin: 0;
-      font-family: var(--industrial);
-      font-size: clamp(42px, 8vw, 116px);
-      line-height: .78;
-      letter-spacing: -.055em;
-      text-transform: lowercase;
-    }
-    .gallery-head p {
-      margin: 16px 0 0;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .gallery-rail {
       display: flex;
       align-items: center;
-      gap: clamp(14px, 2vw, 28px);
-      width: max-content;
-      padding: 0 clamp(18px, 6vw, 96px);
-      transform: translate3d(var(--gallery-x), 0, 0);
+    }
+    .archive-rail {
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2.2vw, 34px);
+      padding: 0 clamp(18px, 6vw, 90px);
+      transform: translate3d(var(--archive-x), 0, 0);
       will-change: transform;
     }
-    .gallery-item {
-      position: relative;
+    .archive-frame {
       flex: 0 0 auto;
-      width: clamp(250px, 31vw, 480px);
-      margin: 0;
+      width: min(74vw, 620px);
+      height: min(82svh, 880px);
       overflow: hidden;
-      background: #181613;
+      background: #111;
     }
-    .gallery-item.is-wide {
-      width: clamp(380px, 54vw, 860px);
+    .archive-frame.wide {
+      width: min(86vw, 980px);
+      height: min(72svh, 740px);
     }
-    .gallery-item.is-tall {
-      width: clamp(230px, 27vw, 390px);
+    .archive-frame.tall {
+      width: min(62vw, 520px);
+      height: min(86svh, 920px);
     }
-    .gallery-item img {
-      display: block;
+    .archive-frame.detail {
+      width: min(56vw, 460px);
+      height: min(68svh, 660px);
+    }
+    .archive-frame img {
       width: 100%;
-      height: clamp(360px, 62vh, 720px);
+      height: 100%;
       object-fit: cover;
-      filter: saturate(.92) contrast(.98);
-    }
-    .gallery-item.is-wide img {
-      height: clamp(310px, 52vh, 620px);
-    }
-    .gallery-item figcaption {
-      position: absolute;
-      left: 12px;
-      bottom: 10px;
-      color: rgba(248, 243, 232, .76);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .13em;
-      text-transform: uppercase;
-      text-shadow: 0 1px 16px rgba(0,0,0,.55);
-    }
-    .close {
-      min-height: 72vh;
-      display: grid;
-      align-items: end;
-      padding: clamp(52px, 8vw, 100px) 0;
-      background: var(--paper);
-      color: var(--ink);
-    }
-    .close-inner {
-      width: min(100% - 32px, 1180px);
-      margin: 0 auto;
-      display: grid;
-      gap: 18px;
-    }
-    .close h2 {
-      max-width: 9ch;
-      margin: 0;
-      font-family: var(--industrial);
-      font-size: clamp(64px, 13vw, 170px);
-      line-height: .76;
-      letter-spacing: -.055em;
-      text-transform: lowercase;
-    }
-    .close p {
-      max-width: 420px;
-      margin: 0;
-      color: rgba(8, 8, 7, .62);
-      font-size: 14px;
-      line-height: 1.65;
     }
 
-    @media (max-width: 720px) {
-      .reveal-track { min-height: 390vh; }
-      .brand-stage { width: 96vw; }
-      .logo { --unit: clamp(56px, 15.5vw, 94px); }
-      .logo-piece { margin-left: calc(var(--unit) * var(--kern, -.17)); }
-      .logo-piece.p { --kern: .02; }
-      .scroll-note {
-        writing-mode: horizontal-tb;
-        right: auto;
-        left: 14px;
+    .vertical {
+      position: relative;
+      background: var(--ink);
+    }
+    .section {
+      padding: clamp(74px, 10vw, 160px) clamp(18px, 5vw, 76px);
+    }
+    .project {
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: minmax(150px, .42fr) minmax(0, 1fr);
+      gap: clamp(22px, 5vw, 76px);
+      align-items: center;
+      border-top: 1px solid var(--line);
+    }
+    .project-kicker,
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .project-title,
+    .section-title {
+      margin: 0;
+      color: var(--paper);
+      font-size: clamp(34px, 7vw, 112px);
+      font-weight: 800;
+      line-height: .86;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+    }
+    .project-note,
+    .body-copy {
+      max-width: 620px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: clamp(17px, 2vw, 26px);
+      line-height: 1.25;
+    }
+    .image-stack {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: clamp(10px, 1.4vw, 22px);
+      align-items: end;
+    }
+    .image-stack img {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      object-fit: cover;
+      background: #111;
+    }
+    .span-7 { grid-column: span 7; height: min(76svh, 780px); }
+    .span-5 { grid-column: span 5; height: min(56svh, 600px); }
+    .span-4 { grid-column: span 4; height: min(46svh, 500px); }
+    .span-8 { grid-column: span 8; height: min(64svh, 700px); }
+    .offset-top { align-self: start; }
+
+    .rio {
+      background: #0f1111;
+    }
+    .rio-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: clamp(14px, 2vw, 28px);
+      align-items: end;
+      margin-top: clamp(34px, 5vw, 76px);
+    }
+    .rio-layout img:first-child { height: min(72svh, 760px); object-fit: cover; }
+    .rio-pair {
+      display: grid;
+      gap: clamp(14px, 2vw, 28px);
+    }
+    .rio-pair img { height: min(38svh, 380px); object-fit: cover; }
+
+    .behind {
+      display: grid;
+      grid-template-columns: minmax(0, .86fr) minmax(280px, .72fr);
+      gap: clamp(28px, 7vw, 110px);
+      align-items: center;
+      border-top: 1px solid var(--line);
+    }
+    .behind img {
+      width: 100%;
+      height: min(82svh, 820px);
+      object-fit: cover;
+    }
+
+    .why {
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(24px, 6vw, 92px);
+    }
+    .why h3 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 58px);
+      line-height: .92;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+    }
+    .why p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: clamp(16px, 1.5vw, 22px);
+      line-height: 1.25;
+    }
+
+    .booking {
+      display: grid;
+      grid-template-columns: minmax(220px, .6fr) minmax(0, 1fr);
+      gap: clamp(34px, 7vw, 120px);
+      align-items: start;
+    }
+    .intake {
+      display: grid;
+      gap: 34px;
+    }
+    .step {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    .step-label {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+    .choice-row input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .choice-row span,
+    .field {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      border: 1px solid rgba(237,230,216,.3);
+      padding: 11px 14px;
+      background: transparent;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .choice-row input:checked + span,
+    .choice-row span:hover,
+    .field:focus {
+      border-color: rgba(237,230,216,.82);
+      background: rgba(237,230,216,.07);
+      outline: none;
+    }
+    .field {
+      width: 100%;
+      appearance: none;
+      border-radius: 0;
+    }
+    textarea.field {
+      min-height: 116px;
+      resize: vertical;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .cal-block {
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .cal-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 48px;
+      padding: 14px 18px;
+      background: var(--paper);
+      color: var(--black);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .cal-note {
+      max-width: 520px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .availability {
+      min-height: 56svh;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: #eee6d8;
+      color: #080807;
+    }
+    .availability h2 {
+      margin: 0;
+      font-size: clamp(34px, 8vw, 118px);
+      line-height: .86;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+    .availability p {
+      margin: 22px 0 0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .footer {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 22px;
+      align-items: end;
+      padding: clamp(28px, 5vw, 64px);
+      background: #080807;
+      border-top: 1px solid var(--line);
+    }
+    .footer img {
+      width: clamp(34px, 4vw, 50px);
+      height: auto;
+    }
+    .footer-word {
+      margin: 0;
+      font-size: clamp(18px, 3vw, 42px);
+      font-weight: 900;
+      line-height: .9;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+    .footer-meta {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .footer-actions {
+      display: grid;
+      gap: 12px;
+      justify-items: end;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 760px) {
+      .opening-wordmark { width: 90vw; }
+      .archive-rail {
+        gap: 12px;
+        padding: 0 16px;
       }
-      .mechanical-line {
-        width: calc(100% - 28px);
+      .archive-frame,
+      .archive-frame.tall,
+      .archive-frame.detail {
+        width: 76vw;
+        height: 76svh;
       }
-      .locked-copy-inner {
-        display: grid;
+      .archive-frame.wide {
+        width: 88vw;
+        height: 62svh;
       }
-      .locked-copy p {
-        max-width: 300px;
-      }
-      .maker-inner {
+      .project,
+      .behind,
+      .booking,
+      .rio-layout,
+      .why,
+      .footer {
         grid-template-columns: 1fr;
       }
-      .maker-image img {
-        height: 62vh;
+      .project {
+        align-content: center;
+        gap: 30px;
       }
-      .gallery-scroll {
-        min-height: 240vh;
+      .image-stack { grid-template-columns: repeat(6, 1fr); }
+      .span-7,
+      .span-5,
+      .span-4,
+      .span-8 {
+        grid-column: 1 / -1;
+        height: auto;
+        aspect-ratio: 3 / 4;
       }
-      .gallery-head {
-        max-width: 270px;
+      .rio-layout img:first-child,
+      .rio-pair img,
+      .behind img {
+        height: auto;
+        aspect-ratio: 3 / 4;
       }
-      .gallery-item {
-        width: clamp(230px, 72vw, 340px);
-      }
-      .gallery-item.is-wide {
-        width: clamp(320px, 88vw, 460px);
-      }
-      .gallery-item.is-tall {
-        width: clamp(220px, 68vw, 330px);
-      }
-      .gallery-item img,
-      .gallery-item.is-wide img {
-        height: 54vh;
+      .footer-actions {
+        justify-items: start;
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .background,
-      .brand-stage,
-      .logo,
-      .revealed,
-      .logo-piece,
-      .logo-shadow,
-      .mechanical-line {
-        transition: none !important;
+      .archive-rail { transform: none !important; }
+      .archive-scroll { min-height: auto !important; }
+      .archive-pin {
+        position: relative;
+        height: auto;
+        overflow-x: auto;
+        padding: 48px 0;
       }
-      .gallery-rail {
-        transition: none !important;
+      .site-header {
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
       }
     }
   </style>
 </head>
 <body>
-  <main>
-    <section class="reveal-track" id="reveal">
-      <div class="pin">
-        <div class="background" aria-hidden="true"></div>
-        <div class="brand-stage" aria-label="COMMON PL4CE scroll reveal">
-          <div class="logo" id="logo" aria-hidden="true">
-            <span class="logo-piece c"><img src="/assets/common-place-logo/c.png" alt="" loading="lazy" decoding="async"></span>
-            <span class="reveal-window left-window" id="leftWindow">
-              <span class="revealed" id="leftLetters">
-                <span class="logo-piece o"><img src="/assets/common-place-logo/o.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece m"><img src="/assets/common-place-logo/m.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece m"><img src="/assets/common-place-logo/m.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece o"><img src="/assets/common-place-logo/o.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece n"><img src="/assets/common-place-logo/n.png" alt="" loading="lazy" decoding="async"></span>
-              </span>
-            </span>
-            <span class="logo-piece p"><img src="/assets/common-place-logo/p.png" alt="" loading="lazy" decoding="async"></span>
-            <span class="reveal-window right-window" id="rightWindow">
-              <span class="revealed" id="rightLetters">
-                <span class="logo-piece l"><img src="/assets/common-place-logo/l.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece four"><img src="/assets/common-place-logo/4.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece c"><img src="/assets/common-place-logo/c.png" alt="" loading="lazy" decoding="async"></span>
-                <span class="logo-piece e"><img src="/assets/common-place-logo/e.png" alt="" loading="lazy" decoding="async"></span>
-              </span>
-            </span>
-            <span class="logo-piece dot"><img src="/assets/common-place-logo/dot.png" alt="" loading="lazy" decoding="async"></span>
-          </div>
-          <div class="logo-shadow" aria-hidden="true"></div>
-        </div>
-        <div class="mechanical-line" aria-hidden="true"></div>
-        <div class="scroll-note">Scroll to open</div>
-      </div>
-      <div class="locked-copy">
-        <div class="locked-copy-inner">
-          <strong>Locked</strong>
-          <p>The compact cp. mark opens into commonpl4ce. The period travels with the right side, and the 4 settles into the final wordmark.</p>
-        </div>
-      </div>
-    </section>
-    <section class="maker" aria-labelledby="maker-title">
-      <div class="maker-inner">
-        <figure class="maker-image">
-          <img src="/assets/common-place/photo-04-romy.jpg" alt="Romy Peters holding a camera on a palm-lined beach" loading="lazy">
-        </figure>
-        <div class="maker-copy">
-          <p class="maker-kicker">Romy Peters</p>
-          <h2 id="maker-title">the girl behind the film</h2>
-          <p>Shot through travel, casting rooms and quiet in-between moments. Common Place lives where documentary instinct meets campaign energy.</p>
-        </div>
-      </div>
-    </section>
-    <section class="gallery-scroll" id="gallery" aria-labelledby="gallery-title">
-      <div class="gallery-pin">
-        <div class="gallery-head">
-          <p class="gallery-kicker">Archive roll</p>
-          <h2 id="gallery-title">slow frames</h2>
-          <p>The rest of the roll moves sideways as the page moves down.</p>
-        </div>
-        <div class="gallery-rail" id="galleryRail">
-          <figure class="gallery-item is-wide">
-            <img src="/assets/common-place/photo-01.jpg" alt="Three boys smiling on a beach at sunset" loading="lazy">
-            <figcaption>Rio</figcaption>
-          </figure>
-          <figure class="gallery-item is-wide">
-            <img src="/assets/common-place/photo-02.jpg" alt="Ocean waves rolling toward a mountain coastline at dusk" loading="lazy">
-            <figcaption>Film mood</figcaption>
-          </figure>
-          <figure class="gallery-item is-wide">
-            <img src="/assets/common-place/photo-03.jpg" alt="A person sitting near palm trees by the beach" loading="lazy">
-            <figcaption>Street</figcaption>
-          </figure>
-          <figure class="gallery-item">
-            <img src="/assets/common-place/photo-06.jpg" alt="Two models in yellow tops seated against a dark wall" loading="lazy">
-            <figcaption>Campaign</figcaption>
-          </figure>
-          <figure class="gallery-item is-tall">
-            <img src="/assets/common-place/photo-07.jpg" alt="Model in yellow glasses seated in a chrome chair" loading="lazy">
-            <figcaption>Portrait</figcaption>
-          </figure>
-          <figure class="gallery-item is-tall">
-            <img src="/assets/common-place/photo-08.jpg" alt="Two models styled in yellow and grey in a studio" loading="lazy">
-            <figcaption>Lookbook</figcaption>
-          </figure>
-          <figure class="gallery-item is-tall">
-            <img src="/assets/common-place/photo-09.jpg" alt="Model standing in a yellow sweatshirt against a soft wall" loading="lazy">
-            <figcaption>Still</figcaption>
-          </figure>
-          <figure class="gallery-item is-tall">
-            <img src="/assets/common-place/photo-10.jpg" alt="Two models sitting on wooden studio benches" loading="lazy">
-            <figcaption>Common place</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-    <section class="close" aria-labelledby="close-title">
-      <div class="close-inner">
-        <h2 id="close-title">Archive locked.</h2>
-        <p>A rough-edged wordmark, a moving archive, and a visual system built from the roll itself.</p>
-      </div>
-    </section>
-  </main>
-  <script>
-    (() => {
-      const root = document.documentElement;
-      const track = document.getElementById("reveal");
-      const leftLetters = document.getElementById("leftLetters");
-      const rightLetters = document.getElementById("rightLetters");
-      const gallery = document.getElementById("gallery");
-      const galleryRail = document.getElementById("galleryRail");
+  <header class="site-header" id="siteHeader" aria-label="COMMONPL4CE">
+    <a href="#top" aria-label="COMMONPL4CE home">
+      <img class="header-logo" src="/assets/common-place/final/cp-header.png" alt="COMMONPL4CE">
+    </a>
+    <a class="book-link" href="#start-project">Book</a>
+  </header>
 
-      let target = 0;
-      let current = 0;
-      let galleryTarget = 0;
-      let galleryCurrent = 0;
-      let leftWidth = 0;
-      let rightWidth = 0;
-      let galleryTravel = 0;
+  <main id="top">
+    <section class="opening" aria-label="COMMONPL4CE opening">
+      <img class="opening-wordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
+    </section>
+
+    <section class="archive-scroll" id="archive" aria-label="Campaign archive">
+      <div class="archive-pin">
+        <div class="archive-rail" id="archiveRail">
+          <figure class="archive-frame tall"><img src="/assets/common-place/final/opening.jpg" alt="Romy standing with her back toward the camera" loading="eager"></figure>
+          <figure class="archive-frame tall"><img src="/assets/common-place/final/yellow-sweater.jpg" alt="Yellow sweater portrait on film" loading="lazy"></figure>
+          <figure class="archive-frame tall"><img src="/assets/common-place/final/hoodie-front.jpg" alt="Hoodie portrait seated on a bench" loading="lazy"></figure>
+          <figure class="archive-frame detail"><img src="/assets/common-place/final/chair-detail.jpg" alt="Editorial chair and styling detail" loading="lazy"></figure>
+          <figure class="archive-frame tall"><img src="/assets/common-place/final/campaign-couch.jpg" alt="Campaign image with couch and hoodie" loading="lazy"></figure>
+          <figure class="archive-frame tall"><img src="/assets/common-place/final/hoodie-side.jpg" alt="Side profile hoodie campaign image" loading="lazy"></figure>
+          <figure class="archive-frame wide"><img src="/assets/common-place/final/duo-portrait.jpg" alt="Duo portrait in yellow campaign styling" loading="lazy"></figure>
+        </div>
+      </div>
+    </section>
+
+    <div class="vertical">
+      <section class="section project" aria-labelledby="novateur-title">
+        <div>
+          <p class="project-kicker">COMMONPL4CE 001</p>
+          <h1 class="project-title" id="novateur-title">Novateur</h1>
+        </div>
+        <div class="image-stack">
+          <img class="span-7" src="/assets/common-place/final/campaign-couch.jpg" alt="Novateur campaign image on couch" loading="lazy">
+          <img class="span-5 offset-top" src="/assets/common-place/final/chair-detail.jpg" alt="Novateur editorial styling detail" loading="lazy">
+        </div>
+      </section>
+
+      <section class="section project" aria-labelledby="portraits-title">
+        <div>
+          <p class="project-kicker">COMMONPL4CE 002</p>
+          <h2 class="project-title" id="portraits-title">Portraits</h2>
+        </div>
+        <div class="image-stack">
+          <img class="span-5" src="/assets/common-place/final/yellow-sweater.jpg" alt="Yellow sweater portrait" loading="lazy">
+          <img class="span-7 offset-top" src="/assets/common-place/final/duo-portrait.jpg" alt="Close duo portrait" loading="lazy">
+        </div>
+      </section>
+
+      <section class="section project" aria-labelledby="editorial-title">
+        <div>
+          <p class="project-kicker">COMMONPL4CE 003</p>
+          <h2 class="project-title" id="editorial-title">Editorial</h2>
+        </div>
+        <div class="image-stack">
+          <img class="span-8" src="/assets/common-place/photo-06.jpg" alt="Editorial seated campaign image" loading="lazy">
+          <img class="span-4 offset-top" src="/assets/common-place/final/hoodie-side.jpg" alt="Hoodie side profile" loading="lazy">
+        </div>
+      </section>
+
+      <section class="section project" aria-labelledby="campaign-title">
+        <div>
+          <p class="project-kicker">COMMONPL4CE 004</p>
+          <h2 class="project-title" id="campaign-title">Campaign</h2>
+        </div>
+        <div class="image-stack">
+          <img class="span-5 offset-top" src="/assets/common-place/final/hoodie-front.jpg" alt="Hoodie front campaign portrait" loading="lazy">
+          <img class="span-7" src="/assets/common-place/photo-10.jpg" alt="Campaign image on wooden bench" loading="lazy">
+        </div>
+      </section>
+
+      <section class="section rio" aria-labelledby="rio-title">
+        <p class="project-kicker">COMMONPL4CE 005</p>
+        <h2 class="project-title" id="rio-title">Rio</h2>
+        <div class="rio-layout">
+          <img src="/assets/common-place/photo-01.jpg" alt="Rio beach portrait with children" loading="lazy">
+          <div class="rio-pair">
+            <img src="/assets/common-place/photo-02.jpg" alt="Rio ocean at dusk" loading="lazy">
+            <img src="/assets/common-place/photo-03.jpg" alt="Beach portrait under palm trees" loading="lazy">
+          </div>
+        </div>
+      </section>
+
+      <section class="section behind" aria-labelledby="behind-title">
+        <img src="/assets/common-place/photo-04-romy.jpg" alt="Romy Peters photographing on a beach" loading="lazy">
+        <div>
+          <p class="eyebrow">COMMONPL4CE</p>
+          <h2 class="section-title" id="behind-title">Behind the Film</h2>
+          <p class="body-copy">Romy Peters works between fashion, travel and documentary storytelling.</p>
+          <p class="body-copy">Selected projects are captured on Kodak film to preserve texture, atmosphere and imperfections that digital often removes.</p>
+        </div>
+      </section>
+
+      <section class="section why" aria-label="Why COMMONPL4CE">
+        <div>
+          <h3>Real</h3>
+          <p>Campaigns that feel lived-in.</p>
+        </div>
+        <div>
+          <h3>Editorial</h3>
+          <p>Imagery with atmosphere and depth.</p>
+        </div>
+        <div>
+          <h3>Worldwide</h3>
+          <p>Available in the Netherlands and internationally.</p>
+        </div>
+      </section>
+
+      <section class="section booking" id="start-project" aria-labelledby="start-title">
+        <div>
+          <p class="eyebrow">Booking</p>
+          <h2 class="section-title" id="start-title">Start Your Project</h2>
+          <p class="body-copy">A short intake before routing into the right booking flow.</p>
+        </div>
+        <form class="intake" action="https://cal.com/commonpl4ce/project" method="get">
+          <fieldset class="step">
+            <legend class="step-label">Step 1 · Project type</legend>
+            <div class="choice-row">
+              <label><input type="radio" name="project" value="fashion"><span>Fashion</span></label>
+              <label><input type="radio" name="project" value="campaign"><span>Campaign</span></label>
+              <label><input type="radio" name="project" value="lifestyle"><span>Lifestyle</span></label>
+              <label><input type="radio" name="project" value="travel"><span>Travel</span></label>
+              <label><input type="radio" name="project" value="editorial"><span>Editorial</span></label>
+              <label><input type="radio" name="project" value="other"><span>Other</span></label>
+            </div>
+          </fieldset>
+          <fieldset class="step">
+            <legend class="step-label">Step 2 · Location</legend>
+            <div class="choice-row">
+              <label><input type="radio" name="location" value="netherlands"><span>Netherlands</span></label>
+              <label><input type="radio" name="location" value="europe"><span>Europe</span></label>
+              <label><input type="radio" name="location" value="worldwide"><span>Worldwide</span></label>
+            </div>
+          </fieldset>
+          <label class="step">
+            <span class="step-label">Step 3 · Preferred date</span>
+            <input class="field" type="text" name="date" placeholder="Month / date / flexible">
+          </label>
+          <label class="step">
+            <span class="step-label">Step 4 · Budget</span>
+            <select class="field" name="budget">
+              <option value="">Select range</option>
+              <option>Under €1,000</option>
+              <option>€1,000–€2,500</option>
+              <option>€2,500–€5,000</option>
+              <option>€5,000+</option>
+            </select>
+          </label>
+          <label class="step">
+            <span class="step-label">Step 5 · References</span>
+            <textarea class="field" name="references" placeholder="Paste links, notes or visual references."></textarea>
+          </label>
+          <div class="cal-block">
+            <button class="cal-button" type="submit">Continue to booking</button>
+            <p class="cal-note">Cal.com routing form placeholder: replace with the final COMMONPL4CE Cal.com routing link when it is available.</p>
+          </div>
+        </form>
+      </section>
+
+      <section class="section availability" aria-label="Availability">
+        <div>
+          <h2>Currently Booking</h2>
+          <p>Netherlands · Europe · Worldwide</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <img src="/assets/common-place/final/cp-header.png" alt="COMMONPL4CE">
+    <div>
+      <p class="footer-word">COMMONPL4CE</p>
+      <p class="footer-meta">Built by <a href="https://doneovernight.com">DONEOVERNIGHT</a></p>
+    </div>
+    <div class="footer-actions">
+      <a href="#start-project">Book</a>
+      <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const archive = document.getElementById('archive');
+      const rail = document.getElementById('archiveRail');
+      const header = document.getElementById('siteHeader');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!archive || !rail || !header || reduceMotion) return;
+
+      let maxTravel = 0;
+      let targetProgress = 0;
+      let currentProgress = 0;
       let ticking = false;
 
-      const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-      const ease = (t) => t * t * (3 - 2 * t);
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
       function measure() {
-        leftWidth = leftLetters.getBoundingClientRect().width;
-        rightWidth = rightLetters.getBoundingClientRect().width;
-        galleryTravel = Math.max(0, galleryRail.scrollWidth - window.innerWidth + 96);
+        const viewport = window.innerWidth;
+        maxTravel = Math.max(0, rail.scrollWidth - viewport);
+        archive.style.minHeight = `${Math.max(window.innerHeight * 2.8, window.innerHeight + maxTravel)}px`;
         updateTarget();
         render(true);
       }
 
       function updateTarget() {
-        const rect = track.getBoundingClientRect();
-        const scrollable = Math.max(1, rect.height - window.innerHeight);
-        const galleryRect = gallery.getBoundingClientRect();
-        const galleryScrollable = Math.max(1, galleryRect.height - window.innerHeight);
-        target = clamp(-rect.top / scrollable);
-        galleryTarget = clamp(-galleryRect.top / galleryScrollable);
+        const rect = archive.getBoundingClientRect();
+        const distance = Math.max(1, rect.height - window.innerHeight);
+        targetProgress = clamp(-rect.top / distance, 0, 1);
+        requestTick();
+      }
+
+      function requestTick() {
         if (!ticking) {
           ticking = true;
-          requestAnimationFrame(tick);
+          window.requestAnimationFrame(render);
         }
       }
 
-      function tick() {
-        current += (target - current) * 0.12;
-        galleryCurrent += (galleryTarget - galleryCurrent) * 0.1;
-        if (Math.abs(target - current) < 0.0008) current = target;
-        if (Math.abs(galleryTarget - galleryCurrent) < 0.0008) galleryCurrent = galleryTarget;
-        render(false);
-        if (current !== target || galleryCurrent !== galleryTarget) {
-          requestAnimationFrame(tick);
+      function render(immediate) {
+        ticking = false;
+        if (immediate === true) {
+          currentProgress = targetProgress;
         } else {
-          ticking = false;
+          currentProgress += (targetProgress - currentProgress) * 0.14;
+          if (Math.abs(targetProgress - currentProgress) > 0.001) {
+            requestTick();
+          }
         }
+
+        const x = -maxTravel * currentProgress;
+        rail.style.setProperty('--archive-x', `${x}px`);
+
+        const archiveDone = currentProgress > 0.985 && archive.getBoundingClientRect().bottom < window.innerHeight * 1.08;
+        header.classList.toggle('is-visible', archiveDone);
       }
 
-      function render(force) {
-        const open = ease(clamp(current / 0.78));
-        const leftOpen = ease(clamp(current / 0.66));
-        const rightOpen = ease(clamp((current - 0.04) / 0.68));
-        const fall = ease(clamp((current - 0.78) / 0.2));
-        const lock = ease(clamp((current - 0.86) / 0.14));
-
-        root.style.setProperty("--open", open.toFixed(4));
-        root.style.setProperty("--left-reveal", `${(leftWidth * leftOpen).toFixed(2)}px`);
-        root.style.setProperty("--right-reveal", `${(rightWidth * rightOpen).toFixed(2)}px`);
-        root.style.setProperty("--left-slide", `${((-1 + leftOpen) * leftWidth).toFixed(2)}px`);
-        root.style.setProperty("--right-slide", `${((-1 + rightOpen) * rightWidth).toFixed(2)}px`);
-        root.style.setProperty("--dot-x", "0px");
-        root.style.setProperty("--four-rotate", `${(-22 * fall).toFixed(2)}deg`);
-        root.style.setProperty("--four-y", `${(10 * fall).toFixed(2)}px`);
-        root.style.setProperty("--lock-y", `${(-36 * lock).toFixed(2)}vh`);
-        root.style.setProperty("--lock-scale", `${(1 - 0.58 * lock).toFixed(4)}`);
-        root.style.setProperty("--gallery-x", `${(-galleryTravel * ease(galleryCurrent)).toFixed(2)}px`);
-
-        if (force && !ticking) {
-          ticking = true;
-          requestAnimationFrame(tick);
-        }
-      }
-
-      window.addEventListener("scroll", updateTarget, { passive: true });
-      window.addEventListener("resize", measure);
-      window.addEventListener("orientationchange", measure);
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(measure);
-      } else {
-        window.addEventListener("load", measure);
-      }
+      window.addEventListener('scroll', updateTarget, { passive: true });
+      window.addEventListener('resize', measure);
+      window.addEventListener('load', measure);
       measure();
     })();
   </script>
