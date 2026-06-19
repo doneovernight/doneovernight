@@ -103,16 +103,40 @@
       place-items: center;
       background: var(--black);
       pointer-events: none;
-      animation: introExit 900ms ease 1900ms forwards;
+      animation: introExit 950ms ease 2600ms forwards;
     }
-    .intro-screen img {
-      width: min(82vw, 1040px);
-      height: auto;
+    .intro-copy {
+      display: grid;
+      justify-items: center;
+      gap: clamp(7px, 1.3vw, 16px);
+      color: var(--paper);
+      text-align: center;
+      text-transform: lowercase;
+    }
+    .intro-copy span {
+      display: block;
       opacity: 0;
-      animation: introLogo 1000ms ease 220ms forwards;
+      transform: translate3d(0, 5px, 0);
+      will-change: opacity, transform;
     }
-    @keyframes introLogo {
-      to { opacity: 1; }
+    .intro-copy .intro-small {
+      font-size: clamp(18px, 2.1vw, 31px);
+      font-weight: 500;
+      letter-spacing: .02em;
+      animation: introLine 850ms ease 220ms forwards;
+    }
+    .intro-copy .intro-large {
+      font-family: var(--serif);
+      font-size: clamp(28px, 4vw, 64px);
+      font-weight: 400;
+      letter-spacing: -.02em;
+      animation: introLine 900ms ease 980ms forwards;
+    }
+    @keyframes introLine {
+      to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
     }
     @keyframes introExit {
       to {
@@ -499,7 +523,6 @@
     }
 
     @media (max-width: 760px) {
-      .intro-screen img,
       .archive-wordmark { width: 90vw; }
       .archive-frame { width: 100vw; height: 100svh; }
       .light-section,
@@ -547,7 +570,10 @@
 </head>
 <body>
   <div class="intro-screen" aria-hidden="true">
-    <img src="/assets/common-place/final/wordmark.png" alt="">
+    <div class="intro-copy">
+      <span class="intro-small">we shoot</span>
+      <span class="intro-large">common places.</span>
+    </div>
   </div>
 
   <header class="site-header" id="siteHeader" aria-label="COMMONPL4CE">
