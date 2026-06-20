@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>COMMONPL4CE — Campaign Archive</title>
+  <title>COMMONPL4CE | Campaign Archive</title>
   <meta name="description" content="CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://doneovernight.com/cp">
@@ -95,6 +95,7 @@
       filter: brightness(0);
     }
     .book-link {
+      position: relative;
       padding: 0;
       border: 0;
       background: transparent;
@@ -104,8 +105,29 @@
       line-height: 1;
       letter-spacing: .14em;
       text-transform: uppercase;
+      transition: color 180ms ease, opacity 180ms ease;
     }
-    .book-link:hover { color: #fff; }
+    .book-link::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -6px;
+      height: 1px;
+      background: currentColor;
+      opacity: .34;
+      transform: scaleX(.42);
+      transform-origin: center;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .book-link:hover {
+      color: #fff;
+      opacity: .88;
+    }
+    .book-link:hover::after {
+      opacity: .72;
+      transform: scaleX(1);
+    }
 
     .intro-backdrop {
       position: fixed;
@@ -413,12 +435,12 @@
     .novateur-head {
       display: grid;
       grid-template-columns: minmax(0, .9fr) minmax(280px, .7fr);
-      gap: clamp(34px, 7vw, 112px);
-      align-items: end;
+      gap: clamp(48px, 8vw, 132px);
+      align-items: center;
     }
     .novateur-logo {
       display: block;
-      width: min(100%, 440px);
+      width: min(100%, 320px);
       height: auto;
       mix-blend-mode: multiply;
     }
@@ -435,7 +457,7 @@
     }
     .novateur-copy .project-label {
       margin: 18px 0 0;
-      color: var(--light-muted);
+      color: rgba(8, 8, 7, .68);
       font-size: 11px;
       font-weight: 850;
       letter-spacing: .18em;
@@ -443,7 +465,7 @@
     }
     .novateur-copy p {
       margin: 22px 0 0;
-      color: var(--light-muted);
+      color: rgba(8, 8, 7, .78);
       font-family: var(--serif);
       font-size: clamp(18px, 1.8vw, 25px);
       line-height: 1.22;
@@ -819,6 +841,7 @@
     .cal-button {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       min-height: 48px;
       padding: 14px 18px;
       border: 0;
@@ -829,10 +852,29 @@
       letter-spacing: .12em;
       text-transform: uppercase;
       cursor: pointer;
+      transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+    .cal-button:hover:not(:disabled) {
+      opacity: .92;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .2);
+    }
+    .cal-button:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: none;
     }
     .cal-button:disabled {
       cursor: wait;
       opacity: .58;
+    }
+    .intake.is-error {
+      animation: formShake 220ms ease;
+    }
+    @keyframes formShake {
+      0%, 100% { transform: translateX(0); }
+      28% { transform: translateX(-4px); }
+      58% { transform: translateX(3px); }
+      82% { transform: translateX(-2px); }
     }
     .cal-note {
       max-width: 520px;
@@ -847,7 +889,7 @@
       grid-template-columns: 1fr auto;
       gap: clamp(24px, 4vw, 52px);
       justify-items: start;
-      align-items: start;
+      align-items: center;
       min-height: clamp(154px, 17vw, 238px);
       overflow: hidden;
       isolation: isolate;
@@ -872,9 +914,13 @@
     .footer-brand {
       position: relative;
       z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2.2vw, 28px);
+      flex-wrap: wrap;
     }
     .footer-contact-label {
-      margin: 0 0 10px;
+      margin: 0;
       color: var(--muted);
       font-size: 11px;
       font-weight: 850;
@@ -891,8 +937,8 @@
     }
     .footer-contact a {
       display: inline-flex;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       align-items: center;
       justify-content: center;
       color: rgba(237, 230, 216, .72);
@@ -901,12 +947,12 @@
       color: var(--paper);
     }
     .footer-contact svg {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       stroke: currentColor;
     }
     .footer-availability {
-      margin: 12px 0 0;
+      margin: 0;
       color: rgba(237, 230, 216, .48);
       font-size: 10px;
       font-weight: 850;
@@ -964,7 +1010,7 @@
         align-items: start;
       }
       .novateur-logo {
-        width: min(100%, 320px);
+        width: min(100%, 240px);
       }
       .novateur-slide,
       .novateur-slide.is-wide {
@@ -993,12 +1039,12 @@
         min-height: 230px;
       }
       .footer-contact a {
-        width: 26px;
-        height: 26px;
+        width: 32px;
+        height: 32px;
       }
       .footer-contact svg {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
       }
       .footer-credit {
         justify-items: start;
@@ -1118,7 +1164,7 @@
           <h1 class="display-title" id="feeling-title">Shot with feeling.</h1>
           <p class="lead">CP creates visual stories for brands, campaigns and people who want their imagery to feel real.</p>
           <p class="lead">Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.</p>
-          <p class="small-line">For brands that need more than clean content — imagery with mood, memory and presence.</p>
+          <p class="small-line">For brands that need more than clean content: imagery with mood, memory and presence.</p>
           <a class="text-cta" href="#booker-station">Start your project</a>
         </div>
       </section>
@@ -1160,9 +1206,9 @@
             </div>
             <div class="novateur-copy">
               <p class="kicker">Selected Client</p>
-              <p class="project-label">Campaign — 2026</p>
+              <p class="project-label">Campaign / 2026</p>
               <p class="project-label">Independent clothing brand.</p>
-              <p>A visual story shaped around texture, movement and a real campaign feeling.</p>
+              <p>A campaign story built around fabric, movement and the feeling of clothes being lived in.</p>
             </div>
           </div>
 
@@ -1255,9 +1301,9 @@
             <img src="/assets/common-place/romy/romy-behind-film.jpg" alt="Romy Peters photographing on location" loading="lazy" decoding="async">
           </figure>
           <div class="founder-copy">
-            <p class="kicker">Founder / Behind the Film</p>
+            <p class="kicker">Behind the Film</p>
             <h2 class="section-title" id="behind-title">Romy Peters</h2>
-            <p class="lead">COMMONPL4CE is shaped by Romy Peters — a photographer working between fashion, lifestyle, travel and documentary storytelling.</p>
+            <p class="lead">COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.</p>
             <p class="body-copy">Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.</p>
             <p class="body-copy">Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.</p>
           </div>
@@ -1275,8 +1321,8 @@
 
       <section class="dark-section booking" id="booker-station" aria-labelledby="booker-title">
         <div>
-          <h2 class="section-title" id="booker-title">Booker Station</h2>
-          <p class="body-copy">Start a project with CP.</p>
+          <h2 class="section-title" id="booker-title">Book a shoot</h2>
+          <p class="body-copy">Tell me what you have in mind.</p>
         </div>
         <form class="intake" id="cpBookerForm">
           <div class="form-grid">
@@ -1346,13 +1392,13 @@
           </fieldset>
           <label class="step">
             <span class="step-label">References / mood / notes</span>
-            <textarea class="field" name="references" placeholder="Add links / describe the feeling"></textarea>
+            <textarea class="field" name="references" placeholder="Add links or describe the feeling"></textarea>
           </label>
           <div class="cal-block">
-            <button class="cal-button" type="submit">Submit request</button>
-            <p class="cal-note">This sends a project request, not a confirmed shoot booking.</p>
+            <button class="cal-button" type="submit">Send request</button>
+            <p class="cal-note">This sends a note about your project. The shoot is only confirmed after we speak.</p>
             <p class="form-success" id="bookerSuccess" role="status">Request received.<br>CP will reply with availability and direction.</p>
-            <p class="form-preview-note" id="bookerPreviewNote">Preview mode: request prepared locally. No email was sent.</p>
+            <p class="form-preview-note" id="bookerPreviewNote">Your request is ready. Please email CP directly if you do not receive a reply.</p>
             <p class="form-error" id="bookerError" role="alert"></p>
           </div>
         </form>
@@ -1475,6 +1521,15 @@
       const selectedRadio = (name) => form.querySelector(`input[name="${name}"]:checked`);
       const clean = (value) => String(value || '').trim();
       const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));
+      const humanMessage = (value, fallback = 'Request could not be sent. Please try again.') => {
+        if (!value) return fallback;
+        if (typeof value === 'string') return clean(value) || fallback;
+        if (value instanceof Error) return humanMessage(value.message, fallback);
+        if (typeof value === 'object') {
+          return humanMessage(value.message || value.error || value.code || value.statusText, fallback);
+        }
+        return fallback;
+      };
 
       function clearFormState() {
         form.classList.remove('is-error', 'is-preview');
@@ -1526,7 +1581,7 @@
 
         return {
           valid: invalid.length === 0,
-          message: invalid.length ? `Add: ${Array.from(new Set(invalid)).join(', ')}.` : ''
+          message: invalid.length ? `Please complete: ${Array.from(new Set(invalid)).join(', ')}.` : ''
         };
       }
 
@@ -1564,7 +1619,7 @@
         isSubmitting = true;
         if (submitButton) {
           submitButton.disabled = true;
-          submitButton.textContent = 'Sending request';
+          submitButton.textContent = 'Sending';
         }
 
         try {
@@ -1579,7 +1634,7 @@
           const result = await response.json().catch(() => ({}));
 
           if (!response.ok || result.success !== true) {
-            throw new Error(result.error || 'Request could not be sent. Please try again.');
+            throw new Error(humanMessage(result.error || result.message || result, 'Request could not be sent. Please try again.'));
           }
 
           form.classList.add('is-success');
@@ -1592,11 +1647,11 @@
         } catch (error) {
           form.classList.add('is-error');
           if (errorMessage) {
-            errorMessage.textContent = error.message || 'Request could not be sent. Please try again.';
+            errorMessage.textContent = humanMessage(error, 'Request could not be sent. Please try again.');
           }
           if (submitButton) {
             submitButton.disabled = false;
-            submitButton.textContent = 'Submit request';
+            submitButton.textContent = 'Send request';
           }
           isSubmitting = false;
         }
