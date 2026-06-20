@@ -4,13 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>COMMONPL4CE — Campaign Archive</title>
-  <meta name="description" content="COMMONPL4CE creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
+  <meta name="description" content="CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://doneovernight.com/cp">
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="preload" as="image" href="/assets/common-place/fullscreen/slide-01-opening.jpg">
-  <link rel="preload" as="image" href="/assets/common-place/fullscreen/slide-02-yellow.jpg">
-  <link rel="preload" as="image" href="/assets/common-place/fullscreen/slide-03-hoodie-front.jpg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/common-place/final/cp-favicon-32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/common-place/final/cp-favicon-96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/common-place/final/cp-apple-touch-icon.png">
+  <link rel="preload" as="image" href="/assets/common-place/final/wordmark-intro-commonpl4ces.png">
+  <link rel="preload" as="image" media="(min-width: 768px)" href="/assets/common-place/fullscreen/slide-01-opening.jpg">
+  <link rel="preload" as="image" media="(max-width: 767px)" href="/assets/common-place/mobile/slide-01-mobile.jpg">
   <style>
     :root {
       --black: #060606;
@@ -25,6 +27,7 @@
       --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --serif: Georgia, "Times New Roman", serif;
       --archive-x: 0px;
+      --archive-height: 100vh;
       --wordmark-opacity: 1;
     }
 
@@ -72,17 +75,24 @@
       padding: clamp(16px, 2.4vw, 30px);
       opacity: 0;
       pointer-events: none;
-      transform: translate3d(0, -10px, 0);
-      transition: opacity 700ms ease, transform 700ms ease;
+      transition: opacity 700ms ease;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2vw, 28px);
     }
     .site-header.is-visible {
       opacity: 1;
       pointer-events: auto;
-      transform: translate3d(0, 0, 0);
     }
     .header-logo {
       width: clamp(34px, 4vw, 50px);
       height: auto;
+      filter: none;
+    }
+    .site-header.is-on-light .header-logo {
+      filter: brightness(0);
     }
     .book-link {
       padding: 0;
@@ -97,47 +107,73 @@
     }
     .book-link:hover { color: #fff; }
 
-    .intro-screen {
+    .intro-backdrop {
       position: fixed;
       inset: 0;
       z-index: 70;
-      display: grid;
-      place-items: center;
       background: var(--black);
       pointer-events: none;
-      animation: introExit 950ms ease 2600ms forwards;
+      animation: introExit 340ms ease 2380ms forwards;
     }
-    .intro-copy {
-      display: grid;
-      justify-items: center;
-      gap: clamp(7px, 1.3vw, 16px);
-      color: var(--paper);
-      text-align: center;
-      text-transform: lowercase;
-    }
-    .intro-copy span {
-      display: block;
+    .intro-backdrop::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: #fff;
       opacity: 0;
-      transform: translate3d(0, 5px, 0);
-      will-change: opacity, transform;
+      pointer-events: none;
+      animation: cameraFlash 180ms ease 2180ms forwards;
     }
-    .intro-copy .intro-small {
-      font-size: clamp(18px, 2.1vw, 31px);
-      font-weight: 500;
-      letter-spacing: .02em;
-      animation: introLine 850ms ease 220ms forwards;
+    .intro-backdrop.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      animation: none;
     }
-    .intro-copy .intro-large {
-      font-family: var(--serif);
-      font-size: clamp(28px, 4vw, 64px);
-      font-weight: 400;
-      letter-spacing: -.02em;
-      animation: introLine 900ms ease 980ms forwards;
+    .intro-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      animation: introExit 340ms ease 2380ms forwards;
     }
-    @keyframes introLine {
+    .intro-screen.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      animation: none;
+    }
+    .intro-lockup {
+      position: relative;
+      width: min(82vw, 1040px);
+      aspect-ratio: 5 / 1;
+      opacity: 0;
+      animation: introLogo 950ms ease 180ms forwards;
+    }
+    .intro-wordmark {
+      width: 100%;
+      height: auto;
+      position: relative;
+      z-index: 0;
+    }
+    .intro-script {
+      position: absolute;
+      z-index: 2;
+      height: auto;
+      pointer-events: none;
+    }
+    .intro-script--we {
+      width: min(67.2vw, 704px);
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      bottom: 88%;
+    }
+    @keyframes introLogo {
       to {
         opacity: 1;
-        transform: translate3d(0, 0, 0);
       }
     }
     @keyframes introExit {
@@ -146,42 +182,59 @@
         visibility: hidden;
       }
     }
+    @keyframes cameraFlash {
+      0% { opacity: 0; }
+      28% { opacity: .92; }
+      100% { opacity: 0; }
+    }
 
     .archive-scroll {
       position: relative;
-      min-height: 700svh;
+      height: calc(var(--archive-height) * 7);
+      min-height: 0;
       background: var(--black);
     }
     .archive-pin {
       position: sticky;
       top: 0;
-      height: 100svh;
+      height: var(--archive-height);
       overflow: hidden;
-      display: flex;
-      align-items: center;
+      display: grid;
     }
     .archive-rail {
+      grid-area: 1 / 1;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 0;
       padding: 0;
+      width: max-content;
+      min-width: 700vw;
+      height: var(--archive-height);
       transform: translate3d(var(--archive-x), 0, 0);
       will-change: transform;
     }
     .archive-frame {
       flex: 0 0 auto;
       width: 100vw;
-      height: 100svh;
+      height: var(--archive-height);
       margin: 0;
       overflow: hidden;
       background: var(--black);
     }
+    .archive-frame picture {
+      display: block;
+      width: 100vw;
+      height: var(--archive-height);
+    }
     .archive-frame img {
-      width: 100%;
-      height: 100%;
+      display: block;
+      width: 100vw;
+      height: var(--archive-height);
       object-fit: cover;
       object-position: center;
       background: var(--black);
+      color: transparent;
+      font-size: 0;
     }
     .slide--opening img { object-position: center center; }
     .slide--yellow img { object-position: center center; }
@@ -202,14 +255,13 @@
     }
     .archive-wordmark {
       position: absolute;
-      left: 50%;
-      top: 50%;
-      z-index: 3;
+      inset: 0;
+      z-index: 85;
       width: min(82vw, 1040px);
       height: auto;
+      margin: auto;
       pointer-events: none;
       opacity: var(--wordmark-opacity);
-      transform: translate3d(-50%, -50%, 0);
       will-change: opacity;
     }
 
@@ -331,6 +383,158 @@
     .dark-section .text-block p {
       color: var(--muted);
     }
+    .founder-section .section-inner {
+      display: grid;
+      grid-template-columns: minmax(0, .82fr) minmax(320px, .62fr);
+      gap: clamp(34px, 7vw, 112px);
+      align-items: center;
+    }
+    .founder-media {
+      min-height: clamp(520px, 58vw, 760px);
+      margin: 0;
+      overflow: hidden;
+      background: #141412;
+    }
+    .founder-media img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: inherit;
+      object-fit: cover;
+      object-position: center 42%;
+    }
+    .founder-copy {
+      max-width: 660px;
+    }
+    .novateur-project {
+      overflow: hidden;
+      background: #ece7dc;
+    }
+    .novateur-head {
+      display: grid;
+      grid-template-columns: minmax(0, .9fr) minmax(280px, .7fr);
+      gap: clamp(34px, 7vw, 112px);
+      align-items: end;
+    }
+    .novateur-logo {
+      display: block;
+      width: min(100%, 440px);
+      height: auto;
+      mix-blend-mode: multiply;
+    }
+    .novateur-copy {
+      max-width: 520px;
+    }
+    .novateur-copy h3 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 78px);
+      font-weight: 850;
+      line-height: .88;
+      letter-spacing: -.045em;
+      text-transform: uppercase;
+    }
+    .novateur-copy .project-label {
+      margin: 18px 0 0;
+      color: var(--light-muted);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .novateur-copy p {
+      margin: 22px 0 0;
+      color: var(--light-muted);
+      font-family: var(--serif);
+      font-size: clamp(18px, 1.8vw, 25px);
+      line-height: 1.22;
+    }
+    .project-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      margin-top: 28px;
+    }
+    .project-links a {
+      border-bottom: 1px solid currentColor;
+      padding-bottom: 5px;
+      color: var(--light-ink);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .project-links a:hover {
+      opacity: .58;
+    }
+    .novateur-slider-wrap {
+      margin-top: clamp(46px, 7vw, 96px);
+    }
+    .novateur-film {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      margin-top: clamp(30px, 5vw, 68px);
+      overflow: hidden;
+      background: #141412;
+    }
+    .novateur-film video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .novateur-links {
+      margin-top: clamp(24px, 3vw, 38px);
+    }
+    .novateur-slider {
+      display: flex;
+      gap: clamp(14px, 2vw, 24px);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+    }
+    .novateur-slider::-webkit-scrollbar {
+      display: none;
+    }
+    .novateur-slide {
+      flex: 0 0 min(72vw, 460px);
+      height: clamp(430px, 62vw, 660px);
+      margin: 0;
+      overflow: hidden;
+      scroll-snap-align: start;
+      background: #d8d0c1;
+    }
+    .novateur-slide.is-wide {
+      flex-basis: min(82vw, 620px);
+    }
+    .novateur-slide img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+    .slider-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .slider-controls button {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(18,18,16,.24);
+      border-radius: 0;
+      background: transparent;
+      color: var(--light-ink);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .slider-controls button:hover {
+      border-color: rgba(18,18,16,.7);
+    }
     .process-list {
       display: grid;
       gap: 0;
@@ -406,6 +610,17 @@
       line-height: 1.8;
       text-transform: uppercase;
     }
+    .availability .availability-note {
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .availability .availability-note--quiet {
+      margin-top: 12px;
+      color: rgba(20, 20, 18, .52);
+      font-size: 10px;
+      letter-spacing: .14em;
+    }
 
     .booking {
       display: grid;
@@ -476,6 +691,126 @@
       font-weight: 500;
       line-height: 1.4;
     }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .form-grid .step--wide {
+      grid-column: 1 / -1;
+    }
+    .calendar {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    .calendar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .calendar-title {
+      margin: 0;
+      color: var(--paper);
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .calendar-nav {
+      display: inline-flex;
+      gap: 8px;
+    }
+    .calendar-nav button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(237,230,216,.3);
+      background: transparent;
+      color: var(--paper);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .calendar-nav button:hover {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.07);
+    }
+    .calendar-weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .calendar-weekdays span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .calendar-day {
+      min-height: 42px;
+      border: 1px solid rgba(237,230,216,.2);
+      background: transparent;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .calendar-day:hover,
+    .calendar-day.is-selected {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.1);
+    }
+    .calendar-day.is-muted {
+      color: rgba(237,230,216,.32);
+      cursor: default;
+    }
+    .calendar-day.is-muted:hover {
+      border-color: rgba(237,230,216,.2);
+      background: transparent;
+    }
+    .form-success,
+    .form-error {
+      display: none;
+      margin: 18px 0 0;
+      font-family: var(--serif);
+      font-size: clamp(18px, 1.8vw, 24px);
+      line-height: 1.22;
+    }
+    .form-success {
+      color: var(--paper);
+    }
+    .form-preview-note {
+      display: none;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .intake.is-preview .form-preview-note {
+      display: block;
+    }
+    .form-error {
+      color: #f0a9a0;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .intake.is-success .form-success,
+    .intake.is-error .form-error {
+      display: block;
+    }
+    .field.is-invalid,
+    .step.is-invalid .choice-row span {
+      border-color: rgba(240,169,160,.78);
+    }
     .cal-block {
       margin-top: 8px;
       border-top: 1px solid var(--line);
@@ -495,6 +830,10 @@
       text-transform: uppercase;
       cursor: pointer;
     }
+    .cal-button:disabled {
+      cursor: wait;
+      opacity: .58;
+    }
     .cal-note {
       max-width: 520px;
       margin: 14px 0 0;
@@ -502,49 +841,103 @@
       font-size: 12px;
       line-height: 1.45;
     }
-
     .footer {
+      position: relative;
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 22px;
-      align-items: end;
-      padding: clamp(28px, 5vw, 64px);
+      grid-template-columns: 1fr auto;
+      gap: clamp(24px, 4vw, 52px);
+      justify-items: start;
+      align-items: start;
+      min-height: clamp(154px, 17vw, 238px);
+      overflow: hidden;
+      isolation: isolate;
+      padding: clamp(24px, 4vw, 44px);
       background: #080807;
       color: var(--paper);
       border-top: 1px solid var(--line);
     }
-    .footer img {
-      width: clamp(34px, 4vw, 50px);
+    .footer-wordmark {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: clamp(-96px, -6.4vw, -54px);
+      width: min(92vw, 960px);
+      max-width: none;
       height: auto;
+      margin: 0 auto;
+      opacity: .11;
+      z-index: 0;
+      pointer-events: none;
     }
-    .footer-word {
-      margin: 0;
-      font-size: clamp(18px, 3vw, 42px);
-      font-weight: 900;
-      line-height: .9;
-      letter-spacing: -.04em;
+    .footer-brand {
+      position: relative;
+      z-index: 1;
+    }
+    .footer-contact-label {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .16em;
       text-transform: uppercase;
     }
-    .footer-meta {
+    .footer-contact {
+      display: flex;
+      position: relative;
+      z-index: 1;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+    }
+    .footer-contact a {
+      display: inline-flex;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      color: rgba(237, 230, 216, .72);
+    }
+    .footer-contact a:hover {
+      color: var(--paper);
+    }
+    .footer-contact svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+    .footer-availability {
       margin: 12px 0 0;
+      color: rgba(237, 230, 216, .48);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .footer-credit {
+      display: grid;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+      align-self: center;
+      justify-items: start;
       color: var(--muted);
       font-size: 11px;
       letter-spacing: .08em;
       text-transform: uppercase;
+      text-decoration: none;
     }
-    .footer-actions {
-      display: grid;
-      gap: 12px;
-      justify-items: end;
-      font-size: 11px;
-      font-weight: 850;
-      letter-spacing: .14em;
-      text-transform: uppercase;
+    .footer-credit:hover {
+      color: var(--paper);
+    }
+    .footer-credit img {
+      width: clamp(118px, 14vw, 184px);
+      height: auto;
     }
 
     @media (max-width: 760px) {
+      .intro-lockup { width: 90vw; }
       .archive-wordmark { width: 90vw; }
-      .archive-frame { width: 100vw; height: 100svh; }
+      .archive-frame { width: 100vw; }
       .slide--opening img { object-position: center center; }
       .slide--yellow img { object-position: center center; }
       .slide--hoodie-front img { object-position: center center; }
@@ -563,23 +956,70 @@
       .booking {
         grid-template-columns: 1fr;
       }
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .novateur-head {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+      .novateur-logo {
+        width: min(100%, 320px);
+      }
+      .novateur-slide,
+      .novateur-slide.is-wide {
+        flex-basis: 78vw;
+        height: 62vh;
+        min-height: 420px;
+      }
+      .novateur-film {
+        aspect-ratio: 4 / 5;
+      }
+      .founder-section .section-inner {
+        grid-template-columns: 1fr;
+      }
+      .founder-media {
+        min-height: 72vh;
+      }
+      .slider-controls {
+        display: none;
+      }
       .process-item {
         grid-template-columns: 1fr;
         gap: 14px;
       }
       .footer {
         grid-template-columns: 1fr;
+        min-height: 230px;
       }
-      .footer-actions {
+      .footer-contact a {
+        width: 26px;
+        height: 26px;
+      }
+      .footer-contact svg {
+        width: 20px;
+        height: 20px;
+      }
+      .footer-credit {
         justify-items: start;
+        align-self: start;
+      }
+      .footer-wordmark {
+        bottom: -52px;
+        width: 132vw;
+        max-width: none;
+      }
+      .header-brand {
+        gap: 12px;
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
+      .intro-backdrop,
       .intro-screen { display: none; }
+      .intro-backdrop::after { display: none; }
       .archive-wordmark { opacity: 1; }
-      .archive-rail { transform: none !important; }
       .archive-scroll { min-height: auto !important; }
       .archive-pin {
         position: relative;
@@ -589,39 +1029,85 @@
       }
       .site-header {
         opacity: 1;
-        transform: none;
         pointer-events: auto;
       }
     }
   </style>
 </head>
 <body>
+  <div class="intro-backdrop" aria-hidden="true"></div>
   <div class="intro-screen" aria-hidden="true">
-    <div class="intro-copy">
-      <span class="intro-small">we shoot</span>
-      <span class="intro-large">common places.</span>
+    <div class="intro-lockup">
+      <img class="intro-wordmark" src="/assets/common-place/final/wordmark-intro-commonpl4ces.png" alt="">
+      <img class="intro-script intro-script--we" src="/assets/common-place/final/script-we-shoot.png" alt="">
     </div>
   </div>
 
+  <script>
+    (function () {
+      const intro = document.querySelector('.intro-screen');
+      const backdrop = document.querySelector('.intro-backdrop');
+      if (!intro || !backdrop) return;
+
+      let hidden = false;
+      function hideIntro() {
+        if (hidden) return;
+        hidden = true;
+        backdrop.classList.add('is-hidden');
+        intro.classList.add('is-hidden');
+      }
+
+      intro.addEventListener('animationend', function (event) {
+        if (event.animationName === 'introExit') hideIntro();
+      });
+      window.setTimeout(hideIntro, 2900);
+    })();
+  </script>
+
   <header class="site-header" id="siteHeader" aria-label="COMMONPL4CE">
-    <a href="/cp" aria-label="COMMONPL4CE home">
-      <img class="header-logo" src="/assets/common-place/final/cp-header.png" alt="COMMONPL4CE">
-    </a>
-    <a class="book-link" href="#start-project">Book</a>
+    <div class="header-brand">
+      <a href="/cp" aria-label="COMMONPL4CE home">
+        <img class="header-logo" src="/assets/common-place/final/cp-header-small.png" alt="COMMONPL4CE">
+      </a>
+    </div>
+    <a class="book-link" href="#booker-station">Book</a>
   </header>
 
   <main id="top">
+    <script type="application/json" id="archive-filename-order">
+      {
+        "rule": "Archive slide order is locked by numeric source filename, not upload order.",
+        "desktop": [
+          { "slide": 1, "sourceFile": "1.jpg", "asset": "/assets/common-place/fullscreen/slide-01-opening.jpg" },
+          { "slide": 2, "sourceFile": "2.jpg", "asset": "/assets/common-place/fullscreen/slide-02-yellow.jpg" },
+          { "slide": 3, "sourceFile": "3.jpg", "asset": "/assets/common-place/fullscreen/slide-03-hoodie-front.jpg" },
+          { "slide": 4, "sourceFile": "4.jpg", "asset": "/assets/common-place/fullscreen/slide-04-chair.jpg" },
+          { "slide": 5, "sourceFile": "5.jpg", "asset": "/assets/common-place/fullscreen/slide-05-duo.jpg" },
+          { "slide": 6, "sourceFile": "6.jpg", "asset": "/assets/common-place/fullscreen/slide-06-couch.jpg" },
+          { "slide": 7, "sourceFile": "7.jpg", "asset": "/assets/common-place/fullscreen/slide-07-profile.jpg" }
+        ],
+        "mobile": [
+          { "slide": 1, "sourceFile": "1.JPG", "asset": "/assets/common-place/mobile/slide-01-mobile.jpg" },
+          { "slide": 2, "sourceFile": "2.JPG", "asset": "/assets/common-place/mobile/slide-02-mobile.jpg" },
+          { "slide": 3, "sourceFile": "3.JPG", "asset": "/assets/common-place/mobile/slide-03-mobile.jpg" },
+          { "slide": 4, "sourceFile": "4.JPG", "asset": "/assets/common-place/mobile/slide-04-mobile.jpg" },
+          { "slide": 5, "sourceFile": "5.JPG", "asset": "/assets/common-place/mobile/slide-05-mobile.jpg" },
+          { "slide": 6, "sourceFile": "6.JPG", "asset": "/assets/common-place/mobile/slide-06-mobile.jpg" },
+          { "slide": 7, "sourceFile": "7.JPG", "asset": "/assets/common-place/mobile/slide-07-mobile.jpg" }
+        ]
+      }
+    </script>
     <section class="archive-scroll" id="archive" aria-label="Campaign archive">
       <div class="archive-pin">
-        <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
+      <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
         <div class="archive-rail" id="archiveRail">
-          <figure class="archive-frame slide--opening"><img src="/assets/common-place/fullscreen/slide-01-opening.jpg" alt="Romy standing with her back toward the camera" loading="eager" decoding="async" fetchpriority="high"></figure>
-          <figure class="archive-frame slide--yellow"><img src="/assets/common-place/fullscreen/slide-02-yellow.jpg" alt="Yellow sweater portrait on film" loading="eager" decoding="async"></figure>
-          <figure class="archive-frame slide--hoodie-front"><img src="/assets/common-place/fullscreen/slide-03-hoodie-front.jpg" alt="Hoodie portrait seated on a bench" loading="eager" decoding="async"></figure>
-          <figure class="archive-frame slide--chair"><img src="/assets/common-place/fullscreen/slide-04-chair.jpg" alt="Editorial chair portrait on film" loading="lazy" decoding="async"></figure>
-          <figure class="archive-frame slide--duo"><img src="/assets/common-place/fullscreen/slide-05-duo.jpg" alt="Duo portrait in yellow campaign styling" loading="lazy" decoding="async"></figure>
-          <figure class="archive-frame slide--couch"><img src="/assets/common-place/fullscreen/slide-06-couch.jpg" alt="Campaign image with couch and hoodie" loading="lazy" decoding="async"></figure>
-          <figure class="archive-frame slide--profile"><img src="/assets/common-place/fullscreen/slide-07-profile.jpg" alt="Side profile hoodie campaign image" loading="lazy" decoding="async"></figure>
+          <figure class="archive-frame slide--opening"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-01-opening.jpg"><img src="/assets/common-place/mobile/slide-01-mobile.jpg" alt="Romy standing with her back toward the camera" loading="eager" decoding="async" fetchpriority="high"></picture></figure>
+          <figure class="archive-frame slide--yellow"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-02-yellow.jpg"><img src="/assets/common-place/mobile/slide-02-mobile.jpg" alt="Yellow sweater portrait on film" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--hoodie-front"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-03-hoodie-front.jpg"><img src="/assets/common-place/mobile/slide-03-mobile.jpg" alt="Hoodie portrait seated on a bench" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--chair"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-04-chair.jpg"><img src="/assets/common-place/mobile/slide-04-mobile.jpg" alt="Editorial chair portrait on film" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--duo"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-05-duo.jpg"><img src="/assets/common-place/mobile/slide-05-mobile.jpg" alt="Duo portrait in yellow campaign styling" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--couch"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-06-couch.jpg"><img src="/assets/common-place/mobile/slide-06-mobile.jpg" alt="Campaign image with couch and hoodie" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--profile"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-07-profile.jpg"><img src="/assets/common-place/mobile/slide-07-mobile.jpg" alt="Side profile hoodie campaign image" loading="eager" decoding="async"></picture></figure>
         </div>
       </div>
     </section>
@@ -630,10 +1116,10 @@
       <section class="light-section story" aria-labelledby="feeling-title">
         <div class="section-inner narrow">
           <h1 class="display-title" id="feeling-title">Shot with feeling.</h1>
-          <p class="lead">COMMONPL4CE creates visual stories for brands, campaigns and people who want their imagery to feel real.</p>
+          <p class="lead">CP creates visual stories for brands, campaigns and people who want their imagery to feel real.</p>
           <p class="lead">Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.</p>
           <p class="small-line">For brands that need more than clean content — imagery with mood, memory and presence.</p>
-          <a class="text-cta" href="#start-project">Start your project</a>
+          <a class="text-cta" href="#booker-station">Start your project</a>
         </div>
       </section>
 
@@ -662,6 +1148,57 @@
               <h3>Portraits</h3>
               <p>People captured with softness, presence and intention.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="light-section novateur-project" aria-label="Novateur selected client">
+        <div class="section-inner">
+          <div class="novateur-head">
+            <div>
+              <img class="novateur-logo" src="/assets/common-place/novateur/novateur-studios-logo.png" alt="NOVATEUR STUDIOS">
+            </div>
+            <div class="novateur-copy">
+              <p class="kicker">Selected Client</p>
+              <p class="project-label">Campaign — 2026</p>
+              <p class="project-label">Independent clothing brand.</p>
+              <p>A visual story shaped around texture, movement and a real campaign feeling.</p>
+            </div>
+          </div>
+
+          <div class="novateur-slider-wrap">
+            <div class="novateur-slider" id="novateurSlider" aria-label="Selected client campaign images">
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-01.jpg" alt="Novateur campaign image 01" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-02.jpg" alt="Novateur campaign image 02" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-03.jpg" alt="Novateur campaign image 03" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-04.jpg" alt="Novateur campaign image 04" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-05.jpg" alt="Novateur campaign image 05" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-06.jpg" alt="Novateur campaign image 06" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-07.jpg" alt="Novateur campaign image 07" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-08.jpg" alt="Novateur campaign image 08" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-09.jpg" alt="Novateur campaign image 09" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-10.jpg" alt="Novateur campaign image 10" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-11.jpg" alt="Novateur campaign image 11" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-12.jpg" alt="Novateur campaign image 12" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-13.jpg" alt="Novateur campaign image 13" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-14.jpg" alt="Novateur campaign image 14" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-15.jpg" alt="Novateur campaign image 15" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-16.jpg" alt="Novateur campaign image 16" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-17.jpg" alt="Novateur campaign image 17" loading="lazy" decoding="async"></figure>
+            </div>
+            <div class="slider-controls" aria-hidden="true">
+              <button class="novateur-prev" type="button" aria-label="Previous Novateur image">‹</button>
+              <button class="novateur-next" type="button" aria-label="Next Novateur image">›</button>
+            </div>
+          </div>
+          <div class="novateur-film" aria-label="Novateur campaign film">
+            <video autoplay muted loop playsinline preload="metadata">
+              <source src="/assets/common-place/novateur/novateur-campaign-film.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="project-links novateur-links">
+            <a href="https://novateurclo.com" target="_blank" rel="noopener">Website</a>
+            <a href="https://instagram.com/novateur" target="_blank" rel="noopener">Instagram</a>
           </div>
         </div>
       </section>
@@ -712,12 +1249,18 @@
         </div>
       </section>
 
-      <section class="dark-section" aria-labelledby="behind-title">
-        <div class="section-inner narrow">
-          <p class="kicker">COMMONPL4CE</p>
-          <h2 class="section-title" id="behind-title">Behind the Film</h2>
-          <p class="lead">COMMONPL4CE is shaped by Romy Peters, working between fashion, lifestyle, travel and documentary storytelling.</p>
-          <p class="body-copy">Selected projects can be captured on Kodak film to preserve grain, atmosphere and the feeling of a real moment.</p>
+      <section class="dark-section founder-section" aria-labelledby="behind-title">
+        <div class="section-inner">
+          <figure class="founder-media">
+            <img src="/assets/common-place/romy/romy-behind-film.jpg" alt="Romy Peters photographing on location" loading="lazy" decoding="async">
+          </figure>
+          <div class="founder-copy">
+            <p class="kicker">Founder / Behind the Film</p>
+            <h2 class="section-title" id="behind-title">Romy Peters</h2>
+            <p class="lead">COMMONPL4CE is shaped by Romy Peters — a photographer working between fashion, lifestyle, travel and documentary storytelling.</p>
+            <p class="body-copy">Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.</p>
+            <p class="body-copy">Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.</p>
+          </div>
         </div>
       </section>
 
@@ -725,25 +1268,44 @@
         <div class="section-inner">
           <h2>Currently Booking</h2>
           <p>Netherlands<br>Europe<br>Worldwide</p>
-          <p class="body-copy" style="margin-left:auto;margin-right:auto;">Available for selected projects, campaigns and content days.</p>
+          <p class="availability-note">Available for campaigns,<br>editorials and selected brand projects.</p>
+          <p class="availability-note availability-note--quiet">Limited availability each month.</p>
         </div>
       </section>
 
-      <section class="dark-section booking" id="start-project" aria-labelledby="start-title">
+      <section class="dark-section booking" id="booker-station" aria-labelledby="booker-title">
         <div>
-          <p class="kicker">Booking</p>
-          <h2 class="section-title" id="start-title">Start Your Project</h2>
-          <p class="body-copy">Tell us what you want to create, where it needs to happen and when you are looking to shoot.</p>
+          <h2 class="section-title" id="booker-title">Booker Station</h2>
+          <p class="body-copy">Start a project with CP.</p>
         </div>
-        <form class="intake" action="https://cal.com/commonpl4ce/project" method="get">
+        <form class="intake" id="cpBookerForm">
+          <div class="form-grid">
+            <label class="step">
+              <span class="step-label">Name</span>
+              <input class="field" name="name" type="text" autocomplete="name" required>
+            </label>
+            <label class="step">
+              <span class="step-label">Brand / company</span>
+              <input class="field" name="brand" type="text" autocomplete="organization" required>
+            </label>
+            <label class="step">
+              <span class="step-label">Email</span>
+              <input class="field" name="email" type="email" autocomplete="email" required>
+            </label>
+            <label class="step">
+              <span class="step-label">Instagram</span>
+              <input class="field" name="instagram" type="text" autocomplete="off">
+            </label>
+          </div>
           <fieldset class="step">
             <legend class="step-label">Project type</legend>
             <div class="choice-row">
-              <label><input type="radio" name="project" value="fashion"><span>Fashion</span></label>
               <label><input type="radio" name="project" value="campaign"><span>Campaign</span></label>
+              <label><input type="radio" name="project" value="fashion"><span>Fashion</span></label>
               <label><input type="radio" name="project" value="lifestyle"><span>Lifestyle</span></label>
               <label><input type="radio" name="project" value="travel"><span>Travel</span></label>
               <label><input type="radio" name="project" value="editorial"><span>Editorial</span></label>
+              <label><input type="radio" name="project" value="portraits"><span>Portraits</span></label>
               <label><input type="radio" name="project" value="other"><span>Other</span></label>
             </div>
           </fieldset>
@@ -757,14 +1319,24 @@
           </fieldset>
           <fieldset class="step">
             <legend class="step-label">Preferred date</legend>
-            <div class="choice-row">
-              <label><input type="radio" name="date" value="this-month"><span>This month</span></label>
-              <label><input type="radio" name="date" value="next-month"><span>Next month</span></label>
-              <label><input type="radio" name="date" value="flexible"><span>Flexible</span></label>
-            </div>
+            <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
           </fieldset>
+          <p class="cal-note">Select a preferred shoot date.</p>
+          <div class="calendar" aria-label="Calendar date selector">
+            <div class="calendar-head">
+              <h3 class="calendar-title" id="calendarTitle"></h3>
+              <div class="calendar-nav">
+                <button type="button" id="calendarPrev" aria-label="Previous month">‹</button>
+                <button type="button" id="calendarNext" aria-label="Next month">›</button>
+              </div>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
           <fieldset class="step">
-            <legend class="step-label">Budget</legend>
+            <legend class="step-label">Budget range</legend>
             <div class="choice-row">
               <label><input type="radio" name="budget" value="500"><span>€500+</span></label>
               <label><input type="radio" name="budget" value="1000"><span>€1.000+</span></label>
@@ -773,12 +1345,15 @@
             </div>
           </fieldset>
           <label class="step">
-            <span class="step-label">References</span>
+            <span class="step-label">References / mood / notes</span>
             <textarea class="field" name="references" placeholder="Add links / describe the feeling"></textarea>
           </label>
           <div class="cal-block">
-            <button class="cal-button" type="submit">Continue to booking</button>
-            <p class="cal-note">Cal.com placeholder: replace <code>https://cal.com/commonpl4ce/project</code> with the final routing form URL when ready.</p>
+            <button class="cal-button" type="submit">Submit request</button>
+            <p class="cal-note">This sends a project request, not a confirmed shoot booking.</p>
+            <p class="form-success" id="bookerSuccess" role="status">Request received.<br>CP will reply with availability and direction.</p>
+            <p class="form-preview-note" id="bookerPreviewNote">Preview mode: request prepared locally. No email was sent.</p>
+            <p class="form-error" id="bookerError" role="alert"></p>
           </div>
         </form>
       </section>
@@ -786,15 +1361,268 @@
   </main>
 
   <footer class="footer">
-    <img src="/assets/common-place/final/cp-header.png" alt="COMMONPL4CE">
-    <div>
-      <p class="footer-word">COMMONPL4CE</p>
-      <p class="footer-meta">Built by <a href="https://doneovernight.com">DONEOVERNIGHT</a></p>
+    <img class="footer-wordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
+    <div class="footer-brand">
+      <p class="footer-contact-label">Contact</p>
+      <nav class="footer-contact" aria-label="COMMONPL4CE contact">
+        <a href="https://instagram.com/commonpl4ce" aria-label="COMMONPL4CE Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect>
+            <circle cx="12" cy="12" r="4.2"></circle>
+            <circle cx="17.2" cy="6.8" r=".8" fill="currentColor" stroke="none"></circle>
+          </svg>
+        </a>
+        <a href="mailto:book@commonpl4ce.com" aria-label="Email COMMONPL4CE">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect>
+            <path d="m4.5 7 7.5 6 7.5-6"></path>
+          </svg>
+        </a>
+      </nav>
+      <p class="footer-availability">Available worldwide</p>
     </div>
-    <div class="footer-actions">
-      <a href="#start-project">Start your project</a>
-    </div>
+    <a class="footer-credit" href="https://ask.doneovernight.com">
+      <span>Powered by</span>
+      <img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
+    </a>
   </footer>
+
+  <script>
+    (function () {
+      const form = document.getElementById('cpBookerForm');
+      const calendarGrid = document.getElementById('calendarGrid');
+      const calendarTitle = document.getElementById('calendarTitle');
+      const preferredDate = document.getElementById('preferredDate');
+      const previous = document.getElementById('calendarPrev');
+      const next = document.getElementById('calendarNext');
+      const submitButton = form.querySelector('.cal-button');
+      const errorMessage = document.getElementById('bookerError');
+
+      if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
+
+      const today = new Date();
+      let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      let selectedDate = null;
+      let isSubmitting = false;
+
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      function renderCalendar() {
+        calendarGrid.innerHTML = '';
+        calendarTitle.textContent = visibleMonth.toLocaleDateString(undefined, {
+          month: 'long',
+          year: 'numeric'
+        });
+
+        const year = visibleMonth.getFullYear();
+        const month = visibleMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const leadingBlanks = (firstDay.getDay() + 6) % 7;
+
+        for (let i = 0; i < leadingBlanks; i += 1) {
+          const blank = document.createElement('button');
+          blank.type = 'button';
+          blank.className = 'calendar-day is-muted';
+          blank.tabIndex = -1;
+          blank.setAttribute('aria-hidden', 'true');
+          calendarGrid.appendChild(blank);
+        }
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const date = new Date(year, month, day);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'calendar-day';
+          button.textContent = String(day);
+          button.setAttribute('aria-label', date.toLocaleDateString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          }));
+
+          if (selectedDate && formatDate(selectedDate) === formatDate(date)) {
+            button.classList.add('is-selected');
+          }
+
+          button.addEventListener('click', function () {
+            selectedDate = date;
+            preferredDate.value = formatDate(date);
+            renderCalendar();
+          });
+
+          calendarGrid.appendChild(button);
+        }
+      }
+
+      previous.addEventListener('click', function () {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
+        renderCalendar();
+      });
+
+      next.addEventListener('click', function () {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
+        renderCalendar();
+      });
+
+      const field = (name) => form.elements[name];
+      const selectedRadio = (name) => form.querySelector(`input[name="${name}"]:checked`);
+      const clean = (value) => String(value || '').trim();
+      const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));
+
+      function clearFormState() {
+        form.classList.remove('is-error', 'is-preview');
+        form.querySelectorAll('.is-invalid').forEach((element) => element.classList.remove('is-invalid'));
+        if (errorMessage) errorMessage.textContent = '';
+      }
+
+      function markInvalid(element) {
+        if (!element) return;
+        element.classList.add('is-invalid');
+      }
+
+      function validateForm() {
+        const projectFieldset = form.querySelector('input[name="project"]')?.closest('fieldset');
+        const locationFieldset = form.querySelector('input[name="location"]')?.closest('fieldset');
+        const budgetFieldset = form.querySelector('input[name="budget"]')?.closest('fieldset');
+        const invalid = [];
+
+        [
+          ['name', 'Name'],
+          ['brand', 'Brand / company'],
+          ['email', 'Email'],
+          ['preferred-date', 'Preferred date']
+        ].forEach(([name, label]) => {
+          const input = field(name);
+          if (!clean(input?.value)) {
+            markInvalid(input);
+            invalid.push(label);
+          }
+        });
+
+        if (field('email')?.value && !isValidEmail(field('email').value)) {
+          markInvalid(field('email'));
+          invalid.push('Valid email');
+        }
+
+        if (!selectedRadio('project')) {
+          markInvalid(projectFieldset);
+          invalid.push('Project type');
+        }
+        if (!selectedRadio('location')) {
+          markInvalid(locationFieldset);
+          invalid.push('Location');
+        }
+        if (!selectedRadio('budget')) {
+          markInvalid(budgetFieldset);
+          invalid.push('Budget range');
+        }
+
+        return {
+          valid: invalid.length === 0,
+          message: invalid.length ? `Add: ${Array.from(new Set(invalid)).join(', ')}.` : ''
+        };
+      }
+
+      function buildPayload() {
+        return {
+          name: clean(field('name')?.value),
+          brandCompany: clean(field('brand')?.value),
+          email: clean(field('email')?.value),
+          instagram: clean(field('instagram')?.value),
+          projectType: selectedRadio('project')?.value || '',
+          location: selectedRadio('location')?.value || '',
+          preferredDate: clean(field('preferred-date')?.value),
+          budgetRange: selectedRadio('budget')?.value || '',
+          notes: clean(field('references')?.value),
+          source: 'cp-booker-station',
+          submittedAt: new Date().toISOString()
+        };
+      }
+
+      form.addEventListener('input', clearFormState);
+      form.addEventListener('change', clearFormState);
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (isSubmitting || form.classList.contains('is-success')) return;
+
+        clearFormState();
+        const validation = validateForm();
+        if (!validation.valid) {
+          form.classList.add('is-error');
+          if (errorMessage) errorMessage.textContent = validation.message;
+          return;
+        }
+
+        isSubmitting = true;
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Sending request';
+        }
+
+        try {
+          const response = await fetch('/api/cp-booking', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(buildPayload())
+          });
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok || result.success !== true) {
+            throw new Error(result.error || 'Request could not be sent. Please try again.');
+          }
+
+          form.classList.add('is-success');
+          if (result.previewMode === true) {
+            form.classList.add('is-preview');
+          }
+          if (submitButton) {
+            submitButton.textContent = 'Request sent';
+          }
+        } catch (error) {
+          form.classList.add('is-error');
+          if (errorMessage) {
+            errorMessage.textContent = error.message || 'Request could not be sent. Please try again.';
+          }
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit request';
+          }
+          isSubmitting = false;
+        }
+      });
+
+      renderCalendar();
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const slider = document.getElementById('novateurSlider');
+      const previous = document.querySelector('.novateur-prev');
+      const next = document.querySelector('.novateur-next');
+      if (!slider || !previous || !next) return;
+
+      function move(direction) {
+        const firstSlide = slider.querySelector('.novateur-slide');
+        const distance = firstSlide ? firstSlide.getBoundingClientRect().width + 24 : slider.clientWidth * 0.72;
+        slider.scrollBy({ left: direction * distance, behavior: 'smooth' });
+      }
+
+      previous.addEventListener('click', function () { move(-1); });
+      next.addEventListener('click', function () { move(1); });
+    })();
+  </script>
 
   <script>
     (function () {
@@ -808,15 +1636,18 @@
 
       let maxTravel = 0;
       let targetProgress = 0;
-      let currentProgress = 0;
       let ticking = false;
 
       const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
       function measure() {
         const viewport = window.innerWidth;
-        maxTravel = Math.max(0, rail.scrollWidth - viewport);
-        archive.style.minHeight = `${window.innerHeight + maxTravel}px`;
+        const archiveHeight = window.innerHeight;
+        const slideCount = rail.querySelectorAll('.archive-frame').length;
+        maxTravel = Math.max(0, (slideCount - 1) * viewport);
+        document.documentElement.style.setProperty('--archive-height', `${archiveHeight}px`);
+        archive.style.height = `${archiveHeight + maxTravel}px`;
+        archive.style.minHeight = '0px';
         updateTarget();
         render(true);
       }
@@ -837,18 +1668,9 @@
 
       function render(immediate) {
         ticking = false;
-        if (immediate === true) {
-          currentProgress = targetProgress;
-        } else {
-          currentProgress += (targetProgress - currentProgress) * 0.14;
-          if (Math.abs(targetProgress - currentProgress) > 0.001) {
-            requestTick();
-          }
-        }
-
-        const x = -maxTravel * currentProgress;
+        const x = -maxTravel * targetProgress;
         rail.style.setProperty('--archive-x', `${x}px`);
-        const wordmarkOpacity = clamp(1 - (currentProgress / 0.08), 0, 1);
+        const wordmarkOpacity = clamp(1 - (targetProgress / 0.08), 0, 1);
         wordmark.style.setProperty('--wordmark-opacity', wordmarkOpacity.toFixed(3));
 
         const archiveDone = targetProgress >= 0.998 && archive.getBoundingClientRect().bottom <= window.innerHeight + 2;
@@ -859,6 +1681,37 @@
       window.addEventListener('resize', measure);
       window.addEventListener('load', measure);
       measure();
+    })();
+  </script>
+  <script>
+    (function () {
+      const header = document.getElementById('siteHeader');
+      const logo = header ? header.querySelector('.header-logo') : null;
+      if (!header || !logo) return;
+
+      let ticking = false;
+
+      function updateLogoTone() {
+        ticking = false;
+        const rect = logo.getBoundingClientRect();
+        const x = rect.left + (rect.width / 2);
+        const y = rect.top + (rect.height / 2);
+        const stack = document.elementsFromPoint(x, y);
+        const surface = stack.find((element) => !header.contains(element));
+        const onLight = Boolean(surface && surface.closest('.light-section'));
+        header.classList.toggle('is-on-light', onLight);
+      }
+
+      function requestUpdate() {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(updateLogoTone);
+      }
+
+      window.addEventListener('scroll', requestUpdate, { passive: true });
+      window.addEventListener('resize', requestUpdate);
+      window.addEventListener('load', requestUpdate);
+      requestUpdate();
     })();
   </script>
 </body>
