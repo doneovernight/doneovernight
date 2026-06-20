@@ -441,48 +441,40 @@
     .road-section {
       background: var(--light);
       color: var(--light-ink);
+      overflow: hidden;
     }
     .road-intro {
-      max-width: 760px;
+      max-width: 820px;
     }
     .road-intro .body-copy {
-      max-width: 620px;
+      max-width: 680px;
     }
-    .road-story {
-      display: grid;
-      grid-template-columns: minmax(0, .7fr) minmax(0, 1fr);
-      gap: clamp(22px, 4.5vw, 70px);
-      align-items: end;
-      margin-top: clamp(54px, 8vw, 112px);
+    .road-travel {
+      margin-top: clamp(46px, 7vw, 96px);
+      overflow: hidden;
     }
-    .road-story + .road-story {
-      grid-template-columns: minmax(0, 1fr) minmax(0, .72fr);
-      align-items: start;
-      margin-top: clamp(24px, 5vw, 72px);
+    .road-rail {
+      display: flex;
+      width: max-content;
+      gap: clamp(14px, 2.2vw, 28px);
+      transform: translate3d(var(--road-x, 0px), 0, 0);
+      will-change: transform;
     }
-    .road-image {
+    .road-frame {
+      flex: 0 0 min(76vw, 740px);
+      height: clamp(360px, 54vh, 620px);
       margin: 0;
       overflow: hidden;
       background: #d8d0c1;
     }
-    .road-image img {
+    .road-frame--narrow {
+      flex-basis: min(58vw, 520px);
+    }
+    .road-frame img {
       display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
-    .road-image--hero {
-      min-height: clamp(520px, 64vw, 780px);
-    }
-    .road-image--support {
-      min-height: clamp(300px, 36vw, 480px);
-    }
-    .road-image--wide {
-      min-height: clamp(360px, 44vw, 560px);
-    }
-    .road-image--quiet {
-      min-height: clamp(280px, 32vw, 420px);
-      align-self: end;
     }
     .novateur-project {
       overflow: hidden;
@@ -1101,18 +1093,23 @@
       .founder-media {
         min-height: 72vh;
       }
-      .road-story,
-      .road-story + .road-story {
-        grid-template-columns: 1fr;
-        gap: 18px;
-        margin-top: 38px;
+      .road-travel {
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
       }
-      .road-image--hero,
-      .road-image--support,
-      .road-image--wide,
-      .road-image--quiet {
-        min-height: auto;
-        aspect-ratio: 4 / 3;
+      .road-travel::-webkit-scrollbar {
+        display: none;
+      }
+      .road-rail {
+        transform: none !important;
+        will-change: auto;
+      }
+      .road-frame,
+      .road-frame--narrow {
+        flex-basis: 82vw;
+        height: 48vh;
+        min-height: 320px;
       }
       .slider-controls {
         display: none;
@@ -1401,26 +1398,27 @@
         <div class="section-inner">
           <div class="road-intro">
             <p class="kicker">On the Road</p>
-            <h2 class="section-title" id="road-title">Beyond the studio.</h2>
-            <p class="body-copy">Not every story happens in a controlled environment.</p>
-            <p class="body-copy">COMMONPL4CE works between cities, coastlines and places that already carry a story of their own.</p>
-            <p class="body-copy">Travel, culture and documentary moments remain a constant source of inspiration behind the work.</p>
+            <h2 class="section-title" id="road-title">Rio Through Romy’s Lens</h2>
+            <p class="body-copy">During her travels, Romy looks for real moments.</p>
+            <p class="body-copy">People, places and energy. Nothing staged, nothing forced.</p>
+            <p class="body-copy">Rio is a city that keeps giving itself to those willing to slow down and observe.</p>
+            <p class="body-copy">These photographs are small reminders of a place that continues to inspire her work.</p>
           </div>
-          <div class="road-story">
-            <figure class="road-image road-image--hero">
-              <img src="/assets/common-place/rio/rio-brazilian-flag.jpg" alt="Brazilian flag held above the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-image road-image--support">
-              <img src="/assets/common-place/rio/rio-children-beach.jpg" alt="Children on the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-          </div>
-          <div class="road-story">
-            <figure class="road-image road-image--quiet">
-              <img src="/assets/common-place/rio/rio-surfer-portrait.jpg" alt="Surfer portrait on the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-image road-image--wide">
-              <img src="/assets/common-place/rio/rio-ocean-horizon.jpg" alt="Ocean horizon at Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
+          <div class="road-travel" id="roadTravel" aria-label="Rio travel story photographs">
+            <div class="road-rail" id="roadRail">
+              <figure class="road-frame">
+                <img src="/assets/common-place/rio/rio-brazilian-flag.jpg" alt="Brazilian flag held above the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-frame road-frame--narrow">
+                <img src="/assets/common-place/rio/rio-children-beach.jpg" alt="Children on the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-frame">
+                <img src="/assets/common-place/rio/rio-surfer-portrait.jpg" alt="Surfer portrait on the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-frame road-frame--narrow">
+                <img src="/assets/common-place/rio/rio-ocean-horizon.jpg" alt="Ocean horizon at Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+            </div>
           </div>
         </div>
       </section>
@@ -1824,6 +1822,45 @@
 
       previous.addEventListener('click', function () { move(-1); });
       next.addEventListener('click', function () { move(1); });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const travel = document.getElementById('roadTravel');
+      const rail = document.getElementById('roadRail');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const compactViewport = window.matchMedia('(max-width: 760px)').matches;
+
+      if (!travel || !rail || reduceMotion || compactViewport) return;
+
+      let ticking = false;
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+      function updateTravel() {
+        ticking = false;
+        const rect = travel.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const viewportWidth = travel.clientWidth;
+        const overflow = Math.max(0, rail.scrollWidth - viewportWidth);
+        const distance = Math.max(1, viewportHeight + rect.height);
+        const progress = clamp((viewportHeight - rect.top) / distance, 0, 1);
+        const leadIn = Math.min(80, viewportWidth * 0.08);
+        const x = leadIn - ((overflow + leadIn) * progress);
+
+        rail.style.setProperty('--road-x', `${x}px`);
+      }
+
+      function requestTravelUpdate() {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(updateTravel);
+      }
+
+      window.addEventListener('scroll', requestTravelUpdate, { passive: true });
+      window.addEventListener('resize', requestTravelUpdate);
+      window.addEventListener('load', requestTravelUpdate);
+      requestTravelUpdate();
     })();
   </script>
 
