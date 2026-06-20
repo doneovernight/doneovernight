@@ -438,6 +438,10 @@
       gap: clamp(48px, 8vw, 132px);
       align-items: center;
     }
+    .novateur-brand {
+      display: flex;
+      align-items: center;
+    }
     .novateur-logo {
       display: block;
       width: min(100%, 320px);
@@ -446,29 +450,27 @@
     }
     .novateur-copy {
       max-width: 520px;
+      color: var(--light-ink);
     }
-    .novateur-copy h3 {
+    .novateur-copy .kicker,
+    .novateur-copy .project-label {
       margin: 0;
-      font-size: clamp(32px, 5vw, 78px);
+      color: var(--light-ink);
+      font-size: 11px;
       font-weight: 850;
-      line-height: .88;
-      letter-spacing: -.045em;
+      line-height: 1.25;
+      letter-spacing: .11em;
       text-transform: uppercase;
     }
     .novateur-copy .project-label {
-      margin: 18px 0 0;
-      color: rgba(8, 8, 7, .68);
-      font-size: 11px;
-      font-weight: 850;
-      letter-spacing: .18em;
-      text-transform: uppercase;
+      margin-top: 10px;
     }
     .novateur-copy p {
-      margin: 22px 0 0;
-      color: rgba(8, 8, 7, .78);
+      margin: 18px 0 0;
+      color: var(--light-ink);
       font-family: var(--serif);
-      font-size: clamp(18px, 1.8vw, 25px);
-      line-height: 1.22;
+      font-size: clamp(18px, 1.6vw, 23px);
+      line-height: 1.28;
     }
     .project-links {
       display: flex;
@@ -1201,11 +1203,11 @@
       <section class="light-section novateur-project" aria-label="Novateur selected client">
         <div class="section-inner">
           <div class="novateur-head">
-            <div>
+            <div class="novateur-brand">
               <img class="novateur-logo" src="/assets/common-place/novateur/novateur-studios-logo.png" alt="NOVATEUR STUDIOS">
             </div>
             <div class="novateur-copy">
-              <p class="kicker">Selected Client</p>
+              <p class="kicker">Selected client</p>
               <p class="project-label">Campaign / 2026</p>
               <p class="project-label">Independent clothing brand.</p>
               <p>A campaign story built around fabric, movement and the feeling of clothes being lived in.</p>
@@ -1586,17 +1588,50 @@
       }
 
       function buildPayload() {
+        const references = clean(field('references')?.value);
+        const projectType = selectedRadio('project')?.value || '';
+        const location = selectedRadio('location')?.value || '';
+        const preferredDateValue = clean(field('preferred-date')?.value);
+        const budgetRange = selectedRadio('budget')?.value || '';
+        const brandCompany = clean(field('brand')?.value);
+        const instagram = clean(field('instagram')?.value);
+        const taskDescription = [
+          `COMMONPL4CE booking request for ${brandCompany || 'a new project'}.`,
+          projectType ? `Project type: ${projectType}.` : '',
+          location ? `Location: ${location}.` : '',
+          preferredDateValue ? `Preferred date: ${preferredDateValue}.` : '',
+          budgetRange ? `Budget range: €${budgetRange}+. ` : '',
+          instagram ? `Instagram: ${instagram}.` : '',
+          references ? `References / mood / notes: ${references}` : ''
+        ].filter(Boolean).join('\n');
+
         return {
           name: clean(field('name')?.value),
-          brandCompany: clean(field('brand')?.value),
+          company: brandCompany,
+          brandCompany,
           email: clean(field('email')?.value),
-          instagram: clean(field('instagram')?.value),
-          projectType: selectedRadio('project')?.value || '',
-          location: selectedRadio('location')?.value || '',
-          preferredDate: clean(field('preferred-date')?.value),
-          budgetRange: selectedRadio('budget')?.value || '',
-          notes: clean(field('references')?.value),
-          source: 'cp-booker-station',
+          instagram,
+          task: taskDescription,
+          task_description: taskDescription,
+          taskSummary: taskDescription,
+          projectType,
+          location,
+          preferredDate: preferredDateValue,
+          deadline: preferredDateValue,
+          budgetRange,
+          clientBudget: budgetRange,
+          client_budget: budgetRange,
+          budget: budgetRange,
+          notes: references,
+          references,
+          links: references,
+          source: 'commonpl4ce_booker',
+          intakeVersion: 'commonpl4ce_booker_v1',
+          brand: 'COMMONPL4CE',
+          internal_owner: 'donovan.vdp@gmail.com',
+          owner_email: 'donovan.vdp@gmail.com',
+          recipient_email: 'donovan.vdp@gmail.com',
+          notification_recipient: 'donovan.vdp@gmail.com',
           submittedAt: new Date().toISOString()
         };
       }
@@ -1623,7 +1658,7 @@
         }
 
         try {
-          const response = await fetch('/api/cp-booking', {
+          const response = await fetch('/api/task-submit', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
