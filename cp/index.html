@@ -464,80 +464,34 @@
       overflow: hidden;
       background: #d8d0c1;
     }
+    .road-track {
+      display: flex;
+      width: 100%;
+      height: 85vh;
+      min-height: inherit;
+      transform: translate3d(calc(var(--road-index, 0) * -100%), 0, 0);
+      transition: transform 820ms cubic-bezier(.76, 0, .24, 1);
+      will-change: transform;
+    }
     .road-slide {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      opacity: 0;
-      transform: scale(1.015);
-      transition: opacity 900ms ease, transform 1200ms ease;
-    }
-    .road-slide.is-active {
-      opacity: 1;
-      transform: scale(1);
-      z-index: 1;
-    }
-    .road-slide img {
-      display: block;
+      flex: 0 0 100%;
       width: 100%;
       height: 100%;
-      object-fit: cover;
-    }
-    .road-controls {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: clamp(18px, 3vw, 34px);
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 0 20px;
-      pointer-events: none;
-    }
-    .road-arrow,
-    .road-pause,
-    .road-dot {
-      pointer-events: auto;
-      cursor: pointer;
-    }
-    .road-arrow,
-    .road-pause {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 38px;
-      height: 38px;
-      border: 1px solid rgba(237, 230, 216, .46);
-      background: rgba(8, 8, 7, .18);
-      color: var(--paper);
-      backdrop-filter: blur(12px);
-      transition: border-color 180ms ease, background 180ms ease, opacity 180ms ease;
-    }
-    .road-arrow {
-      font-size: 18px;
-      line-height: 1;
-    }
-    .road-pause {
-      padding: 0 13px;
-      font-size: var(--type-label-size);
-      font-weight: var(--type-label-weight);
-      letter-spacing: .1em;
-      text-transform: uppercase;
-    }
-    .road-arrow:hover,
-    .road-pause:hover {
-      border-color: rgba(237, 230, 216, .84);
-      background: rgba(8, 8, 7, .28);
+      margin: 0;
+      overflow: hidden;
     }
     .road-dots {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(20px, 3vw, 36px);
+      z-index: 2;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 0 4px;
+      transform: translateX(-50%);
     }
     .road-dot {
+      display: block;
       width: 6px;
       height: 6px;
       border: 0;
@@ -550,6 +504,12 @@
     .road-dot.is-active {
       background: var(--paper);
       transform: scale(1.35);
+    }
+    .road-slide img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
     .novateur-project {
       overflow: hidden;
@@ -1178,17 +1138,11 @@
       .road-slider {
         min-height: 62vh;
       }
-      .road-controls {
-        gap: 10px;
+      .road-track {
+        height: 62vh;
+      }
+      .road-dots {
         bottom: 18px;
-      }
-      .road-arrow,
-      .road-pause {
-        min-width: 34px;
-        height: 34px;
-      }
-      .road-pause {
-        padding: 0 10px;
       }
       .slider-controls {
         display: none;
@@ -1229,9 +1183,8 @@
       .intro-screen { display: none; }
       .intro-backdrop::after { display: none; }
       .archive-wordmark { opacity: 1; }
-      .road-slide {
+      .road-track {
         transition: none;
-        transform: none;
       }
       .archive-scroll { min-height: auto !important; }
       .archive-pin {
@@ -1490,44 +1443,41 @@
             </div>
           </div>
           <div class="road-slider" id="roadSlider" aria-label="Rio travel story photographs">
-            <figure class="road-slide is-active">
-              <img src="/assets/common-place/rio/rio-brazilian-flag.jpg" alt="Brazilian flag held above the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-children-beach.jpg" alt="Children on the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-surfer-portrait.jpg" alt="Surfer portrait on the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-ocean-horizon.jpg" alt="Ocean horizon at Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-favela-flag.jpg" alt="Brazilian flags hanging across a street in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-beach-vendor.jpg" alt="Beach vendor along the coastline in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-commonplace-mark.jpg" alt="COMMONPL4CE film mark" loading="lazy" decoding="async">
-            </figure>
-            <figure class="road-slide">
-              <img src="/assets/common-place/rio/rio-palm-portrait.jpg" alt="Portrait under palm trees near the beach in Rio de Janeiro" loading="lazy" decoding="async">
-            </figure>
-            <div class="road-controls" aria-label="Rio slider controls">
-              <button class="road-arrow road-prev" type="button" aria-label="Previous Rio photograph">‹</button>
-              <div class="road-dots" aria-label="Select Rio photograph">
-                <button class="road-dot is-active" type="button" aria-label="Show Rio photograph 1"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 2"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 3"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 4"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 5"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 6"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 7"></button>
-                <button class="road-dot" type="button" aria-label="Show Rio photograph 8"></button>
-              </div>
-              <button class="road-pause" type="button" aria-label="Pause Rio slider">Pause</button>
-              <button class="road-arrow road-next" type="button" aria-label="Next Rio photograph">›</button>
+            <div class="road-track">
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-brazilian-flag.jpg" alt="Brazilian flag held above the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-children-beach.jpg" alt="Children on the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-surfer-portrait.jpg" alt="Surfer portrait on the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-ocean-horizon.jpg" alt="Ocean horizon at Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-favela-flag.jpg" alt="Brazilian flags hanging across a street in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-beach-vendor.jpg" alt="Beach vendor along the coastline in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-commonplace-mark.jpg" alt="COMMONPL4CE film mark" loading="lazy" decoding="async">
+              </figure>
+              <figure class="road-slide">
+                <img src="/assets/common-place/rio/rio-palm-portrait.jpg" alt="Portrait under palm trees near the beach in Rio de Janeiro" loading="lazy" decoding="async">
+              </figure>
+            </div>
+            <div class="road-dots" aria-label="Rio slider progress" aria-hidden="true">
+              <span class="road-dot is-active"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
+              <span class="road-dot"></span>
             </div>
           </div>
         </div>
@@ -1941,23 +1891,18 @@
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!slider) return;
 
+      const track = slider.querySelector('.road-track');
       const slides = Array.from(slider.querySelectorAll('.road-slide'));
       const dots = Array.from(slider.querySelectorAll('.road-dot'));
-      const previous = slider.querySelector('.road-prev');
-      const next = slider.querySelector('.road-next');
-      const pause = slider.querySelector('.road-pause');
-      const intervalMs = 5200;
+      const intervalMs = 5000;
       let activeIndex = 0;
       let timer = null;
-      let isPaused = reduceMotion;
 
-      if (!slides.length) return;
+      if (!track || !slides.length) return;
 
       function render(index) {
         activeIndex = (index + slides.length) % slides.length;
-        slides.forEach((slide, slideIndex) => {
-          slide.classList.toggle('is-active', slideIndex === activeIndex);
-        });
+        track.style.setProperty('--road-index', activeIndex);
         dots.forEach((dot, dotIndex) => {
           dot.classList.toggle('is-active', dotIndex === activeIndex);
         });
@@ -1970,32 +1915,11 @@
 
       function startAutoplay() {
         stopAutoplay();
-        if (isPaused || reduceMotion) return;
+        if (reduceMotion) return;
         timer = window.setInterval(() => render(activeIndex + 1), intervalMs);
       }
 
-      function goTo(index) {
-        render(index);
-        startAutoplay();
-      }
-
-      previous?.addEventListener('click', function () { goTo(activeIndex - 1); });
-      next?.addEventListener('click', function () { goTo(activeIndex + 1); });
-      dots.forEach((dot, dotIndex) => {
-        dot.addEventListener('click', function () { goTo(dotIndex); });
-      });
-      pause?.addEventListener('click', function () {
-        isPaused = !isPaused;
-        pause.textContent = isPaused ? 'Play' : 'Pause';
-        pause.setAttribute('aria-label', isPaused ? 'Play Rio slider' : 'Pause Rio slider');
-        startAutoplay();
-      });
-
       render(0);
-      if (isPaused && pause) {
-        pause.textContent = 'Play';
-        pause.setAttribute('aria-label', 'Play Rio slider');
-      }
       startAutoplay();
     })();
   </script>
