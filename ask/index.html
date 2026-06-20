@@ -733,6 +733,42 @@
       color: rgba(245, 241, 234, 0.68);
       font-size: 0.78rem;
     }
+    .submit-retry-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: -2px;
+    }
+    .submit-retry-actions[hidden] { display: none; }
+    .submit-retry-actions button,
+    .submit-retry-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 13px;
+      border: 1px solid rgba(245, 241, 234, 0.13);
+      border-radius: 999px;
+      background: rgba(245, 241, 234, 0.035);
+      color: rgba(245, 241, 234, 0.76);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+    }
+    .submit-retry-actions button:hover,
+    .submit-retry-actions button:focus-visible,
+    .submit-retry-actions a:hover,
+    .submit-retry-actions a:focus-visible {
+      border-color: rgba(233, 196, 138, 0.44);
+      background: rgba(233, 196, 138, 0.07);
+      color: #ffe3ad;
+      outline: 0;
+    }
     .message-reference {
       margin-top: 9px;
       color: rgba(139, 224, 173, 0.9);
@@ -1947,6 +1983,11 @@
             <input type="hidden" name="source" value="ask_intake">
             <input type="hidden" name="intakeVersion" value="ask_page_v1">
             <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
+            <div class="submit-retry-actions" id="startRetryActions" hidden>
+              <button type="button" id="retrySubmit">Try again</button>
+              <button type="button" id="copyRequestDetails">Copy request details</button>
+              <a id="emailRequestDetails" href="mailto:ask@doneovernight.com">Email ask@doneovernight.com</a>
+            </div>
 
             <div class="field" data-field="task_description">
               <label for="startTask">What should we handle overnight?</label>
@@ -2130,9 +2171,17 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       const formCard = document.querySelector("#task-intake");
       const deadlineInput = document.querySelector("#startDeadline");
       const deadlineChips = Array.from(document.querySelectorAll(".deadline-chip"));
+      const retryActions = document.querySelector("#startRetryActions");
+      const retryButton = document.querySelector("#retrySubmit");
+      const copyButton = document.querySelector("#copyRequestDetails");
+      const emailButton = document.querySelector("#emailRequestDetails");
       if (!form || !message || !submit) return;
       const submitIdleText = submit.textContent;
       const referralAttribution = getReferralAttribution();
+      const draftKey = "doneovernight_ask_intake_draft_v1";
+      const submitTimeoutMs = 15000;
+      let isSubmitting = false;
+      let lastSubmitPayload = null;
 
       const requiredFields = [
         document.querySelector("#startName"),
@@ -2149,6 +2198,61 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           .split(/[\n,]+/)
           .map((value) => value.trim())
           .filter(Boolean);
+      }
+
+      function draftValues() {
+        const values = {};
+        Array.from(form.elements).forEach((field) => {
+          if (!field?.name || field.type === "submit" || field.type === "button") return;
+          if ((field.type === "checkbox" || field.type === "radio") && !field.checked) return;
+          values[field.name] = field.value || "";
+        });
+        if (deadlineInput) values.deadline = deadlineInput.value || values.deadline || "Tonight";
+        return values;
+      }
+
+      function saveDraft(extra = {}) {
+        const draft = {
+          values: draftValues(),
+          savedAt: new Date().toISOString(),
+          referralAttribution: getReferralAttribution() || referralAttribution || null,
+          ...extra
+        };
+        try {
+          const serialized = JSON.stringify(draft);
+          localStorage.setItem(draftKey, serialized);
+          sessionStorage.setItem(draftKey, serialized);
+        } catch (error) {}
+      }
+
+      function storedDraft() {
+        try {
+          return JSON.parse(sessionStorage.getItem(draftKey) || localStorage.getItem(draftKey) || "null");
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function restoreDraft() {
+        const draft = storedDraft();
+        const values = draft?.values;
+        if (!values || typeof values !== "object") return;
+        Array.from(form.elements).forEach((field) => {
+          if (!field?.name || !(field.name in values) || field.type === "submit" || field.type === "button") return;
+          if (field.type === "checkbox" || field.type === "radio") {
+            field.checked = field.value === values[field.name];
+            return;
+          }
+          field.value = values[field.name] || "";
+        });
+        if (values.deadline) setDeadline(values.deadline);
+      }
+
+      function clearDraft() {
+        try {
+          localStorage.removeItem(draftKey);
+          sessionStorage.removeItem(draftKey);
+        } catch (error) {}
       }
 
       const intakeQualityMessage = "Please provide a real request.";
@@ -2223,6 +2327,76 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           confirmationLine.textContent = confirmation;
           message.append(confirmationLine);
         }
+      }
+
+      function requestDetailsText(data = lastSubmitPayload || payload()) {
+        const lines = [
+          "DONEOVERNIGHT ask",
+          "",
+          `Name: ${data.name || ""}`,
+          `Email: ${data.email || ""}`,
+          `Deadline: ${data.deadline || ""}`,
+          `Budget: ${data.budget || "Optional"}`,
+          "",
+          "Ask:",
+          data.task_description || "",
+          ""
+        ];
+        if (data.files_link) {
+          lines.push("Files / References:", data.files_link, "");
+        }
+        if (data.referral_workspace_slug || data.referred_by_client || data.referral_task_id) {
+          lines.push(`Referral: ${data.referral_workspace_slug || data.referred_by_client || data.referral_task_id}`, "");
+        }
+        return lines.join("\n").trim();
+      }
+
+      function updateEmailFallback() {
+        if (!emailButton) return;
+        const data = lastSubmitPayload || payload();
+        const subject = encodeURIComponent("DONEOVERNIGHT ask");
+        const body = encodeURIComponent(requestDetailsText(data));
+        emailButton.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;
+      }
+
+      function showRetryActions() {
+        updateEmailFallback();
+        if (retryActions) retryActions.hidden = false;
+      }
+
+      function hideRetryActions() {
+        if (retryActions) retryActions.hidden = true;
+      }
+
+      function setSubmitState(active) {
+        submit.disabled = active;
+        submit.textContent = active ? "Sending" : submitIdleText;
+        form.setAttribute("aria-busy", active ? "true" : "false");
+      }
+
+      async function copyRequestDetails() {
+        const text = requestDetailsText();
+        try {
+          await navigator.clipboard.writeText(text);
+          setMessage("Request details copied.", true, "You can paste them into an email if the submit path is still slow.");
+        } catch (error) {
+          const copyTarget = document.createElement("textarea");
+          copyTarget.value = text;
+          copyTarget.setAttribute("readonly", "");
+          copyTarget.style.position = "fixed";
+          copyTarget.style.left = "-9999px";
+          document.body.append(copyTarget);
+          copyTarget.select();
+          try {
+            document.execCommand("copy");
+            setMessage("Request details copied.", true, "You can paste them into an email if the submit path is still slow.");
+          } catch (copyError) {
+            setMessage("Copy failed.", false, "Please select the request details manually and email ask@doneovernight.com.");
+          } finally {
+            copyTarget.remove();
+          }
+        }
+        showRetryActions();
       }
 
       function clearInvalid() {
@@ -2318,6 +2492,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       function payload() {
         const referenceLinks = readReferenceLinks();
         const referenceText = referenceLinks.join("\n");
+        const currentReferralAttribution = getReferralAttribution() || referralAttribution || {};
         return {
           name: read("#startName"),
           email: read("#startEmail"),
@@ -2330,7 +2505,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           source: "ask_intake",
           intakeVersion: "ask_page_v1",
           ui_locale: document.documentElement.lang || "en",
-          ...(referralAttribution || {})
+          ...currentReferralAttribution
         };
       }
 
@@ -2428,6 +2603,50 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         }
       }
 
+      function fetchWithTimeout(url, options = {}, timeoutMs = submitTimeoutMs) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, {
+          ...options,
+          signal: controller.signal
+        }).finally(() => window.clearTimeout(timeout));
+      }
+
+      function isTimeoutError(error) {
+        return error?.name === "AbortError" || error?.code === "SUBMIT_TIMEOUT";
+      }
+
+      function submitErrorMessage(error) {
+        if (isTimeoutError(error)) {
+          return {
+            title: "Submission is taking longer than expected. Your details are saved in this browser. Please try again.",
+            detail: ""
+          };
+        }
+        if (error?.status >= 500) {
+          return {
+            title: "Request could not be sent.",
+            detail: "The server did not confirm receipt. Your details are saved in this browser."
+          };
+        }
+        if (error?.status >= 400) {
+          return {
+            title: "Please complete the required fields.",
+            detail: "Your details are saved in this browser. Review the form and try again."
+          };
+        }
+        if (error?.message === "NON_JSON_RESPONSE") {
+          return {
+            title: "Request could not be confirmed.",
+            detail: "The server returned an unexpected response. Your details are saved in this browser."
+          };
+        }
+        return {
+          title: "Something went wrong. Please try again.",
+          detail: "Your details are saved in this browser."
+        };
+      }
+
       function taskReference(data) {
         return data?.taskId || data?.task?.taskId || data?.persistedTask?.task_id || "";
       }
@@ -2442,38 +2661,65 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       form.addEventListener("input", (event) => {
         event.target?.closest(".field")?.classList.remove("is-invalid");
         if (message.textContent) setMessage("");
+        hideRetryActions();
+        saveDraft();
       });
 
       deadlineChips.forEach((chip) => {
-        chip.addEventListener("click", () => setDeadline(chip.dataset.deadline || "Tonight"));
+        chip.addEventListener("click", () => {
+          setDeadline(chip.dataset.deadline || "Tonight");
+          hideRetryActions();
+          saveDraft();
+        });
       });
 
       revealButton?.addEventListener("click", toggleIntake);
+      retryButton?.addEventListener("click", () => {
+        if (isSubmitting) return;
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+        } else {
+          form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        }
+      });
+      copyButton?.addEventListener("click", copyRequestDetails);
 
       if (window.location.hash === "#task-intake") {
         revealIntake({ focus: false, scroll: false, trigger: "hash" });
       }
 
+      restoreDraft();
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (isSubmitting) return;
+        saveDraft({ lastAttemptedAt: new Date().toISOString() });
         if (!validate()) return;
 
-        submit.disabled = true;
-        submit.textContent = "Sending";
+        isSubmitting = true;
+        let confirmed = false;
+        hideRetryActions();
+        setSubmitState(true);
         setMessage("Routing your ask to the review layer.", true);
 
         try {
-          const response = await fetch(form.action, {
+          lastSubmitPayload = payload();
+          saveDraft({
+            lastAttemptedAt: new Date().toISOString(),
+            lastPayload: lastSubmitPayload
+          });
+
+          const response = await fetchWithTimeout(form.action, {
             method: "POST",
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload())
+            body: JSON.stringify(lastSubmitPayload)
           });
           const { data, preview } = await readSubmitResponse(response);
           if (!response.ok || !data?.success) {
-            const submitError = new Error(data?.code || data?.error || `HTTP_${response.status}`);
+            const submitError = new Error(data ? (data?.code || data?.error || `HTTP_${response.status}`) : "NON_JSON_RESPONSE");
             submitError.status = response.status;
             submitError.code = data?.code || null;
             submitError.responsePreview = preview;
@@ -2481,12 +2727,16 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           }
 
           const reference = taskReference(data);
+          confirmed = true;
           window.trackEvent?.("Start Task Submitted", {
             source: "ask_intake",
             category: "task",
             page: "ask"
           });
+          clearDraft();
           form.reset();
+          setDeadline("Tonight");
+          hideRetryActions();
           setMessage(
             "Ask received.",
             true,
@@ -2502,9 +2752,12 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
             status: error?.status || null,
             responsePreview: error?.responsePreview || null
           });
-          submit.disabled = false;
-          submit.textContent = submitIdleText;
-          setMessage("We could not confirm receipt. Please email ask@doneovernight.com directly.");
+          const readable = submitErrorMessage(error);
+          setMessage(readable.title, false, readable.detail);
+          showRetryActions();
+        } finally {
+          isSubmitting = false;
+          if (!confirmed) setSubmitState(false);
         }
       });
     })();
