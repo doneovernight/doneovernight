@@ -76,6 +76,52 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const EMAIL_TYPO_DOMAIN_SUGGESTIONS = {
+  "gmai.com": "gmail.com",
+  "gmil.com": "gmail.com",
+  "gmal.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gnail.com": "gmail.com",
+  "gmail.co": "gmail.com",
+  "hotmial.com": "hotmail.com",
+  "hotmai.com": "hotmail.com",
+  "outlook.co": "outlook.com",
+  "icloud.co": "icloud.com"
+};
+
+function normalizeEmailValue(value = "") {
+  return clean(value).toLowerCase();
+}
+
+function resolveEmailTypoSuggestion(value = "") {
+  const email = normalizeEmailValue(value);
+  if (!email || /\s/.test(email) || !email.includes("@")) return null;
+  const parts = email.split("@");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  const suggestedDomain = EMAIL_TYPO_DOMAIN_SUGGESTIONS[parts[1]];
+  if (!suggestedDomain) return null;
+  return {
+    email,
+    suggestedEmail: `${parts[0]}@${suggestedDomain}`,
+    suggestedDomain
+  };
+}
+
+function emailTypoConfirmed(input = {}) {
+  const value = input.email_typo_confirmed ?? input.emailTypoConfirmed ?? input.raw_payload?.email_typo_confirmed;
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function assertEmailTypoConfirmed(input = {}) {
+  const issue = resolveEmailTypoSuggestion(input.email || input.client_email || input.raw_payload?.email);
+  if (!issue || emailTypoConfirmed(input)) return;
+  const error = new Error("Please confirm your email address before sending.");
+  error.statusCode = 400;
+  error.code = "EMAIL_TYPO_CONFIRMATION_REQUIRED";
+  error.suggestedEmail = issue.suggestedEmail;
+  throw error;
+}
+
 function buildClientReviewUrl(task) {
   const secureUrl = buildSecureReviewUrl(task);
   if (secureUrl) return secureUrl;
@@ -1478,6 +1524,7 @@ module.exports = async function handler(req, res) {
       return send(res, result.statusCode, result.payload);
     }
 
+    assertEmailTypoConfirmed(input);
     await verifyAskHumanToken(req, input);
 
     const errors = validateTaskInput(input);
@@ -1675,6 +1722,15 @@ module.exports = async function handler(req, res) {
         error: error.message || "Please complete verification before sending.",
         code: error.code,
         ...(error.turnstileErrorCodes?.length ? { verification_errors: error.turnstileErrorCodes } : {})
+      });
+    }
+
+    if (error.code === "EMAIL_TYPO_CONFIRMATION_REQUIRED") {
+      return send(res, error.statusCode || 400, {
+        success: false,
+        code: "EMAIL_TYPO_CONFIRMATION_REQUIRED",
+        suggested_email: error.suggestedEmail || "",
+        message: "Please confirm your email address before sending."
       });
     }
 

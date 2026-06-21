@@ -2871,6 +2871,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       let draftSavedTimer = 0;
       let emailSuggestionState = null;
       let emailSuggestionAcknowledgedFor = "";
+      let emailTypoConfirmedFor = "";
       let turnstileToken = "";
       let turnstileWidgetId = null;
       let verificationRequired = false;
@@ -3129,7 +3130,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       }
 
       function emailIssue(value) {
-        const email = String(value || "").trim().toLowerCase();
+        const email = normalizeEmail(value);
         if (!email || /\s/.test(email) || !email.includes("@")) {
           return { type: "invalid", message: "Enter a valid email so we can get back to you." };
         }
@@ -3153,11 +3154,16 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         if (suggestion) {
           return {
             type: "suggestion",
+            email,
             domain: suggestion,
             suggestedEmail: `${parts[0]}@${suggestion}`
           };
         }
         return null;
+      }
+
+      function normalizeEmail(value = "") {
+        return String(value || "").trim().toLowerCase();
       }
 
       function hideEmailSuggestion() {
@@ -3167,7 +3173,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
 
       function showEmailSuggestion(issue) {
         emailSuggestionState = issue;
-        if (emailSuggestionText) emailSuggestionText.textContent = `Did you mean ${issue.domain}?`;
+        if (emailSuggestionText) emailSuggestionText.textContent = `Did you mean ${issue.suggestedEmail}?`;
         if (emailSuggestion) emailSuggestion.hidden = false;
       }
 
@@ -3200,11 +3206,12 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           setMessage("Enter a valid email so we can get back to you.");
           return false;
         }
-        if (email && issue?.type === "suggestion" && emailSuggestionAcknowledgedFor !== email.value.trim().toLowerCase()) {
+        const normalizedEmail = normalizeEmail(email?.value || "");
+        if (email && issue?.type === "suggestion" && emailSuggestionAcknowledgedFor !== normalizedEmail) {
           email.closest(".field")?.classList.add("is-invalid");
           showEmailSuggestion(issue);
           email.focus({ preventScroll: true });
-          setMessage(`Did you mean ${issue.domain}?`, false, "Use the suggested email or confirm you want to keep the one typed.");
+          setMessage(`Did you mean ${issue.suggestedEmail}?`, false, "Use the suggested email or confirm you want to keep the one typed.");
           return false;
         }
         hideEmailSuggestion();
@@ -3286,9 +3293,10 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         const referenceLinks = readReferenceLinks();
         const referenceText = referenceLinks.join("\n");
         const currentReferralAttribution = getReferralAttribution() || referralAttribution || {};
+        const currentEmail = normalizeEmail(read("#startEmail"));
         return {
           name: read("#startName"),
-          email: read("#startEmail"),
+          email: currentEmail || read("#startEmail"),
           task_description: read("#startTask"),
           links: referenceLinks,
           files_link: referenceText,
@@ -3299,6 +3307,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           intakeVersion: "ask_page_v1",
           ui_locale: document.documentElement.lang || "en",
           turnstile_token: turnstileToken || "",
+          ...(emailTypoConfirmedFor && emailTypoConfirmedFor === currentEmail ? { email_typo_confirmed: true } : {}),
           ...currentReferralAttribution
         };
       }
@@ -3616,6 +3625,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         hideRetryActions();
         if (event.target === emailInput) {
           emailSuggestionAcknowledgedFor = "";
+          emailTypoConfirmedFor = "";
           hideEmailSuggestion();
         }
         saveDraftFromInput();
@@ -3650,7 +3660,8 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       useSuggestedEmailButton?.addEventListener("click", () => {
         if (!emailInput || !emailSuggestionState?.suggestedEmail) return;
         emailInput.value = emailSuggestionState.suggestedEmail;
-        emailSuggestionAcknowledgedFor = emailInput.value.trim().toLowerCase();
+        emailSuggestionAcknowledgedFor = normalizeEmail(emailInput.value);
+        emailTypoConfirmedFor = "";
         emailInput.closest(".field")?.classList.remove("is-invalid");
         hideEmailSuggestion();
         setMessage("");
@@ -3658,7 +3669,8 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       });
       keepTypedEmailButton?.addEventListener("click", () => {
         if (!emailInput) return;
-        emailSuggestionAcknowledgedFor = emailInput.value.trim().toLowerCase();
+        emailSuggestionAcknowledgedFor = normalizeEmail(emailInput.value);
+        emailTypoConfirmedFor = normalizeEmail(emailInput.value);
         emailInput.closest(".field")?.classList.remove("is-invalid");
         hideEmailSuggestion();
         setMessage("");
@@ -3714,6 +3726,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
             const submitError = new Error(data ? (data?.code || data?.error || `HTTP_${response.status}`) : "NON_JSON_RESPONSE");
             submitError.status = response.status;
             submitError.code = data?.code || null;
+            submitError.suggestedEmail = data?.suggested_email || "";
             submitError.responsePreview = preview;
             throw submitError;
           }
@@ -3736,6 +3749,28 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
             status: error?.status || null,
             responsePreview: error?.responsePreview || null
           });
+          if (error?.code === "EMAIL_TYPO_CONFIRMATION_REQUIRED") {
+            const currentEmail = normalizeEmail(emailInput?.value || lastSubmitPayload?.email || "");
+            const suggestedEmail = error.suggestedEmail || emailIssue(currentEmail)?.suggestedEmail || "";
+            if (emailInput) {
+              emailInput.closest(".field")?.classList.add("is-invalid");
+              emailInput.focus({ preventScroll: true });
+            }
+            if (suggestedEmail) {
+              showEmailSuggestion({
+                type: "suggestion",
+                email: currentEmail,
+                suggestedEmail,
+                domain: suggestedEmail.split("@")[1] || ""
+              });
+              setMessage(`Did you mean ${suggestedEmail}?`, false, "Use the suggested email or confirm you want to keep the one typed.");
+            } else {
+              setMessage("Please confirm your email address before sending.");
+            }
+            resetVerification();
+            hideRetryActions();
+            return;
+          }
           const readable = submitErrorMessage(error);
           setMessage(readable.title, false, readable.detail);
           resetVerification();
