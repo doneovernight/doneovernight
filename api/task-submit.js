@@ -69,6 +69,7 @@ const ANALYTICS_EVENT_ALIASES = {
   "payment link opened": "payment_link_clicked",
   "workspace opened": "workspace_opened"
 };
+const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -103,6 +104,100 @@ function send(res, statusCode, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+function askVerificationConfig() {
+  const siteKey = clean(process.env.TURNSTILE_SITE_KEY || process.env.CLOUDFLARE_TURNSTILE_SITE_KEY);
+  const secretKey = clean(process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY);
+  return {
+    provider: "turnstile",
+    enabled: Boolean(siteKey && secretKey),
+    siteKey,
+    secretConfigured: Boolean(secretKey),
+    siteKeyConfigured: Boolean(siteKey)
+  };
+}
+
+function isAskIntakeInput(input = {}) {
+  const source = clean(input.source || input.raw_payload?.source).toLowerCase();
+  const intakeVersion = clean(input.intakeVersion || input.intake_version).toLowerCase();
+  return source === "ask_intake" || intakeVersion === "ask_page_v1";
+}
+
+function askVerificationToken(input = {}) {
+  return clean(
+    input.turnstile_token ||
+    input.turnstileToken ||
+    input.cf_turnstile_response ||
+    input["cf-turnstile-response"] ||
+    input.verification_token ||
+    input.verificationToken
+  );
+}
+
+async function verifyAskHumanToken(req, input = {}) {
+  if (!isAskIntakeInput(input)) {
+    return { required: false, ok: true, provider: "none" };
+  }
+
+  const config = askVerificationConfig();
+  if (!config.enabled) {
+    console.warn("ASK_TURNSTILE_NOT_CONFIGURED", {
+      siteKeyConfigured: config.siteKeyConfigured,
+      secretConfigured: config.secretConfigured
+    });
+    return {
+      required: false,
+      ok: true,
+      provider: "turnstile",
+      configured: false
+    };
+  }
+
+  const token = askVerificationToken(input);
+  if (!token) {
+    const error = new Error("Please complete verification before sending.");
+    error.statusCode = 403;
+    error.code = "ASK_VERIFICATION_REQUIRED";
+    throw error;
+  }
+
+  const form = new URLSearchParams();
+  form.set("secret", clean(process.env.TURNSTILE_SECRET_KEY || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY));
+  form.set("response", token);
+  const remoteIp = clean(req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  if (remoteIp) form.set("remoteip", remoteIp);
+
+  let result = null;
+  try {
+    const response = await fetch(TURNSTILE_SITEVERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form.toString()
+    });
+    result = await response.json().catch(() => null);
+  } catch (error) {
+    const verifyError = new Error("Verification could not be completed.");
+    verifyError.statusCode = 503;
+    verifyError.code = "ASK_VERIFICATION_UNAVAILABLE";
+    throw verifyError;
+  }
+
+  if (!result?.success) {
+    const error = new Error("Please complete verification before sending.");
+    error.statusCode = 403;
+    error.code = "ASK_VERIFICATION_FAILED";
+    error.turnstileErrorCodes = Array.isArray(result?.["error-codes"]) ? result["error-codes"].slice(0, 5) : [];
+    throw error;
+  }
+
+  return {
+    required: true,
+    ok: true,
+    provider: "turnstile",
+    challengeTs: result.challenge_ts || null,
+    hostname: result.hostname || null
+  };
 }
 
 function resolveClientBudget(task = {}) {
@@ -1318,6 +1413,16 @@ async function getConnectedOperatorMetadata(input = {}) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("ask_security_config") === "1") {
+      const config = askVerificationConfig();
+      return send(res, 200, {
+        success: true,
+        provider: config.provider,
+        enabled: config.enabled,
+        site_key: config.enabled ? config.siteKey : "",
+        warning: config.enabled ? "" : "TURNSTILE_NOT_CONFIGURED"
+      });
+    }
     if (url.searchParams.get("invoice_download") === "1") {
       try {
         return await handleInvoiceDownloadRequest(req, res);
@@ -1372,6 +1477,8 @@ module.exports = async function handler(req, res) {
       const result = await handleNotificationPreference(input);
       return send(res, result.statusCode, result.payload);
     }
+
+    await verifyAskHumanToken(req, input);
 
     const errors = validateTaskInput(input);
     if (errors.length) {
@@ -1559,6 +1666,15 @@ module.exports = async function handler(req, res) {
         success: false,
         error: "Invalid task reference",
         code: "INVALID_TASK_ID"
+      });
+    }
+
+    if (error.code === "ASK_VERIFICATION_REQUIRED" || error.code === "ASK_VERIFICATION_FAILED" || error.code === "ASK_VERIFICATION_UNAVAILABLE") {
+      return send(res, error.statusCode || 403, {
+        success: false,
+        error: error.message || "Please complete verification before sending.",
+        code: error.code,
+        ...(error.turnstileErrorCodes?.length ? { verification_errors: error.turnstileErrorCodes } : {})
       });
     }
 

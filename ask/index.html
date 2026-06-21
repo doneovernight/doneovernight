@@ -539,7 +539,7 @@
       transition: max-height 620ms cubic-bezier(0.22, 0.68, 0.26, 1), opacity 420ms ease, transform 520ms ease, visibility 0ms linear 620ms;
     }
     .form-card.is-revealed {
-      max-height: 900px;
+      max-height: 1120px;
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
@@ -628,6 +628,103 @@
     .field.is-invalid input, .field.is-invalid textarea {
       border-color: rgba(225, 155, 143, 0.68);
       box-shadow: 0 0 0 4px rgba(225, 155, 143, 0.08), 0 0 22px rgba(225, 155, 143, 0.12);
+    }
+    .field-hint,
+    .draft-saved {
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+    .field-hint {
+      display: grid;
+      gap: 8px;
+      padding: 10px 11px;
+      border: 1px solid rgba(233, 196, 138, 0.18);
+      border-radius: 4px;
+      background: rgba(233, 196, 138, 0.055);
+      color: rgba(245, 241, 234, 0.72);
+    }
+    .field-hint[hidden],
+    .draft-saved[hidden],
+    .draft-recovery[hidden],
+    .verification-layer[hidden] { display: none; }
+    .field-hint strong {
+      color: var(--amber);
+      font-size: 0.76rem;
+    }
+    .hint-actions,
+    .draft-actions,
+    .summary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hint-actions button,
+    .draft-actions button,
+    .summary-actions button,
+    .summary-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 13px;
+      border: 1px solid rgba(245, 241, 234, 0.13);
+      border-radius: 999px;
+      background: rgba(245, 241, 234, 0.035);
+      color: rgba(245, 241, 234, 0.78);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+    }
+    .hint-actions button:hover,
+    .hint-actions button:focus-visible,
+    .draft-actions button:hover,
+    .draft-actions button:focus-visible,
+    .summary-actions button:hover,
+    .summary-actions button:focus-visible,
+    .summary-actions a:hover,
+    .summary-actions a:focus-visible {
+      border-color: rgba(233, 196, 138, 0.44);
+      background: rgba(233, 196, 138, 0.07);
+      color: #ffe3ad;
+      outline: 0;
+    }
+    .draft-recovery {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(139, 224, 173, 0.18);
+      border-radius: 4px;
+      background: rgba(139, 224, 173, 0.055);
+    }
+    .draft-recovery strong {
+      color: rgba(139, 224, 173, 0.92);
+      font-size: 0.82rem;
+    }
+    .draft-recovery span {
+      color: rgba(245, 241, 234, 0.56);
+      font-size: 0.76rem;
+      line-height: 1.5;
+    }
+    .draft-saved {
+      min-height: 1em;
+      text-align: right;
+    }
+    .verification-layer {
+      display: grid;
+      gap: 8px;
+      justify-items: start;
+      padding: 4px 0 2px;
+    }
+    .verification-note {
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.72rem;
+      line-height: 1.45;
     }
     .deadline-chips {
       display: grid;
@@ -785,6 +882,116 @@
       font-size: 0.72rem;
       line-height: 1.42;
       text-align: center;
+    }
+    .summary-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: clamp(18px, 4vw, 42px);
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .summary-modal[hidden] { display: none; }
+    .summary-panel {
+      position: relative;
+      overflow: hidden;
+      width: min(560px, 100%);
+      border: 1px solid rgba(245, 241, 234, 0.12);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 18% -12%, rgba(233, 196, 138, 0.16), transparent 16rem),
+        linear-gradient(145deg, rgba(18, 19, 22, 0.98), rgba(7, 8, 11, 0.98));
+      box-shadow: 0 32px 90px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(245, 241, 234, 0.05);
+      padding: clamp(24px, 4vw, 34px);
+    }
+    .summary-kicker {
+      color: rgba(233, 196, 138, 0.74);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .summary-reference {
+      margin-top: 12px;
+      color: rgba(139, 224, 173, 0.96);
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .summary-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 22px;
+      padding: 18px 0;
+      border-top: 1px solid rgba(245, 241, 234, 0.08);
+      border-bottom: 1px solid rgba(245, 241, 234, 0.08);
+    }
+    .summary-grid div {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 14px;
+      align-items: baseline;
+    }
+    .summary-grid dt,
+    .next-steps strong {
+      color: rgba(245, 241, 234, 0.42);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .summary-grid dd {
+      color: rgba(245, 241, 234, 0.82);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .next-steps {
+      display: grid;
+      gap: 9px;
+      margin-top: 20px;
+      color: rgba(245, 241, 234, 0.64);
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
+    .next-steps ul {
+      display: grid;
+      gap: 5px;
+      padding-left: 17px;
+    }
+    .summary-actions {
+      margin-top: 22px;
+    }
+    .summary-timer {
+      margin-top: 18px;
+      color: rgba(245, 241, 234, 0.42);
+      font-size: 0.74rem;
+      line-height: 1.45;
+    }
+    .summary-timer-bar {
+      position: relative;
+      overflow: hidden;
+      height: 2px;
+      margin-top: 9px;
+      background: rgba(245, 241, 234, 0.09);
+    }
+    .summary-timer-bar span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(233, 196, 138, 0.32), rgba(139, 224, 173, 0.54));
+      transform-origin: left center;
+      animation: summaryCountdown 10s linear forwards;
+    }
+    @keyframes summaryCountdown {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
     }
     .activity,
     .how,
@@ -1585,6 +1792,7 @@
       .dispatch-panel { width: min(520px, 100%); }
       .dispatch-form { grid-template-columns: 1fr; }
       .dispatch-submit { width: 100%; }
+      .summary-panel { max-height: 88svh; overflow-y: auto; }
     }
     @media (min-width: 700px) and (max-width: 860px) {
       .shell {
@@ -1678,6 +1886,10 @@
       .dispatch-lines { font-size: clamp(1.16rem, 6.2vw, 1.45rem); }
       .dispatch-copy { font-size: 0.9rem; }
       .dispatch-note { font-size: 0.82rem; }
+      .summary-grid div { grid-template-columns: 1fr; gap: 4px; }
+      .summary-actions { display: grid; }
+      .summary-actions button,
+      .summary-actions a { width: 100%; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -1687,6 +1899,7 @@
       .splash-sky { display: none; }
       .atmosphere::before { animation: none; }
       .form-card { transition: none; }
+      .summary-timer-bar span { animation: none; }
       .activity { min-height: auto; padding: clamp(68px, 8vw, 124px) 0; }
       .activity-stage { position: relative; min-height: auto; padding: 0; }
       .activity-words span {
@@ -1983,6 +2196,14 @@
             <input type="hidden" name="source" value="ask_intake">
             <input type="hidden" name="intakeVersion" value="ask_page_v1">
             <div class="message" id="startTaskMessage" role="alert" aria-live="polite"></div>
+            <div class="draft-recovery" id="draftRecovery" hidden>
+              <strong>Previous draft found.</strong>
+              <span>Your unfinished ask is saved in this browser.</span>
+              <div class="draft-actions">
+                <button type="button" id="restoreDraft">Restore Draft</button>
+                <button type="button" id="discardDraft">Discard</button>
+              </div>
+            </div>
             <div class="submit-retry-actions" id="startRetryActions" hidden>
               <button type="button" id="retrySubmit">Try again</button>
               <button type="button" id="copyRequestDetails">Copy request details</button>
@@ -2025,15 +2246,74 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
               <div class="field" data-field="email">
                 <label for="startEmail">Email</label>
                 <input id="startEmail" name="email" type="email" autocomplete="email" required placeholder="your@email.com">
+                <div class="field-hint" id="emailSuggestion" hidden>
+                  <strong id="emailSuggestionText">Did you mean gmail.com?</strong>
+                  <div class="hint-actions">
+                    <button type="button" id="useSuggestedEmail">Use suggested email</button>
+                    <button type="button" id="keepTypedEmail">Keep as typed</button>
+                  </div>
+                </div>
               </div>
             </div>
 
+            <div class="verification-layer" id="verificationLayer" hidden>
+              <div id="turnstileWidget"></div>
+              <p class="verification-note">Private verification keeps the intake clean.</p>
+            </div>
+            <div class="draft-saved" id="draftSaved" hidden>Draft saved</div>
             <button class="submit" id="startSubmit" type="submit">Send the ask</button>
             <p class="fine">No payment required to ask. We review first, then reply with scope, timing, and the next move.</p>
           </form>
         </div>
       </aside>
     </section>
+
+    <div class="summary-modal" id="requestSummaryModal" role="dialog" aria-modal="true" aria-labelledby="requestSummaryTitle" hidden>
+      <div class="summary-panel">
+        <p class="summary-kicker" id="requestSummaryTitle">Request received</p>
+        <p class="summary-reference" id="summaryReference">Reference: DON-2026-00000</p>
+        <dl class="summary-grid">
+          <div>
+            <dt>Task</dt>
+            <dd id="summaryTask">—</dd>
+          </div>
+          <div>
+            <dt>References</dt>
+            <dd id="summaryReferences">None</dd>
+          </div>
+          <div>
+            <dt>Deadline</dt>
+            <dd id="summaryDeadline">—</dd>
+          </div>
+          <div>
+            <dt>Budget</dt>
+            <dd id="summaryBudget">Not provided</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd id="summaryEmail">—</dd>
+          </div>
+        </dl>
+        <div class="next-steps">
+          <strong>What happens next</strong>
+          <ul>
+            <li>Review begins</li>
+            <li>Scope is prepared</li>
+            <li>You receive the next move</li>
+          </ul>
+        </div>
+        <div class="summary-actions">
+          <button type="button" id="submitAnotherRequest">Submit another request</button>
+          <button type="button" id="copySummaryReference">Copy reference</button>
+          <a id="openWorkspaceLink" href="#" target="_blank" rel="noopener" hidden>Open Workspace</a>
+          <a id="correctEmailLink" href="mailto:ask@doneovernight.com">Need to correct your email?</a>
+        </div>
+        <div class="summary-timer">
+          <span id="summaryTimerText">Returning to intake in 10 seconds</span>
+          <div class="summary-timer-bar" aria-hidden="true"><span id="summaryTimerBar"></span></div>
+        </div>
+      </div>
+    </div>
 
     <footer class="footer" aria-label="DONEOVERNIGHT links">
       <a class="footer-link" href="https://instagram.com/doneovernight" target="_blank" rel="noopener" aria-label="DONEOVERNIGHT on Instagram">
@@ -2175,6 +2455,30 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       const retryButton = document.querySelector("#retrySubmit");
       const copyButton = document.querySelector("#copyRequestDetails");
       const emailButton = document.querySelector("#emailRequestDetails");
+      const draftRecovery = document.querySelector("#draftRecovery");
+      const restoreDraftButton = document.querySelector("#restoreDraft");
+      const discardDraftButton = document.querySelector("#discardDraft");
+      const draftSaved = document.querySelector("#draftSaved");
+      const emailInput = document.querySelector("#startEmail");
+      const emailSuggestion = document.querySelector("#emailSuggestion");
+      const emailSuggestionText = document.querySelector("#emailSuggestionText");
+      const useSuggestedEmailButton = document.querySelector("#useSuggestedEmail");
+      const keepTypedEmailButton = document.querySelector("#keepTypedEmail");
+      const verificationLayer = document.querySelector("#verificationLayer");
+      const turnstileWidget = document.querySelector("#turnstileWidget");
+      const summaryModal = document.querySelector("#requestSummaryModal");
+      const summaryReference = document.querySelector("#summaryReference");
+      const summaryTask = document.querySelector("#summaryTask");
+      const summaryReferences = document.querySelector("#summaryReferences");
+      const summaryDeadline = document.querySelector("#summaryDeadline");
+      const summaryBudget = document.querySelector("#summaryBudget");
+      const summaryEmail = document.querySelector("#summaryEmail");
+      const summaryTimerText = document.querySelector("#summaryTimerText");
+      const summaryTimerBar = document.querySelector("#summaryTimerBar");
+      const submitAnotherButton = document.querySelector("#submitAnotherRequest");
+      const copySummaryReferenceButton = document.querySelector("#copySummaryReference");
+      const openWorkspaceLink = document.querySelector("#openWorkspaceLink");
+      const correctEmailLink = document.querySelector("#correctEmailLink");
       if (!form || !message || !submit) return;
       const submitIdleText = submit.textContent;
       const referralAttribution = getReferralAttribution();
@@ -2182,10 +2486,18 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       const submitTimeoutMs = 15000;
       let isSubmitting = false;
       let lastSubmitPayload = null;
+      let draftSavedTimer = 0;
+      let emailSuggestionState = null;
+      let emailSuggestionAcknowledgedFor = "";
+      let turnstileToken = "";
+      let turnstileWidgetId = null;
+      let verificationRequired = false;
+      let summaryTimer = 0;
+      let lastSummaryReference = "";
 
       const requiredFields = [
         document.querySelector("#startName"),
-        document.querySelector("#startEmail"),
+        emailInput,
         document.querySelector("#startTask")
       ];
 
@@ -2225,6 +2537,20 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         } catch (error) {}
       }
 
+      function showDraftSaved() {
+        if (!draftSaved) return;
+        draftSaved.hidden = false;
+        window.clearTimeout(draftSavedTimer);
+        draftSavedTimer = window.setTimeout(() => {
+          draftSaved.hidden = true;
+        }, 1500);
+      }
+
+      function saveDraftFromInput(extra = {}) {
+        saveDraft(extra);
+        showDraftSaved();
+      }
+
       function storedDraft() {
         try {
           return JSON.parse(sessionStorage.getItem(draftKey) || localStorage.getItem(draftKey) || "null");
@@ -2233,7 +2559,18 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         }
       }
 
-      function restoreDraft() {
+      function hasMeaningfulDraft(draft = storedDraft()) {
+        const values = draft?.values || {};
+        return Boolean(
+          String(values.task_description || "").trim() ||
+          String(values.files_link || "").trim() ||
+          String(values.name || "").trim() ||
+          String(values.email || "").trim() ||
+          String(values.budget || "").trim()
+        );
+      }
+
+      function applyDraft() {
         const draft = storedDraft();
         const values = draft?.values;
         if (!values || typeof values !== "object") return;
@@ -2246,6 +2583,13 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           field.value = values[field.name] || "";
         });
         if (values.deadline) setDeadline(values.deadline);
+        if (draftRecovery) draftRecovery.hidden = true;
+        setMessage("Draft restored.", true, "Your saved ask is back in the intake.");
+      }
+
+      function showDraftRecoveryIfNeeded() {
+        if (!draftRecovery) return;
+        draftRecovery.hidden = !hasMeaningfulDraft();
       }
 
       function clearDraft() {
@@ -2253,6 +2597,8 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           localStorage.removeItem(draftKey);
           sessionStorage.removeItem(draftKey);
         } catch (error) {}
+        if (draftRecovery) draftRecovery.hidden = true;
+        if (draftSaved) draftSaved.hidden = true;
       }
 
       const intakeQualityMessage = "Please provide a real request.";
@@ -2399,6 +2745,49 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         showRetryActions();
       }
 
+      function emailIssue(value) {
+        const email = String(value || "").trim().toLowerCase();
+        if (!email || /\s/.test(email) || !email.includes("@")) {
+          return { type: "invalid", message: "Enter a valid email so we can get back to you." };
+        }
+        const parts = email.split("@");
+        if (parts.length !== 2 || !parts[0] || !parts[1] || !parts[1].includes(".")) {
+          return { type: "invalid", message: "Enter a valid email so we can get back to you." };
+        }
+        const domainSuggestions = {
+          "gmil.com": "gmail.com",
+          "gmai.com": "gmail.com",
+          "gmal.com": "gmail.com",
+          "gamil.com": "gmail.com",
+          "gnail.com": "gmail.com",
+          "gmail.co": "gmail.com",
+          "hotmial.com": "hotmail.com",
+          "hotmai.com": "hotmail.com",
+          "outlook.co": "outlook.com",
+          "icloud.co": "icloud.com"
+        };
+        const suggestion = domainSuggestions[parts[1]];
+        if (suggestion) {
+          return {
+            type: "suggestion",
+            domain: suggestion,
+            suggestedEmail: `${parts[0]}@${suggestion}`
+          };
+        }
+        return null;
+      }
+
+      function hideEmailSuggestion() {
+        emailSuggestionState = null;
+        if (emailSuggestion) emailSuggestion.hidden = true;
+      }
+
+      function showEmailSuggestion(issue) {
+        emailSuggestionState = issue;
+        if (emailSuggestionText) emailSuggestionText.textContent = `Did you mean ${issue.domain}?`;
+        if (emailSuggestion) emailSuggestion.hidden = false;
+      }
+
       function clearInvalid() {
         form.querySelectorAll(".field.is-invalid").forEach((field) => field.classList.remove("is-invalid"));
       }
@@ -2412,18 +2801,39 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           setMessage("Add your name, email, and ask so we can review it.");
           return false;
         }
-        const email = document.querySelector("#startEmail");
+        const email = emailInput;
+        const issue = emailIssue(email?.value || "");
+        if (email && issue?.type === "invalid") {
+          email.closest(".field")?.classList.add("is-invalid");
+          email.focus({ preventScroll: true });
+          hideEmailSuggestion();
+          setMessage(issue.message);
+          return false;
+        }
         if (email && !email.checkValidity()) {
           email.closest(".field")?.classList.add("is-invalid");
           email.focus({ preventScroll: true });
+          hideEmailSuggestion();
           setMessage("Enter a valid email so we can get back to you.");
           return false;
         }
+        if (email && issue?.type === "suggestion" && emailSuggestionAcknowledgedFor !== email.value.trim().toLowerCase()) {
+          email.closest(".field")?.classList.add("is-invalid");
+          showEmailSuggestion(issue);
+          email.focus({ preventScroll: true });
+          setMessage(`Did you mean ${issue.domain}?`, false, "Use the suggested email or confirm you want to keep the one typed.");
+          return false;
+        }
+        hideEmailSuggestion();
         if (isObviousInvalidRequest()) {
           const task = document.querySelector("#startTask");
           task?.closest(".field")?.classList.add("is-invalid");
           task?.focus({ preventScroll: true });
           setMessage(intakeQualityMessage, false, intakeQualityDetail);
+          return false;
+        }
+        if (verificationRequired && !turnstileToken) {
+          setMessage("Please complete verification before sending.");
           return false;
         }
         return true;
@@ -2505,6 +2915,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           source: "ask_intake",
           intakeVersion: "ask_page_v1",
           ui_locale: document.documentElement.lang || "en",
+          turnstile_token: turnstileToken || "",
           ...currentReferralAttribution
         };
       }
@@ -2647,6 +3058,73 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         };
       }
 
+      function resetVerification() {
+        turnstileToken = "";
+        try {
+          if (window.turnstile && turnstileWidgetId !== null) {
+            window.turnstile.reset(turnstileWidgetId);
+          }
+        } catch (error) {}
+      }
+
+      function loadTurnstileScript() {
+        return new Promise((resolve, reject) => {
+          if (window.turnstile) return resolve();
+          const existing = document.querySelector("script[data-turnstile-loader]");
+          if (existing) {
+            existing.addEventListener("load", () => resolve(), { once: true });
+            existing.addEventListener("error", () => reject(new Error("TURNSTILE_SCRIPT_FAILED")), { once: true });
+            return;
+          }
+          const script = document.createElement("script");
+          script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+          script.async = true;
+          script.defer = true;
+          script.dataset.turnstileLoader = "true";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("TURNSTILE_SCRIPT_FAILED"));
+          document.head.append(script);
+        });
+      }
+
+      async function configureVerification() {
+        if (!verificationLayer || !turnstileWidget) return;
+        try {
+          const response = await fetch("/api/task-submit?ask_security_config=1", {
+            headers: { Accept: "application/json" }
+          });
+          const config = await response.json().catch(() => null);
+          verificationRequired = Boolean(config?.enabled && config?.site_key);
+          if (!verificationRequired) {
+            verificationLayer.hidden = true;
+            return;
+          }
+          await loadTurnstileScript();
+          turnstileWidgetId = window.turnstile.render(turnstileWidget, {
+            sitekey: config.site_key,
+            theme: "dark",
+            callback: (token) => {
+              turnstileToken = token || "";
+              if (message.textContent === "Please complete verification before sending.") setMessage("");
+            },
+            "expired-callback": () => {
+              turnstileToken = "";
+            },
+            "error-callback": () => {
+              turnstileToken = "";
+              setMessage("Please complete verification before sending.");
+            }
+          });
+          verificationLayer.hidden = false;
+        } catch (error) {
+          verificationRequired = false;
+          verificationLayer.hidden = true;
+          console.warn("DONEOVERNIGHT ask verification unavailable", {
+            message: error?.message || "Verification config failed"
+          });
+        }
+      }
+
       function taskReference(data) {
         return data?.taskId || data?.task?.taskId || data?.persistedTask?.task_id || "";
       }
@@ -2658,22 +3136,115 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         return "We’ll reply by email shortly.";
       }
 
+      function shorten(value = "", max = 92) {
+        const text = String(value || "").replace(/\s+/g, " ").trim();
+        return text.length > max ? `${text.slice(0, max - 1).trim()}…` : text;
+      }
+
+      function workspaceUrlFromResponse(data = {}) {
+        return String(
+          data.workspaceUrl ||
+          data.workspace_url ||
+          data.task?.workspace_url ||
+          data.task?.rawPayload?.workspace_url ||
+          data.task?.raw_payload?.workspace_url ||
+          data.persistedTask?.raw_payload?.workspace_url ||
+          ""
+        ).trim();
+      }
+
+      function completeSuccessFlow() {
+        window.clearTimeout(summaryTimer);
+        if (summaryModal) summaryModal.hidden = true;
+        clearDraft();
+        form.reset();
+        setDeadline("Tonight");
+        resetVerification();
+        hideRetryActions();
+        hideEmailSuggestion();
+        setSubmitState(false);
+        submit.textContent = submitIdleText;
+        setMessage("");
+        lastSubmitPayload = null;
+        lastSummaryReference = "";
+      }
+
+      function updateCorrectEmailLink(reference, submittedEmail) {
+        if (!correctEmailLink) return;
+        const subject = encodeURIComponent(`Email correction for ${reference || "DONEOVERNIGHT request"}`);
+        const body = encodeURIComponent([
+          "Hi DONEOVERNIGHT,",
+          "",
+          "I need to correct the email address for my request.",
+          "",
+          `Reference: ${reference || ""}`,
+          `Submitted email: ${submittedEmail || ""}`,
+          "Correct email:",
+          "",
+          "Thank you."
+        ].join("\n"));
+        correctEmailLink.href = `mailto:ask@doneovernight.com?subject=${subject}&body=${body}`;
+      }
+
+      function showSuccessSummary(data = {}, submittedPayload = {}) {
+        const reference = taskReference(data);
+        lastSummaryReference = reference;
+        if (summaryReference) summaryReference.textContent = reference ? `Reference: ${reference}` : "Reference pending";
+        if (summaryTask) summaryTask.textContent = shorten(submittedPayload.task_description || "Request received");
+        const referenceCount = Array.isArray(submittedPayload.reference_links) ? submittedPayload.reference_links.length : 0;
+        if (summaryReferences) summaryReferences.textContent = referenceCount ? `${referenceCount} link${referenceCount === 1 ? "" : "s"}` : "None";
+        if (summaryDeadline) summaryDeadline.textContent = submittedPayload.deadline || "Tonight";
+        if (summaryBudget) summaryBudget.textContent = submittedPayload.budget || "Not provided";
+        if (summaryEmail) summaryEmail.textContent = submittedPayload.email || "";
+        updateCorrectEmailLink(reference, submittedPayload.email);
+
+        const workspaceUrl = workspaceUrlFromResponse(data);
+        if (openWorkspaceLink && workspaceUrl) {
+          openWorkspaceLink.href = workspaceUrl;
+          openWorkspaceLink.hidden = false;
+        } else if (openWorkspaceLink) {
+          openWorkspaceLink.hidden = true;
+        }
+
+        if (summaryTimerText) summaryTimerText.textContent = "Returning to intake in 10 seconds";
+        if (summaryTimerBar) {
+          summaryTimerBar.style.animation = "none";
+          void summaryTimerBar.offsetWidth;
+          summaryTimerBar.style.animation = "";
+        }
+        if (summaryModal) summaryModal.hidden = false;
+        window.clearTimeout(summaryTimer);
+        summaryTimer = window.setTimeout(completeSuccessFlow, 10000);
+      }
+
       form.addEventListener("input", (event) => {
         event.target?.closest(".field")?.classList.remove("is-invalid");
         if (message.textContent) setMessage("");
         hideRetryActions();
-        saveDraft();
+        if (event.target === emailInput) {
+          emailSuggestionAcknowledgedFor = "";
+          hideEmailSuggestion();
+        }
+        saveDraftFromInput();
       });
 
       deadlineChips.forEach((chip) => {
         chip.addEventListener("click", () => {
           setDeadline(chip.dataset.deadline || "Tonight");
           hideRetryActions();
-          saveDraft();
+          saveDraftFromInput();
         });
       });
 
       revealButton?.addEventListener("click", toggleIntake);
+      restoreDraftButton?.addEventListener("click", () => {
+        applyDraft();
+        saveDraftFromInput();
+      });
+      discardDraftButton?.addEventListener("click", () => {
+        clearDraft();
+        setMessage("Draft discarded.", true);
+      });
       retryButton?.addEventListener("click", () => {
         if (isSubmitting) return;
         if (typeof form.requestSubmit === "function") {
@@ -2683,12 +3254,40 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         }
       });
       copyButton?.addEventListener("click", copyRequestDetails);
+      useSuggestedEmailButton?.addEventListener("click", () => {
+        if (!emailInput || !emailSuggestionState?.suggestedEmail) return;
+        emailInput.value = emailSuggestionState.suggestedEmail;
+        emailSuggestionAcknowledgedFor = emailInput.value.trim().toLowerCase();
+        emailInput.closest(".field")?.classList.remove("is-invalid");
+        hideEmailSuggestion();
+        setMessage("");
+        saveDraftFromInput();
+      });
+      keepTypedEmailButton?.addEventListener("click", () => {
+        if (!emailInput) return;
+        emailSuggestionAcknowledgedFor = emailInput.value.trim().toLowerCase();
+        emailInput.closest(".field")?.classList.remove("is-invalid");
+        hideEmailSuggestion();
+        setMessage("");
+        saveDraftFromInput();
+      });
+      submitAnotherButton?.addEventListener("click", completeSuccessFlow);
+      copySummaryReferenceButton?.addEventListener("click", async () => {
+        if (!lastSummaryReference) return;
+        try {
+          await navigator.clipboard.writeText(lastSummaryReference);
+          if (summaryTimerText) summaryTimerText.textContent = "Reference copied. Returning to intake in 10 seconds";
+        } catch (error) {
+          if (summaryTimerText) summaryTimerText.textContent = "Reference ready to copy manually.";
+        }
+      });
 
       if (window.location.hash === "#task-intake") {
         revealIntake({ focus: false, scroll: false, trigger: "hash" });
       }
 
-      restoreDraft();
+      showDraftRecoveryIfNeeded();
+      configureVerification();
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -2733,17 +3332,9 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
             category: "task",
             page: "ask"
           });
-          clearDraft();
-          form.reset();
-          setDeadline("Tonight");
           hideRetryActions();
-          setMessage(
-            "Ask received.",
-            true,
-            "",
-            reference ? `Reference: ${reference}` : "",
-            confirmationLine(data)
-          );
+          setMessage("Ask received.", true, "", reference ? `Reference: ${reference}` : "", confirmationLine(data));
+          showSuccessSummary(data, lastSubmitPayload);
           submit.textContent = "Ask received";
         } catch (error) {
           console.warn("DONEOVERNIGHT start intake failed", {
@@ -2754,6 +3345,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
           });
           const readable = submitErrorMessage(error);
           setMessage(readable.title, false, readable.detail);
+          resetVerification();
           showRetryActions();
         } finally {
           isSubmitting = false;
