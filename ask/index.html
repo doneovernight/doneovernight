@@ -2492,6 +2492,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
       let turnstileToken = "";
       let turnstileWidgetId = null;
       let verificationRequired = false;
+      let verificationConfig = null;
       let summaryTimer = 0;
       let lastSummaryReference = "";
 
@@ -2974,6 +2975,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         if (scroll) {
           window.setTimeout(scrollIntakeIntoView, 180);
         }
+        configureVerification({ render: true });
         if (focus) {
           window.setTimeout(() => document.querySelector("#startName")?.focus({ preventScroll: true }), 520);
         }
@@ -3087,22 +3089,32 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         });
       }
 
-      async function configureVerification() {
+      async function configureVerification({ render = false } = {}) {
         if (!verificationLayer || !turnstileWidget) return;
         try {
-          const response = await fetch("/api/task-submit?ask_security_config=1", {
-            headers: { Accept: "application/json" }
-          });
-          const config = await response.json().catch(() => null);
-          verificationRequired = Boolean(config?.enabled && config?.site_key);
+          if (!verificationConfig) {
+            const response = await fetch("/api/task-submit?ask_security_config=1", {
+              headers: { Accept: "application/json" }
+            });
+            verificationConfig = await response.json().catch(() => null);
+          }
+          verificationRequired = Boolean(verificationConfig?.enabled && verificationConfig?.site_key);
           if (!verificationRequired) {
             verificationLayer.hidden = true;
             return;
           }
+          if (!render && !formCard?.classList.contains("is-revealed")) {
+            verificationLayer.hidden = true;
+            return;
+          }
+          verificationLayer.hidden = false;
+          if (turnstileWidgetId !== null) return;
           await loadTurnstileScript();
           turnstileWidgetId = window.turnstile.render(turnstileWidget, {
-            sitekey: config.site_key,
+            sitekey: verificationConfig.site_key,
             theme: "dark",
+            size: "normal",
+            appearance: "always",
             callback: (token) => {
               turnstileToken = token || "";
               if (message.textContent === "Please complete verification before sending.") setMessage("");
@@ -3115,7 +3127,6 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
               setMessage("Please complete verification before sending.");
             }
           });
-          verificationLayer.hidden = false;
         } catch (error) {
           verificationRequired = false;
           verificationLayer.hidden = true;
