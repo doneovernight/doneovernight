@@ -2533,8 +2533,8 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         };
         try {
           const serialized = JSON.stringify(draft);
-          localStorage.setItem(draftKey, serialized);
-          sessionStorage.setItem(draftKey, serialized);
+          window.localStorage?.setItem(draftKey, serialized);
+          window.sessionStorage?.setItem(draftKey, serialized);
         } catch (error) {}
       }
 
@@ -2554,7 +2554,7 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
 
       function storedDraft() {
         try {
-          return JSON.parse(sessionStorage.getItem(draftKey) || localStorage.getItem(draftKey) || "null");
+          return JSON.parse(window.sessionStorage?.getItem(draftKey) || window.localStorage?.getItem(draftKey) || "null");
         } catch (error) {
           return null;
         }
@@ -2595,8 +2595,8 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
 
       function clearDraft() {
         try {
-          localStorage.removeItem(draftKey);
-          sessionStorage.removeItem(draftKey);
+          window.localStorage?.removeItem(draftKey);
+          window.sessionStorage?.removeItem(draftKey);
         } catch (error) {}
         if (draftRecovery) draftRecovery.hidden = true;
         if (draftSaved) draftSaved.hidden = true;
@@ -2879,13 +2879,13 @@ Loom, Figma, Notion, GitHub or Website URL"></textarea>
         if (urlReferral) {
           const attribution = buildReferralAttribution(urlReferral);
           try {
-            sessionStorage.setItem(storageKey, JSON.stringify(attribution));
+            window.sessionStorage?.setItem(storageKey, JSON.stringify(attribution));
           } catch (error) {}
           return attribution;
         }
 
         try {
-          const stored = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+          const stored = JSON.parse(window.sessionStorage?.getItem(storageKey) || "null");
           const storedReferral = normalizeReferralValue(stored?.referral_task_id || stored?.referred_by_task_id || stored?.referral_workspace_slug || stored?.referred_by_client);
           if (storedReferral) {
             return {
