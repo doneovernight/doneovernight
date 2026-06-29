@@ -48,6 +48,7 @@
       emailSending: "Sending access...",
       emailSendFailed: "Confirmation email could not be sent. Try again.",
       emailPendingCopy: "Check your inbox. Your DONEOVERNIGHT access is being prepared.",
+      emailFallback: "We could not send the access email yet. Try again in a minute or DM @doneovernight.",
       emailConfirmedTitle: "Access unlocked",
       emailConfirmedHeadline: "You're in.",
       emailConfirmedCopy: "Check your inbox. Your DONEOVERNIGHT access has been sent.",
@@ -178,6 +179,7 @@
       emailSending: "Toegang wordt verzonden...",
       emailSendFailed: "De bevestiging kon niet worden verzonden. Probeer opnieuw.",
       emailPendingCopy: "Check je inbox. Je DONEOVERNIGHT toegang wordt voorbereid.",
+      emailFallback: "We konden de toegangsmail nog niet verzenden. Probeer het zo opnieuw of DM @doneovernight.",
       emailConfirmedTitle: "Toegang ontgrendeld",
       emailConfirmedHeadline: "Je bent binnen.",
       emailConfirmedCopy: "Check je inbox. Je DONEOVERNIGHT toegang is verzonden.",
@@ -684,7 +686,7 @@
     const resendNote = document.getElementById("resend-note");
     const after = document.querySelectorAll("[data-after-gate]");
     if (list) list.innerHTML = data.gateItems[lang].map((item) => `<li>${item}</li>`).join("");
-    if (savedEmail) {
+    if (savedEmail?.confirmation?.delivered === true) {
       showGateConfirmation(savedEmail.confirmation || { delivered: true }, false);
     }
     if (continueButton) {
@@ -711,11 +713,13 @@
         const result = await requestJourneyConfirmation(payload.confirmationPayload || buildJourneyConfirmationPayload(payload));
         payload.confirmation = result;
         save(emailKey, payload);
-        save(confirmationCooldownKey, { lastSentAt: Date.now() });
-        showGateConfirmation(result, false);
+        if (result.delivered) {
+          save(confirmationCooldownKey, { lastSentAt: Date.now() });
+          showGateConfirmation(result, false);
+        }
         if (resendNote) {
-          resendNote.textContent = result.delivered ? copy[lang].sentAgain : copy[lang].emailPendingCopy;
-          resendNote.classList.add("is-success");
+          resendNote.textContent = result.delivered ? copy[lang].sentAgain : copy[lang].emailFallback;
+          resendNote.classList.toggle("is-success", result.delivered);
         }
         updateResendCooldown(resendButton, resendNote);
       };
@@ -749,6 +753,12 @@
         socialHandle
       });
       const confirmationResult = await requestJourneyConfirmation(confirmationPayload);
+      if (!confirmationResult.delivered) {
+        note.textContent = copy[lang].emailFallback;
+        note.classList.remove("is-success");
+        if (submit) submit.disabled = false;
+        return;
+      }
       const payload = {
         email,
         name: form.name.value.trim(),
@@ -772,7 +782,7 @@
       };
       save(emailKey, payload);
       save(confirmationCooldownKey, { lastSentAt: Date.now() });
-      note.textContent = confirmationResult.delivered ? copy[lang].welcome : copy[lang].emailPendingCopy;
+      note.textContent = copy[lang].welcome;
       note.classList.add("is-success");
       markComplete("gate");
       persistVisitorProgress();

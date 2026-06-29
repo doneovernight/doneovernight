@@ -1133,6 +1133,14 @@ async function handleJourneyConfirmationRequest(req, res, input = {}) {
   }
   const emailResult = await sendJourneyConfirmationEmail({ ...input, email });
   const storageResult = await saveJourneyConfirmation({ ...input, email }, emailResult);
+  console.log("[JOURNEY_CONFIRMATION]", {
+    email,
+    delivered: emailResult.delivered === true,
+    provider: emailResult.provider || "none",
+    reason: emailResult.reason || "",
+    configured: emailResult.configured === true,
+    storage: storageResult.status || "not_attempted"
+  });
   const statusCode = emailResult.delivered ? 200 : emailResult.reason === "not_configured" ? 202 : 502;
   return send(res, statusCode, publicJourneyConfirmationResult(emailResult, storageResult));
 }
