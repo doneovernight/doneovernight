@@ -2285,7 +2285,8 @@
   async function fetchPlatformData(view) {
     try {
       const headers = {};
-      if (view === "hq") {
+      const target = String(view || "");
+      if (target === "hq" || target.startsWith("hq&") || target.includes("view=hq")) {
         const token = read("doneovernight.hqAccess.v1", "") || window.prompt("DONEOVERNIGHT HQ access");
         if (token) {
           save("doneovernight.hqAccess.v1", token);
@@ -2391,7 +2392,8 @@
   async function mountHq() {
     const root = document.getElementById("hq-root");
     if (!root) return;
-    const data = await fetchPlatformData("hq");
+    const showTests = read("doneovernight.hqShowTests.v1", false) === true;
+    const data = await fetchPlatformData(showTests ? "hq&show_tests=1" : "hq");
     if (!data.ok) {
       root.innerHTML = `<section class="viewer-panel"><span class="eyebrow">Private</span><h1 class="step-title">HQ locked.</h1><p class="step-copy">Access is private. Set the HQ token to view platform analytics.</p></section>`;
       return;
@@ -2406,6 +2408,7 @@
         </div>
         <a class="open-live" href="/live">Live</a>
       </section>
+      <label class="hq-toggle"><input type="checkbox" id="show-test-records" ${showTests ? "checked" : ""}> Show test records</label>
       <section class="activity-grid" aria-label="DONEOVERNIGHT HQ analytics">
         ${hqMetric("Today's Journeys", metrics.todays_journeys)}
         ${hqMetric("Completed Journeys", metrics.completed_journeys)}
@@ -2424,6 +2427,7 @@
       ${liveStatusForm(data.current_live_status || {})}
     `;
     bindLiveStatusForm();
+    bindHqTestToggle();
   }
 
   function hqMetric(label, value) {
@@ -2445,19 +2449,25 @@
           <p class="step-copy">Update the current build signal. Empty fields stay calm on Live.</p>
         </div>
         <form id="live-status-form" class="live-status-form">
-          ${liveStatusInput("current_build", "Current build", status.current_build)}
-          ${liveStatusInput("current_operator", "Current operator", status.current_operator)}
-          ${liveStatusInput("current_project", "Current project", status.current_project || status.current_client)}
-          ${liveStatusInput("latest_deployment", "Latest deployment", status.latest_deployment)}
-          ${liveStatusInput("estimated_completion", "Estimated completion", status.estimated_completion)}
+          ${liveStatusInput("current_build", "Current Build", status.current_build)}
+          ${liveStatusInput("current_operator", "Current Operator", status.current_operator)}
+          ${liveStatusInput("current_project", "Current Project", status.current_project || status.current_client)}
+          ${liveStatusInput("current_focus", "Current Focus", status.current_focus)}
           ${liveStatusInput("progress", "Progress", status.current_progress || progress)}
-          ${liveStatusInput("current_branch", "Current branch", status.current_branch)}
-          ${liveStatusInput("current_commit", "Current commit", status.current_commit)}
+          ${liveStatusInput("estimated_completion", "Estimated Completion", status.estimated_completion)}
+          ${liveStatusInput("current_branch", "Current Branch", status.current_branch)}
+          ${liveStatusInput("current_commit", "Current Commit", status.current_commit)}
           ${liveStatusInput("heartbeat", "Heartbeat", status.heartbeat)}
-          ${liveStatusInput("repository_status", "Repository status", status.repository_status)}
-          ${liveStatusInput("last_update", "Last update", status.updated_at)}
-          ${liveStatusInput("current_focus", "Current focus", status.current_focus)}
-          <button class="quiet-action" type="submit">Update Live</button>
+          ${liveStatusInput("repository_status", "Repository Status", status.repository_status)}
+          ${liveStatusInput("last_update", "Last Update", status.updated_at)}
+          ${liveStatusTextarea("recent_activity", "Recent Activity", status.recent_activity)}
+          ${liveStatusTextarea("latest_wins", "Latest Wins", status.latest_wins)}
+          ${liveStatusTextarea("upcoming_builds", "Upcoming Builds", status.upcoming_builds)}
+          <div class="live-status-actions">
+            <button class="quiet-action" type="submit" value="save_live_status">Save Live Status</button>
+            <button class="quiet-action secondary" type="submit" value="send_heartbeat">Send Heartbeat</button>
+            <button class="quiet-action secondary" type="submit" value="clear_live_status">Clear Live Status</button>
+          </div>
           <div class="form-note" id="live-status-note" aria-live="polite"></div>
         </form>
       </section>
@@ -2468,6 +2478,11 @@
     return `<label class="field-label">${escapeHtml(label)}<input class="text-field" name="${escapeAttr(name)}" value="${escapeAttr(value || "")}"></label>`;
   }
 
+  function liveStatusTextarea(name, label, value = []) {
+    const text = Array.isArray(value) ? value.join("\n") : value || "";
+    return `<label class="field-label">${escapeHtml(label)}<textarea class="text-field" name="${escapeAttr(name)}">${escapeHtml(text)}</textarea></label>`;
+  }
+
   function bindLiveStatusForm() {
     const form = document.getElementById("live-status-form");
     const note = document.getElementById("live-status-note");
@@ -2476,10 +2491,13 @@
       event.preventDefault();
       const token = read("doneovernight.hqAccess.v1", "");
       const payload = Object.fromEntries(new FormData(form).entries());
+      const action = event.submitter?.value || "save_live_status";
+      payload.action = action;
+      if (action === "send_heartbeat" && !payload.heartbeat) payload.heartbeat = new Date().toISOString();
       const progressNumber = Number(payload.progress);
       if (Number.isFinite(progressNumber)) payload.progress_percentage = progressNumber;
       if (note) {
-        note.textContent = "Updating live status...";
+        note.textContent = action === "clear_live_status" ? "Clearing live status..." : "Updating live status...";
         note.classList.remove("is-success");
       }
       try {
@@ -2495,13 +2513,23 @@
         const result = await response.json().catch(() => ({}));
         if (!response.ok || result.saved !== true) throw new Error(result.reason || result.error || "live_status_failed");
         if (note) {
-          note.textContent = "Live status updated.";
+          note.textContent = action === "clear_live_status" ? "Live status cleared." : "Live status updated.";
           note.classList.add("is-success");
         }
-        showReward("Live updated.");
+        showReward(action === "clear_live_status" ? "Live cleared." : "Live updated.");
+        setTimeout(() => mountHq(), 700);
       } catch (error) {
         if (note) note.textContent = "Live status could not be updated.";
       }
+    };
+  }
+
+  function bindHqTestToggle() {
+    const toggle = document.getElementById("show-test-records");
+    if (!toggle) return;
+    toggle.onchange = () => {
+      save("doneovernight.hqShowTests.v1", toggle.checked);
+      mountHq();
     };
   }
 

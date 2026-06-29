@@ -1464,10 +1464,55 @@ function topPlatformValues(rows = [], field, limit = 6) {
     .map(([label, count]) => ({ label, count }));
 }
 
-function buildHqPlatformSnapshot(snapshot) {
-  const journeys = snapshot.journeys.rows;
-  const emails = snapshot.email_events.rows;
-  const pages = snapshot.page_events.rows;
+function recordLooksLikeTest(row = {}) {
+  const values = [
+    row.journey_id,
+    row.viewer_build_id,
+    row.email,
+    row.title,
+    row.description,
+    row.problem,
+    row.resource,
+    row.source,
+    row.source_page,
+    row.page,
+    row.event_type,
+    row.current_build,
+    row.current_operator,
+    row.current_client,
+    row.latest_deployment,
+    row.current_focus,
+    row.heartbeat,
+    row.provider_message_id,
+    row.raw_payload?.viewer_build_id,
+    row.raw_payload?.email_type,
+    row.metadata?.verification,
+    row.metadata?.stamp
+  ].map((value) => String(value || "").toLowerCase());
+  return values.some((value) => (
+    value.startsWith("don-verify") ||
+    value.includes("verify+") ||
+    value.includes("verification") ||
+    value.includes("browser verification") ||
+    value.includes("codex_production_verification") ||
+    value.includes("live writer verification") ||
+    value.includes("verification resource")
+  ));
+}
+
+function visiblePlatformRows(rows = [], includeTest = false) {
+  return includeTest ? rows : rows.filter((row) => !recordLooksLikeTest(row));
+}
+
+function buildHqPlatformSnapshot(snapshot, options = {}) {
+  const includeTest = options.includeTest === true;
+  const journeys = visiblePlatformRows(snapshot.journeys.rows, includeTest);
+  const emails = visiblePlatformRows(snapshot.email_events.rows, includeTest);
+  const pages = visiblePlatformRows(snapshot.page_events.rows, includeTest);
+  const viewerBuilds = visiblePlatformRows(snapshot.viewer_builds.rows, includeTest);
+  const resources = visiblePlatformRows(snapshot.resource_interest.rows, includeTest);
+  const journal = visiblePlatformRows(snapshot.journal.rows, includeTest);
+  const liveStatus = visiblePlatformRows(snapshot.live_status.rows, includeTest);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const completed = journeys.filter((row) => Number(row.completion_percentage || 0) >= 100);
@@ -1483,7 +1528,7 @@ function buildHqPlatformSnapshot(snapshot) {
       completed_journeys: completed.length,
       emails_sent: emails.filter((row) => row.status === "sent").length,
       email_opens: emails.filter((row) => row.status === "opened").length,
-      viewer_builds: snapshot.viewer_builds.rows.length,
+      viewer_builds: viewerBuilds.length,
       average_completion: average,
       current_live_visitors: 0
     },
@@ -1491,23 +1536,33 @@ function buildHqPlatformSnapshot(snapshot) {
     most_chosen_path: topPlatformValues(journeys, "chosen_path", 4),
     traffic_sources: topPlatformValues(journeys, "source", 8),
     recent_activity: pages.slice(0, 10),
-    recent_builds: snapshot.viewer_builds.rows.slice(0, 8),
-    recent_resources: snapshot.resource_interest.rows.slice(0, 8),
-    recent_journal_entries: snapshot.journal.rows.slice(0, 8),
-    current_live_status: snapshot.live_status.rows[0] || null
+    recent_builds: viewerBuilds.slice(0, 8),
+    recent_resources: resources.slice(0, 8),
+    recent_journal_entries: journal.slice(0, 8),
+    current_live_status: liveStatus[0] || null,
+    test_records_hidden: includeTest ? 0 : {
+      journeys: snapshot.journeys.rows.length - journeys.length,
+      viewer_builds: snapshot.viewer_builds.rows.length - viewerBuilds.length,
+      resource_interest: snapshot.resource_interest.rows.length - resources.length,
+      email_events: snapshot.email_events.rows.length - emails.length,
+      page_events: snapshot.page_events.rows.length - pages.length
+    }
   };
 }
 
 function buildLivePlatformSnapshot(snapshot) {
-  const live = snapshot.live_status.rows[0] || null;
+  const live = visiblePlatformRows(snapshot.live_status.rows, false)[0] || null;
+  const viewerBuilds = visiblePlatformRows(snapshot.viewer_builds.rows, false);
+  const journal = visiblePlatformRows(snapshot.journal.rows, false);
+  const emails = visiblePlatformRows(snapshot.email_events.rows, false);
   return {
-    placeholder: !live,
+    placeholder: !live || live.placeholder === true,
     generated_at: snapshot.generated_at,
     live_status: live,
-    viewer_queue: snapshot.viewer_builds.rows.slice(0, 6),
-    journal: snapshot.journal.rows.slice(0, 5),
+    viewer_queue: viewerBuilds.slice(0, 6),
+    journal: journal.slice(0, 5),
     journey_count_today: buildHqPlatformSnapshot(snapshot).metrics.todays_journeys,
-    email_system: snapshot.email_events.rows[0] || null
+    email_system: emails[0] || null
   };
 }
 
@@ -1519,7 +1574,8 @@ async function handlePlatformDataRequest(req, res) {
   if (view === "hq") {
     const auth = requireHqAccess(req);
     if (!auth.ok) return send(res, 401, { ok: false, error: auth.reason });
-    return send(res, 200, { ok: true, view, ...buildHqPlatformSnapshot(snapshot) });
+    const includeTest = url.searchParams.get("show_tests") === "1" || url.searchParams.get("include_test") === "1";
+    return send(res, 200, { ok: true, view, show_tests: includeTest, ...buildHqPlatformSnapshot(snapshot, { includeTest }) });
   }
 
   if (view === "journal") {
