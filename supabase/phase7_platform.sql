@@ -83,23 +83,39 @@ create table if not exists public.visitor_progress (
 
 create table if not exists public.viewer_builds (
   id uuid primary key default gen_random_uuid(),
+  viewer_build_id text unique,
   journey_id text,
   email text,
   title text not null,
   description text,
   problem text,
   website text,
+  browser_language text,
   status text not null default 'submitted',
   votes integer not null default 0,
+  comments_count integer not null default 0,
   assigned_to text,
+  assigned_operator text,
+  public_roadmap boolean not null default false,
+  roadmap_status text,
+  archive_reason text,
+  raw_payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table public.viewer_builds add column if not exists viewer_build_id text;
 alter table public.viewer_builds add column if not exists description text;
 alter table public.viewer_builds add column if not exists problem text;
 alter table public.viewer_builds add column if not exists website text;
+alter table public.viewer_builds add column if not exists browser_language text;
 alter table public.viewer_builds add column if not exists assigned_to text;
+alter table public.viewer_builds add column if not exists assigned_operator text;
+alter table public.viewer_builds add column if not exists comments_count integer not null default 0;
+alter table public.viewer_builds add column if not exists public_roadmap boolean not null default false;
+alter table public.viewer_builds add column if not exists roadmap_status text;
+alter table public.viewer_builds add column if not exists archive_reason text;
+alter table public.viewer_builds add column if not exists raw_payload jsonb not null default '{}'::jsonb;
 alter table public.viewer_builds add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists public.resource_interest (
@@ -187,12 +203,17 @@ create table if not exists public.page_events (
 create table if not exists public.share_events (
   id uuid primary key default gen_random_uuid(),
   journey_id text,
+  viewer_build_id text,
   event_type text not null,
   page text,
   method text,
   url text,
+  raw_payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.share_events add column if not exists viewer_build_id text;
+alter table public.share_events add column if not exists raw_payload jsonb not null default '{}'::jsonb;
 
 create index if not exists journeys_started_at_idx on public.journeys (started_at desc);
 create index if not exists journey_confirmations_email_idx on public.journey_confirmations (email);
@@ -204,6 +225,7 @@ create index if not exists journeys_chosen_path_idx on public.journeys (chosen_p
 create index if not exists visitor_progress_journey_id_idx on public.visitor_progress (journey_id);
 create index if not exists viewer_builds_created_at_idx on public.viewer_builds (created_at desc);
 create index if not exists viewer_builds_status_idx on public.viewer_builds (status);
+create unique index if not exists viewer_builds_viewer_build_id_unique_idx on public.viewer_builds (viewer_build_id);
 create index if not exists resource_interest_created_at_idx on public.resource_interest (created_at desc);
 create index if not exists journal_created_at_idx on public.journal (created_at desc);
 create unique index if not exists journal_deployment_id_unique_idx
@@ -216,6 +238,7 @@ create index if not exists page_events_entered_at_idx on public.page_events (ent
 create index if not exists page_events_page_idx on public.page_events (page);
 create index if not exists share_events_created_at_idx on public.share_events (created_at desc);
 create index if not exists share_events_event_type_idx on public.share_events (event_type);
+create index if not exists share_events_viewer_build_id_idx on public.share_events (viewer_build_id);
 
 alter table public.journeys enable row level security;
 alter table public.journey_confirmations enable row level security;

@@ -95,6 +95,14 @@
       website: "Website, optional",
       submitIdea: "Submit idea",
       ideaSaved: "Your idea has been added.",
+      ideaFailed: "We could not add your idea yet. Try again in a minute.",
+      viewerSubmitted: "Viewer Build submitted",
+      viewerBuildId: "Viewer Build ID",
+      status: "Status",
+      submitted: "Submitted",
+      estimatedReview: "Estimated review",
+      reviewWindow: "Within a few days",
+      viewerSuccessCopy: "We'll notify you if your idea moves into review or development.",
       copyResult: "Copy your result",
       sharePage: "Share this page",
       copied: "Profile copied.",
@@ -226,6 +234,14 @@
       website: "Website, optioneel",
       submitIdea: "Verstuur idee",
       ideaSaved: "Je idee is toegevoegd.",
+      ideaFailed: "We konden je idee nog niet toevoegen. Probeer het zo opnieuw.",
+      viewerSubmitted: "Viewer Build ingediend",
+      viewerBuildId: "Viewer Build ID",
+      status: "Status",
+      submitted: "Ingediend",
+      estimatedReview: "Geschatte review",
+      reviewWindow: "Binnen een paar dagen",
+      viewerSuccessCopy: "We laten het weten als je idee naar review of ontwikkeling gaat.",
       copyResult: "Kopieer je resultaat",
       sharePage: "Deel deze pagina",
       copied: "Profiel gekopieerd.",
@@ -914,6 +930,37 @@
     }
   }
 
+  async function requestViewerBuildSubmission(build = {}) {
+    try {
+      const response = await fetch("/api/platform-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(platformPayload({
+          event: "viewer_build_submitted",
+          viewer_build: build,
+          idea: build.idea,
+          title: build.idea,
+          description: build.description,
+          problem: build.solve,
+          website: build.website,
+          email: build.email,
+          browser_language: navigator.language || "",
+          lang,
+          page: pageName(),
+          source: pageName()
+        }))
+      });
+      const result = await response.json().catch(() => ({}));
+      return {
+        ...result,
+        ok: response.ok && result.ok === true,
+        statusCode: response.status
+      };
+    } catch (error) {
+      return { ok: false, saved: false, error: "network_error" };
+    }
+  }
+
   function pageName() {
     const path = window.location.pathname.replace(/^\/|\/$/g, "") || "home";
     if (path === "how-it-works") return "how-it-works";
@@ -971,33 +1018,90 @@
     form.onsubmit = async (event) => {
       event.preventDefault();
       if (!canInteract(form)) return;
-      if (!fields.idea.value.trim() || !fields.description.value.trim()) return;
+      postPlatformEvent({ event: "viewer_build_started", page: pageName(), source: pageName() });
+      const submit = form.querySelector('[type="submit"]');
+      if (!fields.idea.value.trim() || !fields.description.value.trim() || !String(fields.solve?.value || "").trim()) {
+        if (note) {
+          note.textContent = copy[lang].ideaFailed;
+          note.classList.remove("is-success");
+        }
+        return;
+      }
+      const email = fields.email.value.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (note) {
+          note.textContent = copy[lang].emailError;
+          note.classList.remove("is-success");
+        }
+        return;
+      }
       const build = {
         idea: fields.idea.value.trim(),
         description: fields.description.value.trim(),
         solve: fields.solve ? fields.solve.value.trim() : "",
         website: fields.website.value.trim(),
-        email: fields.email.value.trim(),
+        email,
         createdAt: new Date().toISOString()
       };
+      if (submit) submit.disabled = true;
+      if (note) {
+        note.textContent = "";
+        note.classList.remove("is-success");
+      }
+      const result = await requestViewerBuildSubmission(build);
+      if (!result.ok || !result.saved) {
+        const drafts = read("doneovernight.viewerBuildDrafts.v1", []);
+        drafts.push({ ...build, failedAt: new Date().toISOString(), reason: result.reason || result.error || "submission_failed" });
+        save("doneovernight.viewerBuildDrafts.v1", drafts);
+        if (note) {
+          note.textContent = copy[lang].ideaFailed;
+          note.classList.remove("is-success");
+        }
+        if (submit) submit.disabled = false;
+        return;
+      }
+      build.viewerBuildId = result.viewer_build_id || "";
+      build.status = result.status || "submitted";
+      build.journeyId = result.journey_id || state.journeyId || "";
       const builds = read("doneovernight.viewerBuilds.v1", []);
       builds.push(build);
       save("doneovernight.viewerBuilds.v1", builds);
-      await postPlatformEvent({
-        event: "viewer_build_submitted",
-        viewer_build: build,
-        title: build.idea,
-        problem: build.solve,
-        page: pageName()
-      });
       form.reset();
-      if (note) {
-        note.textContent = copy[lang].ideaSaved;
-        note.classList.add("is-success");
-      }
+      renderViewerBuildSuccess(form, note, result);
       persistVisitorProgress();
-      completeInteractionAfterFeedback("viewerBuilds", progression.viewerBuilds, form.querySelector('[type="submit"]'));
+      if (submit) submit.disabled = false;
     };
+  }
+
+  function renderViewerBuildSuccess(form, note, result = {}) {
+    if (!note) return;
+    if (form) form.hidden = true;
+    note.classList.add("is-success");
+    note.innerHTML = `
+      <div class="viewer-success">
+        <div class="viewer-success-title">✓ ${escapeHtml(copy[lang].viewerSubmitted)}</div>
+        <dl>
+          <div><dt>${escapeHtml(copy[lang].viewerBuildId)}</dt><dd>${escapeHtml(result.viewer_build_id || "")}</dd></div>
+          <div><dt>${escapeHtml(copy[lang].journeyId)}</dt><dd>${escapeHtml(result.journey_id || state.journeyId || "")}</dd></div>
+          <div><dt>${escapeHtml(copy[lang].status)}</dt><dd>${escapeHtml(copy[lang].submitted)}</dd></div>
+          <div><dt>${escapeHtml(copy[lang].estimatedReview)}</dt><dd>${escapeHtml(copy[lang].reviewWindow)}</dd></div>
+        </dl>
+        <p>${escapeHtml(copy[lang].viewerSuccessCopy)}</p>
+        <div class="viewer-success-actions">
+          ${document.body.dataset.experience ? `<button class="quiet-action" type="button" data-viewer-continue>${escapeHtml(copy[lang].continue)}</button>` : ""}
+          <a class="quiet-action secondary" href="/live">${escapeHtml(copy[lang].goLive)}</a>
+          <a class="quiet-action secondary" href="/resources">${escapeHtml(copy[lang].openResources)}</a>
+        </div>
+      </div>
+    `;
+    const continueButton = note.querySelector("[data-viewer-continue]");
+    if (continueButton) {
+      continueButton.onclick = () => {
+        if (!canInteract(form)) return;
+        completeInteractionAfterFeedback("viewerBuilds", progression.viewerBuilds, continueButton);
+      };
+    }
+    showReward(copy[lang].ideaSaved);
   }
 
   function mountAutomationOther() {

@@ -21,6 +21,11 @@ const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/s
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { sendJourneyConfirmationEmail, isValidEmail: isValidJourneyEmail } = require("../lib/email/journey-confirmation-email");
 const {
+  sendViewerBuildConfirmationEmail,
+  sendViewerBuildInternalNotification,
+  isValidEmail: isValidViewerBuildEmail
+} = require("../lib/email/viewer-build-email");
+const {
   upsertJourney,
   saveEmailEvent,
   saveVisitorProgress,
@@ -1229,10 +1234,151 @@ function platformClientContext(req) {
   };
 }
 
+function createViewerBuildId() {
+  return `VB-${String(crypto.randomInt(1, 1_000_000)).padStart(6, "0")}`;
+}
+
+function normalizeViewerBuildInput(input = {}) {
+  const viewerBuild = input.viewer_build && typeof input.viewer_build === "object" ? input.viewer_build : {};
+  return {
+    viewer_build_id: clean(input.viewer_build_id || input.viewerBuildId) || createViewerBuildId(),
+    journey_id: clean(input.journey_id || input.journeyId || input.journey?.journey_id || input.journey?.journeyId),
+    idea: clean(input.idea || input.title || viewerBuild.idea || viewerBuild.title),
+    title: clean(input.idea || input.title || viewerBuild.idea || viewerBuild.title),
+    description: clean(input.description || viewerBuild.description),
+    problem: clean(input.problem || input.solve || viewerBuild.problem || viewerBuild.solve),
+    website: clean(input.website || viewerBuild.website),
+    email: normalizeEmailValue(input.email || viewerBuild.email),
+    browser_language: clean(input.browser_language || input.browserLanguage || input.language || input.lang),
+    source: clean(input.source || input.page) || "viewer_builds",
+    lang: clean(input.lang || input.language) || "en",
+    status: "submitted",
+    created_at: clean(input.created_at || input.createdAt || viewerBuild.createdAt) || new Date().toISOString()
+  };
+}
+
+function validateViewerBuildPayload(payload = {}) {
+  const errors = [];
+  if (!payload.idea) errors.push("idea_required");
+  if (!payload.description) errors.push("description_required");
+  if (!payload.problem) errors.push("problem_required");
+  if (payload.email && !isValidViewerBuildEmail(payload.email)) errors.push("invalid_email");
+  if (payload.website) {
+    try {
+      const parsed = new URL(payload.website);
+      if (!["http:", "https:"].includes(parsed.protocol)) errors.push("invalid_website");
+    } catch (error) {
+      errors.push("invalid_website");
+    }
+  }
+  return errors;
+}
+
+async function logViewerBuildEvent(type, payload = {}, extra = {}) {
+  return saveShareEvent({
+    journey_id: payload.journey_id,
+    event_type: type,
+    page: "viewer-builds",
+    method: extra.method || "platform",
+    url: extra.url || "https://doneovernight.com/live#viewer-builds",
+    viewer_build_id: payload.viewer_build_id
+  }).catch(() => null);
+}
+
+async function handleViewerBuildSubmissionRequest(req, res, input = {}) {
+  const payload = normalizeViewerBuildInput(input);
+  const errors = validateViewerBuildPayload(payload);
+  if (errors.length) {
+    await logViewerBuildEvent("viewer_build_submission_failed", payload, { method: errors.join(",") });
+    return send(res, 400, {
+      ok: false,
+      saved: false,
+      error: "validation_failed",
+      errors
+    });
+  }
+
+  await logViewerBuildEvent("viewer_build_submission_started", payload);
+  if (input.journey || payload.journey_id) {
+    await upsertJourney({ ...(input.journey || {}), ...payload }, platformClientContext(req)).catch(() => null);
+  }
+
+  const storage = await saveViewerBuild(payload);
+  if (!storage.saved) {
+    await logViewerBuildEvent("viewer_build_submission_failed", payload, { method: storage.reason || "storage_failed" });
+    return send(res, 503, {
+      ok: false,
+      saved: false,
+      error: "viewer_build_not_stored",
+      reason: storage.reason || "storage_failed",
+      viewer_build_id: payload.viewer_build_id,
+      journey_id: payload.journey_id
+    });
+  }
+
+  const internalNotification = await sendViewerBuildInternalNotification(payload);
+  const visitorEmail = payload.email
+    ? await sendViewerBuildConfirmationEmail(payload)
+    : { configured: true, sent: false, delivered: false, reason: "missing_email", provider: "none" };
+
+  await saveEmailEvent({
+    journey_id: payload.journey_id,
+    email: payload.email,
+    status: visitorEmail.delivered ? "sent" : payload.email ? "failed" : "pending",
+    provider: visitorEmail.provider,
+    provider_message_id: visitorEmail.messageId || "",
+    error: visitorEmail.delivered ? "" : visitorEmail.reason,
+    raw_payload: {
+      viewer_build_id: payload.viewer_build_id,
+      email_type: "viewer_build_confirmation"
+    }
+  }).catch(() => null);
+
+  const notificationOk = internalNotification.delivered === true;
+  const emailOk = payload.email ? visitorEmail.delivered === true : true;
+  if (!notificationOk || !emailOk) {
+    await logViewerBuildEvent("viewer_build_submission_failed", payload, {
+      method: !notificationOk ? "internal_notification_failed" : "visitor_email_failed"
+    });
+    return send(res, 502, {
+      ok: false,
+      saved: true,
+      error: "viewer_build_followup_failed",
+      viewer_build_id: payload.viewer_build_id,
+      journey_id: payload.journey_id,
+      status: payload.status,
+      internal_notification: internalNotification,
+      visitor_email: visitorEmail
+    });
+  }
+
+  await logViewerBuildEvent("viewer_build_submission_completed", payload);
+  return send(res, 200, {
+    ok: true,
+    saved: true,
+    viewer_build_id: payload.viewer_build_id,
+    journey_id: payload.journey_id,
+    status: payload.status,
+    estimated_review: "Within a few days",
+    internal_notification: internalNotification,
+    visitor_email: visitorEmail
+  });
+}
+
 async function handlePlatformEventRequest(req, res, input = {}) {
   const event = String(input.event || input.event_type || input.type || "").trim();
   const journey = input.journey && typeof input.journey === "object" ? input.journey : {};
   const results = [];
+
+  if (event === "viewer_build_submitted") {
+    return handleViewerBuildSubmissionRequest(req, res, input);
+  }
+
+  if (event === "viewer_build_started") {
+    const payload = normalizeViewerBuildInput(input);
+    await logViewerBuildEvent("viewer_build_submission_started", payload);
+    return send(res, 202, { ok: true, saved: false, status: "tracked" });
+  }
 
   if (journey.journey_id || input.journey_id || input.journeyId) {
     results.push(["journey", await upsertJourney({ ...journey, ...input }, platformClientContext(req))]);
@@ -1244,10 +1390,6 @@ async function handlePlatformEventRequest(req, res, input = {}) {
       ...input.progress,
       payload: input.progress
     })]);
-  }
-
-  if (event === "viewer_build_submitted") {
-    results.push(["viewer_builds", await saveViewerBuild({ ...input, ...(input.viewer_build || {}) })]);
   }
 
   if (event === "resource_interest" || event === "resource_opened") {
