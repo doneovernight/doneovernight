@@ -2545,9 +2545,17 @@
           <span class="eyebrow">DONEOVERNIGHT HQ</span>
           <h1 class="display">Headquarters.</h1>
           <p class="lede">${data.placeholder ? "Some tables are still placeholders until Supabase is connected." : "Live platform signal from Supabase."}</p>
+          <div class="hq-purpose" aria-label="Admin and HQ purpose">
+            <span>HQ = platform intelligence / live status</span>
+            <span>Admin = operations</span>
+          </div>
         </div>
         <div class="hq-profile">
           <a class="open-live" href="/live">Live</a>
+          <a class="open-live hq-admin-link" href="https://admin.doneovernight.com" aria-label="Open DONEOVERNIGHT Admin">
+            <span>Open Admin</span>
+            <small>Manage clients, tasks, operators, email flows, and internal operations.</small>
+          </a>
           <button class="open-live hq-logout" type="button" id="hq-logout">Logout</button>
         </div>
       </section>

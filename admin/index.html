@@ -339,6 +339,88 @@ body.is-admin .admin-dashboard { display: block; }
   margin-bottom: 34px;
 }
 
+.admin-platform-bridge {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 18px;
+  border: 1px solid rgba(233, 196, 138, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(233, 196, 138, 0.045), transparent 48%),
+    rgba(245, 241, 234, 0.024);
+  box-shadow:
+    0 26px 54px -30px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(245, 241, 234, 0.05);
+  padding: 18px;
+}
+
+.admin-platform-bridge h2 {
+  margin: 7px 0 7px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--serif);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.admin-platform-bridge p {
+  max-width: 62ch;
+  margin: 0;
+  color: rgba(245, 241, 234, 0.48);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.admin-platform-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.admin-platform-labels span {
+  border: 1px solid rgba(245, 241, 234, 0.085);
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.018);
+  color: rgba(245, 241, 234, 0.46);
+  padding: 7px 10px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.admin-platform-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 1px solid rgba(233, 196, 138, 0.36);
+  border-radius: 999px;
+  background: rgba(233, 196, 138, 0.055);
+  color: #f4d28a;
+  padding: 0 16px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: border-color 0.22s, background 0.22s, color 0.22s, box-shadow 0.22s, transform 0.22s;
+}
+
+.admin-platform-button:hover,
+.admin-platform-button:focus-visible {
+  border-color: rgba(233, 196, 138, 0.68);
+  background: rgba(233, 196, 138, 0.1);
+  color: #ffe3ad;
+  box-shadow: 0 0 28px rgba(233, 196, 138, 0.14);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .stat-card {
   position: relative;
   overflow: hidden;
@@ -2772,6 +2854,13 @@ body.is-admin .admin-dashboard { display: block; }
     width: 100%;
     justify-content: space-between;
   }
+  .admin-platform-bridge {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .admin-platform-button {
+    width: 100%;
+  }
   .admin-os-layout {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -3103,6 +3192,19 @@ body.is-admin .admin-dashboard { display: block; }
       <h1>Admin OS for overnight execution.</h1>
       <p>One operational surface for asks, clients, reviews, workspaces, Dispatch, operators, and system readiness.</p>
     </header>
+
+    <section class="admin-platform-bridge" aria-label="DONEOVERNIGHT HQ quick access">
+      <div>
+        <div class="eyebrow">Platform intelligence</div>
+        <h2>DONEOVERNIGHT HQ</h2>
+        <p>Live status, journeys, viewer builds, resources, platform health.</p>
+        <div class="admin-platform-labels" aria-label="Admin and HQ purpose">
+          <span>Admin = operations</span>
+          <span>HQ = platform intelligence / live status</span>
+        </div>
+      </div>
+      <a class="admin-platform-button" href="https://doneovernight.com/hq">Open HQ →</a>
+    </section>
 
     <div class="stats-grid">
       <div class="stat-card" id="adminNewTasksStat" data-target-section="adminTasksSection" tabindex="0">
