@@ -1105,6 +1105,9 @@
 
   function renderViewerBuildSuccess(form, note, result = {}) {
     if (!note) return;
+    if (form && form.contains(note)) {
+      form.insertAdjacentElement("afterend", note);
+    }
     if (form) form.hidden = true;
     note.classList.add("is-success");
     note.innerHTML = `
