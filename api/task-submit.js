@@ -39,7 +39,7 @@ const {
 } = require("../lib/platform-store");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
-const { resolveTaskLanguage } = require("../lib/language");
+const { resolvePlatformLanguage, resolveTaskLanguage } = require("../lib/language");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const {
   activateWorkspace,
@@ -1157,6 +1157,7 @@ function normalizeJourneyList(value = []) {
 function buildJourneyConfirmationRecord(input = {}, emailResult = {}) {
   const delivered = emailResult.delivered === true;
   const failed = emailResult.reason && emailResult.reason !== "not_configured" && !delivered;
+  const language = resolvePlatformLanguage(input);
   return {
     email: normalizeEmailValue(input.email),
     social_handle: clean(input.social_handle || input.socialHandle),
@@ -1165,13 +1166,20 @@ function buildJourneyConfirmationRecord(input = {}, emailResult = {}) {
     chosen_interests: normalizeJourneyList(input.chosen_interests || input.chosenInterests),
     result: clean(input.result),
     source: clean(input.source) || "how_it_works",
+    selected_language: language.selected_language,
+    browser_language: language.browser_language,
+    detected_content_language: language.detected_content_language,
+    email_language: language.email_language,
     created_at: clean(input.created_at || input.createdAt) || new Date().toISOString(),
     status: delivered ? "sent" : failed ? "failed" : "pending",
     provider: emailResult.provider || "none",
     message_id: emailResult.messageId || null,
     error: delivered ? "" : clean(emailResult.error || emailResult.reason),
     raw_payload: {
-      browser_language: clean(input.browser_language || input.browserLanguage),
+      selected_language: language.selected_language,
+      browser_language: language.browser_language,
+      detected_content_language: language.detected_content_language,
+      email_language: language.email_language,
       completion: input.completion ?? null,
       utm: input.utm || {},
       email_configured: emailResult.configured === true,
@@ -1354,7 +1362,7 @@ function createViewerBuildId() {
 
 function normalizeViewerBuildInput(input = {}) {
   const viewerBuild = input.viewer_build && typeof input.viewer_build === "object" ? input.viewer_build : {};
-  return {
+  const base = {
     viewer_build_id: clean(input.viewer_build_id || input.viewerBuildId) || createViewerBuildId(),
     journey_id: clean(input.journey_id || input.journeyId || input.journey?.journey_id || input.journey?.journeyId),
     idea: clean(input.idea || input.title || viewerBuild.idea || viewerBuild.title),
@@ -1368,6 +1376,15 @@ function normalizeViewerBuildInput(input = {}) {
     lang: clean(input.lang || input.language) || "en",
     status: "submitted",
     created_at: clean(input.created_at || input.createdAt || viewerBuild.createdAt) || new Date().toISOString()
+  };
+  const language = resolvePlatformLanguage({ ...input, ...base });
+  return {
+    ...base,
+    selected_language: language.selected_language,
+    browser_language: language.browser_language,
+    detected_content_language: language.detected_content_language,
+    email_language: language.email_language,
+    lang: language.email_language
   };
 }
 
@@ -1391,6 +1408,10 @@ function validateViewerBuildPayload(payload = {}) {
 async function logViewerBuildEvent(type, payload = {}, extra = {}) {
   return saveShareEvent({
     journey_id: payload.journey_id,
+    selected_language: payload.selected_language,
+    browser_language: payload.browser_language,
+    detected_content_language: payload.detected_content_language,
+    email_language: payload.email_language,
     event_type: type,
     page: "viewer-builds",
     method: extra.method || "platform",
@@ -1438,13 +1459,21 @@ async function handleViewerBuildSubmissionRequest(req, res, input = {}) {
   await saveEmailEvent({
     journey_id: payload.journey_id,
     email: payload.email,
+    selected_language: payload.selected_language,
+    browser_language: payload.browser_language,
+    detected_content_language: payload.detected_content_language,
+    email_language: payload.email_language,
     status: visitorEmail.delivered ? "sent" : payload.email ? "failed" : "pending",
     provider: visitorEmail.provider,
     provider_message_id: visitorEmail.messageId || "",
     error: visitorEmail.delivered ? "" : visitorEmail.reason,
     raw_payload: {
       viewer_build_id: payload.viewer_build_id,
-      email_type: "viewer_build_confirmation"
+      email_type: "viewer_build_confirmation",
+      selected_language: payload.selected_language,
+      browser_language: payload.browser_language,
+      detected_content_language: payload.detected_content_language,
+      email_language: payload.email_language
     }
   }).catch(() => null);
 
@@ -1680,6 +1709,10 @@ function topPlatformValues(rows = [], field, limit = 6) {
     .map(([label, count]) => ({ label, count }));
 }
 
+function rowLanguage(row = {}) {
+  return clean(row.email_language || row.selected_language || row.browser_language || row.raw_payload?.email_language || row.raw_payload?.selected_language || row.metadata?.language?.email_language || row.metadata?.language?.selected_language).toUpperCase();
+}
+
 function recordLooksLikeTest(row = {}) {
   const values = [
     row.journey_id,
@@ -1758,8 +1791,14 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
     most_chosen_interests: topPlatformValues(journeys, "chosen_interests"),
     most_chosen_path: topPlatformValues(journeys, "chosen_path", 4),
     traffic_sources: topPlatformValues(journeys, "source", 8),
-    recent_activity: pages.slice(0, 10),
-    recent_builds: viewerBuilds.slice(0, 8),
+    languages: topPlatformValues([
+      ...journeys,
+      ...viewerBuilds,
+      ...emails
+    ].map((row) => ({ email_language: rowLanguage(row) || "UNKNOWN" })), "email_language", 4),
+    recent_activity: pages.slice(0, 10).map((row) => ({ ...row, hq_language: rowLanguage(row) })),
+    recent_builds: viewerBuilds.slice(0, 8).map((row) => ({ ...row, hq_language: rowLanguage(row) })),
+    recent_emails: emails.slice(0, 8).map((row) => ({ ...row, hq_language: rowLanguage(row) })),
     recent_resources: resources.slice(0, 8),
     recent_journal_entries: journal.slice(0, 8),
     current_live_status: liveStatus[0] || null,

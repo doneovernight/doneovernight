@@ -878,6 +878,7 @@
 
   function buildJourneyConfirmationPayload(input = {}) {
     ensureJourney();
+    const language = platformLanguagePayload();
     return {
       email: input.email || "",
       name: input.name || "",
@@ -888,7 +889,7 @@
       result: resolveCurrentResult(),
       source: state.discover || "how_it_works",
       created_at: new Date().toISOString(),
-      browser_language: state.browserLanguage || navigator.language || "",
+      ...language,
       completion: completionPercent(),
       utm: state.utm || {},
       lang
@@ -924,9 +925,11 @@
   function platformPayload(extra = {}) {
     const emailPayload = read(emailKey, {});
     const started = state.journeyStartedAt ? new Date(state.journeyStartedAt).getTime() : Date.now();
+    const language = platformLanguagePayload(extra);
     return {
       journey_id: state.journeyId || "",
       builder_number: builderNumberValue(),
+      ...language,
       journey: {
         journey_id: state.journeyId || "",
         builder_number: builderNumberValue(),
@@ -934,7 +937,7 @@
         social_handle: state.socialHandle || emailPayload.socialHandle || "",
         source: state.discover || "unknown",
         utm: state.utm || {},
-        browser_language: state.browserLanguage || navigator.language || "",
+        ...language,
         chosen_path: state.path || "",
         chosen_interests: state.interests || [],
         completion: completionPercent(),
@@ -951,6 +954,7 @@
       },
       progress: {
         builder_number: builderNumberValue(),
+        ...language,
         active_step: Number(state.activeStep) || 1,
         unlocked_step: Number(state.unlockedStep) || 1,
         completed: state.completed || [],
@@ -988,7 +992,7 @@
           problem: build.solve,
           website: build.website,
           email: build.email,
-          browser_language: navigator.language || "",
+          ...platformLanguagePayload(build),
           lang,
           page: pageName(),
           source: pageName()
@@ -1012,6 +1016,38 @@
     if (path === "resources") return "resources";
     if (path === "journal") return "journal";
     return path;
+  }
+
+  function platformLanguagePayload(extra = {}) {
+    const browserLanguage = state.browserLanguage || navigator.language || "";
+    const selected = state.selectedLanguage || lang;
+    return {
+      selected_language: selected,
+      browser_language: browserLanguage,
+      detected_content_language: detectSubmittedLanguage(extra),
+      email_language: selected,
+      lang: selected,
+      language: selected
+    };
+  }
+
+  function detectSubmittedLanguage(input = {}) {
+    const text = [
+      input.idea,
+      input.title,
+      input.description,
+      input.problem,
+      input.solve,
+      input.viewer_problem,
+      input.automationOther,
+      state.automationOther
+    ].filter(Boolean).join(" ").toLowerCase();
+    if (!text) return "";
+    const dutchWords = /\b(ik|wij|jij|je|mijn|onze|voor|met|het|een|de|graag|nodig|bouwen|maken|zodat|automatisering|klanten|aanvraag|formulier|bedrijf|beschrijving|probleem)\b/i;
+    const englishWords = /\b(i|we|you|my|our|for|with|the|please|need|build|make|automation|customers|request|form|business|description|problem)\b/i;
+    if (dutchWords.test(text)) return "nl";
+    if (englishWords.test(text)) return "en";
+    return "";
   }
 
   function resendCooldownRemaining() {
@@ -1205,6 +1241,7 @@
     if (!state.journeyId) state.journeyId = `DON-${String(Math.floor(1 + Math.random() * 999999)).padStart(6, "0")}`;
     if (!state.journeyStartedAt) state.journeyStartedAt = new Date().toISOString();
     if (!state.browserLanguage) state.browserLanguage = navigator.language || "";
+    if (!state.selectedLanguage) state.selectedLanguage = lang;
     const params = new URLSearchParams(location.search);
     state.utm = state.utm || {
       source: params.get("utm_source") || "",
@@ -1838,6 +1875,7 @@
       button.addEventListener("click", () => {
         lang = button.dataset.lang;
         state.lang = lang;
+        state.selectedLanguage = lang;
         save(storageKey, state);
         updateMemory({ language: lang });
         applyLanguage();
@@ -2570,8 +2608,10 @@
         ${hqMetric("Current Live Visitors", metrics.current_live_visitors)}
         ${hqList("Most Chosen Interests", data.most_chosen_interests)}
         ${hqList("Most Chosen Path", data.most_chosen_path)}
+        ${hqList("Languages", data.languages)}
         ${hqList("Traffic Sources", data.traffic_sources)}
-        ${hqList("Recent Builds", (data.recent_builds || []).map((item) => ({ label: item.title, count: item.status || "submitted" })))}
+        ${hqList("Recent Builds", (data.recent_builds || []).map((item) => ({ label: item.title, count: hqLanguageCount(item, item.status || "submitted") })))}
+        ${hqList("Email Events", (data.recent_emails || []).map((item) => ({ label: item.email || item.journey_id || "Email event", count: hqLanguageCount(item, item.status || "event") })))}
         ${hqList("Recent Resources", (data.recent_resources || []).map((item) => ({ label: item.resource, count: item.status || "notify" })))}
         ${hqList("Recent Journal Entries", (data.recent_journal_entries || []).map((item) => ({ label: item.title, count: item.entry_type || "entry" })))}
       </section>
@@ -2589,6 +2629,11 @@
   function hqList(label, items = []) {
     const rows = items.length ? items : [{ label: "Waiting for platform signal", count: "" }];
     return `<article class="activity-card wide"><h2>${label}</h2><ul>${rows.map((item) => `<li>${escapeHtml(item.label || "")}${item.count !== "" && item.count !== undefined ? ` <span>${escapeHtml(String(item.count))}</span>` : ""}</li>`).join("")}</ul></article>`;
+  }
+
+  function hqLanguageCount(item = {}, fallback = "") {
+    const language = String(item.hq_language || item.email_language || item.selected_language || "").trim().toUpperCase();
+    return language ? `Language: ${language}` : fallback;
   }
 
   function liveStatusForm(status = {}) {

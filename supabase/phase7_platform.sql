@@ -9,6 +9,10 @@ create table if not exists public.journey_confirmations (
   chosen_interests text[] default '{}',
   result text,
   source text default 'how_it_works',
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   created_at timestamptz not null default now(),
   status text not null default 'pending' check (status in ('pending', 'sent', 'failed', 'opened', 'clicked')),
   provider text,
@@ -27,6 +31,9 @@ create table if not exists public.journeys (
   utm_medium text,
   utm_campaign text,
   browser_language text,
+  selected_language text,
+  detected_content_language text,
+  email_language text,
   device text,
   started_at timestamptz not null default now(),
   completed_at timestamptz,
@@ -52,6 +59,9 @@ alter table public.journeys add column if not exists utm_source text;
 alter table public.journeys add column if not exists utm_medium text;
 alter table public.journeys add column if not exists utm_campaign text;
 alter table public.journeys add column if not exists browser_language text;
+alter table public.journeys add column if not exists selected_language text;
+alter table public.journeys add column if not exists detected_content_language text;
+alter table public.journeys add column if not exists email_language text;
 alter table public.journeys add column if not exists device text;
 alter table public.journeys add column if not exists started_at timestamptz not null default now();
 alter table public.journeys add column if not exists completed_at timestamptz;
@@ -72,6 +82,10 @@ alter table public.journeys add column if not exists updated_at timestamptz not 
 create table if not exists public.visitor_progress (
   id uuid primary key default gen_random_uuid(),
   journey_id text not null unique,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   active_step integer not null default 1,
   unlocked_step integer not null default 1,
   completed_steps text[] not null default '{}',
@@ -91,6 +105,9 @@ create table if not exists public.viewer_builds (
   problem text,
   website text,
   browser_language text,
+  selected_language text,
+  detected_content_language text,
+  email_language text,
   status text not null default 'submitted',
   votes integer not null default 0,
   comments_count integer not null default 0,
@@ -109,6 +126,9 @@ alter table public.viewer_builds add column if not exists description text;
 alter table public.viewer_builds add column if not exists problem text;
 alter table public.viewer_builds add column if not exists website text;
 alter table public.viewer_builds add column if not exists browser_language text;
+alter table public.viewer_builds add column if not exists selected_language text;
+alter table public.viewer_builds add column if not exists detected_content_language text;
+alter table public.viewer_builds add column if not exists email_language text;
 alter table public.viewer_builds add column if not exists assigned_to text;
 alter table public.viewer_builds add column if not exists assigned_operator text;
 alter table public.viewer_builds add column if not exists comments_count integer not null default 0;
@@ -123,6 +143,10 @@ create table if not exists public.resource_interest (
   journey_id text,
   email text,
   resource text not null,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   status text not null default 'notify_me',
   source_page text,
   created_at timestamptz not null default now()
@@ -168,6 +192,10 @@ create table if not exists public.email_events (
   id uuid primary key default gen_random_uuid(),
   journey_id text,
   email text,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   status text not null default 'pending' check (status in ('pending', 'sent', 'failed', 'opened', 'clicked')),
   provider text,
   provider_message_id text,
@@ -182,6 +210,10 @@ create table if not exists public.email_events (
 create table if not exists public.follow_events (
   id uuid primary key default gen_random_uuid(),
   journey_id text,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   source_page text,
   target_url text,
   clicked_at timestamptz not null default now()
@@ -191,6 +223,10 @@ create table if not exists public.page_events (
   id uuid primary key default gen_random_uuid(),
   journey_id text,
   page text not null,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   entered_at timestamptz not null default now(),
   left_at timestamptz,
   duration integer not null default 0,
@@ -204,6 +240,10 @@ create table if not exists public.share_events (
   id uuid primary key default gen_random_uuid(),
   journey_id text,
   viewer_build_id text,
+  selected_language text,
+  browser_language text,
+  detected_content_language text,
+  email_language text,
   event_type text not null,
   page text,
   method text,
@@ -214,6 +254,34 @@ create table if not exists public.share_events (
 
 alter table public.share_events add column if not exists viewer_build_id text;
 alter table public.share_events add column if not exists raw_payload jsonb not null default '{}'::jsonb;
+alter table public.journey_confirmations add column if not exists selected_language text;
+alter table public.journey_confirmations add column if not exists browser_language text;
+alter table public.journey_confirmations add column if not exists detected_content_language text;
+alter table public.journey_confirmations add column if not exists email_language text;
+alter table public.visitor_progress add column if not exists selected_language text;
+alter table public.visitor_progress add column if not exists browser_language text;
+alter table public.visitor_progress add column if not exists detected_content_language text;
+alter table public.visitor_progress add column if not exists email_language text;
+alter table public.resource_interest add column if not exists selected_language text;
+alter table public.resource_interest add column if not exists browser_language text;
+alter table public.resource_interest add column if not exists detected_content_language text;
+alter table public.resource_interest add column if not exists email_language text;
+alter table public.email_events add column if not exists selected_language text;
+alter table public.email_events add column if not exists browser_language text;
+alter table public.email_events add column if not exists detected_content_language text;
+alter table public.email_events add column if not exists email_language text;
+alter table public.follow_events add column if not exists selected_language text;
+alter table public.follow_events add column if not exists browser_language text;
+alter table public.follow_events add column if not exists detected_content_language text;
+alter table public.follow_events add column if not exists email_language text;
+alter table public.page_events add column if not exists selected_language text;
+alter table public.page_events add column if not exists browser_language text;
+alter table public.page_events add column if not exists detected_content_language text;
+alter table public.page_events add column if not exists email_language text;
+alter table public.share_events add column if not exists selected_language text;
+alter table public.share_events add column if not exists browser_language text;
+alter table public.share_events add column if not exists detected_content_language text;
+alter table public.share_events add column if not exists email_language text;
 
 create index if not exists journeys_started_at_idx on public.journeys (started_at desc);
 create index if not exists journey_confirmations_email_idx on public.journey_confirmations (email);
@@ -222,9 +290,11 @@ create index if not exists journey_confirmations_status_idx on public.journey_co
 create index if not exists journey_confirmations_created_at_idx on public.journey_confirmations (created_at desc);
 create index if not exists journeys_source_idx on public.journeys (source);
 create index if not exists journeys_chosen_path_idx on public.journeys (chosen_path);
+create index if not exists journeys_email_language_idx on public.journeys (email_language);
 create index if not exists visitor_progress_journey_id_idx on public.visitor_progress (journey_id);
 create index if not exists viewer_builds_created_at_idx on public.viewer_builds (created_at desc);
 create index if not exists viewer_builds_status_idx on public.viewer_builds (status);
+create index if not exists viewer_builds_email_language_idx on public.viewer_builds (email_language);
 create unique index if not exists viewer_builds_viewer_build_id_unique_idx on public.viewer_builds (viewer_build_id);
 create index if not exists resource_interest_created_at_idx on public.resource_interest (created_at desc);
 create index if not exists journal_created_at_idx on public.journal (created_at desc);
@@ -233,9 +303,11 @@ create unique index if not exists journal_deployment_id_unique_idx
 create index if not exists live_status_updated_at_idx on public.live_status (updated_at desc);
 create index if not exists email_events_created_at_idx on public.email_events (created_at desc);
 create index if not exists email_events_status_idx on public.email_events (status);
+create index if not exists email_events_email_language_idx on public.email_events (email_language);
 create index if not exists follow_events_clicked_at_idx on public.follow_events (clicked_at desc);
 create index if not exists page_events_entered_at_idx on public.page_events (entered_at desc);
 create index if not exists page_events_page_idx on public.page_events (page);
+create index if not exists page_events_email_language_idx on public.page_events (email_language);
 create index if not exists share_events_created_at_idx on public.share_events (created_at desc);
 create index if not exists share_events_event_type_idx on public.share_events (event_type);
 create index if not exists share_events_viewer_build_id_idx on public.share_events (viewer_build_id);
