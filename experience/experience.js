@@ -3,6 +3,7 @@
   const emailKey = "doneovernight.experience.email.v1";
   const state = read(storageKey, {});
   const savedEmail = read(emailKey, null);
+  const progressKey = "doneovernight.visitorProgress.v1";
   let lang = state.lang || detectLang();
 
   const copy = {
@@ -82,7 +83,43 @@
       nextViewer: "Next: Viewer Builds",
       nextFollow: "Next: Follow the journey",
       dmIdea: "DM us your build idea",
-      solvePlaceholder: "What would this solve for you?"
+      solvePlaceholder: "What would this solve for you?",
+      journeyComplete: "Journey Complete.",
+      platformWelcome: "Welcome to DONEOVERNIGHT.",
+      unlockedExperience: "Experience unlocked",
+      unlockedLive: "Live Builds unlocked",
+      unlockedViewer: "Viewer Builds unlocked",
+      unlockedJournal: "Build Journal unlocked",
+      unlockedResources: "Resources unlocked",
+      earlyBuilder: "You are now one of the early builders.",
+      journeyId: "Journey ID",
+      journeyStarted: "Journey started",
+      completion: "Completion",
+      chosenPath: "Chosen Path",
+      chosenInterests: "Chosen Interests",
+      result: "Result",
+      openPlatform: "Open platform",
+      platformHub: "Platform Hub",
+      platformHubTitle: "DONEOVERNIGHT Headquarters.",
+      platformHubCopy: "Choose the next room.",
+      hubLive: "Live Builds",
+      hubLiveCopy: "Current signal and status.",
+      hubJournal: "Build Journal",
+      hubJournalCopy: "Operator notes in sequence.",
+      hubResources: "Resources",
+      hubResourcesCopy: "Future systems and tools.",
+      hubViewer: "Viewer Builds",
+      hubViewerCopy: "Submit what should be built next.",
+      hubAsk: "Ask DONEOVERNIGHT",
+      hubAskCopy: "Open the request layer.",
+      resourcesNav: "Resources",
+      journalNav: "Journal",
+      resourcesTitle: "Platform resources.",
+      resourcesText: "A quiet room for the systems, tools, and operating assets that will plug into DONEOVERNIGHT.",
+      enterPlatform: "Enter platform",
+      journalTitle: "Operator journal.",
+      journalText: "Not a blog. A chronological signal of what changed, what shipped, and what is being prepared.",
+      liveBuilds: "Live Builds"
     },
     nl: {
       navLive: "Live",
@@ -160,7 +197,43 @@
       nextViewer: "Volgende: Viewer Builds",
       nextFollow: "Volgende: volg de reis",
       dmIdea: "DM ons je build idee",
-      solvePlaceholder: "Wat zou dit voor je oplossen?"
+      solvePlaceholder: "Wat zou dit voor je oplossen?",
+      journeyComplete: "Reis voltooid.",
+      platformWelcome: "Welkom bij DONEOVERNIGHT.",
+      unlockedExperience: "Experience ontgrendeld",
+      unlockedLive: "Live Builds ontgrendeld",
+      unlockedViewer: "Viewer Builds ontgrendeld",
+      unlockedJournal: "Build Journal ontgrendeld",
+      unlockedResources: "Resources ontgrendeld",
+      earlyBuilder: "Je bent nu een van de early builders.",
+      journeyId: "Journey ID",
+      journeyStarted: "Reis gestart",
+      completion: "Voltooiing",
+      chosenPath: "Gekozen pad",
+      chosenInterests: "Gekozen interesses",
+      result: "Resultaat",
+      openPlatform: "Open platform",
+      platformHub: "Platform Hub",
+      platformHubTitle: "DONEOVERNIGHT Headquarters.",
+      platformHubCopy: "Kies de volgende ruimte.",
+      hubLive: "Live Builds",
+      hubLiveCopy: "Huidig signaal en status.",
+      hubJournal: "Build Journal",
+      hubJournalCopy: "Operator notes in volgorde.",
+      hubResources: "Resources",
+      hubResourcesCopy: "Toekomstige systemen en tools.",
+      hubViewer: "Viewer Builds",
+      hubViewerCopy: "Stuur in wat hierna gebouwd moet worden.",
+      hubAsk: "Ask DONEOVERNIGHT",
+      hubAskCopy: "Open de request laag.",
+      resourcesNav: "Resources",
+      journalNav: "Journal",
+      resourcesTitle: "Platform resources.",
+      resourcesText: "Een rustige ruimte voor systemen, tools en operating assets die in DONEOVERNIGHT passen.",
+      enterPlatform: "Open platform",
+      journalTitle: "Operator journal.",
+      journalText: "Geen blog. Een chronologisch signaal van wat is veranderd, shipped en voorbereid.",
+      liveBuilds: "Live Builds"
     }
   };
 
@@ -342,6 +415,10 @@
     operator: "Operator feed pending",
     project: "Project feed pending",
     repository: "doneovernight.com",
+    branch: "main",
+    commit: "Pending live commit",
+    heartbeat: "Waiting for heartbeat",
+    repositoryStatus: "Repository connection pending",
     deployment: "Deployment feed pending",
     completion: "Estimate pending",
     lastUpdate: "No live update connected",
@@ -382,6 +459,7 @@
   function mountHowItWorks() {
     if (!document.body.dataset.experience) return;
     normalizeProgress();
+    ensureJourney();
     mountChoices("discover-grid", data.discover[lang], "discover", false);
     mountChoices("interest-grid", data.interests[lang], "interests", true);
     mountStory();
@@ -399,8 +477,11 @@
     bindResultActions();
     bindNextUnlocks();
     bindChoiceContinues();
+    bindPlatformHub();
     renderProgress();
     renderReturnVisitor();
+    renderPassport();
+    persistVisitorProgress();
     applyUnlockedSteps();
     bindAutoUnlocks();
   }
@@ -411,6 +492,10 @@
     fill("[data-live='operator']", live.operator);
     fill("[data-live='project']", live.project);
     fill("[data-live='repository']", live.repository);
+    fill("[data-live='branch']", live.branch);
+    fill("[data-live='commit']", live.commit);
+    fill("[data-live='heartbeat']", live.heartbeat);
+    fill("[data-live='repositoryStatus']", live.repositoryStatus);
     fill("[data-live='deployment']", live.deployment);
     fill("[data-live='completion']", live.completion);
     fill("[data-live='lastUpdate']", live.lastUpdate);
@@ -518,6 +603,10 @@
         completeInteraction("operatorTrait", progression.operatorTrait);
       });
     });
+    if (state.operatorTrait && !data.quiz.results[state.operatorTrait]) {
+      state.operatorTrait = "";
+      save(storageKey, state);
+    }
     if (state.operatorTrait) {
       root.querySelectorAll("button").forEach((button) => {
         button.classList.toggle("is-selected", button.dataset.trait === state.operatorTrait);
@@ -573,6 +662,7 @@
       note.textContent = copy[lang].welcome;
       note.classList.add("is-success");
       markComplete("gate");
+      persistVisitorProgress();
       showReward();
       unlockGate(true);
     };
@@ -616,6 +706,7 @@
         note.textContent = copy[lang].ideaSaved;
         note.classList.add("is-success");
       }
+      persistVisitorProgress();
       completeInteraction("viewerBuilds", progression.viewerBuilds);
     };
   }
@@ -663,6 +754,124 @@
     fill("#final-copy", body.textContent);
     const labels = recommendationLabels(state.path || "curious");
     grid.innerHTML = labels.map((label) => `<a class="recommendation-card" href="${recommendationHref(label)}"><span>${data.recommendationLabels[lang][label] || label}</span><small>${copy[lang].recommendationsCopy}</small></a>`).join("");
+  }
+
+  function ensureJourney() {
+    if (!state.journeyId) state.journeyId = `DON-${String(Math.floor(1 + Math.random() * 999999)).padStart(6, "0")}`;
+    if (!state.journeyStartedAt) state.journeyStartedAt = new Date().toISOString();
+    if (!state.browserLanguage) state.browserLanguage = navigator.language || "";
+    const params = new URLSearchParams(location.search);
+    state.utm = state.utm || {
+      source: params.get("utm_source") || "",
+      medium: params.get("utm_medium") || "",
+      campaign: params.get("utm_campaign") || "",
+      content: params.get("utm_content") || "",
+      term: params.get("utm_term") || ""
+    };
+    state.returned = Boolean(state.returned || (state.completed || []).length);
+    save(storageKey, state);
+  }
+
+  function renderPassport() {
+    fill("#journey-id", state.journeyId || "");
+    fill("#journey-started", formatDate(state.journeyStartedAt));
+    fill("#journey-completion", `${completionPercent()}%`);
+    fill("#journey-path", state.path || "curious");
+    fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
+    fill("#journey-result", document.getElementById("final-title")?.textContent || "");
+  }
+
+  function bindPlatformHub() {
+    const button = document.getElementById("open-platform");
+    const panel = document.getElementById("completion-panel");
+    const hub = document.getElementById("platform-hub");
+    if (button && panel && hub) {
+      button.onclick = () => {
+        panel.hidden = true;
+        hub.hidden = false;
+        state.platformOpened = true;
+        save(storageKey, state);
+        persistVisitorProgress();
+        hub.animate([{ opacity: 0, transform: "translateY(18px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 420, easing: "ease-out" });
+        setTimeout(() => scrollToPanel(hub), 80);
+      };
+      if (state.platformOpened) {
+        panel.hidden = true;
+        hub.hidden = false;
+      }
+    }
+    const follow = document.getElementById("follow-journey");
+    if (follow) {
+      follow.onclick = () => {
+        state.followClicked = true;
+        save(storageKey, state);
+        persistVisitorProgress();
+        window.location.href = "https://www.tiktok.com/@doneovernight";
+      };
+    }
+  }
+
+  function completionPercent() {
+    return Math.min(100, Math.round(((state.completed || []).length / progressTotal) * 100));
+  }
+
+  function scrollToPanel(element) {
+    const offset = window.matchMedia("(max-width: 620px)").matches ? 168 : 96;
+    const top = element.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+  }
+
+  function persistVisitorProgress() {
+    const emailPayload = read(emailKey, {});
+    const viewerBuilds = read("doneovernight.viewerBuilds.v1", []);
+    const latestBuild = viewerBuilds[viewerBuilds.length - 1] || {};
+    const started = state.journeyStartedAt ? new Date(state.journeyStartedAt).getTime() : Date.now();
+    const payload = {
+      journeys: {
+        journey_id: state.journeyId || "",
+        email: emailPayload.email || "",
+        social_handle: state.socialHandle || emailPayload.socialHandle || "",
+        source: state.discover || "",
+        utm: state.utm || {},
+        browser_language: state.browserLanguage || navigator.language || "",
+        chosen_path: state.path || "",
+        chosen_interests: state.interests || [],
+        completion: completionPercent(),
+        result: document.getElementById("final-title")?.textContent || "",
+        journey_started_at: state.journeyStartedAt || "",
+        returned: Boolean(state.returned),
+        time_spent: Math.max(0, Math.round((Date.now() - started) / 1000)),
+        follow_clicked: Boolean(state.followClicked)
+      },
+      viewer_builds: {
+        journey_id: state.journeyId || "",
+        viewer_build: latestBuild.idea || "",
+        viewer_problem: latestBuild.solve || "",
+        description: latestBuild.description || "",
+        website: latestBuild.website || "",
+        email: latestBuild.email || ""
+      },
+      resource_interest: [],
+      journal: [],
+      live_status: {},
+      visitor_progress: {
+        journey_id: state.journeyId || "",
+        active_step: Number(state.activeStep) || 1,
+        unlocked_step: Number(state.unlockedStep) || 1,
+        completed: state.completed || [],
+        completion: completionPercent()
+      }
+    };
+    save(progressKey, payload);
+  }
+
+  function formatDate(value) {
+    if (!value) return "";
+    try {
+      return new Intl.DateTimeFormat(lang === "nl" ? "nl-NL" : "en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+    } catch (error) {
+      return value;
+    }
   }
 
   function bindChoiceContinues() {
@@ -879,6 +1088,8 @@
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
+    renderPassport();
+    persistVisitorProgress();
     const target = document.querySelector(`[data-step="${step}"]`);
     if (target) {
       target.classList.add("is-unlocking");
@@ -896,6 +1107,8 @@
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
+    renderPassport();
+    persistVisitorProgress();
     const target = document.querySelector('[data-step="10"]');
     if (target) {
       target.classList.add("is-unlocking");
@@ -911,6 +1124,8 @@
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
+    renderPassport();
+    persistVisitorProgress();
     showReward();
     const target = document.querySelector('[data-step="11"]');
     if (target) {
@@ -967,6 +1182,8 @@
     if (!state.completed.includes(key)) state.completed.push(key);
     save(storageKey, state);
     renderProgress();
+    renderPassport();
+    persistVisitorProgress();
   }
 
   function renderProgress() {
