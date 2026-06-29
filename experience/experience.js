@@ -35,9 +35,9 @@
       reflectionOne: "Where are you today?",
       reflectionTwo: "What would you automate first?",
       otherPlaceholder: "Type your own answer",
-      gateTitle: "Join the build journal.",
-      gateCopy: "Unlock the private layer of what DONEOVERNIGHT is building.",
-      gateNoSpam: "Not a newsletter. A quiet build journal for people who want to see systems before they are public.",
+      gateTitle: "Unlock your access.",
+      gateCopy: "Enter your email to continue.",
+      gateNoSpam: "We'll send your personal DONEOVERNIGHT access and remember your journey.",
       email: "Email",
       name: "Name, optional",
       social: "TikTok / Instagram handle",
@@ -166,9 +166,9 @@
       reflectionOne: "Waar sta je vandaag?",
       reflectionTwo: "Wat zou je als eerste automatiseren?",
       otherPlaceholder: "Typ je eigen antwoord",
-      gateTitle: "Word onderdeel van het build journal.",
-      gateCopy: "Ontgrendel de private laag van wat DONEOVERNIGHT bouwt.",
-      gateNoSpam: "Geen nieuwsbrief. Een rustig build journal voor mensen die systemen willen zien voordat ze publiek zijn.",
+      gateTitle: "Ontgrendel je toegang.",
+      gateCopy: "Vul je e-mailadres in om verder te gaan.",
+      gateNoSpam: "We sturen je persoonlijke DONEOVERNIGHT toegang en onthouden je journey.",
       email: "E-mail",
       name: "Naam, optioneel",
       social: "TikTok / Instagram handle",
@@ -498,7 +498,7 @@
     13: "viewerBuilds"
   };
 
-  const progressTotal = 10;
+  const progressTotal = 13;
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
   let interactionLocked = false;
@@ -797,10 +797,9 @@
       save(confirmationCooldownKey, { lastSentAt: Date.now() });
       note.textContent = copy[lang].welcome;
       note.classList.add("is-success");
-      markComplete("gate");
       persistVisitorProgress();
       showReward();
-      showGateConfirmation(confirmationResult, true);
+      completeInteractionAfterFeedback("gate", progression.gate, submit);
       if (submit) submit.disabled = false;
     };
 
@@ -1660,7 +1659,7 @@
       case "automate":
         return Boolean(((state.automateKeys || []).length || String(state.automationOther || "").trim()) && hasComplete(key));
       case "gate":
-        return Boolean(savedEmail?.email && hasComplete(key));
+        return Boolean(currentSavedEmail()?.email && currentSavedEmail()?.confirmation?.delivered === true && hasComplete(key));
       case "path":
         return Boolean(["business_owner", "operator", "builder", "curious"].includes(state.path) && hasComplete(key));
       default:
@@ -1733,7 +1732,12 @@
       if (!head) return;
       const node = document.createElement("p");
       node.className = "completed-summary";
-      node.textContent = `${summary} ✓`;
+      if (Number(section.dataset.step) === 9) {
+        const email = currentSavedEmail()?.email || "";
+        node.innerHTML = `${escapeHtml(copy[lang].emailConfirmedTitle)} ✓${email ? `<span>${escapeHtml(email)}</span>` : ""}`;
+      } else {
+        node.textContent = `${summary} ✓`;
+      }
       head.appendChild(node);
     });
   }
@@ -1760,7 +1764,7 @@
         return answers.join(", ");
       }
       case 9:
-        return savedEmail?.email || copy[lang].emailConfirmedHeadline;
+        return currentSavedEmail()?.email || copy[lang].emailConfirmedTitle;
       case 10:
         return pathLabel(state.path);
       case 11:
@@ -1929,7 +1933,7 @@
   async function hydrateReturnVisitor() {
     const note = document.getElementById("return-note");
     if (!note || !state.journeyId) return;
-    const data = await fetchPlatformData(`visitor&journey_id=${encodeURIComponent(state.journeyId)}`);
+    const data = await fetchPlatformData(`view=visitor&journey_id=${encodeURIComponent(state.journeyId)}`);
     if (!data.ok || !data.journey) return;
     const pct = Math.max(completionPercent(), Number(data.journey.completion_percentage || 0));
     note.hidden = false;
@@ -2143,6 +2147,10 @@
     } catch (error) {
       return fallback;
     }
+  }
+
+  function currentSavedEmail() {
+    return read(emailKey, null);
   }
 
   function save(key, value) {
