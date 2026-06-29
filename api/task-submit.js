@@ -1084,14 +1084,47 @@ function buildJourneyConfirmationRecord(input = {}, emailResult = {}) {
   };
 }
 
+function missingJourneyColumnName(error = {}) {
+  const detail = String(error.detail || error.message || "");
+  const patterns = [
+    /'([^']+)'\s+column/i,
+    /column\s+"?([a-zA-Z0-9_]+)"?/i,
+    /Could not find the '([^']+)' column/i
+  ];
+  for (const pattern of patterns) {
+    const match = detail.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return "";
+}
+
 async function saveJourneyConfirmation(input = {}, emailResult = {}) {
+  let record = buildJourneyConfirmationRecord(input, emailResult);
+  const skippedColumns = [];
   try {
-    await supabaseFetch(JOURNEY_CONFIRMATION_TABLE, {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(buildJourneyConfirmationRecord(input, emailResult))
-    });
-    return { configured: true, saved: true, status: "saved", reason: "" };
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      try {
+        await supabaseFetch(JOURNEY_CONFIRMATION_TABLE, {
+          method: "POST",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify(record)
+        });
+        return { configured: true, saved: true, status: "saved", reason: skippedColumns.length ? "saved_without_optional_columns" : "", skipped_columns: skippedColumns };
+      } catch (error) {
+        const missingColumn = missingJourneyColumnName(error);
+        if (!missingColumn || !Object.prototype.hasOwnProperty.call(record, missingColumn)) throw error;
+        skippedColumns.push(missingColumn);
+        record = { ...record };
+        delete record[missingColumn];
+        if (missingColumn !== "raw_payload" && Object.prototype.hasOwnProperty.call(record, "raw_payload")) {
+          record.raw_payload = {
+            ...(record.raw_payload || {}),
+            journey_confirmation_skipped_columns: skippedColumns
+          };
+        }
+      }
+    }
+    return { configured: true, saved: false, status: "failed", reason: "schema_retry_exhausted", skipped_columns: skippedColumns };
   } catch (error) {
     if (error.code === "TASK_PERSISTENCE_NOT_CONFIGURED" || error.message.includes("not configured")) {
       return { configured: false, saved: false, status: "not_configured", reason: "supabase_not_configured" };
