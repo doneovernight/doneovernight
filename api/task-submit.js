@@ -1475,6 +1475,7 @@ function recordLooksLikeTest(row = {}) {
     row.resource,
     row.source,
     row.source_page,
+    row.last_page,
     row.page,
     row.event_type,
     row.current_build,
@@ -1486,11 +1487,17 @@ function recordLooksLikeTest(row = {}) {
     row.provider_message_id,
     row.raw_payload?.viewer_build_id,
     row.raw_payload?.email_type,
+    row.raw_payload?.last_page,
+    row.raw_payload?.page,
     row.metadata?.verification,
-    row.metadata?.stamp
+    row.metadata?.stamp,
+    row.metadata?.path
   ].map((value) => String(value || "").toLowerCase());
   return values.some((value) => (
     value.startsWith("don-verify") ||
+    value === "hq" ||
+    value === "/hq" ||
+    value.includes("page\":\"hq") ||
     value.includes("verify+") ||
     value.includes("verification") ||
     value.includes("browser verification") ||
