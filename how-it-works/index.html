@@ -36,7 +36,7 @@
   <div class="vignette"></div>
   <div class="grain"></div>
   <nav class="experience-nav" aria-label="Experience">
-    <a class="experience-brand" href="/">DONEOVERNIGHT</a>
+    <a class="experience-brand" href="/"><img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
     <div class="language-switch" aria-label="Language">
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="nl">NL</button>
@@ -59,7 +59,7 @@
       <div class="choice-grid" id="discover-grid" aria-label="Discovery source"></div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="2" hidden>
       <div class="step-head reveal">
         <span class="step-number">02</span>
         <h2 class="step-title" data-i18n="interests">What interests you most?</h2>
@@ -68,7 +68,7 @@
       <div class="choice-grid" id="interest-grid" aria-label="Interests"></div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="3" hidden>
       <div class="step-head reveal">
         <span class="step-number">03</span>
         <h2 class="step-title" data-i18n="storyTitle">We don't sell AI. We build operating systems.</h2>
@@ -77,7 +77,7 @@
       <div class="story-stage" id="story-lines"></div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="4" hidden>
       <div class="step-head reveal">
         <span class="step-number">04</span>
         <h2 class="step-title" data-i18n="workflowTitle">Workflow becomes visible.</h2>
@@ -94,7 +94,7 @@
       </div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="5" hidden>
       <div class="step-head reveal">
         <span class="step-number">05</span>
         <h2 class="step-title" data-i18n="examples">Choose a world.</h2>
@@ -103,7 +103,7 @@
       <div class="example-board" id="example-board"></div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="6" hidden>
       <div class="step-head reveal">
         <span class="step-number">06</span>
         <h2 class="step-title" data-i18n="operatorQuestion">What makes an operator?</h2>
@@ -115,7 +115,7 @@
       </article>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="7" hidden>
       <div class="step-head reveal">
         <span class="step-number">07</span>
         <h2 class="step-title" data-i18n="reflectionOne">Where are you today?</h2>
@@ -123,18 +123,18 @@
       <div class="choice-grid" id="reflection-grid" aria-label="Reflection"></div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="8" hidden>
       <div class="step-head reveal">
         <span class="step-number">08</span>
         <h2 class="step-title" data-i18n="reflectionTwo">What would you automate first?</h2>
       </div>
       <div class="choice-grid" id="automate-grid" aria-label="Automation choices"></div>
       <div class="reflection-input">
-        <input class="text-field" type="text" data-i18n-placeholder="otherPlaceholder" placeholder="Type your own answer" aria-label="Other automation">
+        <input class="text-field" id="automation-other" type="text" data-i18n-placeholder="otherPlaceholder" placeholder="Type your own answer" aria-label="Other automation">
       </div>
     </section>
 
-    <section class="experience-step">
+    <section class="experience-step" data-step="9" hidden>
       <div class="step-head reveal">
         <span class="step-number">09</span>
         <h2 class="step-title" data-i18n="gateTitle">Unlock what happens behind the surface.</h2>
@@ -146,13 +146,15 @@
         <form id="email-form" novalidate>
           <input class="text-field" name="email" type="email" autocomplete="email" required placeholder="Email">
           <input class="text-field" name="name" type="text" autocomplete="name" placeholder="Name, optional">
+          <label class="field-label" for="social-handle" data-i18n="social">TikTok / Instagram handle</label>
+          <input class="text-field" id="social-handle" name="social" type="text" autocomplete="off" data-i18n-placeholder="socialPlaceholder" placeholder="@yourname" aria-label="TikTok / Instagram handle">
           <button class="quiet-action" type="submit" data-i18n="unlock">Unlock</button>
           <div class="form-note" id="email-note" aria-live="polite"></div>
         </form>
       </article>
     </section>
 
-    <section class="experience-step" id="after-gate" data-after-gate hidden>
+    <section class="experience-step" id="after-gate" data-after-gate data-step="10" hidden>
       <div class="step-head reveal">
         <span class="step-number">10</span>
         <h2 class="step-title" data-i18n="livePreview">Live preview</h2>
@@ -171,7 +173,24 @@
       </article>
     </section>
 
-    <section class="experience-step follow-screen" data-after-gate hidden>
+    <section class="experience-step" data-after-gate data-step="11" hidden>
+      <div class="step-head reveal">
+        <span class="step-number">Viewer Builds</span>
+        <h2 class="step-title" data-i18n="viewerTitle">What should DONEOVERNIGHT build next?</h2>
+      </div>
+      <article class="viewer-panel">
+        <form id="viewer-form">
+          <input class="text-field" name="idea" required placeholder="Idea">
+          <textarea class="text-field" name="description" required placeholder="Description"></textarea>
+          <input class="text-field" name="website" type="url" placeholder="Website, optional">
+          <input class="text-field" name="email" type="email" placeholder="Email">
+          <button class="quiet-action" type="submit" data-i18n="submitIdea">Submit idea</button>
+          <div class="form-note" id="viewer-note" aria-live="polite"></div>
+        </form>
+      </article>
+    </section>
+
+    <section class="experience-step follow-screen" data-after-gate data-step="12" hidden>
       <span class="eyebrow">TikTok</span>
       <h2 class="step-title" data-i18n="followTitle">Follow the journey.</h2>
       <button class="follow-plus" type="button" onclick="window.location.href='https://www.tiktok.com/@doneovernight'" aria-label="Follow DONEOVERNIGHT on TikTok">+</button>

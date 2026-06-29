@@ -33,6 +33,8 @@
       gateNoSpam: "This is not a newsletter. No spam. Only real updates.",
       email: "Email",
       name: "Name, optional",
+      social: "TikTok / Instagram handle",
+      socialPlaceholder: "@yourname",
       unlock: "Unlock",
       emailError: "Enter a valid email to continue.",
       welcome: "Welcome.",
@@ -87,6 +89,8 @@
       gateNoSpam: "Dit is geen nieuwsbrief. Geen spam. Alleen echte updates.",
       email: "E-mail",
       name: "Naam, optioneel",
+      social: "TikTok / Instagram handle",
+      socialPlaceholder: "@jouwnaam",
       unlock: "Ontgrendel",
       emailError: "Voer een geldig e-mailadres in om door te gaan.",
       welcome: "Welkom.",
@@ -231,6 +235,18 @@
     progress: 68
   };
 
+  const progression = {
+    discover: 2,
+    interests: 3,
+    story: 4,
+    workflow: 5,
+    example: 6,
+    operatorTrait: 7,
+    reflection: 8,
+    automate: 9,
+    gate: 12
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
     mountHowItWorks();
@@ -241,6 +257,7 @@
 
   function mountHowItWorks() {
     if (!document.body.dataset.experience) return;
+    normalizeProgress();
     mountChoices("discover-grid", data.discover[lang], "discover", false);
     mountChoices("interest-grid", data.interests[lang], "interests", true);
     mountStory();
@@ -249,8 +266,12 @@
     mountQuiz();
     mountChoices("reflection-grid", data.reflections[lang], "reflection", false);
     mountChoices("automate-grid", data.automate[lang], "automate", true);
+    mountAutomationOther();
     mountGate();
     mountLivePreview();
+    mountViewerBuilds();
+    applyUnlockedSteps();
+    bindAutoUnlocks();
   }
 
   function mountLive() {
@@ -273,20 +294,29 @@
   function mountChoices(id, items, key, multi) {
     const root = document.getElementById(id);
     if (!root) return;
-    const selected = multi ? new Set(state[key] || []) : new Set(state[key] ? [state[key]] : []);
-    root.innerHTML = items.map((item, index) => `<button class="choice-card ${selected.has(item) ? "is-selected" : ""}" type="button" data-value="${escapeAttr(item)}" data-index="${index}"><span>${item}</span><span></span></button>`).join("");
+    const stableKey = `${key}Keys`;
+    const selected = new Set(state[stableKey] || []);
+    root.innerHTML = items.map((item, index) => {
+      const choiceKey = `${key}:${index}`;
+      return `<button class="choice-card ${selected.has(choiceKey) ? "is-selected" : ""}" type="button" data-choice-key="${choiceKey}" data-value="${escapeAttr(item)}" data-index="${index}"><span>${item}</span><span></span></button>`;
+    }).join("");
     root.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
         const value = button.dataset.value;
+        const choiceKey = button.dataset.choiceKey;
         if (multi) {
-          const next = new Set(state[key] || []);
-          next.has(value) ? next.delete(value) : next.add(value);
-          state[key] = Array.from(next);
+          const next = new Set(state[stableKey] || []);
+          next.has(choiceKey) ? next.delete(choiceKey) : next.add(choiceKey);
+          state[stableKey] = Array.from(next);
+          state[key] = Array.from(next).map((item) => items[Number(item.split(":")[1])]).filter(Boolean);
           button.classList.toggle("is-selected");
+          if (next.size > 0 && progression[key]) unlockStep(progression[key]);
         } else {
+          state[stableKey] = [choiceKey];
           state[key] = value;
           root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
           button.classList.add("is-selected");
+          if (progression[key]) unlockStep(progression[key]);
         }
         save(storageKey, state);
       });
@@ -316,7 +346,7 @@
     if (!tabs || !board) return;
     const keys = Object.keys(data.examples);
     const active = state.example || keys[0];
-    tabs.innerHTML = keys.map((key) => `<button class="tab-pill ${key === active ? "is-active" : ""}" type="button" data-example="${key}">${data.examples[key][lang][0]}</button>`).join("");
+    tabs.innerHTML = keys.map((key) => `<button class="tab-pill ${key === state.example ? "is-active" : ""}" type="button" data-example="${key}">${data.examples[key][lang][0]}</button>`).join("");
     renderExample(active);
     tabs.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
@@ -325,6 +355,7 @@
         tabs.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
         button.classList.add("is-active");
         renderExample(button.dataset.example);
+        unlockStep(progression.example);
       });
     });
     function renderExample(key) {
@@ -348,8 +379,13 @@
         result.classList.add("is-visible");
         result.innerHTML = `<h3>${data.quiz.results[trait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
         result.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 380, easing: "ease-out" });
+        unlockStep(progression.operatorTrait);
       });
     });
+    if (state.operatorTrait) {
+      result.classList.add("is-visible");
+      result.innerHTML = `<h3>${data.quiz.results[state.operatorTrait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
+    }
   }
 
   function mountGate() {
@@ -358,11 +394,15 @@
     const note = document.getElementById("email-note");
     const after = document.querySelectorAll("[data-after-gate]");
     if (list) list.innerHTML = data.gateItems[lang].map((item) => `<li>${item}</li>`).join("");
-    if (savedEmail) after.forEach((node) => { node.hidden = false; });
+    if (savedEmail) unlockGate(false);
     if (!form) return;
     form.email.placeholder = copy[lang].email;
     form.name.placeholder = copy[lang].name;
-    form.addEventListener("submit", (event) => {
+    if (form.social) {
+      form.social.placeholder = copy[lang].socialPlaceholder;
+      form.social.setAttribute("aria-label", copy[lang].social);
+    }
+    form.onsubmit = (event) => {
       event.preventDefault();
       const email = form.email.value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -370,15 +410,31 @@
         note.classList.remove("is-success");
         return;
       }
-      const payload = { email, name: form.name.value.trim(), lang, createdAt: new Date().toISOString(), state };
+      const socialHandle = form.social ? form.social.value.trim() : "";
+      state.socialHandle = socialHandle;
+      const payload = {
+        email,
+        name: form.name.value.trim(),
+        socialHandle,
+        lang,
+        createdAt: new Date().toISOString(),
+        interactions: state,
+        crmReady: {
+          source: state.discover || "",
+          interests: state.interests || [],
+          reflection: state.reflection || "",
+          automationFirst: state.automate || [],
+          automationOther: state.automationOther || "",
+          operatorTrait: state.operatorTrait || "",
+          example: state.example || "",
+          socialHandle
+        }
+      };
       save(emailKey, payload);
       note.textContent = copy[lang].welcome;
       note.classList.add("is-success");
-      if (after.length) {
-        after.forEach((node) => { node.hidden = false; });
-        setTimeout(() => after[0].scrollIntoView({ behavior: "smooth", block: "start" }), 900);
-      }
-    });
+      unlockGate(true);
+    };
   }
 
   function mountLivePreview() {
@@ -399,7 +455,7 @@
     form.description.placeholder = copy[lang].description;
     form.website.placeholder = copy[lang].website;
     form.email.placeholder = copy[lang].email;
-    form.addEventListener("submit", (event) => {
+    form.onsubmit = (event) => {
       event.preventDefault();
       const builds = read("doneovernight.viewerBuilds.v1", []);
       builds.push({
@@ -415,7 +471,18 @@
         note.textContent = copy[lang].ideaSaved;
         note.classList.add("is-success");
       }
-    });
+    };
+  }
+
+  function mountAutomationOther() {
+    const input = document.getElementById("automation-other");
+    if (!input) return;
+    input.value = state.automationOther || "";
+    input.oninput = () => {
+      state.automationOther = input.value.trim();
+      save(storageKey, state);
+      if (state.automationOther) unlockStep(progression.automate);
+    };
   }
 
   function applyLanguage() {
@@ -459,6 +526,102 @@
       });
     }, { threshold: 0.18 });
     items.forEach((item) => observer.observe(item));
+  }
+
+  function normalizeProgress() {
+    state.unlockedStep = Math.max(1, Number(state.unlockedStep) || 1);
+    migrateChoice("discover", data.discover);
+    migrateChoice("interests", data.interests);
+    migrateChoice("reflection", data.reflections);
+    migrateChoice("automate", data.automate);
+    if ((state.discoverKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.discover);
+    if ((state.interestsKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.interests);
+    if (state.example) state.unlockedStep = Math.max(state.unlockedStep, progression.example);
+    if (state.operatorTrait) state.unlockedStep = Math.max(state.unlockedStep, progression.operatorTrait);
+    if ((state.reflectionKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.reflection);
+    if ((state.automateKeys || []).length || state.automationOther) state.unlockedStep = Math.max(state.unlockedStep, progression.automate);
+    if (savedEmail) state.unlockedStep = Math.max(state.unlockedStep, progression.gate);
+    save(storageKey, state);
+  }
+
+  function migrateChoice(key, dataset) {
+    const stableKey = `${key}Keys`;
+    if (state[stableKey]) return;
+    const labels = new Map();
+    Object.values(dataset).forEach((items) => {
+      items.forEach((item, index) => labels.set(item, `${key}:${index}`));
+    });
+    const raw = Array.isArray(state[key]) ? state[key] : state[key] ? [state[key]] : [];
+    state[stableKey] = raw.map((item) => labels.get(item)).filter(Boolean);
+  }
+
+  function applyUnlockedSteps() {
+    const unlocked = Number(state.unlockedStep) || 1;
+    document.querySelectorAll("[data-step]").forEach((section) => {
+      const step = Number(section.dataset.step);
+      section.hidden = step > unlocked;
+    });
+  }
+
+  function unlockStep(step, scroll = true) {
+    const next = Math.max(Number(state.unlockedStep) || 1, step);
+    if (next === state.unlockedStep) return;
+    state.unlockedStep = next;
+    save(storageKey, state);
+    applyUnlockedSteps();
+    const target = document.querySelector(`[data-step="${step}"]`);
+    if (target) {
+      target.classList.add("is-unlocking");
+      setTimeout(() => target.classList.remove("is-unlocking"), 800);
+      if (scroll) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+    }
+  }
+
+  function unlockGate(scroll = true) {
+    const next = Math.max(Number(state.unlockedStep) || 1, progression.gate);
+    state.unlockedStep = next;
+    save(storageKey, state);
+    applyUnlockedSteps();
+    const target = document.querySelector('[data-step="10"]');
+    if (target) {
+      target.classList.add("is-unlocking");
+      setTimeout(() => target.classList.remove("is-unlocking"), 800);
+      if (scroll) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 900);
+    }
+  }
+
+  function bindAutoUnlocks() {
+    const bindings = [
+      ["3", progression.story],
+      ["4", progression.workflow]
+    ];
+    const checkAutoUnlocks = () => {
+      bindings.forEach(([step, unlockTo]) => {
+        const section = document.querySelector(`[data-step="${step}"]`);
+        if (!section || section.hidden) return;
+        const rect = section.getBoundingClientRect();
+        if (rect.top < window.innerHeight * 0.72 && rect.bottom > window.innerHeight * 0.18) {
+          unlockStep(unlockTo, false);
+        }
+      });
+    };
+    window.removeEventListener("scroll", window.__doneOvernightAutoUnlock);
+    window.__doneOvernightAutoUnlock = checkAutoUnlocks;
+    window.addEventListener("scroll", checkAutoUnlocks, { passive: true });
+    window.addEventListener("resize", checkAutoUnlocks, { passive: true });
+    setTimeout(checkAutoUnlocks, 250);
+    if (!("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const found = bindings.find(([step]) => entry.target.dataset.step === step);
+        if (found) unlockStep(found[1], false);
+      });
+    }, { threshold: 0.45 });
+    bindings.forEach(([step]) => {
+      const section = document.querySelector(`[data-step="${step}"]`);
+      if (section) observer.observe(section);
+    });
   }
 
   function mountList(id, items) {
