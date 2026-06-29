@@ -479,9 +479,27 @@
     viewerBuilds: 14
   };
 
+  const progressionVersion = 3;
+  const stepCompletionKeys = {
+    1: "discover",
+    2: "interests",
+    3: "story",
+    4: "workflow",
+    5: "example",
+    6: "operatorTrait",
+    7: "reflection",
+    8: "automate",
+    9: "gate",
+    10: "path",
+    11: "recommendations",
+    12: "livePreview",
+    13: "viewerBuilds"
+  };
+
   const progressTotal = 10;
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
+  let interactionLocked = false;
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
@@ -518,7 +536,6 @@
     renderPassport();
     persistVisitorProgress();
     applyUnlockedSteps();
-    bindAutoUnlocks();
   }
 
   function mountLive() {
@@ -557,6 +574,7 @@
     }).join("");
     root.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
+        if (!canInteract(button)) return;
         const value = button.dataset.value;
         const choiceKey = button.dataset.choiceKey;
         if (multi) {
@@ -570,7 +588,7 @@
           state[key] = value;
           root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
           button.classList.add("is-selected");
-          if (progression[key]) completeInteraction(key, progression[key]);
+          if (progression[key]) completeInteractionAfterFeedback(key, progression[key], button);
         }
         save(storageKey, state);
       });
@@ -604,12 +622,13 @@
     renderExample(active);
     tabs.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
+        if (!canInteract(button)) return;
         state.example = button.dataset.example;
         save(storageKey, state);
         tabs.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
         button.classList.add("is-active");
         renderExample(button.dataset.example);
-        completeInteraction("example", progression.example);
+        completeInteractionAfterFeedback("example", progression.example, button);
       });
     });
     function renderExample(key) {
@@ -627,6 +646,7 @@
     root.innerHTML = traits.map(([key, value]) => `<button class="quiz-option" type="button" data-trait="${key}">${value[lang]}</button>`).join("");
     root.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
+        if (!canInteract(button)) return;
         const trait = button.dataset.trait;
         state.operatorTrait = trait;
         save(storageKey, state);
@@ -635,7 +655,7 @@
         result.classList.add("is-visible");
         result.innerHTML = `<h3>${data.quiz.results[trait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
         result.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 380, easing: "ease-out" });
-        completeInteraction("operatorTrait", progression.operatorTrait);
+        completeInteractionAfterFeedback("operatorTrait", progression.operatorTrait, button);
       });
     });
     if (state.operatorTrait && !data.quiz.results[state.operatorTrait]) {
@@ -664,10 +684,12 @@
     if (list) list.innerHTML = data.gateItems[lang].map((item) => `<li>${item}</li>`).join("");
     if (savedEmail) {
       showGateConfirmation(savedEmail.confirmation || { delivered: true }, false);
-      unlockGate(false);
     }
     if (continueButton) {
-      continueButton.onclick = () => unlockGate(true);
+      continueButton.onclick = () => {
+        if (!canInteract(continueButton)) return;
+        completeInteractionAfterFeedback("gate", progression.gate, continueButton);
+      };
     }
     if (resendButton) {
       updateResendCooldown(resendButton, resendNote);
@@ -705,6 +727,7 @@
     }
     form.onsubmit = async (event) => {
       event.preventDefault();
+      if (!canInteract(form)) return;
       const email = form.email.value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         note.textContent = copy[lang].emailError;
@@ -870,6 +893,8 @@
     fields.email.placeholder = copy[lang].email;
     form.onsubmit = (event) => {
       event.preventDefault();
+      if (!canInteract(form)) return;
+      if (!fields.idea.value.trim() || !fields.description.value.trim()) return;
       const builds = read("doneovernight.viewerBuilds.v1", []);
       builds.push({
         idea: fields.idea.value.trim(),
@@ -886,7 +911,7 @@
         note.classList.add("is-success");
       }
       persistVisitorProgress();
-      completeInteraction("viewerBuilds", progression.viewerBuilds);
+      completeInteractionAfterFeedback("viewerBuilds", progression.viewerBuilds, form.querySelector('[type="submit"]'));
     };
   }
 
@@ -910,12 +935,13 @@
     }).join("");
     root.querySelectorAll("button").forEach((button) => {
       button.addEventListener("click", () => {
+        if (!canInteract(button)) return;
         state.path = button.dataset.path;
         save(storageKey, state);
         root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
         button.classList.add("is-selected");
         renderPersonalResult();
-        completePath();
+        completeInteractionAfterFeedback("path", progression.path, button);
       });
     });
   }
@@ -1056,13 +1082,14 @@
   function bindChoiceContinues() {
     document.querySelectorAll("[data-continue-choice]").forEach((button) => {
       button.onclick = () => {
+        if (!canInteract(button)) return;
         const key = button.dataset.continueChoice;
         const selected = state[`${key}Keys`] || [];
         if (key === "automate" && state.automationOther) {
-          completeInteraction(key, progression[key]);
+          completeInteractionAfterFeedback(key, progression[key], button);
           return;
         }
-        if (selected.length && progression[key]) completeInteraction(key, progression[key]);
+        if (selected.length && progression[key]) completeInteractionAfterFeedback(key, progression[key], button);
       };
     });
   }
@@ -1098,7 +1125,10 @@
 
   function bindNextUnlocks() {
     document.querySelectorAll("[data-next-step]").forEach((button) => {
-      button.onclick = () => completeInteraction(button.dataset.nextKey, Number(button.dataset.nextStep));
+      button.onclick = () => {
+        if (!canInteract(button)) return;
+        completeInteractionAfterFeedback(button.dataset.nextKey, Number(button.dataset.nextStep), button);
+      };
     });
   }
 
@@ -1317,35 +1347,195 @@
   }
 
   function normalizeProgress() {
-    state.unlockedStep = Math.max(1, Number(state.unlockedStep) || 1);
-    const hadActiveStep = Number.isFinite(Number(state.activeStep)) && Number(state.activeStep) > 0;
-    state.activeStep = hadActiveStep ? Math.max(1, Number(state.activeStep)) : 1;
     state.completed = Array.isArray(state.completed) ? state.completed : [];
     migrateChoice("discover", data.discover);
     migrateChoice("interests", data.interests);
     migrateChoice("reflection", data.reflections);
     migrateChoice("automate", data.automate);
-    if ((state.discoverKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.discover);
-    if ((state.interestsKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.interests);
-    if ((state.completed || []).includes("story")) state.unlockedStep = Math.max(state.unlockedStep, progression.story);
-    if ((state.completed || []).includes("workflow")) state.unlockedStep = Math.max(state.unlockedStep, progression.workflow);
-    if (state.example) state.unlockedStep = Math.max(state.unlockedStep, progression.example);
-    if (state.operatorTrait) state.unlockedStep = Math.max(state.unlockedStep, progression.operatorTrait);
-    if ((state.reflectionKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.reflection);
-    if ((state.automateKeys || []).length || state.automationOther) state.unlockedStep = Math.max(state.unlockedStep, progression.automate);
-    if (savedEmail) state.unlockedStep = Math.max(state.unlockedStep, progression.gate);
-    if (state.path) state.unlockedStep = Math.max(state.unlockedStep, progression.viewerBuilds);
-    if (!hadActiveStep) {
-      if (state.path) {
-        state.activeStep = progression.path;
-      } else if (savedEmail) {
-        state.activeStep = progression.gate;
-      } else {
-        state.activeStep = Math.min(state.unlockedStep, progression.gate - 1);
+    sanitizeProgressState();
+    const maxActive = highestContiguousStep();
+    const requestedActive = Number(state.activeStep);
+    state.unlockedStep = maxActive;
+    state.activeStep = Number.isFinite(requestedActive) && requestedActive > 0
+      ? Math.min(Math.max(1, requestedActive), maxActive)
+      : maxActive;
+    if (isStepComplete(Number(state.activeStep))) state.activeStep = maxActive;
+    save(storageKey, state);
+  }
+
+  function sanitizeProgressState() {
+    if (state.progressionVersion !== progressionVersion) {
+      const migratedKeys = ["story", "workflow", "example", "operatorTrait", "reflection", "automate", "gate", "path", "recommendations", "livePreview", "viewerBuilds"];
+      state.completed = state.completed.filter((key) => !migratedKeys.includes(key));
+      state.example = "";
+      state.operatorTrait = "";
+      delete state.reflection;
+      state.reflectionKeys = [];
+      state.automate = [];
+      state.automateKeys = [];
+      state.automationOther = "";
+      state.path = "";
+      state.platformOpened = false;
+      state.progressionVersion = progressionVersion;
+    }
+    state.completed = state.completed.filter((key) => isKnownCompletion(key));
+    if (!isValidChoice("discover", data.discover)) {
+      delete state.discover;
+      state.discoverKeys = [];
+      removeComplete("discover");
+    }
+    if (!hasComplete("discover")) {
+      delete state.discover;
+      state.discoverKeys = [];
+    }
+    if (!isValidChoice("interests", data.interests)) {
+      state.interests = [];
+      state.interestsKeys = [];
+      removeComplete("interests");
+    }
+    if (!hasComplete("interests")) {
+      state.interests = [];
+      state.interestsKeys = [];
+    }
+    if (state.example && !data.examples[state.example]) {
+      state.example = "";
+      removeComplete("example");
+    }
+    if (!hasComplete("example")) state.example = "";
+    if (state.operatorTrait && !data.quiz.results[state.operatorTrait]) {
+      state.operatorTrait = "";
+      removeComplete("operatorTrait");
+    }
+    if (!hasComplete("operatorTrait")) state.operatorTrait = "";
+    if (!isValidChoice("reflection", data.reflections)) {
+      delete state.reflection;
+      state.reflectionKeys = [];
+      removeComplete("reflection");
+    }
+    if (!hasComplete("reflection")) {
+      delete state.reflection;
+      state.reflectionKeys = [];
+    }
+    if (!isValidChoice("automate", data.automate) && !String(state.automationOther || "").trim()) {
+      state.automate = [];
+      state.automateKeys = [];
+      removeComplete("automate");
+    }
+    if (!hasComplete("automate")) {
+      state.automate = [];
+      state.automateKeys = [];
+      state.automationOther = "";
+    }
+    if (state.path && !["business_owner", "operator", "builder", "curious"].includes(state.path)) {
+      state.path = "";
+      removeComplete("path");
+    }
+    if (!hasComplete("path")) state.path = "";
+    let foundGap = false;
+    for (let step = 1; step <= 13; step += 1) {
+      const key = stepCompletionKeys[step];
+      if (foundGap) {
+        removeComplete(key);
+        clearStepState(key);
+        continue;
+      }
+      if (!isCompletionValid(key)) {
+        removeComplete(key);
+        foundGap = true;
       }
     }
-    state.activeStep = Math.min(Math.max(1, state.activeStep), Math.max(1, state.unlockedStep));
-    save(storageKey, state);
+  }
+
+  function clearStepState(key) {
+    switch (key) {
+      case "example":
+        state.example = "";
+        break;
+      case "operatorTrait":
+        state.operatorTrait = "";
+        break;
+      case "reflection":
+        delete state.reflection;
+        state.reflectionKeys = [];
+        break;
+      case "automate":
+        state.automate = [];
+        state.automateKeys = [];
+        state.automationOther = "";
+        break;
+      case "path":
+        state.path = "";
+        state.platformOpened = false;
+        break;
+      default:
+        break;
+    }
+  }
+
+  function highestContiguousStep() {
+    let active = 1;
+    for (let step = 1; step <= 13; step += 1) {
+      if (!isCompletionValid(stepCompletionKeys[step])) break;
+      active = step + 1;
+    }
+    return Math.min(14, active);
+  }
+
+  function isStepComplete(step) {
+    const key = stepCompletionKeys[step];
+    return Boolean(key && isCompletionValid(key));
+  }
+
+  function isCompletionValid(key) {
+    if (!isKnownCompletion(key)) return false;
+    switch (key) {
+      case "discover":
+        return isValidChoice("discover", data.discover) && hasComplete(key);
+      case "interests":
+        return isValidChoice("interests", data.interests) && hasComplete(key);
+      case "story":
+      case "workflow":
+      case "recommendations":
+      case "livePreview":
+      case "viewerBuilds":
+        return hasComplete(key);
+      case "example":
+        return Boolean(state.example && data.examples[state.example] && hasComplete(key));
+      case "operatorTrait":
+        return Boolean(state.operatorTrait && data.quiz.results[state.operatorTrait] && hasComplete(key));
+      case "reflection":
+        return isValidChoice("reflection", data.reflections) && hasComplete(key);
+      case "automate":
+        return Boolean(((state.automateKeys || []).length || String(state.automationOther || "").trim()) && hasComplete(key));
+      case "gate":
+        return Boolean(savedEmail?.email && hasComplete(key));
+      case "path":
+        return Boolean(["business_owner", "operator", "builder", "curious"].includes(state.path) && hasComplete(key));
+      default:
+        return false;
+    }
+  }
+
+  function isKnownCompletion(key) {
+    return Object.values(stepCompletionKeys).includes(key);
+  }
+
+  function hasComplete(key) {
+    return (state.completed || []).includes(key);
+  }
+
+  function removeComplete(key) {
+    state.completed = (state.completed || []).filter((item) => item !== key);
+  }
+
+  function isValidChoice(key, dataset) {
+    const selectedKeys = Array.isArray(state[`${key}Keys`]) ? state[`${key}Keys`] : [];
+    if (!selectedKeys.length) return false;
+    const allowed = new Set();
+    Object.values(dataset).forEach((items) => {
+      items.forEach((_, index) => allowed.add(`${key}:${index}`));
+    });
+    return selectedKeys.every((item) => allowed.has(item));
   }
 
   function migrateChoice(key, dataset) {
@@ -1360,7 +1550,9 @@
   }
 
   function applyUnlockedSteps() {
-    const active = Math.max(1, Number(state.activeStep) || 1);
+    const active = Math.max(1, Math.min(highestContiguousStep(), Number(state.activeStep) || 1));
+    state.activeStep = active;
+    state.unlockedStep = highestContiguousStep();
     if (renderedActiveStep !== active) {
       renderedActiveStep = active;
       activeStepReadyAt = Date.now() + 1600;
@@ -1368,6 +1560,7 @@
     document.querySelectorAll("[data-step]").forEach((section) => {
       const step = Number(section.dataset.step);
       section.hidden = step > active;
+      section.inert = step !== active;
       section.classList.toggle("is-active", step === active);
       section.classList.toggle("is-complete", step < active);
       if (step === active) {
@@ -1376,12 +1569,80 @@
         section.removeAttribute("aria-current");
       }
     });
+    renderCompletedSummaries();
+  }
+
+  function renderCompletedSummaries() {
+    document.querySelectorAll(".completed-summary").forEach((node) => node.remove());
+    document.querySelectorAll(".experience-step.is-complete[data-step]").forEach((section) => {
+      const summary = summaryForStep(Number(section.dataset.step));
+      if (!summary) return;
+      const head = section.querySelector(".step-head");
+      if (!head) return;
+      const node = document.createElement("p");
+      node.className = "completed-summary";
+      node.textContent = `${summary} ✓`;
+      head.appendChild(node);
+    });
+  }
+
+  function summaryForStep(step) {
+    switch (step) {
+      case 1:
+        return choiceLabels("discover", data.discover).join(", ");
+      case 2:
+        return choiceLabels("interests", data.interests).join(", ");
+      case 3:
+        return lang === "nl" ? "Besturingssystemen" : "Operating systems";
+      case 4:
+        return copy[lang].newWorkflow;
+      case 5:
+        return state.example && data.examples[state.example] ? data.examples[state.example][lang][0] : "";
+      case 6:
+        return state.operatorTrait && data.quiz.traits[state.operatorTrait] ? data.quiz.traits[state.operatorTrait][lang] : "";
+      case 7:
+        return choiceLabels("reflection", data.reflections).join(", ");
+      case 8: {
+        const answers = choiceLabels("automate", data.automate);
+        if (state.automationOther) answers.push(state.automationOther);
+        return answers.join(", ");
+      }
+      case 9:
+        return savedEmail?.email || copy[lang].emailConfirmedHeadline;
+      case 10:
+        return pathLabel(state.path);
+      case 11:
+        return document.getElementById("personal-title")?.textContent || "";
+      case 12:
+        return copy[lang].openLive;
+      case 13: {
+        const builds = read("doneovernight.viewerBuilds.v1", []);
+        return builds[builds.length - 1]?.idea || copy[lang].ideaSaved;
+      }
+      default:
+        return "";
+    }
+  }
+
+  function choiceLabels(key, dataset) {
+    const selectedKeys = Array.isArray(state[`${key}Keys`]) ? state[`${key}Keys`] : [];
+    return selectedKeys.map((item) => {
+      const index = Number(String(item).split(":")[1]);
+      return dataset[lang]?.[index] || "";
+    }).filter(Boolean);
+  }
+
+  function pathLabel(path) {
+    const keys = ["business_owner", "operator", "builder", "curious"];
+    const index = keys.indexOf(path);
+    return index >= 0 ? data.paths[lang][index] : "";
   }
 
   function unlockStep(step, scroll = true) {
-    const next = Math.max(Number(state.unlockedStep) || 1, step);
-    state.unlockedStep = next;
-    state.activeStep = Math.min(step, next);
+    const maxActive = highestContiguousStep();
+    const next = Math.min(step, maxActive);
+    state.unlockedStep = maxActive;
+    state.activeStep = next;
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
@@ -1416,7 +1677,7 @@
 
   function completePath() {
     markComplete("path");
-    state.unlockedStep = Math.max(Number(state.unlockedStep) || 1, progression.viewerBuilds);
+    state.unlockedStep = Math.max(Number(state.unlockedStep) || 1, progression.path);
     state.activeStep = progression.path;
     save(storageKey, state);
     applyUnlockedSteps();
@@ -1433,45 +1694,38 @@
   }
 
   function bindAutoUnlocks() {
-    const bindings = [
-      ["3", "story", progression.story],
-      ["4", "workflow", progression.workflow]
-    ];
-    const checkAutoUnlocks = () => {
-      bindings.forEach(([step, key, unlockTo]) => {
-        const section = document.querySelector(`[data-step="${step}"]`);
-        if (!section || section.hidden) return;
-        if (Number(state.activeStep) !== Number(step) || Date.now() < activeStepReadyAt) return;
-        const rect = section.getBoundingClientRect();
-        if (rect.top < window.innerHeight * 0.72 && rect.bottom > window.innerHeight * 0.18) {
-          completeInteraction(key, unlockTo, false);
-        }
-      });
-    };
     window.removeEventListener("scroll", window.__doneOvernightAutoUnlock);
-    window.__doneOvernightAutoUnlock = checkAutoUnlocks;
-    window.addEventListener("scroll", checkAutoUnlocks, { passive: true });
-    window.addEventListener("resize", checkAutoUnlocks, { passive: true });
-    setTimeout(checkAutoUnlocks, 250);
-    if (!("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        const found = bindings.find(([step]) => entry.target.dataset.step === step);
-        if (!found || Number(state.activeStep) !== Number(found[0]) || Date.now() < activeStepReadyAt) return;
-        if (found) completeInteraction(found[1], found[2], false);
-      });
-    }, { threshold: 0.45 });
-    bindings.forEach(([step]) => {
-      const section = document.querySelector(`[data-step="${step}"]`);
-      if (section) observer.observe(section);
-    });
+    window.__doneOvernightAutoUnlock = null;
   }
 
   function completeInteraction(key, nextStep, scroll = true) {
+    const current = Number(state.activeStep) || 1;
+    if (stepCompletionKeys[current] !== key) return false;
+    if (Number(nextStep) !== current + 1) return false;
     markComplete(key);
     unlockStep(nextStep, scroll);
     showReward();
+    return true;
+  }
+
+  function completeInteractionAfterFeedback(key, nextStep, trigger, scroll = true) {
+    if (interactionLocked) return false;
+    const current = Number(state.activeStep) || 1;
+    if (stepCompletionKeys[current] !== key || Number(nextStep) !== current + 1) return false;
+    interactionLocked = true;
+    trigger?.classList.add("is-pressing", "is-confirmed");
+    window.setTimeout(() => {
+      completeInteraction(key, nextStep, scroll);
+      trigger?.classList.remove("is-pressing");
+      interactionLocked = false;
+    }, 300);
+    return true;
+  }
+
+  function canInteract(element) {
+    if (interactionLocked) return false;
+    const section = element.closest("[data-step]");
+    return Boolean(section && !section.hidden && section.classList.contains("is-active") && Number(section.dataset.step) === Number(state.activeStep));
   }
 
   function markComplete(key) {

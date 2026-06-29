@@ -229,6 +229,10 @@ body.has-reward .experience-progress {
 }
 .experience-step[hidden] {
   display: none;
+  min-height: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
 }
 .experience-step.is-complete {
   min-height: auto;
@@ -236,6 +240,7 @@ body.has-reward .experience-progress {
   padding-bottom: 18px;
   justify-content: center;
   opacity: 0.62;
+  pointer-events: none;
 }
 .experience-step.is-complete .step-head {
   margin-bottom: 0;
@@ -248,6 +253,15 @@ body.has-reward .experience-progress {
   text-transform: uppercase;
   color: var(--muted);
   max-width: none;
+}
+.completed-summary {
+  margin: 8px 0 0;
+  color: var(--amber);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .experience-step.is-complete .step-copy,
 .experience-step.is-complete .choice-grid,
@@ -343,6 +357,18 @@ body.has-reward .experience-progress {
 .follow-card:active {
   transform: scale(0.985);
 }
+.choice-card.is-pressing,
+.choice-card.is-confirmed,
+.tab-pill.is-pressing,
+.tab-pill.is-confirmed,
+.quiet-action.is-pressing,
+.quiet-action.is-confirmed,
+.quiz-option.is-pressing,
+.quiz-option.is-confirmed {
+  transform: scale(0.985) translateY(1px);
+  border-color: rgba(233,196,138,0.82);
+  box-shadow: 0 0 0 1px rgba(233,196,138,0.14), 0 0 34px rgba(233,196,138,0.22);
+}
 .choice-card span:first-child {
   font-family: var(--sans);
   font-size: 15px;
@@ -363,6 +389,16 @@ body.has-reward .experience-progress {
   background: var(--amber);
   border-color: var(--amber);
   box-shadow: inset 0 0 0 4px rgba(5,6,8,0.72), 0 0 22px rgba(233,196,138,0.55);
+}
+.choice-card.is-selected span:last-child::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  margin: 2px auto 0;
+  border: solid rgba(5,6,8,0.92);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 .story-stage {
   min-height: 70svh;
@@ -464,6 +500,7 @@ body.has-reward .experience-progress {
 .example-tabs::-webkit-scrollbar { display: none; }
 .tab-pill {
   flex: 0 0 auto;
+  position: relative;
   min-height: 38px;
   padding: 0 15px;
   border: 1px solid var(--line);
@@ -477,6 +514,11 @@ body.has-reward .experience-progress {
   color: #050608;
   background: var(--ink);
   border-color: var(--ink);
+}
+.tab-pill.is-active::after {
+  content: "✓";
+  margin-left: 8px;
+  color: #050608;
 }
 .example-board {
   margin-top: 20px;
@@ -518,6 +560,7 @@ body.has-reward .experience-progress {
   margin-top: 26px;
 }
 .quiz-option {
+  position: relative;
   min-height: 76px;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -531,6 +574,14 @@ body.has-reward .experience-progress {
 .quiz-option.is-selected {
   border-color: rgba(233,196,138,0.48);
   background: rgba(233,196,138,0.06);
+}
+.quiz-option.is-selected::after {
+  content: "✓";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--amber);
 }
 .quiz-result {
   display: none;
