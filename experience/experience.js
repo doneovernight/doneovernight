@@ -1766,13 +1766,20 @@
     const note = document.getElementById("wallet-note");
     const handler = async (kind) => {
       if (note) note.textContent = copy[lang].walletComingSoon;
-      const endpoint = kind === "apple" ? "/api/builder-wallet/apple" : "/api/builder-wallet/google";
+      const endpoint = kind === "apple" ? "/api/builder-wallet/apple?type=builder" : "/api/builder-wallet/google?type=builder";
       try {
-        await fetch(endpoint, {
+        const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(builderIdentityPayload())
         });
+        const result = await response.json().catch(() => ({}));
+        const issuedNumber = result.identity?.builderNumber || result.identity_storage?.builder_number || result.storage?.pass?.builder_number;
+        if (issuedNumber) {
+          updateMemory({ builderNumber: String(issuedNumber) });
+          renderPassport();
+        }
+        if (note) note.textContent = result.message || copy[lang].walletComingSoon;
       } catch (error) {}
       showReward(copy[lang].walletComingSoon);
     };
@@ -1788,6 +1795,7 @@
 
   function builderIdentityPayload() {
     return {
+      pass_kind: "builder",
       journey_id: state.journeyId || "",
       builder_number: builderNumberValue(),
       builder_type: builderType(),
@@ -1797,7 +1805,8 @@
       current_stage: currentStage(),
       joined_at: read(memoryKey, {}).joinedAt || state.journeyStartedAt || "",
       completion: completionPercent(),
-      status: read(memoryKey, {}).foundingBuilder ? "Founding Builder" : "Builder"
+      status: read(memoryKey, {}).foundingBuilder ? "Founding Builder" : "Builder",
+      ...platformLanguagePayload()
     };
   }
 
@@ -2604,6 +2613,8 @@
         ${hqMetric("Emails Sent", metrics.emails_sent)}
         ${hqMetric("Email Opens", metrics.email_opens)}
         ${hqMetric("Viewer Builds", metrics.viewer_builds)}
+        ${hqMetric("Builder Cards", metrics.builder_cards)}
+        ${hqMetric("Wallet Passes", metrics.wallet_passes)}
         ${hqMetric("Average Completion", `${metrics.average_completion || 0}%`)}
         ${hqMetric("Current Live Visitors", metrics.current_live_visitors)}
         ${hqList("Most Chosen Interests", data.most_chosen_interests)}
@@ -2615,6 +2626,7 @@
         ${hqList("Recent Resources", (data.recent_resources || []).map((item) => ({ label: item.resource, count: item.status || "notify" })))}
         ${hqList("Recent Journal Entries", (data.recent_journal_entries || []).map((item) => ({ label: item.title, count: item.entry_type || "entry" })))}
       </section>
+      ${hqIdentityPanel(data.wallet_status || {})}
       ${liveStatusForm(data.current_live_status || {})}
     `;
     bindLiveStatusForm();
@@ -2634,6 +2646,42 @@
   function hqLanguageCount(item = {}, fallback = "") {
     const language = String(item.hq_language || item.email_language || item.selected_language || "").trim().toUpperCase();
     return language ? `Language: ${language}` : fallback;
+  }
+
+  function hqIdentityPanel(status = {}) {
+    const counts = status.counts || {};
+    const founder = status.founder_pass || null;
+    const builderCards = status.builder_cards || [];
+    const builderPasses = status.builder_passes || [];
+    const notConnected = status.placeholders?.builder_identities || status.placeholders?.wallet_passes;
+    return `
+      <section class="viewer-panel live-status-writer" aria-label="Identity">
+        <div class="step-head">
+          <span class="step-number">Identity</span>
+          <h2 class="step-title">Wallet Passes.</h2>
+          <p class="step-copy">${notConnected ? "Identity tables are ready in code. Apply the Phase 11 migration to store issued passes." : "Builder IDs, cards, and wallet status."}</p>
+        </div>
+        <section class="activity-grid" aria-label="Wallet identity status">
+          ${hqMetric("Founder Pass", founder ? founder.status || "Issued" : "Prepared")}
+          ${hqMetric("Builder Passes", builderPasses.length)}
+          ${hqMetric("Issued", counts.issued || 0)}
+          ${hqMetric("Downloaded", counts.downloaded || 0)}
+          ${hqMetric("Active", counts.active || 0)}
+          ${hqList("Builder Cards", builderCards.map((item) => ({
+            label: item.journey_id || `Builder #${item.builder_number || ""}`,
+            count: item.builder_number ? `Builder #${item.builder_number}` : item.status || "Identity"
+          })))}
+          ${hqList("Recent Wallet Passes", builderPasses.map((item) => ({
+            label: item.serial_number || item.journey_id || "Wallet pass",
+            count: `${item.provider || "wallet"} · ${item.status || "issued"}`
+          })))}
+        </section>
+        <div class="live-status-actions">
+          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">Founder Pass</a>
+          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=builder">Builder Pass</a>
+        </div>
+      </section>
+    `;
   }
 
   function liveStatusForm(status = {}) {

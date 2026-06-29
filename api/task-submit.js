@@ -35,6 +35,8 @@ const {
   saveShareEvent,
   savePageEvent,
   saveLiveStatus,
+  issueBuilderIdentity,
+  saveWalletPass,
   getPlatformSnapshot
 } = require("../lib/platform-store");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
@@ -49,7 +51,9 @@ const {
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
 const {
-  applePassJson,
+  applePackagePlan,
+  founderIdentity,
+  builderIdentity,
   googleWalletPayload,
   appleWalletConfigured,
   googleWalletConfigured
@@ -1642,18 +1646,57 @@ function handleHqSessionRequest(req, res) {
   return send(res, 200, { ok: true, session: publicHqSession(session.session || {}) });
 }
 
-function handleBuilderWalletRequest(req, res, input = {}) {
+async function handleBuilderWalletRequest(req, res, input = {}) {
   const url = new URL(req.url || "/api/builder-wallet/apple", "https://doneovernight.com");
   const provider = String(input.provider || url.searchParams.get("provider") || url.pathname.split("/").pop() || "apple").toLowerCase();
+  const passKind = String(input.pass_kind || input.passKind || input.type || url.searchParams.get("type") || url.searchParams.get("kind") || "builder").toLowerCase() === "founder"
+    ? "founder"
+    : "builder";
+  const baseIdentity = passKind === "founder" ? founderIdentity(input) : builderIdentity(input);
+  let identityResult = { configured: true, saved: false, status: "skipped", reason: passKind === "founder" ? "founder_pass" : "identity_not_requested" };
+  let walletInput = {
+    ...input,
+    pass_kind: passKind,
+    type: passKind,
+    founder_id: baseIdentity.founderId || input.founder_id || input.founderId,
+    builder_number: baseIdentity.builderNumber || input.builder_number || input.builderNumber
+  };
+
+  if (passKind === "builder") {
+    identityResult = await issueBuilderIdentity({
+      ...walletInput,
+      builder_type: walletInput.builder_type || walletInput.builderType || baseIdentity.builderType,
+      identity_payload: baseIdentity
+    });
+    walletInput = {
+      ...walletInput,
+      builder_number: identityResult.builder_number || walletInput.builder_number,
+      builder_type: walletInput.builder_type || baseIdentity.builderType,
+      status: walletInput.status || baseIdentity.status
+    };
+  }
+
   if (provider === "google") {
-    const payload = googleWalletPayload(input);
+    const payload = googleWalletPayload(walletInput);
+    const storage = await saveWalletPass({
+      ...walletInput,
+      provider: "google",
+      serial_number: passKind === "founder" ? baseIdentity.founderId : walletInput.journey_id || walletInput.journeyId || `builder-${walletInput.builder_number || ""}`,
+      founder_id: baseIdentity.founderId,
+      signed: false,
+      payload
+    });
     if (!googleWalletConfigured()) {
       return send(res, 501, {
         ok: false,
         configured: false,
         provider: "google",
-        status: "coming_soon",
+        pass_kind: passKind,
+        status: "wallet_credentials_required",
         message: "Wallet support coming soon.",
+        identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
+        identity_storage: identityResult,
+        storage,
         payload
       });
     }
@@ -1661,27 +1704,48 @@ function handleBuilderWalletRequest(req, res, input = {}) {
       ok: false,
       configured: true,
       provider: "google",
-      status: "signing_not_implemented",
+      pass_kind: passKind,
+      status: "google_wallet_issuer_not_implemented",
+      identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
+      identity_storage: identityResult,
+      storage,
       payload
     });
   }
-  const pass = applePassJson(input);
+  const packagePlan = applePackagePlan(walletInput);
+  const storage = await saveWalletPass({
+    ...walletInput,
+    provider: "apple",
+    serial_number: packagePlan.pass?.serialNumber,
+    founder_id: baseIdentity.founderId,
+    signed: false,
+    payload: packagePlan
+  });
   if (!appleWalletConfigured()) {
     return send(res, 501, {
       ok: false,
       configured: false,
       provider: "apple",
-      status: "coming_soon",
+      pass_kind: passKind,
+      status: "wallet_certificates_required",
       message: "Wallet support coming soon.",
-      pass
+      identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
+      identity_storage: identityResult,
+      storage,
+      package: packagePlan
     });
   }
   return send(res, 501, {
     ok: false,
     configured: true,
     provider: "apple",
-    status: "signing_not_implemented",
-    pass
+    pass_kind: passKind,
+    status: "apple_pass_signing_not_implemented",
+    message: "Wallet support coming soon.",
+    identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
+    identity_storage: identityResult,
+    storage,
+    package: packagePlan
   });
 }
 
@@ -1780,6 +1844,11 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
   const resources = visiblePlatformRows(snapshot.resource_interest.rows, includeTest);
   const journal = visiblePlatformRows(snapshot.journal.rows, includeTest);
   const liveStatus = visiblePlatformRows(snapshot.live_status.rows, includeTest);
+  const builderIdentities = visiblePlatformRows(snapshot.builder_identities?.rows || [], includeTest);
+  const walletPasses = visiblePlatformRows(snapshot.wallet_passes?.rows || [], includeTest);
+  const walletIssued = walletPasses.filter((row) => row.status === "issued").length;
+  const walletDownloaded = walletPasses.filter((row) => row.status === "downloaded").length;
+  const walletActive = walletPasses.filter((row) => row.status === "active").length;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const completed = journeys.filter((row) => Number(row.completion_percentage || 0) >= 100);
@@ -1796,6 +1865,8 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
       emails_sent: emails.filter((row) => row.status === "sent").length,
       email_opens: emails.filter((row) => row.status === "opened").length,
       viewer_builds: viewerBuilds.length,
+      builder_cards: builderIdentities.length,
+      wallet_passes: walletPasses.length,
       average_completion: average,
       current_live_visitors: 0
     },
@@ -1813,12 +1884,28 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
     recent_resources: resources.slice(0, 8),
     recent_journal_entries: journal.slice(0, 8),
     current_live_status: liveStatus[0] || null,
+    wallet_status: {
+      founder_pass: walletPasses.find((row) => row.pass_kind === "founder") || null,
+      builder_passes: walletPasses.filter((row) => row.pass_kind === "builder").slice(0, 8),
+      builder_cards: builderIdentities.slice(0, 8),
+      counts: {
+        issued: walletIssued,
+        downloaded: walletDownloaded,
+        active: walletActive
+      },
+      placeholders: {
+        builder_identities: snapshot.builder_identities?.placeholder === true,
+        wallet_passes: snapshot.wallet_passes?.placeholder === true
+      }
+    },
     test_records_hidden: includeTest ? 0 : {
       journeys: snapshot.journeys.rows.length - journeys.length,
       viewer_builds: snapshot.viewer_builds.rows.length - viewerBuilds.length,
       resource_interest: snapshot.resource_interest.rows.length - resources.length,
       email_events: snapshot.email_events.rows.length - emails.length,
-      page_events: snapshot.page_events.rows.length - pages.length
+      page_events: snapshot.page_events.rows.length - pages.length,
+      builder_identities: (snapshot.builder_identities?.rows || []).length - builderIdentities.length,
+      wallet_passes: (snapshot.wallet_passes?.rows || []).length - walletPasses.length
     }
   };
 }
@@ -2366,6 +2453,9 @@ module.exports = async function handler(req, res) {
     if (url.searchParams.get("hq_session") === "1" || isHqSessionRequest(req)) {
       return handleHqSessionRequest(req, res);
     }
+    if (url.searchParams.get("builder_wallet") === "1" || isBuilderWalletRequest(req, {})) {
+      return await handleBuilderWalletRequest(req, res, Object.fromEntries(url.searchParams.entries()));
+    }
     return handleReviewStateRequest(req, res);
   }
 
@@ -2397,7 +2487,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (isBuilderWalletRequest(req, input)) {
-      return handleBuilderWalletRequest(req, res, input);
+      return await handleBuilderWalletRequest(req, res, input);
     }
 
     if (isPlatformEventsRequest(req, input)) {
