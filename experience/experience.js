@@ -559,6 +559,8 @@
   let scrollFrame = 0;
   let scrollRun = 0;
   let platformProgressTimer = 0;
+  const tapFeedbackMs = 320;
+  const insightDwellMs = 1700;
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
@@ -2166,6 +2168,7 @@
           systems: "Je denkt in systemen.",
           execution: "Je waardeert uitvoering boven complexiteit.",
           workflow: "Je ziet waar werk vastloopt.",
+          example: "Je koppelt systemen aan echte werelden.",
           operator: "Je let op eigenaarschap.",
           stage: "Je weet waar je nu staat.",
           automation: "Je zoekt hefboom in herhaling.",
@@ -2176,6 +2179,7 @@
           systems: "You naturally think in systems.",
           execution: "You value execution over complexity.",
           workflow: "You notice where work gets stuck.",
+          example: "You connect systems to real worlds.",
           operator: "You pay attention to ownership.",
           stage: "You know where you are right now.",
           automation: "You look for leverage in repetition.",
@@ -2184,6 +2188,7 @@
     if (step === 1) return lines.discover;
     if (step === 2) return interests.includes("automation") || interests.includes("systems") || interests.includes("systemen") ? lines.systems : lines.execution;
     if (step === 3 || step === 4) return lines.workflow;
+    if (step === 5) return lines.example;
     if (step === 6 || path === "operator") return lines.operator;
     if (step === 7) return lines.stage;
     if (step === 8 || automate) return lines.automation;
@@ -2320,11 +2325,40 @@
     interactionLocked = true;
     trigger?.classList.add("is-pressing", "is-confirmed");
     window.setTimeout(() => {
-      completeInteraction(key, nextStep, scroll);
       trigger?.classList.remove("is-pressing");
-      interactionLocked = false;
-    }, 300);
+      const hasInsight = revealActiveInsight(current, trigger);
+      window.setTimeout(() => {
+        completeInteraction(key, nextStep, scroll);
+        interactionLocked = false;
+      }, hasInsight ? insightDwellMs : tapFeedbackMs);
+    }, tapFeedbackMs);
     return true;
+  }
+
+  function revealActiveInsight(step, trigger) {
+    const insight = insightForStep(step);
+    if (!insight) return false;
+    const section = trigger?.closest("[data-step]") || document.querySelector(`[data-step="${step}"]`);
+    if (!section) return false;
+    section.querySelectorAll(".active-insight").forEach((node) => node.remove());
+    const node = document.createElement("p");
+    node.className = "active-insight";
+    node.textContent = insight;
+    const anchor = trigger?.closest(".choice-card, .quiz-option, .tab-pill, .quiet-action, .next-unlock");
+    if (anchor && anchor.parentNode && section.contains(anchor)) {
+      anchor.insertAdjacentElement("afterend", node);
+    } else {
+      (section.querySelector(".step-head") || section).appendChild(node);
+    }
+    window.requestAnimationFrame(() => node.classList.add("is-visible"));
+    return true;
+  }
+
+  function clearActiveInsights() {
+    document.querySelectorAll(".active-insight").forEach((node) => {
+      node.classList.remove("is-visible");
+      window.setTimeout(() => node.remove(), 260);
+    });
   }
 
   function canInteract(element) {
@@ -2335,6 +2369,7 @@
   }
 
   function markComplete(key) {
+    clearActiveInsights();
     state.completed = Array.isArray(state.completed) ? state.completed : [];
     if (!state.completed.includes(key)) state.completed.push(key);
     save(storageKey, state);
