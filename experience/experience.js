@@ -2,6 +2,8 @@
   const storageKey = "doneovernight.experience.v1";
   const emailKey = "doneovernight.experience.email.v1";
   const confirmationCooldownKey = "doneovernight.experience.confirmationCooldown.v1";
+  const canonicalExperienceUrl = "https://doneovernight.com/how-it-works";
+  const canonicalLiveUrl = "https://doneovernight.com/live";
   const state = read(storageKey, {});
   const savedEmail = read(emailKey, null);
   const progressKey = "doneovernight.visitorProgress.v1";
@@ -94,7 +96,7 @@
       ideaSaved: "Your idea has been added.",
       copyResult: "Copy your result",
       sharePage: "Share this page",
-      copied: "Copied",
+      copied: "Profile copied.",
       linkCopied: "Link copied",
       nextLive: "Next: Live Build",
       nextViewer: "Next: Viewer Builds",
@@ -224,7 +226,7 @@
       ideaSaved: "Je idee is toegevoegd.",
       copyResult: "Kopieer je resultaat",
       sharePage: "Deel deze pagina",
-      copied: "Gekopieerd",
+      copied: "Profiel gekopieerd.",
       linkCopied: "Link gekopieerd",
       nextLive: "Volgende: Live Build",
       nextViewer: "Volgende: Viewer Builds",
@@ -1070,22 +1072,25 @@
     const shareButton = document.getElementById("share-page");
     if (copyButton) {
       copyButton.onclick = () => {
-        const text = resultText();
+        const text = buildDoneOvernightProfile();
         copyText(text);
         showReward(copy[lang].copied);
       };
     }
     if (shareButton) {
       shareButton.onclick = async () => {
-        const text = resultText();
-        const url = `${location.origin}/how-it-works`;
+        const sharePayload = {
+          title: "Experience DONEOVERNIGHT",
+          text: "I just completed the DONEOVERNIGHT experience.\n\nCurious what kind of builder you are?",
+          url: canonicalExperienceUrl
+        };
         if (navigator.share) {
           try {
-            await navigator.share({ title: "DONEOVERNIGHT", text, url });
+            await navigator.share(sharePayload);
             return;
           } catch (error) {}
         }
-        copyText(url);
+        copyText(canonicalExperienceUrl);
         showReward(copy[lang].linkCopied);
       };
     }
@@ -1101,6 +1106,121 @@
     const title = document.getElementById("personal-title")?.textContent || "";
     const body = document.getElementById("personal-copy")?.textContent || "";
     return `${title}\n${body}`.trim();
+  }
+
+  function buildDoneOvernightProfile() {
+    ensureJourney();
+    const lines = ["DONEOVERNIGHT PROFILE"];
+    addProfileSection(lines, "Journey ID", [state.journeyId]);
+    addProfileSection(lines, "Discovered from", [state.discover]);
+    addProfileSection(lines, "Builder Type", [builderType()]);
+    addProfileSection(lines, "Primary Interests", bulletLines(state.interests || []));
+    addProfileSection(lines, "Current Stage", [currentStage()]);
+    addProfileSection(lines, "You said you'd automate", automationLines());
+    addProfileSection(lines, "Your mindset", mindsetLines());
+    addProfileSection(lines, "Recommended next steps", bulletLines(profileRecommendations()));
+    lines.push("", "Continue your journey:", canonicalLiveUrl);
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function addProfileSection(lines, title, values = []) {
+    const safeValues = values.map((value) => String(value || "").trim()).filter(Boolean);
+    if (!safeValues.length) return;
+    lines.push("", title, ...safeValues);
+  }
+
+  function bulletLines(values = []) {
+    return values.map((value) => String(value || "").trim()).filter(Boolean).map((value) => `✓ ${value}`);
+  }
+
+  function automationLines() {
+    const answers = Array.isArray(state.automate) ? state.automate.slice() : state.automate ? [state.automate] : [];
+    if (state.automationOther) answers.push(state.automationOther);
+    return answers.map((value) => normalizeProfileLabel(value));
+  }
+
+  function mindsetLines() {
+    const lines = [];
+    const result = resolveCurrentResult();
+    if (result) lines.push(result);
+    const support = document.getElementById("personal-copy")?.textContent || data.summarySupport[lang][(summarySeed() + 3) % data.summarySupport[lang].length];
+    if (support) lines.push(support);
+    const source = [
+      state.path,
+      ...(state.interests || []),
+      state.operatorTrait,
+      state.reflection,
+      ...(Array.isArray(state.automate) ? state.automate : state.automate ? [state.automate] : [])
+    ].join("|").toLowerCase();
+    const extras = [
+      source.includes("automation") || source.includes("crm") || source.includes("lead")
+        ? "You look for leverage instead of repetitive work."
+        : "",
+      source.includes("business") || source.includes("growing") || source.includes("planning")
+        ? "You seem more interested in building long-term infrastructure than quick wins."
+        : "",
+      source.includes("ai") || source.includes("research")
+        ? "You care about where intelligence connects to real execution."
+        : "",
+      source.includes("operator") || source.includes("ownership")
+        ? "You notice the work between the idea and the outcome."
+        : "",
+      source.includes("design") || source.includes("taste")
+        ? "You care about the quality of the system, not only whether it works."
+        : ""
+    ].filter(Boolean);
+    const selected = extras[(summarySeed() + lines.length) % Math.max(1, extras.length)];
+    if (selected) lines.push(selected);
+    return Array.from(new Set(lines)).slice(0, 4);
+  }
+
+  function builderType() {
+    const interests = new Set(state.interests || []);
+    const hasInterest = (...labels) => labels.some((label) => interests.has(label));
+    const path = state.path || "";
+    if (path === "operator") return "Operator Builder";
+    if (path === "business_owner") return "Business Systems Builder";
+    if (path === "builder" && (hasInterest("AI") || hasInterest("Architecture", "Architectuur"))) return "Infrastructure Builder";
+    if (hasInterest("Automation", "Automatisering") || hasInterest("Systems", "Systemen")) return "Systems Builder";
+    if (hasInterest("Design") || state.operatorTrait === "taste") return "Experience Builder";
+    if (hasInterest("Business")) return "Execution Builder";
+    return resolveCurrentResult().replace(/^You\s+/i, "").replace(/\.$/, "") || "Builder";
+  }
+
+  function currentStage() {
+    const value = String(state.reflection || "").trim();
+    const map = {
+      "Building my first project": "Building",
+      "Growing a business": "Growing",
+      "Looking for automation": "Systemizing",
+      "Learning AI": "Learning",
+      "Just exploring": "Exploring",
+      "Planning something bigger": "Planning",
+      "Mijn eerste project bouwen": "Building",
+      "Een bedrijf laten groeien": "Growing",
+      "Op zoek naar automatisering": "Systemizing",
+      "AI leren": "Learning",
+      "Gewoon verkennen": "Exploring",
+      "Iets groters plannen": "Planning"
+    };
+    return map[value] || value;
+  }
+
+  function profileRecommendations() {
+    const labels = recommendationLabels(state.path || "curious").map((label) => data.recommendationLabels.en[label] || label);
+    const signals = [
+      state.path,
+      ...(state.interests || []),
+      ...(Array.isArray(state.automate) ? state.automate : state.automate ? [state.automate] : []),
+      state.automationOther
+    ].join("|").toLowerCase();
+    if (signals.includes("lead") || signals.includes("sales") || signals.includes("business")) labels.push("Lead Operating System");
+    if (signals.includes("client onboarding")) labels.push("Client Onboarding System");
+    return Array.from(new Set(labels)).slice(0, 6);
+  }
+
+  function normalizeProfileLabel(value) {
+    return String(value || "").trim();
   }
 
   function copyText(text) {
