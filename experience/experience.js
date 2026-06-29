@@ -504,11 +504,15 @@
   let interactionLocked = false;
   let scrollFrame = 0;
   let scrollRun = 0;
+  let platformProgressTimer = 0;
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
+    ensureJourney();
+    trackPageLifecycle();
     mountHowItWorks();
     mountLive();
+    mountPlatformPages();
     bindLanguage();
     revealOnScroll();
   });
@@ -537,6 +541,7 @@
     bindPlatformHub();
     renderProgress();
     renderReturnVisitor();
+    hydrateReturnVisitor();
     renderPassport();
     persistVisitorProgress();
     applyUnlockedSteps();
@@ -565,6 +570,14 @@
     mountList("upcoming-list", data.upcoming[lang]);
     mountViewerBuilds();
     renderProgress();
+    bindPlatformHub();
+    hydrateLiveData();
+  }
+
+  function mountPlatformPages() {
+    if (document.body.dataset.platform === "resources") mountResourceInterest();
+    if (document.body.dataset.platform === "journal") hydrateJournalData();
+    if (document.body.dataset.platform === "hq") mountHq();
   }
 
   function mountChoices(id, items, key, multi) {
@@ -852,6 +865,65 @@
     }
   }
 
+  function platformPayload(extra = {}) {
+    const emailPayload = read(emailKey, {});
+    const started = state.journeyStartedAt ? new Date(state.journeyStartedAt).getTime() : Date.now();
+    return {
+      journey_id: state.journeyId || "",
+      journey: {
+        journey_id: state.journeyId || "",
+        email: emailPayload.email || "",
+        social_handle: state.socialHandle || emailPayload.socialHandle || "",
+        source: state.discover || "unknown",
+        utm: state.utm || {},
+        browser_language: state.browserLanguage || navigator.language || "",
+        chosen_path: state.path || "",
+        chosen_interests: state.interests || [],
+        completion: completionPercent(),
+        result: document.getElementById("final-title")?.textContent || document.getElementById("personal-title")?.textContent || "",
+        automate: Array.isArray(state.automate) ? state.automate : [],
+        automation_choice: state.automationOther || "",
+        journey_started_at: state.journeyStartedAt || "",
+        returned: Boolean(state.returned),
+        profile_copied: Boolean(state.profileCopied),
+        share_clicked: Boolean(state.shareClicked),
+        follow_clicked: Boolean(state.followClicked),
+        time_spent: Math.max(0, Math.round((Date.now() - started) / 1000)),
+        last_page: pageName()
+      },
+      progress: {
+        active_step: Number(state.activeStep) || 1,
+        unlocked_step: Number(state.unlockedStep) || 1,
+        completed: state.completed || [],
+        completion: completionPercent()
+      },
+      ...extra
+    };
+  }
+
+  async function postPlatformEvent(extra = {}) {
+    try {
+      const response = await fetch("/api/platform-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(platformPayload(extra)),
+        keepalive: true
+      });
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function pageName() {
+    const path = window.location.pathname.replace(/^\/|\/$/g, "") || "home";
+    if (path === "how-it-works") return "how-it-works";
+    if (path === "live") return "live";
+    if (path === "resources") return "resources";
+    if (path === "journal") return "journal";
+    return path;
+  }
+
   function resendCooldownRemaining() {
     const cooldown = read(confirmationCooldownKey, {});
     const elapsed = Math.floor((Date.now() - Number(cooldown.lastSentAt || 0)) / 1000);
@@ -897,20 +969,28 @@
     if (fields.solve) fields.solve.placeholder = copy[lang].solvePlaceholder;
     fields.website.placeholder = copy[lang].website;
     fields.email.placeholder = copy[lang].email;
-    form.onsubmit = (event) => {
+    form.onsubmit = async (event) => {
       event.preventDefault();
       if (!canInteract(form)) return;
       if (!fields.idea.value.trim() || !fields.description.value.trim()) return;
-      const builds = read("doneovernight.viewerBuilds.v1", []);
-      builds.push({
+      const build = {
         idea: fields.idea.value.trim(),
         description: fields.description.value.trim(),
         solve: fields.solve ? fields.solve.value.trim() : "",
         website: fields.website.value.trim(),
         email: fields.email.value.trim(),
         createdAt: new Date().toISOString()
-      });
+      };
+      const builds = read("doneovernight.viewerBuilds.v1", []);
+      builds.push(build);
       save("doneovernight.viewerBuilds.v1", builds);
+      await postPlatformEvent({
+        event: "viewer_build_submitted",
+        viewer_build: build,
+        title: build.idea,
+        problem: build.solve,
+        page: pageName()
+      });
       form.reset();
       if (note) {
         note.textContent = copy[lang].ideaSaved;
@@ -1013,10 +1093,16 @@
     }
     const follow = document.getElementById("follow-journey");
     if (follow) {
-      follow.onclick = () => {
+      follow.onclick = async () => {
         state.followClicked = true;
         save(storageKey, state);
         persistVisitorProgress();
+        await postPlatformEvent({
+          event: "follow_clicked",
+          page: pageName(),
+          source_page: pageName(),
+          target_url: "https://www.tiktok.com/@doneovernight"
+        });
         window.location.href = "https://www.tiktok.com/@doneovernight";
       };
     }
@@ -1117,6 +1203,14 @@
       }
     };
     save(progressKey, payload);
+    schedulePlatformProgress();
+  }
+
+  function schedulePlatformProgress() {
+    window.clearTimeout(platformProgressTimer);
+    platformProgressTimer = window.setTimeout(() => {
+      postPlatformEvent({ event: "journey_progress", page: pageName() });
+    }, 1200);
   }
 
   function formatDate(value) {
@@ -1150,6 +1244,9 @@
       copyButton.onclick = () => {
         const text = buildDoneOvernightProfile();
         copyText(text);
+        state.profileCopied = true;
+        save(storageKey, state);
+        postPlatformEvent({ event: "profile_copied", page: pageName(), method: "clipboard", url: canonicalExperienceUrl });
         showReward(copy[lang].copied);
       };
     }
@@ -1163,10 +1260,16 @@
         if (navigator.share) {
           try {
             await navigator.share(sharePayload);
+            state.shareClicked = true;
+            save(storageKey, state);
+            postPlatformEvent({ event: "native_share", page: pageName(), method: "native", url: canonicalExperienceUrl });
             return;
           } catch (error) {}
         }
         copyText(canonicalExperienceUrl);
+        state.shareClicked = true;
+        save(storageKey, state);
+        postPlatformEvent({ event: "copy_link_fallback", page: pageName(), method: "copy_link", url: canonicalExperienceUrl });
         showReward(copy[lang].linkCopied);
       };
     }
@@ -1774,6 +1877,7 @@
   function canInteract(element) {
     if (interactionLocked) return false;
     const section = element.closest("[data-step]");
+    if (!section) return true;
     return Boolean(section && !section.hidden && section.classList.contains("is-active") && Number(section.dataset.step) === Number(state.activeStep));
   }
 
@@ -1822,6 +1926,192 @@
     note.textContent = `${copy[lang].welcomeBack} ${pct}% ${copy[lang].continueJourney}`;
   }
 
+  async function hydrateReturnVisitor() {
+    const note = document.getElementById("return-note");
+    if (!note || !state.journeyId) return;
+    const data = await fetchPlatformData(`visitor&journey_id=${encodeURIComponent(state.journeyId)}`);
+    if (!data.ok || !data.journey) return;
+    const pct = Math.max(completionPercent(), Number(data.journey.completion_percentage || 0));
+    note.hidden = false;
+    note.textContent = `${copy[lang].welcomeBack} ${pct}% ${copy[lang].continueJourney}`;
+  }
+
+  function trackPageLifecycle() {
+    const enteredAt = new Date().toISOString();
+    postPlatformEvent({
+      event: "page_entered",
+      page: pageName(),
+      entered_at: enteredAt,
+      referrer: document.referrer || "",
+      source: state.discover || "",
+      metadata: {
+        path: window.location.pathname,
+        language: lang
+      }
+    });
+    const sendLeft = () => {
+      const duration = Math.max(0, Math.round((Date.now() - Date.parse(enteredAt)) / 1000));
+      const payload = platformPayload({
+        event: "page_left",
+        page: pageName(),
+        entered_at: enteredAt,
+        left_at: new Date().toISOString(),
+        duration,
+        referrer: document.referrer || "",
+        source: state.discover || "",
+        metadata: {
+          path: window.location.pathname,
+          language: lang
+        }
+      });
+      try {
+        const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        navigator.sendBeacon?.("/api/platform-events", blob);
+      } catch (error) {}
+    };
+    window.addEventListener("pagehide", sendLeft, { once: true });
+  }
+
+  async function fetchPlatformData(view) {
+    try {
+      const headers = {};
+      if (view === "hq") {
+        const token = read("doneovernight.hqAccess.v1", "") || window.prompt("DONEOVERNIGHT HQ access");
+        if (token) {
+          save("doneovernight.hqAccess.v1", token);
+          headers["x-hq-access-token"] = token;
+        }
+      }
+      const query = String(view).includes("&") ? view : `view=${encodeURIComponent(view)}`;
+      const response = await fetch(`/api/platform-data?${query}`, {
+        headers,
+        cache: "no-store"
+      });
+      const data = await response.json().catch(() => ({}));
+      return response.ok ? data : { ok: false, placeholder: true, error: data.error || "unavailable" };
+    } catch (error) {
+      return { ok: false, placeholder: true, error: "network_error" };
+    }
+  }
+
+  async function hydrateLiveData() {
+    const data = await fetchPlatformData("live");
+    if (!data.ok || data.placeholder || !data.live_status) {
+      mountList("today-list", [
+        "Placeholder: Supabase live_status has no connected row yet.",
+        `Journey count today: ${Number(data.journey_count_today || 0)}`
+      ]);
+      return;
+    }
+    const row = data.live_status;
+    fill("[data-live='build']", row.current_build || live.build);
+    fill("[data-live='operator']", row.current_operator || live.operator);
+    fill("[data-live='repository']", row.current_repository || live.repository);
+    fill("[data-live='branch']", row.current_branch || live.branch);
+    fill("[data-live='commit']", row.current_commit || live.commit);
+    fill("[data-live='heartbeat']", row.heartbeat || live.heartbeat);
+    fill("[data-live='repositoryStatus']", row.repository_status || live.repositoryStatus);
+    fill("[data-live='deployment']", row.latest_deployment || live.deployment);
+    fill("[data-live='completion']", row.estimated_completion || live.completion);
+    fill("[data-live='lastUpdate']", row.last_update || row.updated_at || live.lastUpdate);
+    fill("[data-live='focus']", row.current_focus || live.focus);
+    fill("[data-live='progressLabel']", row.current_progress || live.progressLabel);
+    const bar = document.querySelector("[data-live-progress]");
+    if (bar) bar.style.width = `${Math.max(0, Math.min(100, Number(row.progress_percentage || 0)))}%`;
+    mountList("today-list", (row.recent_activity || []).concat(data.viewer_queue?.map((item) => `Viewer Build: ${item.title}`) || []).slice(0, 6));
+    mountList("wins-list", row.latest_wins || []);
+    mountList("finished-list", row.recently_finished || []);
+    mountList("upcoming-list", row.upcoming_builds || []);
+    document.querySelectorAll(".placeholder-badge").forEach((node) => {
+      node.textContent = row.placeholder === true ? copy[lang].placeholder : "Connected";
+    });
+  }
+
+  async function hydrateJournalData() {
+    const root = document.querySelector(".journal-list");
+    if (!root) return;
+    const data = await fetchPlatformData("journal");
+    if (!data.ok || data.placeholder || !Array.isArray(data.entries) || !data.entries.length) return;
+    root.innerHTML = data.entries.map((entry) => `
+      <article class="journal-entry">
+        <div>
+          <div class="journal-meta">
+            <span class="status-badge is-development">${entry.entry_type || "Deployment"}</span>
+            <span class="placeholder-badge">Connected</span>
+          </div>
+          <h2>${escapeHtml(entry.title || "Journal entry")}</h2>
+          <p>${escapeHtml(entry.body || entry.summary || "")}</p>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function mountResourceInterest() {
+    document.querySelectorAll(".notify-link").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const card = link.closest(".resource-card");
+        const resource = card?.querySelector("h2")?.textContent || link.dataset.resource || "";
+        postPlatformEvent({
+          event: "resource_interest",
+          resource,
+          page: "resources",
+          source_page: "resources",
+          status: "notify_me"
+        });
+        showReward("Interest saved.");
+        window.setTimeout(() => {
+          window.location.href = link.href;
+        }, 160);
+      });
+    });
+  }
+
+  async function mountHq() {
+    const root = document.getElementById("hq-root");
+    if (!root) return;
+    const data = await fetchPlatformData("hq");
+    if (!data.ok) {
+      root.innerHTML = `<section class="viewer-panel"><span class="eyebrow">Private</span><h1 class="step-title">HQ locked.</h1><p class="step-copy">Access is private. Set the HQ token to view platform analytics.</p></section>`;
+      return;
+    }
+    const metrics = data.metrics || {};
+    root.innerHTML = `
+      <section class="live-hero">
+        <div>
+          <span class="eyebrow">DONEOVERNIGHT HQ</span>
+          <h1 class="display">Headquarters.</h1>
+          <p class="lede">${data.placeholder ? "Some tables are still placeholders until Supabase is connected." : "Live platform signal from Supabase."}</p>
+        </div>
+        <a class="open-live" href="/live">Live</a>
+      </section>
+      <section class="activity-grid" aria-label="DONEOVERNIGHT HQ analytics">
+        ${hqMetric("Today's Journeys", metrics.todays_journeys)}
+        ${hqMetric("Completed Journeys", metrics.completed_journeys)}
+        ${hqMetric("Emails Sent", metrics.emails_sent)}
+        ${hqMetric("Email Opens", metrics.email_opens)}
+        ${hqMetric("Viewer Builds", metrics.viewer_builds)}
+        ${hqMetric("Average Completion", `${metrics.average_completion || 0}%`)}
+        ${hqMetric("Current Live Visitors", metrics.current_live_visitors)}
+        ${hqList("Most Chosen Interests", data.most_chosen_interests)}
+        ${hqList("Most Chosen Path", data.most_chosen_path)}
+        ${hqList("Traffic Sources", data.traffic_sources)}
+        ${hqList("Recent Builds", (data.recent_builds || []).map((item) => ({ label: item.title, count: item.status || "submitted" })))}
+        ${hqList("Recent Resources", (data.recent_resources || []).map((item) => ({ label: item.resource, count: item.status || "notify" })))}
+        ${hqList("Recent Journal Entries", (data.recent_journal_entries || []).map((item) => ({ label: item.title, count: item.entry_type || "entry" })))}
+      </section>
+    `;
+  }
+
+  function hqMetric(label, value) {
+    return `<article class="activity-card"><h2>${label}</h2><strong>${value ?? 0}</strong></article>`;
+  }
+
+  function hqList(label, items = []) {
+    const rows = items.length ? items : [{ label: "Placeholder until connected", count: "" }];
+    return `<article class="activity-card wide"><h2>${label}</h2><ul>${rows.map((item) => `<li>${escapeHtml(item.label || "")}${item.count !== "" && item.count !== undefined ? ` <span>${escapeHtml(String(item.count))}</span>` : ""}</li>`).join("")}</ul></article>`;
+  }
+
   function mountList(id, items) {
     const root = document.getElementById(id);
     if (!root) return;
@@ -1831,6 +2121,15 @@
   function fill(selector, value) {
     const node = document.querySelector(selector);
     if (node) node.textContent = value;
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function detectLang() {

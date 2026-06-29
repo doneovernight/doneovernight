@@ -20,6 +20,17 @@ const { handleNotificationPreference } = require("../lib/notification-preference
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
 const { sendJourneyConfirmationEmail, isValidEmail: isValidJourneyEmail } = require("../lib/email/journey-confirmation-email");
+const {
+  upsertJourney,
+  saveEmailEvent,
+  saveVisitorProgress,
+  saveViewerBuild,
+  saveResourceInterest,
+  saveFollowEvent,
+  saveShareEvent,
+  savePageEvent,
+  getPlatformSnapshot
+} = require("../lib/platform-store");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 const { resolveTaskLanguage } = require("../lib/language");
@@ -1140,6 +1151,45 @@ async function saveJourneyConfirmation(input = {}, emailResult = {}) {
   }
 }
 
+async function saveJourneyPlatformRecords(input = {}, emailResult = {}) {
+  const journeyResult = await upsertJourney({
+    ...input,
+    completion_percentage: input.completion ?? input.completion_percentage,
+    builder_result: input.result,
+    completed_at: emailResult.delivered === true ? new Date().toISOString() : null
+  }).catch((error) => ({
+    configured: true,
+    saved: false,
+    status: "failed",
+    reason: error.message || "journey_save_failed"
+  }));
+  const emailResultStatus = emailResult.delivered === true
+    ? "sent"
+    : emailResult.reason === "not_configured"
+      ? "pending"
+      : "failed";
+  const emailEventResult = await saveEmailEvent({
+    ...input,
+    status: emailResultStatus,
+    provider: emailResult.provider || "none",
+    provider_message_id: emailResult.messageId || "",
+    error: emailResult.delivered === true ? "" : clean(emailResult.error || emailResult.reason),
+    raw_payload: {
+      configured: emailResult.configured === true,
+      missing: emailResult.missing || []
+    }
+  }).catch((error) => ({
+    configured: true,
+    saved: false,
+    status: "failed",
+    reason: error.message || "email_event_save_failed"
+  }));
+  return {
+    journey: journeyResult,
+    email_event: emailEventResult
+  };
+}
+
 function publicJourneyConfirmationResult(emailResult = {}, storageResult = {}) {
   return {
     ok: emailResult.delivered === true,
@@ -1159,6 +1209,200 @@ function publicJourneyConfirmationResult(emailResult = {}, storageResult = {}) {
   };
 }
 
+function isPlatformEventsRequest(req, input = {}) {
+  return String(req.url || "").includes("platform_events=1") ||
+    String(req.url || "").includes("/api/platform-events") ||
+    input.action === "platform_event" ||
+    input.intent === "platform_event";
+}
+
+function isPlatformDataRequest(req) {
+  return String(req.url || "").includes("platform_data=1") ||
+    String(req.url || "").includes("/api/platform-data");
+}
+
+function platformClientContext(req) {
+  return {
+    userAgent: req.headers["user-agent"] || "",
+    browserLanguage: req.headers["accept-language"] || "",
+    page: ""
+  };
+}
+
+async function handlePlatformEventRequest(req, res, input = {}) {
+  const event = String(input.event || input.event_type || input.type || "").trim();
+  const journey = input.journey && typeof input.journey === "object" ? input.journey : {};
+  const results = [];
+
+  if (journey.journey_id || input.journey_id || input.journeyId) {
+    results.push(["journey", await upsertJourney({ ...journey, ...input }, platformClientContext(req))]);
+  }
+
+  if (input.progress && typeof input.progress === "object") {
+    results.push(["visitor_progress", await saveVisitorProgress({
+      journey_id: input.journey_id || input.journeyId || journey.journey_id,
+      ...input.progress,
+      payload: input.progress
+    })]);
+  }
+
+  if (event === "viewer_build_submitted") {
+    results.push(["viewer_builds", await saveViewerBuild({ ...input, ...(input.viewer_build || {}) })]);
+  }
+
+  if (event === "resource_interest" || event === "resource_opened") {
+    results.push(["resource_interest", await saveResourceInterest(input)]);
+  }
+
+  if (event === "follow_clicked") {
+    results.push(["follow_events", await saveFollowEvent(input)]);
+  }
+
+  if (event === "profile_copied" || event === "share_clicked" || event === "native_share" || event === "copy_link_fallback" || event === "resource_opened") {
+    results.push(["share_events", await saveShareEvent(input)]);
+  }
+
+  if (event === "page_event" || event === "page_entered" || event === "page_left") {
+    results.push(["page_events", await savePageEvent(input)]);
+  }
+
+  if (!results.length) {
+    return send(res, 400, { ok: false, saved: false, status: "skipped", reason: "unsupported_event" });
+  }
+
+  const saved = results.some(([, result]) => result.saved === true);
+  return send(res, saved ? 200 : 202, {
+    ok: saved,
+    saved,
+    results: Object.fromEntries(results),
+    status: saved ? "saved" : "not_saved"
+  });
+}
+
+function requireHqAccess(req) {
+  const expected = String(process.env.HQ_ACCESS_TOKEN || "").trim();
+  if (!expected) return { ok: false, reason: "hq_auth_not_configured" };
+  const header = String(req.headers["x-hq-access-token"] || "").trim();
+  const auth = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  return header === expected || auth === expected
+    ? { ok: true }
+    : { ok: false, reason: "unauthorized" };
+}
+
+function countSince(rows = [], field, since) {
+  const floor = since.getTime();
+  return rows.filter((row) => {
+    const value = Date.parse(row[field] || row.created_at || row.started_at || "");
+    return Number.isFinite(value) && value >= floor;
+  }).length;
+}
+
+function topPlatformValues(rows = [], field, limit = 6) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const value = row[field];
+    const values = Array.isArray(value) ? value : value ? [value] : [];
+    values.forEach((item) => {
+      const label = String(item || "").trim();
+      if (label) counts.set(label, (counts.get(label) || 0) + 1);
+    });
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function buildHqPlatformSnapshot(snapshot) {
+  const journeys = snapshot.journeys.rows;
+  const emails = snapshot.email_events.rows;
+  const pages = snapshot.page_events.rows;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const completed = journeys.filter((row) => Number(row.completion_percentage || 0) >= 100);
+  const average = journeys.length
+    ? Math.round(journeys.reduce((sum, row) => sum + Number(row.completion_percentage || 0), 0) / journeys.length)
+    : 0;
+
+  return {
+    placeholder: snapshot.placeholder,
+    generated_at: snapshot.generated_at,
+    metrics: {
+      todays_journeys: countSince(journeys, "started_at", today),
+      completed_journeys: completed.length,
+      emails_sent: emails.filter((row) => row.status === "sent").length,
+      email_opens: emails.filter((row) => row.status === "opened").length,
+      viewer_builds: snapshot.viewer_builds.rows.length,
+      average_completion: average,
+      current_live_visitors: 0
+    },
+    most_chosen_interests: topPlatformValues(journeys, "chosen_interests"),
+    most_chosen_path: topPlatformValues(journeys, "chosen_path", 4),
+    traffic_sources: topPlatformValues(journeys, "source", 8),
+    recent_activity: pages.slice(0, 10),
+    recent_builds: snapshot.viewer_builds.rows.slice(0, 8),
+    recent_resources: snapshot.resource_interest.rows.slice(0, 8),
+    recent_journal_entries: snapshot.journal.rows.slice(0, 8)
+  };
+}
+
+function buildLivePlatformSnapshot(snapshot) {
+  const live = snapshot.live_status.rows[0] || null;
+  return {
+    placeholder: !live,
+    generated_at: snapshot.generated_at,
+    live_status: live,
+    viewer_queue: snapshot.viewer_builds.rows.slice(0, 6),
+    journal: snapshot.journal.rows.slice(0, 5),
+    journey_count_today: buildHqPlatformSnapshot(snapshot).metrics.todays_journeys,
+    email_system: snapshot.email_events.rows[0] || null
+  };
+}
+
+async function handlePlatformDataRequest(req, res) {
+  const url = new URL(req.url || "/api/platform-data", "https://doneovernight.com");
+  const view = url.searchParams.get("view") || "live";
+  const snapshot = await getPlatformSnapshot();
+
+  if (view === "hq") {
+    const auth = requireHqAccess(req);
+    if (!auth.ok) return send(res, 401, { ok: false, error: auth.reason });
+    return send(res, 200, { ok: true, view, ...buildHqPlatformSnapshot(snapshot) });
+  }
+
+  if (view === "journal") {
+    return send(res, 200, { ok: true, view, placeholder: snapshot.journal.placeholder, entries: snapshot.journal.rows });
+  }
+
+  if (view === "resources") {
+    return send(res, 200, { ok: true, view, placeholder: snapshot.resource_interest.placeholder, interest: snapshot.resource_interest.rows });
+  }
+
+  if (view === "visitor") {
+    const journeyId = String(url.searchParams.get("journey_id") || "").trim();
+    const journey = snapshot.journeys.rows.find((row) => row.journey_id === journeyId) || null;
+    const progress = snapshot.page_events.rows.filter((row) => row.journey_id === journeyId).slice(0, 8);
+    return send(res, 200, {
+      ok: true,
+      view,
+      placeholder: snapshot.placeholder,
+      journey: journey ? {
+        journey_id: journey.journey_id,
+        completion_percentage: journey.completion_percentage,
+        chosen_path: journey.chosen_path,
+        chosen_interests: journey.chosen_interests,
+        builder_result: journey.builder_result,
+        last_page: journey.last_page
+      } : null,
+      recent_pages: progress,
+      new_journal_entries: snapshot.journal.rows.length,
+      new_resources: snapshot.resource_interest.rows.length
+    });
+  }
+
+  return send(res, 200, { ok: true, view: "live", ...buildLivePlatformSnapshot(snapshot) });
+}
+
 async function handleJourneyConfirmationRequest(req, res, input = {}) {
   const email = normalizeEmailValue(input.email);
   if (!isValidJourneyEmail(email)) {
@@ -1166,13 +1410,16 @@ async function handleJourneyConfirmationRequest(req, res, input = {}) {
   }
   const emailResult = await sendJourneyConfirmationEmail({ ...input, email });
   const storageResult = await saveJourneyConfirmation({ ...input, email }, emailResult);
+  const platformStorage = await saveJourneyPlatformRecords({ ...input, email }, emailResult);
   console.log("[JOURNEY_CONFIRMATION]", {
     email,
     delivered: emailResult.delivered === true,
     provider: emailResult.provider || "none",
     reason: emailResult.reason || "",
     configured: emailResult.configured === true,
-    storage: storageResult.status || "not_attempted"
+    storage: storageResult.status || "not_attempted",
+    journey_storage: platformStorage.journey?.status || "not_attempted",
+    email_event_storage: platformStorage.email_event?.status || "not_attempted"
   });
   const statusCode = emailResult.delivered ? 200 : emailResult.reason === "not_configured" ? 202 : 502;
   return send(res, statusCode, publicJourneyConfirmationResult(emailResult, storageResult));
@@ -1619,6 +1866,9 @@ module.exports = async function handler(req, res) {
     if (url.searchParams.get("payment_return") === "1" || isPaymentReturnRequest(req)) {
       return handlePaymentReturnRequest(req, res);
     }
+    if (url.searchParams.get("platform_data") === "1" || isPlatformDataRequest(req)) {
+      return handlePlatformDataRequest(req, res);
+    }
     return handleReviewStateRequest(req, res);
   }
 
@@ -1635,6 +1885,10 @@ module.exports = async function handler(req, res) {
     const input = await parseBody(req);
     if (isJourneyConfirmationRequest(req, input)) {
       return handleJourneyConfirmationRequest(req, res, input);
+    }
+
+    if (isPlatformEventsRequest(req, input)) {
+      return handlePlatformEventRequest(req, res, input);
     }
 
     if (isWorkspaceActivationRequest(req, input)) {
