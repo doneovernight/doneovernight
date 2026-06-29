@@ -1681,6 +1681,7 @@ async function handleBuilderWalletRequest(req, res, input = {}) {
     const storage = await saveWalletPass({
       ...walletInput,
       provider: "google",
+      status: "issued",
       serial_number: passKind === "founder" ? baseIdentity.founderId : walletInput.journey_id || walletInput.journeyId || `builder-${walletInput.builder_number || ""}`,
       founder_id: baseIdentity.founderId,
       signed: false,
@@ -1716,6 +1717,7 @@ async function handleBuilderWalletRequest(req, res, input = {}) {
   const storage = await saveWalletPass({
     ...walletInput,
     provider: "apple",
+    status: "issued",
     serial_number: packagePlan.pass?.serialNumber,
     founder_id: baseIdentity.founderId,
     signed: false,
