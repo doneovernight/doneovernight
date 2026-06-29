@@ -138,6 +138,13 @@
       completion: "Completion",
       chosenPath: "Chosen Path",
       chosenInterests: "Chosen Interests",
+      builderProfile: "Builder Profile",
+      automationChoice: "Automation Choice",
+      currentStage: "Current Stage",
+      recommendedResources: "Recommended Resources",
+      recommendedBuilds: "Recommended Builds",
+      journeyCompleteStatus: "Journey Complete",
+      walletComingSoon: "Wallet support coming soon.",
       result: "Result",
       openPlatform: "Open platform",
       platformHub: "Platform Hub",
@@ -288,6 +295,13 @@
       completion: "Voltooiing",
       chosenPath: "Gekozen pad",
       chosenInterests: "Gekozen interesses",
+      builderProfile: "Builder Profiel",
+      automationChoice: "Automatisering",
+      currentStage: "Fase",
+      recommendedResources: "Aanbevolen resources",
+      recommendedBuilds: "Aanbevolen builds",
+      journeyCompleteStatus: "Reis voltooid",
+      walletComingSoon: "Wallet ondersteuning komt eraan.",
       result: "Resultaat",
       openPlatform: "Open platform",
       platformHub: "Platform Hub",
@@ -912,8 +926,10 @@
     const started = state.journeyStartedAt ? new Date(state.journeyStartedAt).getTime() : Date.now();
     return {
       journey_id: state.journeyId || "",
+      builder_number: builderNumberValue(),
       journey: {
         journey_id: state.journeyId || "",
+        builder_number: builderNumberValue(),
         email: emailPayload.email || "",
         social_handle: state.socialHandle || emailPayload.socialHandle || "",
         source: state.discover || "unknown",
@@ -934,6 +950,7 @@
         last_page: pageName()
       },
       progress: {
+        builder_number: builderNumberValue(),
         active_step: Number(state.activeStep) || 1,
         unlocked_step: Number(state.unlockedStep) || 1,
         completed: state.completed || [],
@@ -1311,20 +1328,28 @@
   }
 
   function renderPassport() {
-    fill("#journey-id", state.journeyId || "");
-    fill("#journey-started", formatDate(state.journeyStartedAt));
-    fill("#journey-completion", `${completionPercent()}%`);
-    fill("#journey-path", state.path || "curious");
-    fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
-    fill("#journey-result", document.getElementById("final-title")?.textContent || "");
-    const passport = document.querySelector(".passport-card dl");
     const memory = read(memoryKey, {});
-    if (passport && memory.foundingBuilder && !passport.querySelector("[data-builder-status]")) {
-      passport.insertAdjacentHTML("afterbegin", `
-        <div data-builder-status><dt>${escapeHtml(copy[lang].foundingBuilder)}</dt><dd>${escapeHtml(copy[lang].builderNumber)}${escapeHtml(memory.builderNumber || "")}</dd></div>
-        <div data-builder-status><dt>${escapeHtml(copy[lang].joined)}</dt><dd>${escapeHtml(formatDate(memory.joinedAt))}</dd></div>
-      `);
-    }
+    const builderNo = builderNumberValue();
+    const type = builderType();
+    const joined = formatDate(memory.joinedAt || state.journeyStartedAt || new Date().toISOString());
+    fill("#builder-profile-type", type);
+    fill("#journey-id", state.journeyId || "");
+    fill("#builder-number", `#${builderNo}`);
+    fill("#builder-status", copy[lang].journeyCompleteStatus || "Journey Complete");
+    fill("#builder-joined", joined);
+    fill("#journey-completion", `${completionPercent()}%`);
+    fill("#journey-path", pathLabel(state.path) || "Curious");
+    fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
+    fill("#builder-automation", automationLines().map((item) => item.replace(/^✓\s*/, "")).join(", ") || "Not selected");
+    fill("#builder-stage", currentStage());
+    fill("#builder-resources", recommendedResources().join(", "));
+    fill("#builder-builds", recommendedBuilds().join(", "));
+    fill("#builder-card-number", `Builder #${builderNo}`);
+    fill("#builder-card-rank", memory.foundingBuilder ? copy[lang].foundingBuilder : "Builder");
+    fill("#builder-card-joined", joined);
+    fill("#builder-card-type", type);
+    fill("#builder-card-journey", state.journeyId || "");
+    bindWalletActions();
   }
 
   function bindPlatformHub() {
@@ -1560,13 +1585,18 @@
     ensureJourney();
     const lines = ["DONEOVERNIGHT PROFILE"];
     addProfileSection(lines, "Journey ID", [state.journeyId]);
+    addProfileSection(lines, "Builder Number", [`#${builderNumberValue()}`]);
     addProfileSection(lines, "Discovered from", [state.discover]);
     addProfileSection(lines, "Builder Type", [builderType()]);
     addProfileSection(lines, "Primary Interests", bulletLines(state.interests || []));
+    addProfileSection(lines, "Path", [pathLabel(state.path)]);
     addProfileSection(lines, "Current Stage", [currentStage()]);
     addProfileSection(lines, "You said you'd automate", automationLines());
+    addProfileSection(lines, "Joined", [formatDate(read(memoryKey, {}).joinedAt || state.journeyStartedAt)]);
+    addProfileSection(lines, "Completion", [`${completionPercent()}%`]);
     addProfileSection(lines, "Your mindset", mindsetLines());
-    addProfileSection(lines, "Recommended next steps", bulletLines(profileRecommendations()));
+    addProfileSection(lines, "Recommended Resources", bulletLines(recommendedResources()));
+    addProfileSection(lines, "Recommended Builds", bulletLines(recommendedBuilds()));
     lines.push("", "Continue your journey:", canonicalLiveUrl);
     return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
@@ -1665,6 +1695,73 @@
     if (signals.includes("lead") || signals.includes("sales") || signals.includes("business")) labels.push("Lead Operating System");
     if (signals.includes("client onboarding")) labels.push("Client Onboarding System");
     return Array.from(new Set(labels)).slice(0, 6);
+  }
+
+  function recommendedResources() {
+    return profileRecommendations().filter((label) => !["Live", "Viewer Builds"].includes(label)).slice(0, 4);
+  }
+
+  function recommendedBuilds() {
+    const builds = [];
+    if (hasProfileInterest("Automation", "Automatisering")) builds.push("Lead Operating System");
+    if (hasProfileInterest("Business")) builds.push("Business Operating System");
+    if (hasProfileInterest("AI")) builds.push("AI Workflow Layer");
+    if (hasProfileInterest("Architecture", "Architectuur")) builds.push("Architecture Breakdown");
+    builds.push("Live Builds", "Viewer Builds");
+    return Array.from(new Set(builds)).slice(0, 4);
+  }
+
+  function hasProfileInterest(...labels) {
+    const interests = new Set(state.interests || []);
+    return labels.some((label) => interests.has(label));
+  }
+
+  function builderNumberValue() {
+    const memory = read(memoryKey, {});
+    const number = memory.builderNumber || String(Math.abs(hashString(state.journeyId || "doneovernight")) % 9000 + 100).padStart(4, "0");
+    if (memory.builderNumber !== number) updateMemory({ builderNumber: number });
+    return number;
+  }
+
+  function bindWalletActions() {
+    const apple = document.getElementById("apple-wallet");
+    const google = document.getElementById("google-wallet");
+    const note = document.getElementById("wallet-note");
+    const handler = async (kind) => {
+      if (note) note.textContent = copy[lang].walletComingSoon;
+      const endpoint = kind === "apple" ? "/api/builder-wallet/apple" : "/api/builder-wallet/google";
+      try {
+        await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(builderIdentityPayload())
+        });
+      } catch (error) {}
+      showReward(copy[lang].walletComingSoon);
+    };
+    if (apple && !apple.dataset.bound) {
+      apple.dataset.bound = "true";
+      apple.onclick = () => handler("apple");
+    }
+    if (google && !google.dataset.bound) {
+      google.dataset.bound = "true";
+      google.onclick = () => handler("google");
+    }
+  }
+
+  function builderIdentityPayload() {
+    return {
+      journey_id: state.journeyId || "",
+      builder_number: builderNumberValue(),
+      builder_type: builderType(),
+      interests: state.interests || [],
+      path: pathLabel(state.path),
+      automation_choice: automationLines().map((item) => item.replace(/^✓\s*/, "")),
+      current_stage: currentStage(),
+      joined_at: read(memoryKey, {}).joinedAt || state.journeyStartedAt || "",
+      completion: completionPercent(),
+      status: read(memoryKey, {}).foundingBuilder ? "Founding Builder" : "Builder"
+    };
   }
 
   function normalizeProfileLabel(value) {
@@ -2005,10 +2102,46 @@
         const email = currentSavedEmail()?.email || "";
         node.innerHTML = `${escapeHtml(copy[lang].emailConfirmedTitle)} ✓${email ? `<span>${escapeHtml(email)}</span>` : ""}`;
       } else {
-        node.textContent = `${summary} ✓`;
+        const insight = insightForStep(Number(section.dataset.step));
+        node.innerHTML = `${escapeHtml(summary)} ✓${insight ? `<span>${escapeHtml(insight)}</span>` : ""}`;
       }
       head.appendChild(node);
     });
+  }
+
+  function insightForStep(step) {
+    const interests = (state.interests || []).join(" ").toLowerCase();
+    const automate = [...(Array.isArray(state.automate) ? state.automate : []), state.automationOther || ""].join(" ").toLowerCase();
+    const path = state.path || "";
+    const lines = lang === "nl"
+      ? {
+          discover: "Je kwam binnen via nieuwsgierigheid.",
+          systems: "Je denkt in systemen.",
+          execution: "Je waardeert uitvoering boven complexiteit.",
+          workflow: "Je ziet waar werk vastloopt.",
+          operator: "Je let op eigenaarschap.",
+          stage: "Je weet waar je nu staat.",
+          automation: "Je zoekt hefboom in herhaling.",
+          identity: "Je builder identity is vastgelegd."
+        }
+      : {
+          discover: "You arrived through curiosity.",
+          systems: "You naturally think in systems.",
+          execution: "You value execution over complexity.",
+          workflow: "You notice where work gets stuck.",
+          operator: "You pay attention to ownership.",
+          stage: "You know where you are right now.",
+          automation: "You look for leverage in repetition.",
+          identity: "Your builder identity is now recorded."
+        };
+    if (step === 1) return lines.discover;
+    if (step === 2) return interests.includes("automation") || interests.includes("systems") || interests.includes("systemen") ? lines.systems : lines.execution;
+    if (step === 3 || step === 4) return lines.workflow;
+    if (step === 6 || path === "operator") return lines.operator;
+    if (step === 7) return lines.stage;
+    if (step === 8 || automate) return lines.automation;
+    if (step >= 10) return lines.identity;
+    return "";
   }
 
   function summaryForStep(step) {
@@ -2237,8 +2370,10 @@
   function returnVisitorMarkup({ pct, previousVisit, since = [] }) {
     const lastVisit = previousVisit ? formatDate(previousVisit) : "";
     const sinceText = since.length ? since.join(" · ") : copy[lang].continueJourney;
+    const memory = read(memoryKey, {});
+    const builder = memory.builderNumber ? ` Builder #${memory.builderNumber}` : "";
     return `
-      <span>${escapeHtml(copy[lang].welcomeBack)}</span>
+      <span>${escapeHtml(`${copy[lang].welcomeBack}${builder}.`)}</span>
       <strong>${escapeHtml(`${pct}%`)}</strong>
       ${lastVisit ? `<small>${escapeHtml(copy[lang].lastVisit)} ${escapeHtml(lastVisit)}</small>` : ""}
       <small>${escapeHtml(copy[lang].sinceLastVisit)} ${escapeHtml(sinceText)}</small>

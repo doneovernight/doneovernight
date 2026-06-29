@@ -48,6 +48,12 @@ const {
 } = require("../lib/workspace-activation");
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
+const {
+  applePassJson,
+  googleWalletPayload,
+  appleWalletConfigured,
+  googleWalletConfigured
+} = require("../lib/builder-wallet");
 
 const WEBHOOK_TIMEOUT_MS = 7_000;
 const CLIENT_EMAIL_TIMEOUT_MS = 8_000;
@@ -1327,6 +1333,13 @@ function isHqSessionRequest(req) {
     String(req.url || "").includes("/api/hq-session");
 }
 
+function isBuilderWalletRequest(req, input = {}) {
+  return String(req.url || "").includes("builder_wallet=1") ||
+    String(req.url || "").includes("/api/builder-wallet") ||
+    input.action === "builder_wallet" ||
+    input.intent === "builder_wallet";
+}
+
 function platformClientContext(req) {
   return {
     userAgent: req.headers["user-agent"] || "",
@@ -1598,6 +1611,49 @@ function handleHqSessionRequest(req, res) {
   const session = verifyHqSession(req);
   if (!session.ok) return send(res, 401, { ok: false, error: "unauthorized" });
   return send(res, 200, { ok: true, session: publicHqSession(session.session || {}) });
+}
+
+function handleBuilderWalletRequest(req, res, input = {}) {
+  const url = new URL(req.url || "/api/builder-wallet/apple", "https://doneovernight.com");
+  const provider = String(input.provider || url.searchParams.get("provider") || url.pathname.split("/").pop() || "apple").toLowerCase();
+  if (provider === "google") {
+    const payload = googleWalletPayload(input);
+    if (!googleWalletConfigured()) {
+      return send(res, 501, {
+        ok: false,
+        configured: false,
+        provider: "google",
+        status: "coming_soon",
+        message: "Wallet support coming soon.",
+        payload
+      });
+    }
+    return send(res, 501, {
+      ok: false,
+      configured: true,
+      provider: "google",
+      status: "signing_not_implemented",
+      payload
+    });
+  }
+  const pass = applePassJson(input);
+  if (!appleWalletConfigured()) {
+    return send(res, 501, {
+      ok: false,
+      configured: false,
+      provider: "apple",
+      status: "coming_soon",
+      message: "Wallet support coming soon.",
+      pass
+    });
+  }
+  return send(res, 501, {
+    ok: false,
+    configured: true,
+    provider: "apple",
+    status: "signing_not_implemented",
+    pass
+  });
 }
 
 function countSince(rows = [], field, since) {
@@ -2288,6 +2344,10 @@ module.exports = async function handler(req, res) {
 
     if (isHqLogoutRequest(req, input)) {
       return handleHqLogoutRequest(req, res);
+    }
+
+    if (isBuilderWalletRequest(req, input)) {
+      return handleBuilderWalletRequest(req, res, input);
     }
 
     if (isPlatformEventsRequest(req, input)) {
