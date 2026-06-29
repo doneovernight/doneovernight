@@ -72,7 +72,16 @@
       description: "Description",
       website: "Website, optional",
       submitIdea: "Submit idea",
-      ideaSaved: "Your idea has been added."
+      ideaSaved: "Your idea has been added.",
+      copyResult: "Copy your result",
+      sharePage: "Share this page",
+      copied: "Copied",
+      linkCopied: "Link copied",
+      nextLive: "Next: Live Build",
+      nextViewer: "Next: Viewer Builds",
+      nextFollow: "Next: Follow the journey",
+      dmIdea: "DM us your build idea",
+      solvePlaceholder: "What would this solve for you?"
     },
     nl: {
       navLive: "Live",
@@ -140,7 +149,16 @@
       description: "Beschrijving",
       website: "Website, optioneel",
       submitIdea: "Verstuur idee",
-      ideaSaved: "Je idee is toegevoegd."
+      ideaSaved: "Je idee is toegevoegd.",
+      copyResult: "Kopieer je resultaat",
+      sharePage: "Deel deze pagina",
+      copied: "Gekopieerd",
+      linkCopied: "Link gekopieerd",
+      nextLive: "Volgende: Live Build",
+      nextViewer: "Volgende: Viewer Builds",
+      nextFollow: "Volgende: volg de reis",
+      dmIdea: "DM ons je build idee",
+      solvePlaceholder: "Wat zou dit voor je oplossen?"
     }
   };
 
@@ -376,6 +394,8 @@
     mountViewerBuilds();
     mountPaths();
     renderPersonalResult();
+    bindResultActions();
+    bindNextUnlocks();
     renderProgress();
     renderReturnVisitor();
     applyUnlockedSteps();
@@ -566,18 +586,21 @@
     const form = document.getElementById("viewer-form");
     const note = document.getElementById("viewer-note");
     if (!form) return;
-    form.idea.placeholder = copy[lang].idea;
-    form.description.placeholder = copy[lang].description;
-    form.website.placeholder = copy[lang].website;
-    form.email.placeholder = copy[lang].email;
+    const fields = form.elements;
+    fields.idea.placeholder = copy[lang].idea;
+    fields.description.placeholder = copy[lang].description;
+    if (fields.solve) fields.solve.placeholder = copy[lang].solvePlaceholder;
+    fields.website.placeholder = copy[lang].website;
+    fields.email.placeholder = copy[lang].email;
     form.onsubmit = (event) => {
       event.preventDefault();
       const builds = read("doneovernight.viewerBuilds.v1", []);
       builds.push({
-        idea: form.idea.value.trim(),
-        description: form.description.value.trim(),
-        website: form.website.value.trim(),
-        email: form.email.value.trim(),
+        idea: fields.idea.value.trim(),
+        description: fields.description.value.trim(),
+        solve: fields.solve ? fields.solve.value.trim() : "",
+        website: fields.website.value.trim(),
+        email: fields.email.value.trim(),
         createdAt: new Date().toISOString()
       });
       save("doneovernight.viewerBuilds.v1", builds);
@@ -632,6 +655,64 @@
     body.textContent = data.summarySupport[lang][supportIndex];
     const labels = recommendationLabels(state.path || "curious");
     grid.innerHTML = labels.map((label) => `<a class="recommendation-card" href="${recommendationHref(label)}"><span>${data.recommendationLabels[lang][label] || label}</span><small>${copy[lang].recommendationsCopy}</small></a>`).join("");
+  }
+
+  function bindResultActions() {
+    const copyButton = document.getElementById("copy-result");
+    const shareButton = document.getElementById("share-page");
+    if (copyButton) {
+      copyButton.onclick = () => {
+        const text = resultText();
+        copyText(text);
+        showReward(copy[lang].copied);
+      };
+    }
+    if (shareButton) {
+      shareButton.onclick = async () => {
+        const text = resultText();
+        const url = `${location.origin}/how-it-works`;
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: "DONEOVERNIGHT", text, url });
+            return;
+          } catch (error) {}
+        }
+        copyText(url);
+        showReward(copy[lang].linkCopied);
+      };
+    }
+  }
+
+  function bindNextUnlocks() {
+    document.querySelectorAll("[data-next-step]").forEach((button) => {
+      button.onclick = () => completeInteraction(button.dataset.nextKey, Number(button.dataset.nextStep));
+    });
+  }
+
+  function resultText() {
+    const title = document.getElementById("personal-title")?.textContent || "";
+    const body = document.getElementById("personal-copy")?.textContent || "";
+    return `${title}\n${body}`.trim();
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      return;
+    }
+    fallbackCopy(text);
+  }
+
+  function fallbackCopy(text) {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    try { document.execCommand("copy"); } catch (error) {}
+    field.remove();
   }
 
   function recommendationLabels(path) {
@@ -787,7 +868,9 @@
   function unlockGate(scroll = true) {
     const next = Math.max(Number(state.unlockedStep) || 1, progression.gate);
     state.unlockedStep = next;
-    state.activeStep = progression.gate;
+    if (scroll || Number(state.activeStep) < progression.gate) {
+      state.activeStep = progression.gate;
+    }
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
@@ -818,9 +901,7 @@
   function bindAutoUnlocks() {
     const bindings = [
       ["3", "story", progression.story],
-      ["4", "workflow", progression.workflow],
-      ["11", "recommendations", progression.recommendations],
-      ["12", "livePreview", progression.livePreview]
+      ["4", "workflow", progression.workflow]
     ];
     const checkAutoUnlocks = () => {
       bindings.forEach(([step, key, unlockTo]) => {
@@ -874,10 +955,10 @@
     root.setAttribute("aria-label", `${completed} / ${progressTotal}`);
   }
 
-  function showReward() {
+  function showReward(message) {
     const toast = document.getElementById("unlock-toast");
     if (!toast) return;
-    toast.textContent = copy[lang].unlockToast;
+    toast.textContent = message || copy[lang].unlockToast;
     toast.classList.remove("is-visible");
     void toast.offsetWidth;
     toast.classList.add("is-visible");

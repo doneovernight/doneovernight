@@ -260,6 +260,9 @@ body.has-reward .experience-progress {
 .experience-step.is-complete .live-preview,
 .experience-step.is-complete .viewer-panel,
 .experience-step.is-complete .recommendation-grid,
+.experience-step.is-complete .result-actions,
+.experience-step.is-complete .next-unlock,
+.experience-step.is-complete .dm-idea,
 .experience-step.is-complete .follow-card,
 .experience-step.is-complete > .eyebrow,
 .experience-step.is-complete > .step-copy {
@@ -659,6 +662,53 @@ textarea.text-field {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -24px 0 28px;
+}
+.quiet-action.secondary {
+  padding: 11px 14px;
+  border-color: rgba(245,241,234,0.12);
+  color: var(--muted);
+  background: rgba(245,241,234,0.018);
+}
+.quiet-action.secondary:hover {
+  color: var(--ink);
+  border-color: rgba(233,196,138,0.34);
+}
+.next-unlock,
+.dm-idea {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 22px;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.86;
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+.next-unlock {
+  border: 1px solid rgba(233,196,138,0.18);
+  border-radius: 999px;
+  padding: 10px 13px;
+  background: rgba(233,196,138,0.035);
+}
+.next-unlock:hover,
+.dm-idea:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.next-unlock.is-preview {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--faint);
 }
 .recommendation-card {
   min-height: 138px;
