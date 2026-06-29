@@ -39,7 +39,7 @@ const {
 } = require("../lib/platform-store");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
-const { resolvePlatformLanguage, resolveTaskLanguage } = require("../lib/language");
+const { normalizeLanguage, resolvePlatformLanguage, resolveTaskLanguage } = require("../lib/language");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const {
   activateWorkspace,
@@ -1710,7 +1710,18 @@ function topPlatformValues(rows = [], field, limit = 6) {
 }
 
 function rowLanguage(row = {}) {
-  return clean(row.email_language || row.selected_language || row.browser_language || row.raw_payload?.email_language || row.raw_payload?.selected_language || row.metadata?.language?.email_language || row.metadata?.language?.selected_language).toUpperCase();
+  const language = normalizeLanguage(
+    row.email_language ||
+    row.selected_language ||
+    row.raw_payload?.email_language ||
+    row.raw_payload?.selected_language ||
+    row.metadata?.language?.email_language ||
+    row.metadata?.language?.selected_language ||
+    row.browser_language ||
+    row.raw_payload?.browser_language ||
+    row.metadata?.language?.browser_language
+  );
+  return language ? language.toUpperCase() : "";
 }
 
 function recordLooksLikeTest(row = {}) {
