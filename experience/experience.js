@@ -2,11 +2,13 @@
   const storageKey = "doneovernight.experience.v1";
   const emailKey = "doneovernight.experience.email.v1";
   const confirmationCooldownKey = "doneovernight.experience.confirmationCooldown.v1";
+  const memoryKey = "doneovernight.memory.v1";
   const canonicalExperienceUrl = "https://doneovernight.com/how-it-works";
   const canonicalLiveUrl = "https://doneovernight.com/live";
   const state = read(storageKey, {});
   const savedEmail = read(emailKey, null);
   const progressKey = "doneovernight.visitorProgress.v1";
+  let platformSignal = null;
   let lang = state.lang || detectLang();
 
   const copy = {
@@ -69,10 +71,10 @@
       livePreview: "Live preview",
       livePreviewCopy: "A glimpse of what is being built now.",
       openLive: "Open Live Build",
-      followTitle: "Follow the journey.",
-      followCopy: "New systems are built every week.",
-      followCardTitle: "We build in public.",
-      followCardCopy: "Follow the journey.",
+      followTitle: "You unlocked DONEOVERNIGHT.",
+      followCopy: "Now watch it being built.",
+      followCardTitle: "You've reached the end.",
+      followCardCopy: "The rest happens in public.",
       currentBuild: "Current Build",
       currentOperator: "Current Operator",
       currentProject: "Current Project",
@@ -81,10 +83,21 @@
       estimated: "Estimated completion",
       lastUpdate: "Last Update",
       currentFocus: "Current Focus",
-      placeholder: "Placeholder until connected",
+      placeholder: "Waiting for connection",
       liveTitle: "Live build signal.",
       liveText: "A quiet window into what DONEOVERNIGHT is building, shipping, and learning. Live data connects here next.",
       today: "Today's Progress",
+      todayLabel: "TODAY",
+      currentlyBuilding: "Currently building",
+      started: "Started",
+      expected: "Expected",
+      foundingBuilder: "Founding Builder",
+      builderNumber: "Builder #",
+      joined: "Joined",
+      lastVisit: "Last visit",
+      sinceLastVisit: "Since your last visit",
+      resourcesOpened: "Resources opened",
+      liveVisits: "Live visits",
       recentActivity: "Recent Activity",
       wins: "Latest Wins",
       finished: "Recently Finished",
@@ -208,10 +221,10 @@
       livePreview: "Live preview",
       livePreviewCopy: "Een glimp van wat nu wordt gebouwd.",
       openLive: "Open Live Build",
-      followTitle: "Volg de reis.",
-      followCopy: "Elke week worden nieuwe systemen gebouwd.",
-      followCardTitle: "We bouwen publiek.",
-      followCardCopy: "Volg de reis.",
+      followTitle: "Je hebt DONEOVERNIGHT ontgrendeld.",
+      followCopy: "Bekijk nu hoe het wordt gebouwd.",
+      followCardTitle: "Je hebt het einde bereikt.",
+      followCardCopy: "De rest gebeurt publiek.",
       currentBuild: "Huidige build",
       currentOperator: "Huidige operator",
       currentProject: "Huidig project",
@@ -220,10 +233,21 @@
       estimated: "Geschatte oplevering",
       lastUpdate: "Laatste update",
       currentFocus: "Huidige focus",
-      placeholder: "Placeholder tot gekoppeld",
+      placeholder: "Wacht op koppeling",
       liveTitle: "Live build signaal.",
       liveText: "Een rustig venster op wat DONEOVERNIGHT bouwt, shipped en leert. Live data wordt hierna gekoppeld.",
       today: "Voortgang vandaag",
+      todayLabel: "VANDAAG",
+      currentlyBuilding: "Nu aan het bouwen",
+      started: "Gestart",
+      expected: "Verwacht",
+      foundingBuilder: "Founding Builder",
+      builderNumber: "Builder #",
+      joined: "Aangesloten",
+      lastVisit: "Laatste bezoek",
+      sinceLastVisit: "Sinds je laatste bezoek",
+      resourcesOpened: "Resources geopend",
+      liveVisits: "Live bezoeken",
       recentActivity: "Recente activiteit",
       wins: "Laatste wins",
       finished: "Recent afgerond",
@@ -464,20 +488,20 @@
   };
 
   const live = {
-    build: "Awaiting live connection",
-    operator: "Operator feed pending",
-    project: "Project feed pending",
+    build: "Waiting for today's deployment.",
+    operator: "Waiting for the next operator session.",
+    project: "DONEOVERNIGHT HQ",
     repository: "doneovernight.com",
-    branch: "main",
-    commit: "Pending live commit",
+    branch: "Main branch is standing by.",
+    commit: "Waiting for the next commit.",
     heartbeat: "Waiting for heartbeat",
-    repositoryStatus: "Repository connection pending",
-    deployment: "Deployment feed pending",
-    completion: "Estimate pending",
-    lastUpdate: "No live update connected",
-    focus: "Connect live data",
+    repositoryStatus: "Waiting for GitHub connection.",
+    deployment: "No deployment yet today.",
+    completion: "Tonight",
+    lastUpdate: "Waiting for today's build signal.",
+    focus: "Living memory and platform signal",
     progress: 22,
-    progressLabel: "Pending"
+    progressLabel: "Waiting for today's build signal."
   };
 
   const progression = {
@@ -525,7 +549,9 @@
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
     ensureJourney();
+    initializeMemory();
     trackPageLifecycle();
+    hydratePlatformSignal();
     mountHowItWorks();
     mountLive();
     mountPlatformPages();
@@ -1068,6 +1094,10 @@
       save("doneovernight.viewerBuilds.v1", builds);
       form.reset();
       renderViewerBuildSuccess(form, note, result);
+      updateMemory({
+        viewerBuilds: read("doneovernight.viewerBuilds.v1", []),
+        lastViewerBuildSubmittedAt: new Date().toISOString()
+      });
       persistVisitorProgress();
       if (submit) submit.disabled = false;
     };
@@ -1166,6 +1196,116 @@
     save(storageKey, state);
   }
 
+  function initializeMemory() {
+    const now = new Date().toISOString();
+    const memory = read(memoryKey, {});
+    const visits = Number(memory.totalVisits || 0) + 1;
+    const previousVisit = memory.lastVisit || "";
+    const builderNumber = memory.builderNumber || String(Math.abs(hashString(state.journeyId || "doneovernight")) % 9000 + 100).padStart(4, "0");
+    const next = {
+      ...memory,
+      journeyId: state.journeyId || "",
+      completion: completionPercent(),
+      chosenPath: state.path || memory.chosenPath || "",
+      chosenInterests: state.interests || memory.chosenInterests || [],
+      automationChoice: [...(Array.isArray(state.automate) ? state.automate : []), state.automationOther].filter(Boolean),
+      viewerBuilds: read("doneovernight.viewerBuilds.v1", memory.viewerBuilds || []),
+      resourcesOpened: memory.resourcesOpened || [],
+      journalEntriesViewed: memory.journalEntriesViewed || [],
+      livePageVisits: Number(memory.livePageVisits || 0) + (pageName() === "live" ? 1 : 0),
+      emailsSent: memory.emailsSent || Boolean(currentSavedEmail()?.confirmation?.delivered),
+      emailOpened: memory.emailOpened || false,
+      profileCopied: memory.profileCopied || Boolean(state.profileCopied),
+      shareClicked: memory.shareClicked || Boolean(state.shareClicked),
+      tiktokClicked: memory.tiktokClicked || Boolean(state.followClicked),
+      previousVisit,
+      lastVisit: now,
+      totalVisits: visits,
+      timeSpent: Number(memory.timeSpent || 0),
+      device: deviceType(),
+      language: lang,
+      source: state.discover || memory.source || "",
+      foundingBuilder: completionPercent() >= 100 || memory.foundingBuilder === true,
+      builderRank: memory.builderRank || "Explorer",
+      builderNumber,
+      joinedAt: memory.joinedAt || now
+    };
+    if (next.foundingBuilder) next.builderRank = "Builder";
+    save(memoryKey, next);
+  }
+
+  function updateMemory(patch = {}) {
+    const memory = read(memoryKey, {});
+    save(memoryKey, { ...memory, ...patch, journeyId: state.journeyId || memory.journeyId || "" });
+  }
+
+  function hashString(value = "") {
+    return Array.from(String(value)).reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
+  }
+
+  function deviceType() {
+    const width = window.innerWidth || 0;
+    if (width < 720) return "mobile";
+    if (width < 1100) return "tablet";
+    return "desktop";
+  }
+
+  async function hydratePlatformSignal() {
+    try {
+      const response = await fetch("/data/platform-signal.json", { cache: "no-store" });
+      platformSignal = response.ok ? await response.json() : null;
+    } catch (error) {
+      platformSignal = null;
+    }
+    mountTodaySections();
+    applyLiveSignalFallbacks();
+  }
+
+  function mountTodaySections() {
+    const shells = document.querySelectorAll(".experience-shell");
+    if (!shells.length) return;
+    shells.forEach((shell) => {
+      shell.querySelectorAll("[data-today-section]").forEach((node) => node.remove());
+      const hero = shell.querySelector(".live-hero, .experience-hero");
+      if (!hero) return;
+      const today = (platformSignal && platformSignal.today) || {};
+      const section = document.createElement("section");
+      section.className = "today-signal";
+      section.setAttribute("data-today-section", "");
+      section.innerHTML = `
+        <span class="eyebrow">${escapeHtml(copy[lang].todayLabel)}</span>
+        <div class="today-signal-grid">
+          ${todayCell(copy[lang].currentlyBuilding, today.currently_building || "DONEOVERNIGHT HQ")}
+          ${todayCell(copy[lang].started, today.started || "09:40")}
+          ${todayCell(copy[lang].expected, today.expected || "Tonight")}
+          ${todayCell(copy[lang].currentOperator, today.current_operator || "Don")}
+        </div>
+      `;
+      hero.insertAdjacentElement("afterend", section);
+    });
+  }
+
+  function todayCell(label, value) {
+    return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+  }
+
+  function applyLiveSignalFallbacks() {
+    if (!document.body.dataset.live) return;
+    const waiting = platformSignal?.live_waiting || {};
+    fill("[data-live='deployment']", waiting.deployment || live.deployment);
+    fill("[data-live='operator']", waiting.operator || live.operator);
+    fill("[data-live='repositoryStatus']", waiting.github || live.repositoryStatus);
+    fill("[data-live='heartbeat']", waiting.heartbeat || live.heartbeat);
+    fill("[data-live='branch']", waiting.branch || live.branch);
+    fill("[data-live='commit']", waiting.commit || live.commit);
+    fill("[data-live='progressLabel']", waiting.progress || live.progressLabel);
+    fill("[data-live='repository']", waiting.repository || live.repository);
+    mountList("today-list", [waiting.activity || live.lastUpdate]);
+    mountList("wins-list", [waiting.wins || "Wins will appear as they ship."]);
+    mountList("finished-list", [waiting.finished || "Completed builds will collect here."]);
+    mountList("upcoming-list", [waiting.upcoming || "Next builds are being shaped."]);
+  }
+
   function renderPassport() {
     fill("#journey-id", state.journeyId || "");
     fill("#journey-started", formatDate(state.journeyStartedAt));
@@ -1173,6 +1313,14 @@
     fill("#journey-path", state.path || "curious");
     fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
     fill("#journey-result", document.getElementById("final-title")?.textContent || "");
+    const passport = document.querySelector(".passport-card dl");
+    const memory = read(memoryKey, {});
+    if (passport && memory.foundingBuilder && !passport.querySelector("[data-builder-status]")) {
+      passport.insertAdjacentHTML("afterbegin", `
+        <div data-builder-status><dt>${escapeHtml(copy[lang].foundingBuilder)}</dt><dd>${escapeHtml(copy[lang].builderNumber)}${escapeHtml(memory.builderNumber || "")}</dd></div>
+        <div data-builder-status><dt>${escapeHtml(copy[lang].joined)}</dt><dd>${escapeHtml(formatDate(memory.joinedAt))}</dd></div>
+      `);
+    }
   }
 
   function bindPlatformHub() {
@@ -1197,16 +1345,24 @@
     const follow = document.getElementById("follow-journey");
     if (follow) {
       follow.onclick = async () => {
+        if (follow.classList.contains("is-following")) return;
+        follow.classList.add("is-following");
         state.followClicked = true;
         save(storageKey, state);
+        updateMemory({ tiktokClicked: true, followClickedAt: new Date().toISOString() });
         persistVisitorProgress();
+        if ("vibrate" in navigator) {
+          try { navigator.vibrate(18); } catch (error) {}
+        }
         await postPlatformEvent({
           event: "follow_clicked",
           page: pageName(),
           source_page: pageName(),
           target_url: "https://www.tiktok.com/@doneovernight"
         });
-        window.location.href = "https://www.tiktok.com/@doneovernight";
+        window.setTimeout(() => {
+          window.location.href = "https://www.tiktok.com/@doneovernight";
+        }, 500);
       };
     }
   }
@@ -1349,6 +1505,7 @@
         copyText(text);
         state.profileCopied = true;
         save(storageKey, state);
+        updateMemory({ profileCopied: true, profileCopiedAt: new Date().toISOString() });
         postPlatformEvent({ event: "profile_copied", page: pageName(), method: "clipboard", url: canonicalExperienceUrl });
         showReward(copy[lang].copied);
       };
@@ -1365,6 +1522,7 @@
             await navigator.share(sharePayload);
             state.shareClicked = true;
             save(storageKey, state);
+            updateMemory({ shareClicked: true, shareClickedAt: new Date().toISOString() });
             postPlatformEvent({ event: "native_share", page: pageName(), method: "native", url: canonicalExperienceUrl });
             return;
           } catch (error) {}
@@ -1372,6 +1530,7 @@
         copyText(canonicalExperienceUrl);
         state.shareClicked = true;
         save(storageKey, state);
+        updateMemory({ shareClicked: true, shareClickedAt: new Date().toISOString() });
         postPlatformEvent({ event: "copy_link_fallback", page: pageName(), method: "copy_link", url: canonicalExperienceUrl });
         showReward(copy[lang].linkCopied);
       };
@@ -1579,9 +1738,11 @@
         lang = button.dataset.lang;
         state.lang = lang;
         save(storageKey, state);
+        updateMemory({ language: lang });
         applyLanguage();
         mountHowItWorks();
         mountLive();
+        mountTodaySections();
         revealOnScroll();
       });
     });
@@ -1993,6 +2154,15 @@
     state.completed = Array.isArray(state.completed) ? state.completed : [];
     if (!state.completed.includes(key)) state.completed.push(key);
     save(storageKey, state);
+    updateMemory({
+      completion: completionPercent(),
+      chosenPath: state.path || "",
+      chosenInterests: state.interests || [],
+      automationChoice: [...(Array.isArray(state.automate) ? state.automate : []), state.automationOther].filter(Boolean),
+      source: state.discover || "",
+      foundingBuilder: completionPercent() >= 100 || read(memoryKey, {}).foundingBuilder === true,
+      builderRank: completionPercent() >= 100 ? "Builder" : read(memoryKey, {}).builderRank || "Explorer"
+    });
     renderProgress();
     renderPassport();
     persistVisitorProgress();
@@ -2030,8 +2200,17 @@
     const completed = (state.completed || []).length;
     if (!completed) return;
     const pct = Math.min(100, Math.round((completed / progressTotal) * 100));
+    const memory = read(memoryKey, {});
     note.hidden = false;
-    note.textContent = `${copy[lang].welcomeBack} ${pct}% ${copy[lang].continueJourney}`;
+    note.innerHTML = returnVisitorMarkup({
+      pct,
+      previousVisit: memory.previousVisit,
+      since: [
+        memory.livePageVisits ? `${memory.livePageVisits} ${copy[lang].liveVisits.toLowerCase()}` : "",
+        (memory.resourcesOpened || []).length ? `${(memory.resourcesOpened || []).length} ${copy[lang].resourcesOpened.toLowerCase()}` : "",
+        (memory.viewerBuilds || []).length ? `${(memory.viewerBuilds || []).length} Viewer Build${(memory.viewerBuilds || []).length === 1 ? "" : "s"}` : ""
+      ].filter(Boolean)
+    });
   }
 
   async function hydrateReturnVisitor() {
@@ -2041,7 +2220,25 @@
     if (!data.ok || !data.journey) return;
     const pct = Math.max(completionPercent(), Number(data.journey.completion_percentage || 0));
     note.hidden = false;
-    note.textContent = `${copy[lang].welcomeBack} ${pct}% ${copy[lang].continueJourney}`;
+    note.innerHTML = returnVisitorMarkup({
+      pct,
+      previousVisit: read(memoryKey, {}).previousVisit,
+      since: [
+        Number(data.viewer_builds_count || 0) ? `${Number(data.viewer_builds_count || 0)} Viewer Builds` : "",
+        Number(data.resource_interest_count || 0) ? `${Number(data.resource_interest_count || 0)} ${copy[lang].resourcesOpened.toLowerCase()}` : ""
+      ].filter(Boolean)
+    });
+  }
+
+  function returnVisitorMarkup({ pct, previousVisit, since = [] }) {
+    const lastVisit = previousVisit ? formatDate(previousVisit) : "";
+    const sinceText = since.length ? since.join(" · ") : copy[lang].continueJourney;
+    return `
+      <span>${escapeHtml(copy[lang].welcomeBack)}</span>
+      <strong>${escapeHtml(`${pct}%`)}</strong>
+      ${lastVisit ? `<small>${escapeHtml(copy[lang].lastVisit)} ${escapeHtml(lastVisit)}</small>` : ""}
+      <small>${escapeHtml(copy[lang].sinceLastVisit)} ${escapeHtml(sinceText)}</small>
+    `;
   }
 
   function trackPageLifecycle() {
@@ -2059,6 +2256,8 @@
     });
     const sendLeft = () => {
       const duration = Math.max(0, Math.round((Date.now() - Date.parse(enteredAt)) / 1000));
+      const memory = read(memoryKey, {});
+      updateMemory({ timeSpent: Number(memory.timeSpent || 0) + duration });
       const payload = platformPayload({
         event: "page_left",
         page: pageName(),
@@ -2105,8 +2304,9 @@
   async function hydrateLiveData() {
     const data = await fetchPlatformData("live");
     if (!data.ok || data.placeholder || !data.live_status) {
+      const waiting = platformSignal?.live_waiting || {};
       mountList("today-list", [
-        "Placeholder: Supabase live_status has no connected row yet.",
+        waiting.activity || "Waiting for today's deployment.",
         `Journey count today: ${Number(data.journey_count_today || 0)}`
       ]);
       return;
@@ -2138,6 +2338,10 @@
   async function hydrateJournalData() {
     const root = document.querySelector(".journal-list");
     if (!root) return;
+    updateMemory({
+      journalEntriesViewed: Array.from(new Set([...(read(memoryKey, {}).journalEntriesViewed || []), "journal"].filter(Boolean))),
+      lastJournalViewedAt: new Date().toISOString()
+    });
     const data = await fetchPlatformData("journal");
     if (!data.ok || data.placeholder || !Array.isArray(data.entries) || !data.entries.length) return;
     root.innerHTML = data.entries.map((entry) => `
@@ -2160,6 +2364,11 @@
         event.preventDefault();
         const card = link.closest(".resource-card");
         const resource = card?.querySelector("h2")?.textContent || link.dataset.resource || "";
+        const memory = read(memoryKey, {});
+        updateMemory({
+          resourcesOpened: Array.from(new Set([...(memory.resourcesOpened || []), resource].filter(Boolean))),
+          lastResourceOpenedAt: new Date().toISOString()
+        });
         postPlatformEvent({
           event: "resource_interest",
           resource,
@@ -2216,7 +2425,7 @@
   }
 
   function hqList(label, items = []) {
-    const rows = items.length ? items : [{ label: "Placeholder until connected", count: "" }];
+    const rows = items.length ? items : [{ label: "Waiting for platform signal", count: "" }];
     return `<article class="activity-card wide"><h2>${label}</h2><ul>${rows.map((item) => `<li>${escapeHtml(item.label || "")}${item.count !== "" && item.count !== undefined ? ` <span>${escapeHtml(String(item.count))}</span>` : ""}</li>`).join("")}</ul></article>`;
   }
 

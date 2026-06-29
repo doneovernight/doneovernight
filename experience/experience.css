@@ -211,6 +211,16 @@ body.has-reward .experience-progress {
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
+.return-note strong,
+.return-note small,
+.return-note span {
+  display: inline-block;
+  margin-right: 10px;
+}
+.return-note small {
+  color: var(--faint);
+  letter-spacing: 0.14em;
+}
 .scroll-cue {
   margin-top: 62px;
   display: inline-flex;
@@ -1127,6 +1137,7 @@ textarea.text-field {
   margin-right: auto;
 }
 .follow-card {
+  position: relative;
   width: min(78vw, 340px);
   aspect-ratio: 1;
   min-height: 300px;
@@ -1144,12 +1155,36 @@ textarea.text-field {
   gap: 14px;
   box-shadow: 0 0 80px rgba(233,196,138,0.08);
   backdrop-filter: blur(16px);
+  animation: followBreath 3.4s ease-in-out infinite;
   transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+}
+.follow-card::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 44px;
+  background: radial-gradient(circle, rgba(233,196,138,0.08), transparent 64%);
+  opacity: 0.72;
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
 }
 .follow-card:hover {
   transform: translateY(-4px);
   border-color: rgba(233,196,138,0.58);
   box-shadow: 0 0 110px rgba(233,196,138,0.14);
+}
+.follow-card.is-following {
+  transform: scale(0.96);
+  border-color: rgba(233,196,138,0.72);
+  box-shadow: 0 0 132px rgba(233,196,138,0.2);
+}
+.follow-card.is-following::before {
+  opacity: 1;
+  transform: scale(1.04);
+}
+.follow-card > * {
+  position: relative;
+  z-index: 1;
 }
 .follow-mark {
   width: 112px;
@@ -1211,6 +1246,42 @@ textarea.text-field {
   gap: clamp(34px, 7vw, 120px);
   align-items: end;
   margin-bottom: 52px;
+}
+.today-signal {
+  margin: 0 0 44px;
+  padding: 18px 0 8px;
+  border-top: 1px solid rgba(245,241,234,0.09);
+  border-bottom: 1px solid rgba(245,241,234,0.06);
+}
+.today-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.today-signal-grid div {
+  min-height: 96px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(245,241,234,0.022);
+}
+.today-signal-grid span {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.today-signal-grid strong {
+  display: block;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(24px, 4vw, 38px);
+  line-height: 1;
 }
 .heartbeat {
   display: inline-flex;
@@ -1290,6 +1361,10 @@ textarea.text-field {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.36); opacity: 0.7; }
 }
+@keyframes followBreath {
+  0%, 100% { box-shadow: 0 0 80px rgba(233,196,138,0.08); transform: scale(1); }
+  50% { box-shadow: 0 0 118px rgba(233,196,138,0.14); transform: scale(1.025); }
+}
 @keyframes stepUnlock {
   from { opacity: 0; filter: blur(10px); transform: translateY(18px); }
   to { opacity: 1; filter: blur(0); transform: translateY(0); }
@@ -1312,9 +1387,12 @@ textarea.text-field {
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
   }
+  .follow-card {
+    animation: none;
+  }
 }
 @media (max-width: 920px) {
-  .choice-grid, .workflow-stage, .live-grid, .live-hero, .activity-grid, .recommendation-grid, .platform-grid, .resource-grid, .journal-list, .status-grid {
+  .choice-grid, .workflow-stage, .live-grid, .live-hero, .today-signal-grid, .activity-grid, .recommendation-grid, .platform-grid, .resource-grid, .journal-list, .status-grid {
     grid-template-columns: 1fr;
   }
   .activity-card.wide {
