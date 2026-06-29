@@ -1,6 +1,7 @@
 (() => {
   const storageKey = "doneovernight.experience.v1";
   const emailKey = "doneovernight.experience.email.v1";
+  const confirmationCooldownKey = "doneovernight.experience.confirmationCooldown.v1";
   const state = read(storageKey, {});
   const savedEmail = read(emailKey, null);
   const progressKey = "doneovernight.visitorProgress.v1";
@@ -42,6 +43,22 @@
       unlock: "Unlock",
       continue: "Continue",
       emailError: "Enter a valid email to continue.",
+      emailSending: "Sending access...",
+      emailSendFailed: "Confirmation email could not be sent. Try again.",
+      emailPendingCopy: "Your access is saved. Email delivery is not connected yet.",
+      emailConfirmedTitle: "You're in.",
+      emailConfirmedHeadline: "Check your inbox.",
+      emailConfirmedCopy: "Your DONEOVERNIGHT access has been sent.",
+      liveUnlocked: "Live unlocked",
+      resourcesUnlocked: "Resources unlocked",
+      viewerUnlocked: "Viewer Builds unlocked",
+      journalUnlocked: "Journal unlocked",
+      goLive: "Go to Live",
+      openResources: "Open Resources",
+      submitViewerBuild: "Submit Viewer Build",
+      sendAgain: "Send again",
+      sendAgainWait: "Send again in",
+      sentAgain: "Sent again.",
       welcome: "Welcome.",
       pathTitle: "Welcome.",
       pathCopy: "Choose your path.",
@@ -156,6 +173,22 @@
       unlock: "Ontgrendel",
       continue: "Ga verder",
       emailError: "Voer een geldig e-mailadres in om door te gaan.",
+      emailSending: "Toegang wordt verzonden...",
+      emailSendFailed: "De bevestiging kon niet worden verzonden. Probeer opnieuw.",
+      emailPendingCopy: "Je toegang is opgeslagen. E-mailbezorging is nog niet gekoppeld.",
+      emailConfirmedTitle: "Je bent binnen.",
+      emailConfirmedHeadline: "Check je inbox.",
+      emailConfirmedCopy: "Je DONEOVERNIGHT toegang is verzonden.",
+      liveUnlocked: "Live ontgrendeld",
+      resourcesUnlocked: "Resources ontgrendeld",
+      viewerUnlocked: "Viewer Builds ontgrendeld",
+      journalUnlocked: "Journal ontgrendeld",
+      goLive: "Ga naar Live",
+      openResources: "Open Resources",
+      submitViewerBuild: "Submit Viewer Build",
+      sendAgain: "Opnieuw verzenden",
+      sendAgainWait: "Opnieuw verzenden over",
+      sentAgain: "Opnieuw verzonden.",
       welcome: "Welkom.",
       pathTitle: "Welkom.",
       pathCopy: "Kies je pad.",
@@ -620,9 +653,47 @@
     const list = document.getElementById("gate-list");
     const form = document.getElementById("email-form");
     const note = document.getElementById("email-note");
+    const confirmation = document.getElementById("gate-confirmation");
+    const confirmationCopy = document.getElementById("email-confirmation-copy");
+    const continueButton = document.getElementById("gate-continue");
+    const resendButton = document.getElementById("resend-confirmation");
+    const resendNote = document.getElementById("resend-note");
     const after = document.querySelectorAll("[data-after-gate]");
     if (list) list.innerHTML = data.gateItems[lang].map((item) => `<li>${item}</li>`).join("");
-    if (savedEmail) unlockGate(false);
+    if (savedEmail) {
+      showGateConfirmation(savedEmail.confirmation || { delivered: true }, false);
+      unlockGate(false);
+    }
+    if (continueButton) {
+      continueButton.onclick = () => unlockGate(true);
+    }
+    if (resendButton) {
+      updateResendCooldown(resendButton, resendNote);
+      resendButton.onclick = async () => {
+        const remaining = resendCooldownRemaining();
+        if (remaining > 0) {
+          if (resendNote) resendNote.textContent = `${copy[lang].sendAgainWait} ${remaining}s.`;
+          return;
+        }
+        const payload = read(emailKey, null);
+        if (!payload?.email) return;
+        resendButton.disabled = true;
+        if (resendNote) {
+          resendNote.textContent = copy[lang].emailSending;
+          resendNote.classList.remove("is-success");
+        }
+        const result = await requestJourneyConfirmation(payload.confirmationPayload || buildJourneyConfirmationPayload(payload));
+        payload.confirmation = result;
+        save(emailKey, payload);
+        save(confirmationCooldownKey, { lastSentAt: Date.now() });
+        showGateConfirmation(result, false);
+        if (resendNote) {
+          resendNote.textContent = result.delivered ? copy[lang].sentAgain : (result.configured === false ? copy[lang].emailPendingCopy : copy[lang].emailSendFailed);
+          resendNote.classList.toggle("is-success", result.delivered || result.configured === false);
+        }
+        updateResendCooldown(resendButton, resendNote);
+      };
+    }
     if (!form) return;
     form.email.placeholder = copy[lang].email;
     form.name.placeholder = copy[lang].name;
@@ -630,7 +701,7 @@
       form.social.placeholder = copy[lang].socialPlaceholder;
       form.social.setAttribute("aria-label", copy[lang].social);
     }
-    form.onsubmit = (event) => {
+    form.onsubmit = async (event) => {
       event.preventDefault();
       const email = form.email.value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -638,16 +709,36 @@
         note.classList.remove("is-success");
         return;
       }
+      const submit = form.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      note.textContent = copy[lang].emailSending;
+      note.classList.remove("is-success");
       const socialHandle = form.social ? form.social.value.trim() : "";
       state.socialHandle = socialHandle;
+      save(storageKey, state);
+      const confirmationPayload = buildJourneyConfirmationPayload({
+        email,
+        name: form.name.value.trim(),
+        socialHandle
+      });
+      const confirmationResult = await requestJourneyConfirmation(confirmationPayload);
+      if (!confirmationResult.delivered && confirmationResult.configured !== false) {
+        note.textContent = copy[lang].emailSendFailed;
+        note.classList.remove("is-success");
+        if (submit) submit.disabled = false;
+        return;
+      }
       const payload = {
         email,
         name: form.name.value.trim(),
         socialHandle,
         lang,
         createdAt: new Date().toISOString(),
+        confirmation: confirmationResult,
+        confirmationPayload,
         interactions: state,
         crmReady: {
+          journeyId: state.journeyId || "",
           source: state.discover || "",
           interests: state.interests || [],
           reflection: state.reflection || "",
@@ -659,13 +750,99 @@
         }
       };
       save(emailKey, payload);
-      note.textContent = copy[lang].welcome;
+      save(confirmationCooldownKey, { lastSentAt: Date.now() });
+      note.textContent = confirmationResult.delivered ? copy[lang].welcome : copy[lang].emailPendingCopy;
       note.classList.add("is-success");
       markComplete("gate");
       persistVisitorProgress();
       showReward();
-      unlockGate(true);
+      showGateConfirmation(confirmationResult, true);
+      if (submit) submit.disabled = false;
     };
+
+    function showGateConfirmation(result = {}, scroll = true) {
+      if (!confirmation || !form) return;
+      const section = confirmation.closest(".experience-step");
+      const panel = confirmation.closest(".gate-panel");
+      if (section) section.classList.add("has-gate-confirmation");
+      if (panel) panel.classList.add("is-confirmed");
+      form.hidden = true;
+      confirmation.hidden = false;
+      if (confirmationCopy) {
+        confirmationCopy.textContent = result.delivered ? copy[lang].emailConfirmedCopy : copy[lang].emailPendingCopy;
+      }
+      if (scroll) setTimeout(() => scrollToPanel(section || confirmation), 120);
+      updateResendCooldown(resendButton, resendNote);
+    }
+  }
+
+  function buildJourneyConfirmationPayload(input = {}) {
+    ensureJourney();
+    return {
+      email: input.email || "",
+      name: input.name || "",
+      social_handle: input.socialHandle || state.socialHandle || "",
+      journey_id: state.journeyId || "",
+      chosen_path: state.path || "",
+      chosen_interests: state.interests || [],
+      result: resolveCurrentResult(),
+      source: state.discover || "how_it_works",
+      created_at: new Date().toISOString(),
+      browser_language: state.browserLanguage || navigator.language || "",
+      completion: completionPercent(),
+      utm: state.utm || {},
+      lang
+    };
+  }
+
+  async function requestJourneyConfirmation(payload) {
+    try {
+      const response = await fetch("/api/journey-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      return {
+        ...result,
+        delivered: result.delivered === true,
+        configured: result.configured === true,
+        ok: response.ok && result.ok === true,
+        statusCode: response.status
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        delivered: false,
+        configured: true,
+        provider: "none",
+        reason: "network_error"
+      };
+    }
+  }
+
+  function resendCooldownRemaining() {
+    const cooldown = read(confirmationCooldownKey, {});
+    const elapsed = Math.floor((Date.now() - Number(cooldown.lastSentAt || 0)) / 1000);
+    return Math.max(0, 60 - elapsed);
+  }
+
+  function updateResendCooldown(button, note) {
+    if (!button) return;
+    const remaining = resendCooldownRemaining();
+    button.disabled = remaining > 0;
+    button.textContent = remaining > 0 ? `${copy[lang].sendAgainWait} ${remaining}s` : copy[lang].sendAgain;
+    if (remaining > 0) {
+      setTimeout(() => updateResendCooldown(button, note), 1000);
+    } else if (note && note.textContent.startsWith(copy[lang].sendAgainWait)) {
+      note.textContent = "";
+    }
+  }
+
+  function resolveCurrentResult() {
+    if (state.operatorTrait && data.quiz.results[state.operatorTrait]) return data.quiz.results[state.operatorTrait][lang];
+    const title = document.getElementById("personal-title")?.textContent || document.getElementById("final-title")?.textContent;
+    return title || data.summaries[lang][summarySeed() % data.summaries[lang].length];
   }
 
   function mountLivePreview() {
