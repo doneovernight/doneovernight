@@ -1393,6 +1393,84 @@ textarea.text-field {
 .hq-toggle input {
   accent-color: var(--amber);
 }
+.hq-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hq-logout {
+  cursor: pointer;
+}
+.hq-login-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: max(22px, env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+}
+.hq-login-panel {
+  width: min(100%, 430px);
+  padding: 32px 0 18px;
+}
+.hq-login-logo {
+  width: 174px;
+  height: auto;
+  display: block;
+  margin: 0 0 58px;
+}
+.hq-login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 28px;
+}
+.hq-login-form .quiet-action {
+  min-height: 52px;
+  justify-content: center;
+  position: relative;
+}
+.hq-login-form.is-checking .hq-spinner {
+  opacity: 1;
+}
+.hq-spinner {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(245, 241, 232, 0.26);
+  border-top-color: var(--amber);
+  border-radius: 999px;
+  margin-left: 10px;
+  opacity: 0;
+  animation: hqSpin 0.82s linear infinite;
+}
+.hq-login-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 34px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hq-login-shell.is-denied .hq-login-panel {
+  animation: hqDenied 0.34s ease both;
+}
+.hq-login-shell.is-denied .text-field {
+  border-color: rgba(255, 111, 111, 0.46);
+  box-shadow: 0 0 42px rgba(255, 111, 111, 0.1);
+}
+.form-note.is-error {
+  color: #ff9f9f;
+}
+@keyframes hqSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes hqDenied {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+}
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.36); opacity: 0.7; }
@@ -1492,6 +1570,18 @@ textarea.text-field {
     width: 100%;
     justify-self: stretch;
     text-align: center;
+  }
+  .hq-login-shell {
+    align-items: start;
+    padding-top: max(38px, env(safe-area-inset-top));
+  }
+  .hq-login-logo {
+    width: 152px;
+    margin-bottom: 44px;
+  }
+  .hq-login-footer {
+    display: grid;
+    gap: 8px;
   }
   .passport-card dl {
     grid-template-columns: 1fr;

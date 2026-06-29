@@ -59,6 +59,11 @@ const MAX_ATTACHMENT_FILES = 6;
 const ATTACHMENT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const ANALYTICS_EVENT_TABLE = "analytics_events";
 const JOURNEY_CONFIRMATION_TABLE = "journey_confirmations";
+const HQ_SESSION_COOKIE = "doneovernight_hq_session";
+const HQ_SESSION_TTL_SECONDS = Number(process.env.HQ_SESSION_TTL_SECONDS || 60 * 60 * 24);
+const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const HQ_LOGIN_MAX_ATTEMPTS = 6;
+const hqLoginAttempts = new Map();
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
   "ask_started",
@@ -169,6 +174,74 @@ function send(res, statusCode, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+function base64url(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function signHqSession(payload, secret) {
+  return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((cookies, part) => {
+      const index = part.indexOf("=");
+      if (index === -1) return cookies;
+      cookies[decodeURIComponent(part.slice(0, index))] = decodeURIComponent(part.slice(index + 1));
+      return cookies;
+    }, {});
+}
+
+function createHqSessionValue() {
+  const secret = String(process.env.HQ_ACCESS_TOKEN || "").trim();
+  if (!secret) return "";
+  const now = Math.floor(Date.now() / 1000);
+  const payload = base64url(JSON.stringify({
+    operator: "DONEOVERNIGHT Operator",
+    role: "owner",
+    permissions: ["hq:read", "hq:write"],
+    iat: now,
+    exp: now + HQ_SESSION_TTL_SECONDS
+  }));
+  return `${payload}.${signHqSession(payload, secret)}`;
+}
+
+function verifyHqSession(req) {
+  const secret = String(process.env.HQ_ACCESS_TOKEN || "").trim();
+  if (!secret) return { ok: false, reason: "hq_auth_not_configured" };
+  const value = parseCookies(req)[HQ_SESSION_COOKIE] || "";
+  const [payload, signature] = String(value).split(".");
+  if (!payload || !signature) return { ok: false, reason: "unauthorized" };
+  const expected = signHqSession(payload, secret);
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    return { ok: false, reason: "unauthorized" };
+  }
+  try {
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (Number(session.exp || 0) <= Math.floor(Date.now() / 1000)) {
+      return { ok: false, reason: "session_expired" };
+    }
+    return { ok: true, session };
+  } catch (error) {
+    return { ok: false, reason: "unauthorized" };
+  }
+}
+
+function setHqSessionCookie(res, value) {
+  const secure = process.env.NODE_ENV === "production" || process.env.VERCEL === "1" ? " Secure;" : "";
+  res.setHeader("Set-Cookie", `${HQ_SESSION_COOKIE}=${encodeURIComponent(value)}; Max-Age=${HQ_SESSION_TTL_SECONDS}; Path=/; HttpOnly;${secure} SameSite=Strict`);
+}
+
+function clearHqSessionCookie(res) {
+  const secure = process.env.NODE_ENV === "production" || process.env.VERCEL === "1" ? " Secure;" : "";
+  res.setHeader("Set-Cookie", `${HQ_SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly;${secure} SameSite=Strict`);
 }
 
 function askVerificationConfig() {
@@ -1235,6 +1308,25 @@ function isLiveStatusRequest(req, input = {}) {
     input.event === "live_status_update";
 }
 
+function isHqLoginRequest(req, input = {}) {
+  return String(req.url || "").includes("hq_login=1") ||
+    String(req.url || "").includes("/api/hq-login") ||
+    input.action === "hq_login" ||
+    input.intent === "hq_login";
+}
+
+function isHqLogoutRequest(req, input = {}) {
+  return String(req.url || "").includes("hq_logout=1") ||
+    String(req.url || "").includes("/api/hq-logout") ||
+    input.action === "hq_logout" ||
+    input.intent === "hq_logout";
+}
+
+function isHqSessionRequest(req) {
+  return String(req.url || "").includes("hq_session=1") ||
+    String(req.url || "").includes("/api/hq-session");
+}
+
 function platformClientContext(req) {
   return {
     userAgent: req.headers["user-agent"] || "",
@@ -1433,11 +1525,79 @@ async function handlePlatformEventRequest(req, res, input = {}) {
 function requireHqAccess(req) {
   const expected = String(process.env.HQ_ACCESS_TOKEN || "").trim();
   if (!expected) return { ok: false, reason: "hq_auth_not_configured" };
+  const session = verifyHqSession(req);
+  if (session.ok) return session;
   const header = String(req.headers["x-hq-access-token"] || "").trim();
   const auth = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
   return header === expected || auth === expected
-    ? { ok: true }
+    ? { ok: true, session: { operator: "DONEOVERNIGHT Operator", role: "owner" } }
     : { ok: false, reason: "unauthorized" };
+}
+
+function hqClientKey(req) {
+  return String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0].trim() || "unknown";
+}
+
+function hqLoginLimited(req) {
+  const key = hqClientKey(req);
+  const now = Date.now();
+  const attempts = (hqLoginAttempts.get(key) || []).filter((time) => now - time < HQ_LOGIN_WINDOW_MS);
+  hqLoginAttempts.set(key, attempts);
+  return attempts.length >= HQ_LOGIN_MAX_ATTEMPTS;
+}
+
+function recordHqLoginFailure(req) {
+  const key = hqClientKey(req);
+  const now = Date.now();
+  const attempts = (hqLoginAttempts.get(key) || []).filter((time) => now - time < HQ_LOGIN_WINDOW_MS);
+  attempts.push(now);
+  hqLoginAttempts.set(key, attempts);
+}
+
+function clearHqLoginFailures(req) {
+  hqLoginAttempts.delete(hqClientKey(req));
+}
+
+function publicHqSession(session = {}) {
+  return {
+    operator: session.operator || "DONEOVERNIGHT Operator",
+    role: session.role || "owner",
+    permissions: Array.isArray(session.permissions) ? session.permissions : ["hq:read", "hq:write"],
+    expires_at: session.exp ? new Date(Number(session.exp) * 1000).toISOString() : "",
+    environment: process.env.VERCEL_ENV === "production" ? "Production" : clean(process.env.VERCEL_ENV) || "Production",
+    branch: clean(process.env.VERCEL_GIT_COMMIT_REF) || "main"
+  };
+}
+
+async function handleHqLoginRequest(req, res, input = {}) {
+  const expected = String(process.env.HQ_ACCESS_TOKEN || "").trim();
+  if (!expected) return send(res, 503, { ok: false, error: "access_denied" });
+  if (hqLoginLimited(req)) return send(res, 429, { ok: false, error: "access_denied" });
+  const password = String(input.password || input.token || "").trim();
+  const passwordBuffer = Buffer.from(password);
+  const expectedBuffer = Buffer.from(expected);
+  const matches = passwordBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(passwordBuffer, expectedBuffer);
+  if (!matches) {
+    recordHqLoginFailure(req);
+    return send(res, 401, { ok: false, error: "access_denied" });
+  }
+  clearHqLoginFailures(req);
+  const sessionValue = createHqSessionValue();
+  if (!sessionValue) return send(res, 503, { ok: false, error: "access_denied" });
+  setHqSessionCookie(res, sessionValue);
+  const session = verifyHqSession({ headers: { cookie: `${HQ_SESSION_COOKIE}=${encodeURIComponent(sessionValue)}` } });
+  return send(res, 200, { ok: true, session: publicHqSession(session.session || {}) });
+}
+
+function handleHqLogoutRequest(req, res) {
+  clearHqSessionCookie(res);
+  return send(res, 200, { ok: true });
+}
+
+function handleHqSessionRequest(req, res) {
+  const session = verifyHqSession(req);
+  if (!session.ok) return send(res, 401, { ok: false, error: "unauthorized" });
+  return send(res, 200, { ok: true, session: publicHqSession(session.session || {}) });
 }
 
 function countSince(rows = [], field, since) {
@@ -2097,6 +2257,9 @@ module.exports = async function handler(req, res) {
     if (url.searchParams.get("platform_data") === "1" || isPlatformDataRequest(req)) {
       return handlePlatformDataRequest(req, res);
     }
+    if (url.searchParams.get("hq_session") === "1" || isHqSessionRequest(req)) {
+      return handleHqSessionRequest(req, res);
+    }
     return handleReviewStateRequest(req, res);
   }
 
@@ -2117,6 +2280,14 @@ module.exports = async function handler(req, res) {
 
     if (isLiveStatusRequest(req, input)) {
       return handleLiveStatusUpdateRequest(req, res, input);
+    }
+
+    if (isHqLoginRequest(req, input)) {
+      return handleHqLoginRequest(req, res, input);
+    }
+
+    if (isHqLogoutRequest(req, input)) {
+      return handleHqLogoutRequest(req, res);
     }
 
     if (isPlatformEventsRequest(req, input)) {

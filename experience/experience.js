@@ -620,6 +620,7 @@
     if (document.body.dataset.platform === "resources") mountResourceInterest();
     if (document.body.dataset.platform === "journal") hydrateJournalData();
     if (document.body.dataset.platform === "hq") mountHq();
+    if (document.body.dataset.platform === "hq-login") mountHqLogin();
   }
 
   function mountChoices(id, items, key, multi) {
@@ -2284,21 +2285,22 @@
 
   async function fetchPlatformData(view) {
     try {
-      const headers = {};
       const target = String(view || "");
-      if (target === "hq" || target.startsWith("hq&") || target.includes("view=hq")) {
-        const token = read("doneovernight.hqAccess.v1", "") || window.prompt("DONEOVERNIGHT HQ access");
-        if (token) {
-          save("doneovernight.hqAccess.v1", token);
-          headers["x-hq-access-token"] = token;
-        }
-      }
-      const query = String(view).includes("&") ? view : `view=${encodeURIComponent(view)}`;
+      const viewText = String(view || "live");
+      const query = viewText.includes("=")
+        ? viewText
+        : viewText.includes("&")
+          ? `view=${viewText}`
+          : `view=${encodeURIComponent(viewText)}`;
       const response = await fetch(`/api/platform-data?${query}`, {
-        headers,
+        credentials: "same-origin",
         cache: "no-store"
       });
       const data = await response.json().catch(() => ({}));
+      if (response.status === 401 && (target === "hq" || target.startsWith("hq&") || target.includes("view=hq"))) {
+        window.location.replace(`/hq/login?return=${encodeURIComponent(window.location.pathname || "/hq")}`);
+        return { ok: false, placeholder: true, error: "unauthorized" };
+      }
       return response.ok ? data : { ok: false, placeholder: true, error: data.error || "unavailable" };
     } catch (error) {
       return { ok: false, placeholder: true, error: "network_error" };
@@ -2392,10 +2394,13 @@
   async function mountHq() {
     const root = document.getElementById("hq-root");
     if (!root) return;
+    try {
+      localStorage.removeItem("doneovernight.hqAccess.v1");
+    } catch (error) {}
     const showTests = read("doneovernight.hqShowTests.v1", false) === true;
     const data = await fetchPlatformData(showTests ? "hq&show_tests=1" : "hq");
     if (!data.ok) {
-      root.innerHTML = `<section class="viewer-panel"><span class="eyebrow">Private</span><h1 class="step-title">HQ locked.</h1><p class="step-copy">Access is private. Set the HQ token to view platform analytics.</p></section>`;
+      root.innerHTML = `<section class="viewer-panel"><span class="eyebrow">Private</span><h1 class="step-title">HQ locked.</h1><p class="step-copy">Access is private. Redirecting to HQ login.</p></section>`;
       return;
     }
     const metrics = data.metrics || {};
@@ -2406,7 +2411,10 @@
           <h1 class="display">Headquarters.</h1>
           <p class="lede">${data.placeholder ? "Some tables are still placeholders until Supabase is connected." : "Live platform signal from Supabase."}</p>
         </div>
-        <a class="open-live" href="/live">Live</a>
+        <div class="hq-profile">
+          <a class="open-live" href="/live">Live</a>
+          <button class="open-live hq-logout" type="button" id="hq-logout">Logout</button>
+        </div>
       </section>
       <label class="hq-toggle"><input type="checkbox" id="show-test-records" ${showTests ? "checked" : ""}> Show test records</label>
       <section class="activity-grid" aria-label="DONEOVERNIGHT HQ analytics">
@@ -2428,6 +2436,7 @@
     `;
     bindLiveStatusForm();
     bindHqTestToggle();
+    bindHqLogout();
   }
 
   function hqMetric(label, value) {
@@ -2489,7 +2498,6 @@
     if (!form) return;
     form.onsubmit = async (event) => {
       event.preventDefault();
-      const token = read("doneovernight.hqAccess.v1", "");
       const payload = Object.fromEntries(new FormData(form).entries());
       const action = event.submitter?.value || "save_live_status";
       payload.action = action;
@@ -2505,9 +2513,9 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "application/json",
-            "x-hq-access-token": token
+            Accept: "application/json"
           },
+          credentials: "same-origin",
           body: JSON.stringify(payload)
         });
         const result = await response.json().catch(() => ({}));
@@ -2521,6 +2529,79 @@
       } catch (error) {
         if (note) note.textContent = "Live status could not be updated.";
       }
+    };
+  }
+
+  async function mountHqLogin() {
+    const root = document.getElementById("hq-login-root");
+    const form = document.getElementById("hq-login-form");
+    const note = document.getElementById("hq-login-note");
+    const label = document.querySelector("[data-login-label]");
+    if (!root || !form) return;
+    try {
+      localStorage.removeItem("doneovernight.hqAccess.v1");
+    } catch (error) {}
+    const session = await fetch("/api/hq-session", { credentials: "same-origin", cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .catch(() => null);
+    if (session?.ok) {
+      window.location.replace("/hq");
+      return;
+    }
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      const password = String(form.password.value || "").trim();
+      const button = form.querySelector("button");
+      if (!password) return;
+      if (button) button.disabled = true;
+      root.classList.remove("is-denied");
+      form.classList.add("is-checking");
+      if (label) label.textContent = "Checking access...";
+      if (note) {
+        note.textContent = "";
+        note.classList.remove("is-error");
+      }
+      try {
+        const response = await fetch("/api/hq-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ password })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.ok !== true) throw new Error("access_denied");
+        window.location.replace(new URLSearchParams(window.location.search).get("return") || "/hq");
+      } catch (error) {
+        form.password.value = "";
+        root.classList.add("is-denied");
+        if (note) {
+          note.textContent = "Access denied. Please try again.";
+          note.classList.add("is-error");
+        }
+        if (button) button.disabled = false;
+        form.classList.remove("is-checking");
+        if (label) label.textContent = "Unlock HQ";
+        window.setTimeout(() => root.classList.remove("is-denied"), 420);
+      }
+    };
+  }
+
+  function bindHqLogout() {
+    const logout = document.getElementById("hq-logout");
+    if (!logout) return;
+    logout.onclick = async () => {
+      logout.disabled = true;
+      try {
+        await fetch("/api/hq-logout", {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          credentials: "same-origin"
+        });
+      } catch (error) {}
+      try {
+        localStorage.removeItem("doneovernight.hqAccess.v1");
+      } catch (error) {}
+      window.location.replace("/hq/login");
     };
   }
 
