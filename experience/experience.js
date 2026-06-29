@@ -22,15 +22,18 @@
       oldWorkflow: "Old workflow",
       newWorkflow: "Connected workflow",
       workflowTitle: "Workflow becomes visible.",
+      unlockToast: "Unlocked",
+      welcomeBack: "Welcome back.",
+      continueJourney: "Continue your journey.",
       examples: "Choose a world.",
       operatorQuestion: "What makes an operator?",
       operatorCopy: "No wrong answers. The pattern matters more than the score.",
       reflectionOne: "Where are you today?",
       reflectionTwo: "What would you automate first?",
       otherPlaceholder: "Type your own answer",
-      gateTitle: "Unlock what happens behind the surface.",
-      gateCopy: "You are about to unlock:",
-      gateNoSpam: "This is not a newsletter. No spam. Only real updates.",
+      gateTitle: "Join the build journal.",
+      gateCopy: "Unlock the private layer of what DONEOVERNIGHT is building.",
+      gateNoSpam: "Not a newsletter. A quiet build journal for people who want to see systems before they are public.",
       email: "Email",
       name: "Name, optional",
       social: "TikTok / Instagram handle",
@@ -38,20 +41,29 @@
       unlock: "Unlock",
       emailError: "Enter a valid email to continue.",
       welcome: "Welcome.",
+      pathTitle: "Welcome.",
+      pathCopy: "Choose your path.",
+      recommendationsCopy: "A few routes are worth opening next.",
       livePreview: "Live preview",
       livePreviewCopy: "A glimpse of what is being built now.",
       openLive: "Open Live Build",
       followTitle: "Follow the journey.",
       followCopy: "New systems are built every week.",
+      followCardTitle: "We build in public.",
+      followCardCopy: "Follow the journey.",
       currentBuild: "Current Build",
       currentOperator: "Current Operator",
       currentProject: "Current Project",
       progress: "Progress",
       latestDeployment: "Latest deployment",
       estimated: "Estimated completion",
+      lastUpdate: "Last Update",
+      currentFocus: "Current Focus",
+      placeholder: "Placeholder until connected",
       liveTitle: "Live build signal.",
-      liveText: "A quiet window into what DONEOVERNIGHT is building, shipping, and learning.",
+      liveText: "A quiet window into what DONEOVERNIGHT is building, shipping, and learning. Live data connects here next.",
       today: "Today's Progress",
+      recentActivity: "Recent Activity",
       wins: "Latest Wins",
       finished: "Recently Finished",
       upcoming: "Upcoming Builds",
@@ -60,7 +72,7 @@
       description: "Description",
       website: "Website, optional",
       submitIdea: "Submit idea",
-      ideaSaved: "Idea saved locally for the next community builds layer."
+      ideaSaved: "Your idea has been added."
     },
     nl: {
       navLive: "Live",
@@ -78,15 +90,18 @@
       oldWorkflow: "Oude workflow",
       newWorkflow: "Verbonden workflow",
       workflowTitle: "Workflow wordt zichtbaar.",
+      unlockToast: "Ontgrendeld",
+      welcomeBack: "Welkom terug.",
+      continueJourney: "Ga verder.",
       examples: "Kies een wereld.",
       operatorQuestion: "Wat maakt iemand een operator?",
       operatorCopy: "Geen foute antwoorden. Het patroon telt meer dan de score.",
       reflectionOne: "Waar sta je vandaag?",
       reflectionTwo: "Wat zou je als eerste automatiseren?",
       otherPlaceholder: "Typ je eigen antwoord",
-      gateTitle: "Ontgrendel wat er achter de schermen gebeurt.",
-      gateCopy: "Je staat op het punt dit te ontgrendelen:",
-      gateNoSpam: "Dit is geen nieuwsbrief. Geen spam. Alleen echte updates.",
+      gateTitle: "Word onderdeel van het build journal.",
+      gateCopy: "Ontgrendel de private laag van wat DONEOVERNIGHT bouwt.",
+      gateNoSpam: "Geen nieuwsbrief. Een rustig build journal voor mensen die systemen willen zien voordat ze publiek zijn.",
       email: "E-mail",
       name: "Naam, optioneel",
       social: "TikTok / Instagram handle",
@@ -94,20 +109,29 @@
       unlock: "Ontgrendel",
       emailError: "Voer een geldig e-mailadres in om door te gaan.",
       welcome: "Welkom.",
+      pathTitle: "Welkom.",
+      pathCopy: "Kies je pad.",
+      recommendationsCopy: "Een paar routes zijn het openen waard.",
       livePreview: "Live preview",
       livePreviewCopy: "Een glimp van wat nu wordt gebouwd.",
       openLive: "Open Live Build",
       followTitle: "Volg de reis.",
       followCopy: "Elke week worden nieuwe systemen gebouwd.",
+      followCardTitle: "We bouwen publiek.",
+      followCardCopy: "Volg de reis.",
       currentBuild: "Huidige build",
       currentOperator: "Huidige operator",
       currentProject: "Huidig project",
       progress: "Voortgang",
       latestDeployment: "Laatste deployment",
       estimated: "Geschatte oplevering",
+      lastUpdate: "Laatste update",
+      currentFocus: "Huidige focus",
+      placeholder: "Placeholder tot gekoppeld",
       liveTitle: "Live build signaal.",
-      liveText: "Een rustig venster op wat DONEOVERNIGHT bouwt, shipped en leert.",
+      liveText: "Een rustig venster op wat DONEOVERNIGHT bouwt, shipped en leert. Live data wordt hierna gekoppeld.",
       today: "Voortgang vandaag",
+      recentActivity: "Recente activiteit",
       wins: "Laatste wins",
       finished: "Recent afgerond",
       upcoming: "Aankomende builds",
@@ -116,7 +140,7 @@
       description: "Beschrijving",
       website: "Website, optioneel",
       submitIdea: "Verstuur idee",
-      ideaSaved: "Idee lokaal opgeslagen voor de volgende community builds laag."
+      ideaSaved: "Je idee is toegevoegd."
     }
   };
 
@@ -196,24 +220,24 @@
       }
     },
     today: {
-      en: ["Mapped viewer build intake", "Refined bilingual experience layer", "Prepared live status modules"],
-      nl: ["Viewer build intake uitgewerkt", "Tweetalige experience laag verfijnd", "Live status modules voorbereid"]
+      en: ["Waiting for live activity feed", "GitHub connection pending", "Internal status API pending"],
+      nl: ["Wachten op live activity feed", "GitHub koppeling pending", "Interne status API pending"]
     },
     wins: {
-      en: ["New topic architecture shipped", "Mobile story flow verified", "Email gate ready for CRM connection"],
-      nl: ["Nieuwe topic architectuur live", "Mobiele story flow geverifieerd", "Email gate klaar voor CRM koppeling"]
+      en: ["Live wins will appear here", "Deployment events will appear here", "Operator notes will appear here"],
+      nl: ["Live wins verschijnen hier", "Deployment events verschijnen hier", "Operator notes verschijnen hier"]
     },
     finished: {
-      en: ["Systems pages", "Operator application routing", "Ask subdomain flow"],
-      nl: ["Systeempagina's", "Operator apply routing", "Ask subdomein flow"]
+      en: ["Recently finished builds will appear here", "Client-ready systems will appear here", "Public releases will appear here"],
+      nl: ["Recent afgeronde builds verschijnen hier", "Client-ready systemen verschijnen hier", "Publieke releases verschijnen hier"]
     },
     upcoming: {
-      en: ["Public build log", "Community voting", "Operator journal"],
-      nl: ["Publieke build log", "Community voting", "Operator journal"]
+      en: ["Upcoming builds will appear here", "Viewer Builds voting will appear here", "Operator Journal entries will appear here"],
+      nl: ["Aankomende builds verschijnen hier", "Viewer Builds voting verschijnt hier", "Operator Journal entries verschijnen hier"]
     },
     gateItems: {
-      en: ["Behind-the-scenes builds", "Live project updates", "Operator journal", "Viewer Builds", "Architecture breakdowns", "New systems before they are public"],
-      nl: ["Behind-the-scenes builds", "Live project updates", "Operator journal", "Viewer Builds", "Architectuur breakdowns", "Nieuwe systemen voordat ze publiek zijn"]
+      en: ["Live Builds", "Operator Journal", "Viewer Builds", "Private updates", "New systems before they are public", "Architecture breakdowns"],
+      nl: ["Live Builds", "Operator Journal", "Viewer Builds", "Private updates", "Nieuwe systemen voordat ze publiek zijn", "Architectuur breakdowns"]
     },
     reflections: {
       en: ["Building my first project", "Growing a business", "Looking for automation", "Learning AI", "Just exploring", "Planning something bigger"],
@@ -222,17 +246,88 @@
     automate: {
       en: ["Lead generation", "Emails", "Sales", "Administration", "Content", "CRM", "Scheduling", "Customer support", "Other"],
       nl: ["Leadgeneratie", "E-mails", "Sales", "Administratie", "Content", "CRM", "Planning", "Klantenservice", "Anders"]
+    },
+    paths: {
+      en: ["Business Owner", "Operator", "Builder", "Just Curious"],
+      nl: ["Business owner", "Operator", "Builder", "Gewoon nieuwsgierig"]
+    },
+    summaries: {
+      en: [
+        "You think like an operator.",
+        "You naturally think in systems.",
+        "You care about execution.",
+        "You enjoy building.",
+        "You solve before you speak.",
+        "You think long term.",
+        "You look for the hidden workflow.",
+        "You notice where work gets stuck."
+      ],
+      nl: [
+        "Je denkt als een operator.",
+        "Je denkt van nature in systemen.",
+        "Je geeft om executie.",
+        "Je houdt van bouwen.",
+        "Je lost op voordat je praat.",
+        "Je denkt op lange termijn.",
+        "Je ziet de verborgen workflow.",
+        "Je merkt waar werk vastloopt."
+      ]
+    },
+    summarySupport: {
+      en: [
+        "Your answers point toward structure, movement, and practical leverage.",
+        "You followed the parts where ideas become operating systems.",
+        "The useful next step is not more information. It is seeing what can be built.",
+        "You seem drawn to the layer where judgment and systems meet."
+      ],
+      nl: [
+        "Je antwoorden wijzen naar structuur, beweging en praktische leverage.",
+        "Je volgde de delen waar ideeën besturingssystemen worden.",
+        "De nuttige volgende stap is niet meer informatie. Het is zien wat gebouwd kan worden.",
+        "Je lijkt te kijken naar de laag waar oordeel en systemen elkaar raken."
+      ]
+    },
+    recommendations: {
+      business_owner: ["Systems", "Automation", "Business", "Live"],
+      operator: ["Operators", "Systems", "Live", "Architecture"],
+      builder: ["AI", "Architecture", "Systems", "Viewer Builds"],
+      curious: ["Systems", "Automation", "AI", "Business", "Architecture", "Operators", "Live", "Viewer Builds"]
+    },
+    recommendationLabels: {
+      en: {
+        "AI": "AI",
+        "Architecture": "Architecture",
+        "Automation": "Automation",
+        "Business": "Business",
+        "Live": "Live",
+        "Operators": "Operators",
+        "Systems": "Systems",
+        "Viewer Builds": "Viewer Builds"
+      },
+      nl: {
+        "AI": "AI",
+        "Architecture": "Architectuur",
+        "Automation": "Automatisering",
+        "Business": "Business",
+        "Live": "Live",
+        "Operators": "Operators",
+        "Systems": "Systemen",
+        "Viewer Builds": "Viewer Builds"
+      }
     }
   };
 
   const live = {
-    build: "Interactive operating system",
-    operator: "DONEOVERNIGHT Studio",
-    project: "Public experience layer",
+    build: "Awaiting live connection",
+    operator: "Operator feed pending",
+    project: "Project feed pending",
     repository: "doneovernight.com",
-    deployment: "Preview verified",
-    completion: "Tonight",
-    progress: 68
+    deployment: "Deployment feed pending",
+    completion: "Estimate pending",
+    lastUpdate: "No live update connected",
+    focus: "Connect live data",
+    progress: 22,
+    progressLabel: "Pending"
   };
 
   const progression = {
@@ -244,8 +339,11 @@
     operatorTrait: 7,
     reflection: 8,
     automate: 9,
-    gate: 12
+    gate: 10,
+    path: 14
   };
+
+  const progressTotal = 10;
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
@@ -270,6 +368,10 @@
     mountGate();
     mountLivePreview();
     mountViewerBuilds();
+    mountPaths();
+    renderPersonalResult();
+    renderProgress();
+    renderReturnVisitor();
     applyUnlockedSteps();
     bindAutoUnlocks();
   }
@@ -282,6 +384,9 @@
     fill("[data-live='repository']", live.repository);
     fill("[data-live='deployment']", live.deployment);
     fill("[data-live='completion']", live.completion);
+    fill("[data-live='lastUpdate']", live.lastUpdate);
+    fill("[data-live='focus']", live.focus);
+    fill("[data-live='progressLabel']", live.progressLabel);
     const bar = document.querySelector("[data-live-progress]");
     if (bar) bar.style.width = `${live.progress}%`;
     mountList("today-list", data.today[lang]);
@@ -289,6 +394,7 @@
     mountList("finished-list", data.finished[lang]);
     mountList("upcoming-list", data.upcoming[lang]);
     mountViewerBuilds();
+    renderProgress();
   }
 
   function mountChoices(id, items, key, multi) {
@@ -310,13 +416,13 @@
           state[stableKey] = Array.from(next);
           state[key] = Array.from(next).map((item) => items[Number(item.split(":")[1])]).filter(Boolean);
           button.classList.toggle("is-selected");
-          if (next.size > 0 && progression[key]) unlockStep(progression[key]);
+          if (next.size > 0 && progression[key]) completeInteraction(key, progression[key]);
         } else {
           state[stableKey] = [choiceKey];
           state[key] = value;
           root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
           button.classList.add("is-selected");
-          if (progression[key]) unlockStep(progression[key]);
+          if (progression[key]) completeInteraction(key, progression[key]);
         }
         save(storageKey, state);
       });
@@ -355,7 +461,7 @@
         tabs.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
         button.classList.add("is-active");
         renderExample(button.dataset.example);
-        unlockStep(progression.example);
+        completeInteraction("example", progression.example);
       });
     });
     function renderExample(key) {
@@ -379,7 +485,7 @@
         result.classList.add("is-visible");
         result.innerHTML = `<h3>${data.quiz.results[trait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
         result.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 380, easing: "ease-out" });
-        unlockStep(progression.operatorTrait);
+        completeInteraction("operatorTrait", progression.operatorTrait);
       });
     });
     if (state.operatorTrait) {
@@ -433,6 +539,8 @@
       save(emailKey, payload);
       note.textContent = copy[lang].welcome;
       note.classList.add("is-success");
+      markComplete("gate");
+      showReward();
       unlockGate(true);
     };
   }
@@ -443,6 +551,7 @@
     fill("[data-preview='project']", live.project);
     fill("[data-preview='deployment']", live.deployment);
     fill("[data-preview='completion']", live.completion);
+    fill("[data-preview='progressLabel']", live.progressLabel);
     const bar = document.querySelector("[data-preview-progress]");
     if (bar) bar.style.width = `${live.progress}%`;
   }
@@ -471,6 +580,7 @@
         note.textContent = copy[lang].ideaSaved;
         note.classList.add("is-success");
       }
+      showReward();
     };
   }
 
@@ -481,8 +591,71 @@
     input.oninput = () => {
       state.automationOther = input.value.trim();
       save(storageKey, state);
-      if (state.automationOther) unlockStep(progression.automate);
+      if (state.automationOther) completeInteraction("automate", progression.automate);
     };
+  }
+
+  function mountPaths() {
+    const root = document.getElementById("path-grid");
+    if (!root) return;
+    const keys = ["business_owner", "operator", "builder", "curious"];
+    root.innerHTML = data.paths[lang].map((label, index) => {
+      const key = keys[index];
+      return `<button class="choice-card ${state.path === key ? "is-selected" : ""}" type="button" data-path="${key}"><span>${label}</span><span></span></button>`;
+    }).join("");
+    root.querySelectorAll("button").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.path = button.dataset.path;
+        save(storageKey, state);
+        root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
+        button.classList.add("is-selected");
+        renderPersonalResult();
+        completePath();
+      });
+    });
+  }
+
+  function renderPersonalResult() {
+    const title = document.getElementById("personal-title");
+    const body = document.getElementById("personal-copy");
+    const grid = document.getElementById("recommendation-grid");
+    if (!title || !body || !grid) return;
+    const summaryIndex = summarySeed() % data.summaries[lang].length;
+    const supportIndex = (summarySeed() + 3) % data.summarySupport[lang].length;
+    title.textContent = data.summaries[lang][summaryIndex];
+    body.textContent = data.summarySupport[lang][supportIndex];
+    const labels = recommendationLabels(state.path || "curious");
+    grid.innerHTML = labels.map((label) => `<a class="recommendation-card" href="${recommendationHref(label)}"><span>${data.recommendationLabels[lang][label] || label}</span><small>${copy[lang].recommendationsCopy}</small></a>`).join("");
+  }
+
+  function recommendationLabels(path) {
+    return data.recommendations[path] || data.recommendations.curious;
+  }
+
+  function recommendationHref(label) {
+    const map = {
+      "AI": "/ai",
+      "Architecture": "/architecture",
+      "Automation": "/automation",
+      "Business": "/business",
+      "Live": "/live",
+      "Operators": "/operators",
+      "Systems": "/systems",
+      "Viewer Builds": "/live#viewer-builds"
+    };
+    return map[label] || "/live";
+  }
+
+  function summarySeed() {
+    const source = [
+      state.discover,
+      (state.interests || []).join(","),
+      state.operatorTrait,
+      state.reflection,
+      (state.automate || []).join(","),
+      state.path
+    ].join("|");
+    return Array.from(source || "doneovernight").reduce((sum, char) => sum + char.charCodeAt(0), 0);
   }
 
   function applyLanguage() {
@@ -530,6 +703,7 @@
 
   function normalizeProgress() {
     state.unlockedStep = Math.max(1, Number(state.unlockedStep) || 1);
+    state.completed = Array.isArray(state.completed) ? state.completed : [];
     migrateChoice("discover", data.discover);
     migrateChoice("interests", data.interests);
     migrateChoice("reflection", data.reflections);
@@ -541,6 +715,7 @@
     if ((state.reflectionKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.reflection);
     if ((state.automateKeys || []).length || state.automationOther) state.unlockedStep = Math.max(state.unlockedStep, progression.automate);
     if (savedEmail) state.unlockedStep = Math.max(state.unlockedStep, progression.gate);
+    if (state.path) state.unlockedStep = Math.max(state.unlockedStep, progression.path);
     save(storageKey, state);
   }
 
@@ -569,6 +744,7 @@
     state.unlockedStep = next;
     save(storageKey, state);
     applyUnlockedSteps();
+    renderProgress();
     const target = document.querySelector(`[data-step="${step}"]`);
     if (target) {
       target.classList.add("is-unlocking");
@@ -582,11 +758,27 @@
     state.unlockedStep = next;
     save(storageKey, state);
     applyUnlockedSteps();
+    renderProgress();
     const target = document.querySelector('[data-step="10"]');
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
       if (scroll) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 900);
+    }
+  }
+
+  function completePath() {
+    markComplete("path");
+    state.unlockedStep = Math.max(Number(state.unlockedStep) || 1, progression.path);
+    save(storageKey, state);
+    applyUnlockedSteps();
+    renderProgress();
+    showReward();
+    const target = document.querySelector('[data-step="11"]');
+    if (target) {
+      target.classList.add("is-unlocking");
+      setTimeout(() => target.classList.remove("is-unlocking"), 800);
+      setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
     }
   }
 
@@ -601,7 +793,7 @@
         if (!section || section.hidden) return;
         const rect = section.getBoundingClientRect();
         if (rect.top < window.innerHeight * 0.72 && rect.bottom > window.innerHeight * 0.18) {
-          unlockStep(unlockTo, false);
+          completeInteraction(step === "3" ? "story" : "workflow", unlockTo, false);
         }
       });
     };
@@ -615,13 +807,62 @@
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         const found = bindings.find(([step]) => entry.target.dataset.step === step);
-        if (found) unlockStep(found[1], false);
+        if (found) completeInteraction(found[0] === "3" ? "story" : "workflow", found[1], false);
       });
     }, { threshold: 0.45 });
     bindings.forEach(([step]) => {
       const section = document.querySelector(`[data-step="${step}"]`);
       if (section) observer.observe(section);
     });
+  }
+
+  function completeInteraction(key, nextStep, scroll = true) {
+    markComplete(key);
+    unlockStep(nextStep, scroll);
+    showReward();
+  }
+
+  function markComplete(key) {
+    state.completed = Array.isArray(state.completed) ? state.completed : [];
+    if (!state.completed.includes(key)) state.completed.push(key);
+    save(storageKey, state);
+    renderProgress();
+  }
+
+  function renderProgress() {
+    const root = document.getElementById("experience-progress");
+    if (!root) return;
+    const completed = Math.min(progressTotal, (state.completed || []).length);
+    root.innerHTML = Array.from({ length: progressTotal }, (_, index) => `<span class="${index < completed ? "is-filled" : ""}"></span>`).join("");
+    root.setAttribute("aria-label", `${completed} / ${progressTotal}`);
+  }
+
+  function showReward() {
+    const toast = document.getElementById("unlock-toast");
+    if (!toast) return;
+    toast.textContent = copy[lang].unlockToast;
+    toast.classList.remove("is-visible");
+    void toast.offsetWidth;
+    toast.classList.add("is-visible");
+    document.body.classList.add("has-reward");
+    if ("vibrate" in navigator) {
+      try { navigator.vibrate(12); } catch (error) {}
+    }
+    window.clearTimeout(window.__doneOvernightToastTimer);
+    window.__doneOvernightToastTimer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+      document.body.classList.remove("has-reward");
+    }, 1100);
+  }
+
+  function renderReturnVisitor() {
+    const note = document.getElementById("return-note");
+    if (!note) return;
+    const completed = (state.completed || []).length;
+    if (!completed) return;
+    const pct = Math.min(100, Math.round((completed / progressTotal) * 100));
+    note.hidden = false;
+    note.textContent = `${copy[lang].welcomeBack} ${pct}% ${copy[lang].continueJourney}`;
   }
 
   function mountList(id, items) {

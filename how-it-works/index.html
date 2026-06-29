@@ -37,16 +37,19 @@
   <div class="grain"></div>
   <nav class="experience-nav" aria-label="Experience">
     <a class="experience-brand" href="/"><img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
+    <div class="experience-progress" id="experience-progress" aria-label="Progress"></div>
     <div class="language-switch" aria-label="Language">
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="nl">NL</button>
     </div>
   </nav>
+  <div class="unlock-toast" id="unlock-toast" role="status" aria-live="polite"></div>
 
   <main class="experience-shell">
     <section class="experience-hero">
       <span class="eyebrow" data-i18n="entryKicker">DONEOVERNIGHT</span>
       <h1 class="display" data-i18n="entryTitle">Every business becomes software eventually.</h1>
+      <p class="return-note" id="return-note" hidden></p>
       <p class="lede" data-i18n="entryText">Let's show you how.</p>
       <a class="scroll-cue" href="#discover" data-i18n="scroll">Scroll</a>
     </section>
@@ -137,12 +140,12 @@
     <section class="experience-step" data-step="9" hidden>
       <div class="step-head reveal">
         <span class="step-number">09</span>
-        <h2 class="step-title" data-i18n="gateTitle">Unlock what happens behind the surface.</h2>
+        <h2 class="step-title" data-i18n="gateTitle">Join the build journal.</h2>
       </div>
       <article class="gate-panel">
-        <p class="step-copy" data-i18n="gateCopy">You are about to unlock:</p>
+        <p class="step-copy" data-i18n="gateCopy">Unlock the private layer of what DONEOVERNIGHT is building.</p>
         <ul class="gate-list" id="gate-list"></ul>
-        <p class="step-copy" data-i18n="gateNoSpam">This is not a newsletter. No spam. Only real updates.</p>
+        <p class="step-copy" data-i18n="gateNoSpam">Not a newsletter. A quiet build journal for people who want to see systems before they are public.</p>
         <form id="email-form" novalidate>
           <input class="text-field" name="email" type="email" autocomplete="email" required placeholder="Email">
           <input class="text-field" name="name" type="text" autocomplete="name" placeholder="Name, optional">
@@ -157,6 +160,24 @@
     <section class="experience-step" id="after-gate" data-after-gate data-step="10" hidden>
       <div class="step-head reveal">
         <span class="step-number">10</span>
+        <h2 class="step-title" data-i18n="pathTitle">Welcome.</h2>
+        <p class="step-copy" data-i18n="pathCopy">Choose your path.</p>
+      </div>
+      <div class="choice-grid" id="path-grid" aria-label="Path"></div>
+    </section>
+
+    <section class="experience-step" data-after-gate data-step="11" hidden>
+      <div class="step-head reveal">
+        <span class="step-number">11</span>
+        <h2 class="step-title" id="personal-title">You think in systems.</h2>
+        <p class="step-copy" id="personal-copy">A few routes are worth opening next.</p>
+      </div>
+      <div class="recommendation-grid" id="recommendation-grid"></div>
+    </section>
+
+    <section class="experience-step" data-after-gate data-step="12" hidden>
+      <div class="step-head reveal">
+        <span class="step-number">12</span>
         <h2 class="step-title" data-i18n="livePreview">Live preview</h2>
         <p class="step-copy" data-i18n="livePreviewCopy">A glimpse of what is being built now.</p>
       </div>
@@ -167,13 +188,13 @@
           <div class="signal-card"><span data-i18n="currentProject">Current Project</span><strong data-preview="project">Public experience layer</strong></div>
           <div class="signal-card"><span data-i18n="latestDeployment">Latest deployment</span><strong data-preview="deployment">Preview verified</strong></div>
           <div class="signal-card"><span data-i18n="estimated">Estimated completion</span><strong data-preview="completion">Tonight</strong></div>
-          <div class="signal-card"><span data-i18n="progress">Progress</span><strong>68%</strong><div class="progress-line"><i data-preview-progress></i></div></div>
+          <div class="signal-card"><span data-i18n="progress">Progress</span><strong data-preview="progressLabel">Pending</strong><div class="progress-line"><i data-preview-progress></i></div></div>
         </div>
         <a class="open-live" href="/live" data-i18n="openLive">Open Live Build</a>
       </article>
     </section>
 
-    <section class="experience-step" data-after-gate data-step="11" hidden>
+    <section class="experience-step" id="viewer-builds" data-after-gate data-step="13" hidden>
       <div class="step-head reveal">
         <span class="step-number">Viewer Builds</span>
         <h2 class="step-title" data-i18n="viewerTitle">What should DONEOVERNIGHT build next?</h2>
@@ -190,10 +211,14 @@
       </article>
     </section>
 
-    <section class="experience-step follow-screen" data-after-gate data-step="12" hidden>
+    <section class="experience-step follow-screen" data-after-gate data-step="14" hidden>
       <span class="eyebrow">TikTok</span>
       <h2 class="step-title" data-i18n="followTitle">Follow the journey.</h2>
-      <button class="follow-plus" type="button" onclick="window.location.href='https://www.tiktok.com/@doneovernight'" aria-label="Follow DONEOVERNIGHT on TikTok">+</button>
+      <button class="follow-card" type="button" onclick="window.location.href='https://www.tiktok.com/@doneovernight'" aria-label="Follow DONEOVERNIGHT on TikTok">
+        <span class="follow-mark">+</span>
+        <span data-i18n="followCardTitle">We build in public.</span>
+        <small data-i18n="followCardCopy">Follow the journey.</small>
+      </button>
       <p class="step-copy" data-i18n="followCopy">New systems are built every week.</p>
     </section>
   </main>
