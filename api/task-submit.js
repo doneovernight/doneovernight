@@ -34,6 +34,7 @@ const {
   saveFollowEvent,
   saveShareEvent,
   savePageEvent,
+  saveLiveStatus,
   getPlatformSnapshot
 } = require("../lib/platform-store");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
@@ -1226,6 +1227,14 @@ function isPlatformDataRequest(req) {
     String(req.url || "").includes("/api/platform-data");
 }
 
+function isLiveStatusRequest(req, input = {}) {
+  return String(req.url || "").includes("live_status=1") ||
+    String(req.url || "").includes("/api/live-status") ||
+    input.action === "live_status_update" ||
+    input.intent === "live_status_update" ||
+    input.event === "live_status_update";
+}
+
 function platformClientContext(req) {
   return {
     userAgent: req.headers["user-agent"] || "",
@@ -1484,7 +1493,8 @@ function buildHqPlatformSnapshot(snapshot) {
     recent_activity: pages.slice(0, 10),
     recent_builds: snapshot.viewer_builds.rows.slice(0, 8),
     recent_resources: snapshot.resource_interest.rows.slice(0, 8),
-    recent_journal_entries: snapshot.journal.rows.slice(0, 8)
+    recent_journal_entries: snapshot.journal.rows.slice(0, 8),
+    current_live_status: snapshot.live_status.rows[0] || null
   };
 }
 
@@ -1543,6 +1553,19 @@ async function handlePlatformDataRequest(req, res) {
   }
 
   return send(res, 200, { ok: true, view: "live", ...buildLivePlatformSnapshot(snapshot) });
+}
+
+async function handleLiveStatusUpdateRequest(req, res, input = {}) {
+  const auth = requireHqAccess(req);
+  if (!auth.ok) return send(res, 401, { ok: false, saved: false, error: auth.reason });
+  const result = await saveLiveStatus(input);
+  return send(res, result.saved ? 200 : 503, {
+    ok: result.saved === true,
+    saved: result.saved === true,
+    status: result.status,
+    reason: result.reason || "",
+    live_status: result.record || null
+  });
 }
 
 async function handleJourneyConfirmationRequest(req, res, input = {}) {
@@ -2027,6 +2050,10 @@ module.exports = async function handler(req, res) {
     const input = await parseBody(req);
     if (isJourneyConfirmationRequest(req, input)) {
       return handleJourneyConfirmationRequest(req, res, input);
+    }
+
+    if (isLiveStatusRequest(req, input)) {
+      return handleLiveStatusUpdateRequest(req, res, input);
     }
 
     if (isPlatformEventsRequest(req, input)) {

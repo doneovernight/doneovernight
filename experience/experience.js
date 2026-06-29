@@ -2317,6 +2317,7 @@
     const row = data.live_status;
     fill("[data-live='build']", row.current_build || live.build);
     fill("[data-live='operator']", row.current_operator || live.operator);
+    fill("[data-live='project']", row.current_project || row.current_client || live.project);
     fill("[data-live='repository']", row.current_repository || live.repository);
     fill("[data-live='branch']", row.current_branch || live.branch);
     fill("[data-live='commit']", row.current_commit || live.commit);
@@ -2420,7 +2421,9 @@
         ${hqList("Recent Resources", (data.recent_resources || []).map((item) => ({ label: item.resource, count: item.status || "notify" })))}
         ${hqList("Recent Journal Entries", (data.recent_journal_entries || []).map((item) => ({ label: item.title, count: item.entry_type || "entry" })))}
       </section>
+      ${liveStatusForm(data.current_live_status || {})}
     `;
+    bindLiveStatusForm();
   }
 
   function hqMetric(label, value) {
@@ -2430,6 +2433,76 @@
   function hqList(label, items = []) {
     const rows = items.length ? items : [{ label: "Waiting for platform signal", count: "" }];
     return `<article class="activity-card wide"><h2>${label}</h2><ul>${rows.map((item) => `<li>${escapeHtml(item.label || "")}${item.count !== "" && item.count !== undefined ? ` <span>${escapeHtml(String(item.count))}</span>` : ""}</li>`).join("")}</ul></article>`;
+  }
+
+  function liveStatusForm(status = {}) {
+    const progress = status.progress_percentage || "";
+    return `
+      <section class="viewer-panel live-status-writer" aria-label="Live status writer">
+        <div class="step-head">
+          <span class="step-number">Internal</span>
+          <h2 class="step-title">Live Status.</h2>
+          <p class="step-copy">Update the current build signal. Empty fields stay calm on Live.</p>
+        </div>
+        <form id="live-status-form" class="live-status-form">
+          ${liveStatusInput("current_build", "Current build", status.current_build)}
+          ${liveStatusInput("current_operator", "Current operator", status.current_operator)}
+          ${liveStatusInput("current_project", "Current project", status.current_project || status.current_client)}
+          ${liveStatusInput("latest_deployment", "Latest deployment", status.latest_deployment)}
+          ${liveStatusInput("estimated_completion", "Estimated completion", status.estimated_completion)}
+          ${liveStatusInput("progress", "Progress", status.current_progress || progress)}
+          ${liveStatusInput("current_branch", "Current branch", status.current_branch)}
+          ${liveStatusInput("current_commit", "Current commit", status.current_commit)}
+          ${liveStatusInput("heartbeat", "Heartbeat", status.heartbeat)}
+          ${liveStatusInput("repository_status", "Repository status", status.repository_status)}
+          ${liveStatusInput("last_update", "Last update", status.updated_at)}
+          ${liveStatusInput("current_focus", "Current focus", status.current_focus)}
+          <button class="quiet-action" type="submit">Update Live</button>
+          <div class="form-note" id="live-status-note" aria-live="polite"></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function liveStatusInput(name, label, value = "") {
+    return `<label class="field-label">${escapeHtml(label)}<input class="text-field" name="${escapeAttr(name)}" value="${escapeAttr(value || "")}"></label>`;
+  }
+
+  function bindLiveStatusForm() {
+    const form = document.getElementById("live-status-form");
+    const note = document.getElementById("live-status-note");
+    if (!form) return;
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      const token = read("doneovernight.hqAccess.v1", "");
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const progressNumber = Number(payload.progress);
+      if (Number.isFinite(progressNumber)) payload.progress_percentage = progressNumber;
+      if (note) {
+        note.textContent = "Updating live status...";
+        note.classList.remove("is-success");
+      }
+      try {
+        const response = await fetch("/api/live-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "x-hq-access-token": token
+          },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.saved !== true) throw new Error(result.reason || result.error || "live_status_failed");
+        if (note) {
+          note.textContent = "Live status updated.";
+          note.classList.add("is-success");
+        }
+        showReward("Live updated.");
+      } catch (error) {
+        if (note) note.textContent = "Live status could not be updated.";
+      }
+    };
   }
 
   function mountList(id, items) {
