@@ -39,6 +39,7 @@
       social: "TikTok / Instagram handle",
       socialPlaceholder: "@yourname",
       unlock: "Unlock",
+      continue: "Continue",
       emailError: "Enter a valid email to continue.",
       welcome: "Welcome.",
       pathTitle: "Welcome.",
@@ -116,6 +117,7 @@
       social: "TikTok / Instagram handle",
       socialPlaceholder: "@jouwnaam",
       unlock: "Ontgrendel",
+      continue: "Ga verder",
       emailError: "Voer een geldig e-mailadres in om door te gaan.",
       welcome: "Welkom.",
       pathTitle: "Welkom.",
@@ -396,6 +398,7 @@
     renderPersonalResult();
     bindResultActions();
     bindNextUnlocks();
+    bindChoiceContinues();
     renderProgress();
     renderReturnVisitor();
     applyUnlockedSteps();
@@ -442,7 +445,6 @@
           state[stableKey] = Array.from(next);
           state[key] = Array.from(next).map((item) => items[Number(item.split(":")[1])]).filter(Boolean);
           button.classList.toggle("is-selected");
-          if (next.size > 0 && progression[key]) completeInteraction(key, progression[key]);
         } else {
           state[stableKey] = [choiceKey];
           state[key] = value;
@@ -508,6 +510,8 @@
         const trait = button.dataset.trait;
         state.operatorTrait = trait;
         save(storageKey, state);
+        root.querySelectorAll("button").forEach((item) => item.classList.remove("is-selected"));
+        button.classList.add("is-selected");
         result.classList.add("is-visible");
         result.innerHTML = `<h3>${data.quiz.results[trait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
         result.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 380, easing: "ease-out" });
@@ -515,6 +519,9 @@
       });
     });
     if (state.operatorTrait) {
+      root.querySelectorAll("button").forEach((button) => {
+        button.classList.toggle("is-selected", button.dataset.trait === state.operatorTrait);
+      });
       result.classList.add("is-visible");
       result.innerHTML = `<h3>${data.quiz.results[state.operatorTrait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
     }
@@ -620,7 +627,6 @@
     input.oninput = () => {
       state.automationOther = input.value.trim();
       save(storageKey, state);
-      if (state.automationOther) completeInteraction("automate", progression.automate);
     };
   }
 
@@ -653,8 +659,24 @@
     const supportIndex = (summarySeed() + 3) % data.summarySupport[lang].length;
     title.textContent = data.summaries[lang][summaryIndex];
     body.textContent = data.summarySupport[lang][supportIndex];
+    fill("#final-title", title.textContent);
+    fill("#final-copy", body.textContent);
     const labels = recommendationLabels(state.path || "curious");
     grid.innerHTML = labels.map((label) => `<a class="recommendation-card" href="${recommendationHref(label)}"><span>${data.recommendationLabels[lang][label] || label}</span><small>${copy[lang].recommendationsCopy}</small></a>`).join("");
+  }
+
+  function bindChoiceContinues() {
+    document.querySelectorAll("[data-continue-choice]").forEach((button) => {
+      button.onclick = () => {
+        const key = button.dataset.continueChoice;
+        const selected = state[`${key}Keys`] || [];
+        if (key === "automate" && state.automationOther) {
+          completeInteraction(key, progression[key]);
+          return;
+        }
+        if (selected.length && progression[key]) completeInteraction(key, progression[key]);
+      };
+    });
   }
 
   function bindResultActions() {
