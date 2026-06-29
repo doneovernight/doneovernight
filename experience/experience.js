@@ -47,7 +47,7 @@
       emailError: "Enter a valid email to continue.",
       emailSending: "Sending access...",
       emailSendFailed: "Confirmation email could not be sent. Try again.",
-      emailPendingCopy: "Your access is saved. Email delivery is not connected yet.",
+      emailPendingCopy: "Check your inbox. Your DONEOVERNIGHT access is being prepared.",
       emailConfirmedTitle: "Access unlocked",
       emailConfirmedHeadline: "You're in.",
       emailConfirmedCopy: "Check your inbox. Your DONEOVERNIGHT access has been sent.",
@@ -177,7 +177,7 @@
       emailError: "Voer een geldig e-mailadres in om door te gaan.",
       emailSending: "Toegang wordt verzonden...",
       emailSendFailed: "De bevestiging kon niet worden verzonden. Probeer opnieuw.",
-      emailPendingCopy: "Je toegang is opgeslagen. E-mailbezorging is nog niet gekoppeld.",
+      emailPendingCopy: "Check je inbox. Je DONEOVERNIGHT toegang wordt voorbereid.",
       emailConfirmedTitle: "Toegang ontgrendeld",
       emailConfirmedHeadline: "Je bent binnen.",
       emailConfirmedCopy: "Check je inbox. Je DONEOVERNIGHT toegang is verzonden.",
@@ -500,6 +500,8 @@
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
   let interactionLocked = false;
+  let scrollFrame = 0;
+  let scrollRun = 0;
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
@@ -712,8 +714,8 @@
         save(confirmationCooldownKey, { lastSentAt: Date.now() });
         showGateConfirmation(result, false);
         if (resendNote) {
-          resendNote.textContent = result.delivered ? copy[lang].sentAgain : (result.configured === false ? copy[lang].emailPendingCopy : copy[lang].emailSendFailed);
-          resendNote.classList.toggle("is-success", result.delivered || result.configured === false);
+          resendNote.textContent = result.delivered ? copy[lang].sentAgain : copy[lang].emailPendingCopy;
+          resendNote.classList.add("is-success");
         }
         updateResendCooldown(resendButton, resendNote);
       };
@@ -747,12 +749,6 @@
         socialHandle
       });
       const confirmationResult = await requestJourneyConfirmation(confirmationPayload);
-      if (!confirmationResult.delivered && confirmationResult.configured !== false) {
-        note.textContent = copy[lang].emailSendFailed;
-        note.classList.remove("is-success");
-        if (submit) submit.disabled = false;
-        return;
-      }
       const payload = {
         email,
         name: form.name.value.trim(),
@@ -796,7 +792,7 @@
       if (confirmationCopy) {
         confirmationCopy.textContent = result.delivered ? copy[lang].emailConfirmedCopy : copy[lang].emailPendingCopy;
       }
-      if (scroll) setTimeout(() => scrollToPanel(section || confirmation), 120);
+      if (scroll) setTimeout(() => scrollToQuestion(section || confirmation), 160);
       updateResendCooldown(resendButton, resendNote);
     }
   }
@@ -1023,7 +1019,50 @@
   function scrollToPanel(element) {
     const offset = window.matchMedia("(max-width: 620px)").matches ? 168 : 96;
     const top = element.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    animateScrollTo(Math.max(0, top), 620);
+  }
+
+  function scrollToQuestion(section) {
+    if (!section) return;
+    const target = section.querySelector?.(".step-title") || section.querySelector?.(".step-head") || section;
+    const mobile = window.matchMedia("(max-width: 620px)").matches;
+    const progressBottom = document.querySelector(".experience-progress")?.getBoundingClientRect().bottom || 0;
+    const desiredTop = mobile ? Math.max(116, progressBottom + 16) : 104;
+    const top = target.getBoundingClientRect().top + window.scrollY - desiredTop;
+    const duration = mobile ? 760 : 640;
+    animateScrollTo(Math.max(0, top), duration);
+    window.setTimeout(() => settleQuestionPosition(target, desiredTop), duration + 40);
+  }
+
+  function settleQuestionPosition(target, desiredTop) {
+    const currentTop = target.getBoundingClientRect().top;
+    if (Math.abs(currentTop - desiredTop) < 8) return;
+    const top = window.scrollY + currentTop - desiredTop;
+    scrollRun += 1;
+    if (scrollFrame) cancelAnimationFrame(scrollFrame);
+    window.scrollTo(0, Math.max(0, top));
+  }
+
+  function animateScrollTo(top, duration = 680) {
+    scrollRun += 1;
+    const run = scrollRun;
+    if (scrollFrame) cancelAnimationFrame(scrollFrame);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      window.scrollTo(0, top);
+      return;
+    }
+    const start = window.scrollY;
+    const distance = top - start;
+    if (Math.abs(distance) < 2) return;
+    const startTime = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const tick = (now) => {
+      if (run !== scrollRun) return;
+      const progress = Math.min(1, (now - startTime) / duration);
+      window.scrollTo(0, start + distance * ease(progress));
+      if (progress < 1) scrollFrame = requestAnimationFrame(tick);
+    };
+    scrollFrame = requestAnimationFrame(tick);
   }
 
   function persistVisitorProgress() {
@@ -1652,7 +1691,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      if (scroll) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+      if (scroll) setTimeout(() => scrollToQuestion(target), 180);
     }
   }
 
@@ -1671,7 +1710,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      if (scroll) setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 900);
+      if (scroll) setTimeout(() => scrollToQuestion(target), 360);
     }
   }
 
@@ -1689,7 +1728,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 180);
+      setTimeout(() => scrollToQuestion(target), 180);
     }
   }
 

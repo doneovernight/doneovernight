@@ -90,6 +90,7 @@ img, svg { display: block; max-width: 100%; }
 .language-switch {
   pointer-events: auto;
   flex: 0 0 auto;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -108,7 +109,10 @@ img, svg { display: block; max-width: 100%; }
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.16em;
-  transition: background 0.25s, color 0.25s;
+  transition: background 0.32s cubic-bezier(0.22, 1, 0.36, 1), color 0.32s cubic-bezier(0.22, 1, 0.36, 1), transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.language-switch button:active {
+  transform: scale(0.96);
 }
 .language-switch button.is-active {
   background: rgba(233, 196, 138, 0.12);
@@ -116,7 +120,11 @@ img, svg { display: block; max-width: 100%; }
 }
 .experience-progress {
   pointer-events: none;
-  display: inline-flex;
+  position: fixed;
+  top: 74px;
+  left: clamp(24px, 6vw, 92px);
+  right: clamp(24px, 6vw, 92px);
+  display: flex;
   align-items: center;
   gap: 5px;
   padding: 8px 10px;
@@ -126,11 +134,13 @@ img, svg { display: block; max-width: 100%; }
   backdrop-filter: blur(18px);
 }
 .experience-progress span {
-  width: clamp(12px, 1.2vw, 22px);
+  flex: 1 1 0;
+  min-width: 10px;
+  width: auto;
   height: 4px;
   border-radius: 999px;
   background: rgba(245, 241, 234, 0.16);
-  transition: background 0.45s ease, box-shadow 0.45s ease, transform 0.45s ease;
+  transition: background 0.58s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.58s cubic-bezier(0.22, 1, 0.36, 1), transform 0.58s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.58s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .experience-progress span.is-filled {
   background: linear-gradient(90deg, var(--amber), rgba(245,241,234,0.86));
@@ -226,6 +236,7 @@ body.has-reward .experience-progress {
   justify-content: center;
   border-top: 1px solid var(--line);
   scroll-margin-top: 128px;
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .experience-step[hidden] {
   display: none;
@@ -241,6 +252,7 @@ body.has-reward .experience-progress {
   justify-content: center;
   opacity: 0.62;
   pointer-events: none;
+  animation: completeSettle 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .experience-step.is-complete .step-head {
   margin-bottom: 0;
@@ -286,7 +298,7 @@ body.has-reward .experience-progress {
   display: none;
 }
 .experience-step.is-unlocking {
-  animation: stepUnlock 0.7s ease both;
+  animation: stepUnlock 0.92s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .step-head {
   margin-bottom: clamp(32px, 6vw, 66px);
@@ -1217,8 +1229,12 @@ textarea.text-field {
   50% { transform: scale(1.36); opacity: 0.7; }
 }
 @keyframes stepUnlock {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; filter: blur(10px); transform: translateY(18px); }
+  to { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes completeSettle {
+  from { opacity: 1; filter: blur(0); }
+  to { opacity: 0.62; filter: blur(0); }
 }
 @keyframes driftOut {
   0%, 25% { opacity: 1; transform: translateX(0); }
@@ -1253,28 +1269,33 @@ textarea.text-field {
   }
   .language-switch {
     position: fixed;
-    top: 48px;
-    left: 18px;
-    right: auto;
+    top: 18px;
+    left: auto;
+    right: 18px;
     transform: scale(0.92);
-    transform-origin: left top;
+    transform-origin: right top;
     background: rgba(245, 241, 234, 0.055);
   }
   .experience-progress {
     position: fixed;
-    top: 94px;
-    left: 18px;
-    max-width: calc(100vw - 36px);
+    top: 72px;
+    left: 24px;
+    right: 24px;
+    max-width: none;
     padding: 7px 9px;
   }
   .experience-progress span {
-    width: 14px;
+    width: auto;
   }
   .experience-hero,
   .experience-step,
   .live-page {
     padding-left: 24px;
     padding-right: 24px;
+  }
+  .experience-step.is-active {
+    min-height: calc(100svh + 96px);
+    justify-content: flex-start;
   }
   .choice-grid,
   .quiz-options {
