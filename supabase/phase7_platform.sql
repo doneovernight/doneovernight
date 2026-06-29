@@ -251,3 +251,19 @@ alter table public.email_events enable row level security;
 alter table public.follow_events enable row level security;
 alter table public.page_events enable row level security;
 alter table public.share_events enable row level security;
+
+grant usage on schema public to service_role;
+
+grant select, insert, update, delete on table public.journey_confirmations to service_role;
+grant select, insert, update, delete on table public.journeys to service_role;
+grant select, insert, update, delete on table public.visitor_progress to service_role;
+grant select, insert, update, delete on table public.viewer_builds to service_role;
+grant select, insert, update, delete on table public.resource_interest to service_role;
+grant select, insert, update, delete on table public.journal to service_role;
+grant select, insert, update, delete on table public.live_status to service_role;
+grant select, insert, update, delete on table public.email_events to service_role;
+grant select, insert, update, delete on table public.follow_events to service_role;
+grant select, insert, update, delete on table public.page_events to service_role;
+grant select, insert, update, delete on table public.share_events to service_role;
+
+grant usage, select on all sequences in schema public to service_role;
