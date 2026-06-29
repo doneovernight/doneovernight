@@ -331,6 +331,7 @@
   };
 
   const progression = {
+    first: 1,
     discover: 2,
     interests: 3,
     story: 4,
@@ -340,10 +341,15 @@
     reflection: 8,
     automate: 9,
     gate: 10,
-    path: 14
+    path: 11,
+    recommendations: 12,
+    livePreview: 13,
+    viewerBuilds: 14
   };
 
   const progressTotal = 10;
+  let renderedActiveStep = null;
+  let activeStepReadyAt = Date.now();
 
   document.addEventListener("DOMContentLoaded", () => {
     applyLanguage();
@@ -580,7 +586,7 @@
         note.textContent = copy[lang].ideaSaved;
         note.classList.add("is-success");
       }
-      showReward();
+      completeInteraction("viewerBuilds", progression.viewerBuilds);
     };
   }
 
@@ -703,6 +709,8 @@
 
   function normalizeProgress() {
     state.unlockedStep = Math.max(1, Number(state.unlockedStep) || 1);
+    const hadActiveStep = Number.isFinite(Number(state.activeStep)) && Number(state.activeStep) > 0;
+    state.activeStep = hadActiveStep ? Math.max(1, Number(state.activeStep)) : 1;
     state.completed = Array.isArray(state.completed) ? state.completed : [];
     migrateChoice("discover", data.discover);
     migrateChoice("interests", data.interests);
@@ -710,12 +718,24 @@
     migrateChoice("automate", data.automate);
     if ((state.discoverKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.discover);
     if ((state.interestsKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.interests);
+    if ((state.completed || []).includes("story")) state.unlockedStep = Math.max(state.unlockedStep, progression.story);
+    if ((state.completed || []).includes("workflow")) state.unlockedStep = Math.max(state.unlockedStep, progression.workflow);
     if (state.example) state.unlockedStep = Math.max(state.unlockedStep, progression.example);
     if (state.operatorTrait) state.unlockedStep = Math.max(state.unlockedStep, progression.operatorTrait);
     if ((state.reflectionKeys || []).length) state.unlockedStep = Math.max(state.unlockedStep, progression.reflection);
     if ((state.automateKeys || []).length || state.automationOther) state.unlockedStep = Math.max(state.unlockedStep, progression.automate);
     if (savedEmail) state.unlockedStep = Math.max(state.unlockedStep, progression.gate);
-    if (state.path) state.unlockedStep = Math.max(state.unlockedStep, progression.path);
+    if (state.path) state.unlockedStep = Math.max(state.unlockedStep, progression.viewerBuilds);
+    if (!hadActiveStep) {
+      if (state.path) {
+        state.activeStep = progression.path;
+      } else if (savedEmail) {
+        state.activeStep = progression.gate;
+      } else {
+        state.activeStep = Math.min(state.unlockedStep, progression.gate - 1);
+      }
+    }
+    state.activeStep = Math.min(Math.max(1, state.activeStep), Math.max(1, state.unlockedStep));
     save(storageKey, state);
   }
 
@@ -731,17 +751,28 @@
   }
 
   function applyUnlockedSteps() {
-    const unlocked = Number(state.unlockedStep) || 1;
+    const active = Math.max(1, Number(state.activeStep) || 1);
+    if (renderedActiveStep !== active) {
+      renderedActiveStep = active;
+      activeStepReadyAt = Date.now() + 1600;
+    }
     document.querySelectorAll("[data-step]").forEach((section) => {
       const step = Number(section.dataset.step);
-      section.hidden = step > unlocked;
+      section.hidden = step > active;
+      section.classList.toggle("is-active", step === active);
+      section.classList.toggle("is-complete", step < active);
+      if (step === active) {
+        section.setAttribute("aria-current", "step");
+      } else {
+        section.removeAttribute("aria-current");
+      }
     });
   }
 
   function unlockStep(step, scroll = true) {
     const next = Math.max(Number(state.unlockedStep) || 1, step);
-    if (next === state.unlockedStep) return;
     state.unlockedStep = next;
+    state.activeStep = Math.min(step, next);
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
@@ -756,6 +787,7 @@
   function unlockGate(scroll = true) {
     const next = Math.max(Number(state.unlockedStep) || 1, progression.gate);
     state.unlockedStep = next;
+    state.activeStep = progression.gate;
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
@@ -769,7 +801,8 @@
 
   function completePath() {
     markComplete("path");
-    state.unlockedStep = Math.max(Number(state.unlockedStep) || 1, progression.path);
+    state.unlockedStep = Math.max(Number(state.unlockedStep) || 1, progression.viewerBuilds);
+    state.activeStep = progression.path;
     save(storageKey, state);
     applyUnlockedSteps();
     renderProgress();
@@ -784,16 +817,19 @@
 
   function bindAutoUnlocks() {
     const bindings = [
-      ["3", progression.story],
-      ["4", progression.workflow]
+      ["3", "story", progression.story],
+      ["4", "workflow", progression.workflow],
+      ["11", "recommendations", progression.recommendations],
+      ["12", "livePreview", progression.livePreview]
     ];
     const checkAutoUnlocks = () => {
-      bindings.forEach(([step, unlockTo]) => {
+      bindings.forEach(([step, key, unlockTo]) => {
         const section = document.querySelector(`[data-step="${step}"]`);
         if (!section || section.hidden) return;
+        if (Number(state.activeStep) !== Number(step) || Date.now() < activeStepReadyAt) return;
         const rect = section.getBoundingClientRect();
         if (rect.top < window.innerHeight * 0.72 && rect.bottom > window.innerHeight * 0.18) {
-          completeInteraction(step === "3" ? "story" : "workflow", unlockTo, false);
+          completeInteraction(key, unlockTo, false);
         }
       });
     };
@@ -807,7 +843,8 @@
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         const found = bindings.find(([step]) => entry.target.dataset.step === step);
-        if (found) completeInteraction(found[0] === "3" ? "story" : "workflow", found[1], false);
+        if (!found || Number(state.activeStep) !== Number(found[0]) || Date.now() < activeStepReadyAt) return;
+        if (found) completeInteraction(found[1], found[2], false);
       });
     }, { threshold: 0.45 });
     bindings.forEach(([step]) => {
