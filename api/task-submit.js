@@ -19,6 +19,7 @@ const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { buildTaskConfirmationEmail, sendTaskConfirmationEmailViaResend } = require("../lib/email/task-confirmation");
+const { sendJourneyConfirmationEmail, isValidEmail: isValidJourneyEmail } = require("../lib/email/journey-confirmation-email");
 const { sendInvalidRequestEmail } = require("../lib/email/invalid-request-email");
 const { attachReviewSecurity, buildSecureReviewUrl, createReviewToken, verifyReviewToken } = require("../lib/review-token");
 const { resolveTaskLanguage } = require("../lib/language");
@@ -40,6 +41,7 @@ const MAX_ATTACHMENT_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_ATTACHMENT_FILES = 6;
 const ATTACHMENT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const ANALYTICS_EVENT_TABLE = "analytics_events";
+const JOURNEY_CONFIRMATION_TABLE = "journey_confirmations";
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
   "ask_started",
@@ -1045,6 +1047,96 @@ function isWorkspaceActivationRequest(req, input = {}) {
     input.intent === "workspace_activate";
 }
 
+function isJourneyConfirmationRequest(req, input = {}) {
+  return String(req.url || "").includes("journey_confirmation=1") ||
+    String(req.url || "").includes("/api/journey-confirmation") ||
+    input.action === "journey_confirmation" ||
+    input.intent === "journey_confirmation";
+}
+
+function normalizeJourneyList(value = []) {
+  return (Array.isArray(value) ? value : [value]).map(clean).filter(Boolean);
+}
+
+function buildJourneyConfirmationRecord(input = {}, emailResult = {}) {
+  const delivered = emailResult.delivered === true;
+  const failed = emailResult.reason && emailResult.reason !== "not_configured" && !delivered;
+  return {
+    email: normalizeEmailValue(input.email),
+    social_handle: clean(input.social_handle || input.socialHandle),
+    journey_id: clean(input.journey_id || input.journeyId),
+    chosen_path: clean(input.chosen_path || input.chosenPath),
+    chosen_interests: normalizeJourneyList(input.chosen_interests || input.chosenInterests),
+    result: clean(input.result),
+    source: clean(input.source) || "how_it_works",
+    created_at: clean(input.created_at || input.createdAt) || new Date().toISOString(),
+    status: delivered ? "sent" : failed ? "failed" : "pending",
+    provider: emailResult.provider || "none",
+    message_id: emailResult.messageId || null,
+    error: delivered ? "" : clean(emailResult.error || emailResult.reason),
+    raw_payload: {
+      browser_language: clean(input.browser_language || input.browserLanguage),
+      completion: input.completion ?? null,
+      utm: input.utm || {},
+      email_configured: emailResult.configured === true,
+      email_missing: emailResult.missing || []
+    }
+  };
+}
+
+async function saveJourneyConfirmation(input = {}, emailResult = {}) {
+  try {
+    await supabaseFetch(JOURNEY_CONFIRMATION_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(buildJourneyConfirmationRecord(input, emailResult))
+    });
+    return { configured: true, saved: true, status: "saved", reason: "" };
+  } catch (error) {
+    if (error.code === "TASK_PERSISTENCE_NOT_CONFIGURED" || error.message.includes("not configured")) {
+      return { configured: false, saved: false, status: "not_configured", reason: "supabase_not_configured" };
+    }
+    return {
+      configured: true,
+      saved: false,
+      status: "failed",
+      reason: String(error.detail || error.message || "").toLowerCase().includes("schema")
+        ? "table_not_ready"
+        : "supabase_failed"
+    };
+  }
+}
+
+function publicJourneyConfirmationResult(emailResult = {}, storageResult = {}) {
+  return {
+    ok: emailResult.delivered === true,
+    status: emailResult.delivered ? "sent" : emailResult.reason === "not_configured" ? "pending" : "failed",
+    provider: emailResult.provider || "none",
+    configured: emailResult.configured === true,
+    delivered: emailResult.delivered === true,
+    messageId: emailResult.messageId || null,
+    reason: emailResult.reason || "",
+    missing: emailResult.missing || [],
+    storage: {
+      configured: storageResult.configured === true,
+      saved: storageResult.saved === true,
+      status: storageResult.status || "not_attempted",
+      reason: storageResult.reason || ""
+    }
+  };
+}
+
+async function handleJourneyConfirmationRequest(req, res, input = {}) {
+  const email = normalizeEmailValue(input.email);
+  if (!isValidJourneyEmail(email)) {
+    return send(res, 400, { ok: false, error: "invalid_email" });
+  }
+  const emailResult = await sendJourneyConfirmationEmail({ ...input, email });
+  const storageResult = await saveJourneyConfirmation({ ...input, email }, emailResult);
+  const statusCode = emailResult.delivered ? 200 : emailResult.reason === "not_configured" ? 202 : 502;
+  return send(res, statusCode, publicJourneyConfirmationResult(emailResult, storageResult));
+}
+
 function isPaymentReturnRequest(req) {
   return String(req.url || "").includes("payment_return=1") ||
     String(req.url || "").includes("/api/payment-return");
@@ -1500,6 +1592,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isJourneyConfirmationRequest(req, input)) {
+      return handleJourneyConfirmationRequest(req, res, input);
+    }
+
     if (isWorkspaceActivationRequest(req, input)) {
       try {
         const result = await activateWorkspace(req, input);
