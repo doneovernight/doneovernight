@@ -52,6 +52,8 @@ const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
 const {
   applePackagePlan,
+  appleSigningStatus,
+  createSignedApplePassPackage,
   founderIdentity,
   builderIdentity,
   googleWalletPayload,
@@ -184,6 +186,13 @@ function send(res, statusCode, payload) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(payload));
+}
+
+function sendBinary(res, statusCode, buffer, headers = {}) {
+  res.statusCode = statusCode;
+  Object.entries(headers).forEach(([key, value]) => res.setHeader(key, value));
+  res.setHeader("Cache-Control", "no-store");
+  res.end(buffer);
 }
 
 function base64url(value) {
@@ -1721,16 +1730,17 @@ async function handleBuilderWalletRequest(req, res, input = {}) {
     });
   }
   const packagePlan = applePackagePlan(walletInput);
-  const storage = await saveWalletPass({
-    ...walletInput,
-    provider: "apple",
-    status: "issued",
-    serial_number: packagePlan.pass?.serialNumber,
-    founder_id: baseIdentity.founderId,
-    signed: false,
-    payload: packagePlan
-  });
-  if (!appleWalletConfigured()) {
+  const signing = appleSigningStatus(passKind);
+  if (!signing.configured) {
+    const storage = await saveWalletPass({
+      ...walletInput,
+      provider: "apple",
+      status: "issued",
+      serial_number: packagePlan.pass?.serialNumber,
+      founder_id: baseIdentity.founderId,
+      signed: false,
+      payload: packagePlan
+    });
     return send(res, 501, {
       ok: false,
       configured: false,
@@ -1738,24 +1748,44 @@ async function handleBuilderWalletRequest(req, res, input = {}) {
       pass_kind: passKind,
       status: "wallet_certificates_required",
       message: "Wallet support coming soon.",
+      missing: signing.missing,
       identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
       identity_storage: identityResult,
       storage,
       package: packagePlan
     });
   }
-  return send(res, 501, {
-    ok: false,
-    configured: true,
-    provider: "apple",
-    pass_kind: passKind,
-    status: "apple_pass_signing_not_implemented",
-    message: "Wallet support coming soon.",
-    identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
-    identity_storage: identityResult,
-    storage,
-    package: packagePlan
-  });
+  try {
+    const signedPackage = createSignedApplePassPackage(walletInput);
+    const storage = await saveWalletPass({
+      ...walletInput,
+      provider: "apple",
+      status: "issued",
+      serial_number: signedPackage.package.pass?.serialNumber || packagePlan.pass?.serialNumber,
+      founder_id: baseIdentity.founderId,
+      signed: true,
+      payload: signedPackage.package
+    });
+    if (!signedPackage.buffer) throw new Error("Signed pass buffer missing");
+    return sendBinary(res, 200, signedPackage.buffer, {
+      "Content-Type": "application/vnd.apple.pkpass",
+      "Content-Disposition": `attachment; filename="${passKind === "founder" ? "doneovernight-founder" : "doneovernight-builder"}.pkpass"`,
+      "X-DONEOVERNIGHT-Wallet-Status": storage.saved === true ? "stored" : "storage_unavailable"
+    });
+  } catch (error) {
+    return send(res, 500, {
+      ok: false,
+      configured: true,
+      provider: "apple",
+      pass_kind: passKind,
+      status: "apple_pass_signing_failed",
+      message: "Wallet pass could not be signed.",
+      reason: "signing_failed",
+      identity: passKind === "builder" ? builderIdentity(walletInput) : baseIdentity,
+      identity_storage: identityResult,
+      package: packagePlan
+    });
+  }
 }
 
 async function handleBuilderIdentityRequest(req, res, input = {}) {
@@ -1928,6 +1958,9 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
       founder_pass: walletPasses.find((row) => row.pass_kind === "founder") || null,
       builder_passes: walletPasses.filter((row) => row.pass_kind === "builder").slice(0, 8),
       builder_cards: builderIdentities.slice(0, 8),
+      apple_signing: {
+        founder: appleSigningStatus("founder")
+      },
       counts: {
         issued: walletIssued,
         builder_issued: builderWalletIssued,

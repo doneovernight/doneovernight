@@ -2792,6 +2792,9 @@
   function hqIdentityPanel(status = {}) {
     const counts = status.counts || {};
     const founder = status.founder_pass || null;
+    const appleSigning = status.apple_signing?.founder || {};
+    const appleMissing = Array.isArray(appleSigning.missing) ? appleSigning.missing : [];
+    const appleConfigured = appleSigning.configured === true;
     const builderCards = status.builder_cards || [];
     const builderPasses = status.builder_passes || [];
     const notConnected = status.placeholders?.builder_identities || status.placeholders?.wallet_passes;
@@ -2811,6 +2814,11 @@
             <span>Founder Pass</span>
             <strong>${founderStatus}</strong>
             <small>${founder ? `${founderProvider}${founderSigned ? "signed" : "unsigned · certificates required"}` : "Ready to issue."}</small>
+          </article>
+          <article class="identity-status-card">
+            <span>Apple Signing</span>
+            <strong>${appleConfigured ? "Configured" : "Certificates required"}</strong>
+            <small>${appleConfigured ? "Download Founder Pass is available." : `Missing: ${appleMissing.map(escapeHtml).join(", ") || "Apple Wallet env vars"}`}</small>
           </article>
           <article class="identity-status-card">
             <span>Builder Passes</span>
@@ -2836,7 +2844,7 @@
         <p class="form-note">Founder QR/NFC destination: /don. Use this page for QR/NFC sharing until signed Wallet delivery is configured.</p>
         <div class="live-status-actions">
           <a class="quiet-action secondary" href="/don">Open /don</a>
-          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">Founder Apple Payload</a>
+          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">${appleConfigured ? "Download Founder Pass" : "Founder Apple Payload"}</a>
           <a class="quiet-action secondary" href="/api/builder-wallet/google?type=founder">Founder Google Payload</a>
           <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=builder">Builder Pass</a>
         </div>
