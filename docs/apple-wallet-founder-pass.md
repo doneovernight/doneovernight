@@ -44,7 +44,7 @@ Certificate values may be PEM strings with newlines, escaped-newline PEM strings
 1. Redeploy production so the env vars are available to the serverless function.
 2. Open authenticated HQ and check Identity -> Apple Signing.
 3. Confirm it shows `Configured`.
-4. Click `Download Founder Pass`.
+4. Click `Signed Founder Pass`.
 5. Confirm the response is `application/vnd.apple.pkpass`.
 6. Add the pass to Apple Wallet on iPhone.
 7. Scan the QR and confirm it opens `https://doneovernight.com/don`.

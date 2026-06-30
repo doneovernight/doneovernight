@@ -149,7 +149,7 @@
       recommendedResources: "Recommended Resources",
       recommendedBuilds: "Recommended Builds",
       journeyCompleteStatus: "Builder created",
-      walletComingSoon: "Wallet support coming soon.",
+      walletComingSoon: "Wallet delivery is prepared and will unlock when credentials are configured.",
       result: "Result",
       openPlatform: "Enter Builder Home",
       platformHub: "Builder Home",
@@ -2854,7 +2854,7 @@
           <article class="identity-status-card">
             <span>Apple Signing</span>
             <strong>${appleConfigured ? "Configured" : "Certificates required"}</strong>
-            <small>${appleConfigured ? "Download Founder Pass is available." : `Missing: ${appleMissing.map(escapeHtml).join(", ") || "Apple Wallet env vars"}`}</small>
+            <small>${appleConfigured ? "Signed Founder Pass delivery is available." : `Missing: ${appleMissing.map(escapeHtml).join(", ") || "Apple Wallet env vars"}`}</small>
           </article>
           <article class="identity-status-card">
             <span>Builder Passes</span>
@@ -2880,7 +2880,7 @@
         <p class="form-note">Founder QR/NFC destination: /don. Use this page for QR/NFC sharing until signed Wallet delivery is configured.</p>
         <div class="live-status-actions">
           <a class="quiet-action secondary" href="/don">Open /don</a>
-          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">${appleConfigured ? "Download Founder Pass" : "Founder Apple Payload"}</a>
+          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">${appleConfigured ? "Signed Founder Pass" : "Founder Apple Payload"}</a>
           <a class="quiet-action secondary" href="/api/builder-wallet/google?type=founder">Founder Google Payload</a>
           <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=builder">Builder Pass</a>
         </div>
