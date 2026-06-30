@@ -97,7 +97,9 @@
       joined: "Joined",
       lastVisit: "Last visit",
       sinceLastVisit: "Since your last visit",
+      deployment: "deployment",
       deployments: "deployments",
+      journalUpdate: "journal update",
       journalUpdates: "journal updates",
       resourcesOpened: "Resources opened",
       liveVisits: "Live visits",
@@ -257,7 +259,9 @@
       joined: "Aangesloten",
       lastVisit: "Laatste bezoek",
       sinceLastVisit: "Sinds je laatste bezoek",
+      deployment: "deployment",
       deployments: "deployments",
+      journalUpdate: "journal update",
       journalUpdates: "journal updates",
       resourcesOpened: "Resources geopend",
       liveVisits: "Live bezoeken",
@@ -2536,21 +2540,28 @@
       pct,
       previousVisit: read(memoryKey, {}).previousVisit,
       since: [
-        Number(data.latest_deployments_count || 0) ? `${Number(data.latest_deployments_count || 0)} ${copy[lang].deployments}` : "",
-        Number(data.new_journal_entries || 0) ? `${Number(data.new_journal_entries || 0)} ${copy[lang].journalUpdates}` : "",
-        Number(data.viewer_builds_count || 0) ? `${Number(data.viewer_builds_count || 0)} Viewer Builds` : "",
-        Number(data.resource_interest_count || 0) ? `${Number(data.resource_interest_count || 0)} ${copy[lang].resourcesOpened.toLowerCase()}` : ""
+        formatCount(data.latest_deployments_count, copy[lang].deployment, copy[lang].deployments),
+        formatCount(data.new_journal_entries, copy[lang].journalUpdate, copy[lang].journalUpdates),
+        formatCount(data.viewer_builds_count, "Viewer Build", "Viewer Builds"),
+        formatCount(data.resource_interest_count, copy[lang].resourcesOpened.toLowerCase(), copy[lang].resourcesOpened.toLowerCase())
       ].filter(Boolean)
     });
+  }
+
+  function formatCount(value, singular, plural) {
+    const count = Number(value || 0);
+    if (!count) return "";
+    return `${count} ${count === 1 ? singular : plural}`;
   }
 
   function returnVisitorMarkup({ pct, previousVisit, since = [] }) {
     const lastVisit = previousVisit ? formatDate(previousVisit) : "";
     const sinceText = since.length ? since.join(" · ") : copy[lang].continueJourney;
     const memory = read(memoryKey, {});
-    const builder = memory.builderNumber ? ` Builder #${memory.builderNumber}` : "";
+    const builder = permanentBuilderNumber(memory);
+    const greeting = builder ? `${copy[lang].welcomeBack.replace(/\.$/, "")} Builder #${builder}.` : copy[lang].welcomeBack;
     return `
-      <span>${escapeHtml(`${copy[lang].welcomeBack}${builder}.`)}</span>
+      <span>${escapeHtml(greeting)}</span>
       <strong>${escapeHtml(`${pct}%`)}</strong>
       ${lastVisit ? `<small>${escapeHtml(copy[lang].lastVisit)} ${escapeHtml(lastVisit)}</small>` : ""}
       <small>${escapeHtml(copy[lang].sinceLastVisit)} ${escapeHtml(sinceText)}</small>
