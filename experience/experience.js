@@ -155,6 +155,8 @@
       platformHub: "Platform Hub",
       platformHubTitle: "DONEOVERNIGHT Headquarters.",
       platformHubCopy: "Choose the next room.",
+      hubLibrary: "Library",
+      hubLibraryCopy: "Builder home and access.",
       hubLive: "Live Builds",
       hubLiveCopy: "Current signal and status.",
       hubJournal: "Build Journal",
@@ -317,6 +319,8 @@
       platformHub: "Platform Hub",
       platformHubTitle: "DONEOVERNIGHT Headquarters.",
       platformHubCopy: "Kies de volgende ruimte.",
+      hubLibrary: "Library",
+      hubLibraryCopy: "Builder home en toegang.",
       hubLive: "Live Builds",
       hubLiveCopy: "Huidig signaal en status.",
       hubJournal: "Build Journal",
@@ -643,7 +647,8 @@
   }
 
   function mountPlatformPages() {
-    if (document.body.dataset.platform === "resources") mountResourceInterest();
+    if (document.body.dataset.platform === "resources" || document.body.dataset.platform === "library") mountResourceInterest();
+    if (document.body.dataset.platform === "library") mountLibrary();
     if (document.body.dataset.platform === "journal") hydrateJournalData();
     if (document.body.dataset.platform === "hq") mountHq();
     if (document.body.dataset.platform === "hq-login") mountHqLogin();
@@ -940,11 +945,11 @@
     const language = platformLanguagePayload(extra);
     return {
       journey_id: state.journeyId || "",
-      builder_number: builderNumberValue(),
+      builder_number: permanentBuilderNumber(),
       ...language,
       journey: {
         journey_id: state.journeyId || "",
-        builder_number: builderNumberValue(),
+        builder_number: permanentBuilderNumber(),
         email: emailPayload.email || "",
         social_handle: state.socialHandle || emailPayload.socialHandle || "",
         source: state.discover || "unknown",
@@ -965,7 +970,7 @@
         last_page: pageName()
       },
       progress: {
-        builder_number: builderNumberValue(),
+        builder_number: permanentBuilderNumber(),
         ...language,
         active_step: Number(state.activeStep) || 1,
         unlocked_step: Number(state.unlockedStep) || 1,
@@ -1335,6 +1340,7 @@
     const shells = document.querySelectorAll(".experience-shell");
     if (!shells.length) return;
     shells.forEach((shell) => {
+      if (shell.hasAttribute("data-no-today")) return;
       shell.querySelectorAll("[data-today-section]").forEach((node) => node.remove());
       const hero = shell.querySelector(".live-hero, .experience-hero");
       if (!hero) return;
@@ -2693,18 +2699,27 @@
       link.addEventListener("click", (event) => {
         event.preventDefault();
         const card = link.closest(".resource-card");
-        const resource = card?.querySelector("h2")?.textContent || link.dataset.resource || "";
+        const resource = link.dataset.resource || card?.querySelector("h2")?.textContent || "";
+        const product = link.dataset.product || document.body.dataset.productPage || "";
+        const category = link.dataset.category || card?.dataset.resourceCategory || card?.dataset.resourceSignal || "";
+        const status = link.dataset.status || card?.dataset.resourceStatus || "notify_me";
+        const access = card?.dataset.access || card?.dataset.librarySection || "";
         const memory = read(memoryKey, {});
         updateMemory({
           resourcesOpened: Array.from(new Set([...(memory.resourcesOpened || []), resource].filter(Boolean))),
+          recentlyViewed: Array.from(new Set([resource, ...(memory.recentlyViewed || [])].filter(Boolean))).slice(0, 8),
           lastResourceOpenedAt: new Date().toISOString()
         });
         postPlatformEvent({
           event: "resource_interest",
           resource,
-          page: "resources",
-          source_page: "resources",
-          status: "notify_me"
+          product,
+          category,
+          access,
+          builder_number: permanentBuilderNumber(memory),
+          page: pageName(),
+          source_page: pageName(),
+          status
         });
         showReward("Interest saved.");
         window.setTimeout(() => {
@@ -2712,6 +2727,23 @@
         }, 160);
       });
     });
+  }
+
+  function mountLibrary() {
+    const memory = read(memoryKey, {});
+    const builder = permanentBuilderNumber(memory);
+    fill("#library-builder-number", builder ? `Builder #${builder}` : "Builder pending");
+    fill("#library-builder-type", memory.builderType || builderType());
+    const interests = Array.isArray(memory.chosenInterests) ? memory.chosenInterests : state.interests || [];
+    const signal = interests.join(" ").toLowerCase();
+    const recommended = signal.includes("automation")
+      ? "Recommended: Automation Pack, Lead Operating System."
+      : signal.includes("architecture")
+        ? "Recommended: Deployment Breakdowns, Operating Systems."
+        : signal.includes("business")
+          ? "Recommended: Lead Operating System, Templates."
+          : "Unlocked: Automation, Prompt Packs, Journal.";
+    fill("#library-builder-line", recommended);
   }
 
   async function mountHq() {
@@ -2768,6 +2800,7 @@
         ${hqList("Recent Journal Entries", (data.recent_journal_entries || []).map((item) => ({ label: item.title, count: item.entry_type || "entry" })))}
       </section>
       ${hqIdentityPanel(data.wallet_status || {})}
+      ${hqLibraryPanel(data)}
       ${liveStatusForm(data.current_live_status || {})}
     `;
     bindLiveStatusForm();
@@ -2861,6 +2894,36 @@
           ${items.map((item) => `<li><strong>${escapeHtml(item.title || "")}</strong>${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ""}</li>`).join("")}
         </ul>
       </article>
+    `;
+  }
+
+  function hqLibraryPanel(data = {}) {
+    const resources = data.recent_resources || [];
+    const categories = ["Automation", "AI", "Repositories", "Prompt Packs", "Operating Systems", "Templates", "UI Components", "Internal Notes", "SOPs", "Case Studies", "Deployment Breakdowns", "Journal"];
+    const products = ["Lead Operating System", "Restaurant OS", "Builder Pack", "Prompt Pack", "Automation Pack", "Repository"];
+    const states = ["Research", "Planning", "Building", "Testing", "Released", "Archived"];
+    return `
+      <section class="viewer-panel live-status-writer" aria-label="Library">
+        <div class="step-head">
+          <span class="step-number">Library</span>
+          <h2 class="step-title">Builder Library.</h2>
+          <p class="step-copy">Products, categories, resource states, and Builder interest. Management remains lightweight until the backend editor is needed.</p>
+        </div>
+        <section class="identity-status-grid" aria-label="Library management">
+          ${hqIdentityRows("Products", products.map((title) => ({ title, detail: title === "Lead Operating System" || title === "Automation Pack" ? "Building" : "Prepared" })))}
+          ${hqIdentityRows("Categories", categories.map((title) => ({ title, detail: "Expandable" })))}
+          ${hqIdentityRows("States", states.map((title) => ({ title, detail: title === "Released" ? "Visible when shipped" : "Roadmap" })))}
+          ${hqIdentityRows("Recent Product Interest", resources.slice(0, 8).map((item) => ({
+            title: item.product || item.resource || "Resource",
+            detail: [item.category, item.status, item.builder_number ? `Builder #${item.builder_number}` : ""].filter(Boolean).join(" · ") || "notify_me"
+          })))}
+        </section>
+        <div class="live-status-actions">
+          <a class="quiet-action secondary" href="/library">Open Library</a>
+          <a class="quiet-action secondary" href="/products">Open Products</a>
+          <a class="quiet-action secondary" href="/case-studies">Case Studies</a>
+        </div>
+      </section>
     `;
   }
 
