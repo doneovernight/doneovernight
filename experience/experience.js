@@ -1370,6 +1370,7 @@
     const memory = read(memoryKey, {});
     const builderNo = builderNumberValue();
     const type = builderType();
+    const line = builderIdentityLine();
     const joined = formatDate(memory.joinedAt || state.journeyStartedAt || new Date().toISOString());
     fill("#builder-profile-type", type);
     fill("#journey-id", state.journeyId || "");
@@ -1380,6 +1381,7 @@
     fill("#journey-path", pathLabel(state.path) || "Curious");
     fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
     fill("#builder-automation", automationLines().map((item) => item.replace(/^✓\s*/, "")).join(", ") || "Not selected");
+    fill("#builder-identity-line", line);
     fill("#builder-stage", currentStage());
     fill("#builder-resources", recommendedResources().join(", "));
     fill("#builder-builds", recommendedBuilds().join(", "));
@@ -1388,6 +1390,7 @@
     fill("#builder-card-joined", joined);
     fill("#builder-card-type", type);
     fill("#builder-card-journey", state.journeyId || "");
+    fill("#builder-card-line", line);
     bindWalletActions();
   }
 
@@ -1627,6 +1630,7 @@
     addProfileSection(lines, "Builder Number", [`#${builderNumberValue()}`]);
     addProfileSection(lines, "Discovered from", [state.discover]);
     addProfileSection(lines, "Builder Type", [builderType()]);
+    addProfileSection(lines, "Identity Line", [builderIdentityLine()]);
     addProfileSection(lines, "Primary Interests", bulletLines(state.interests || []));
     addProfileSection(lines, "Path", [pathLabel(state.path)]);
     addProfileSection(lines, "Current Stage", [currentStage()]);
@@ -1702,6 +1706,37 @@
     if (hasInterest("Design") || state.operatorTrait === "taste") return "Experience Builder";
     if (hasInterest("Business")) return "Execution Builder";
     return resolveCurrentResult().replace(/^You\s+/i, "").replace(/\.$/, "") || "Builder";
+  }
+
+  function builderIdentityLine() {
+    const type = builderType().toLowerCase();
+    const source = [
+      type,
+      state.path || "",
+      ...(state.interests || [])
+    ].join(" ").toLowerCase();
+    const lines = lang === "nl"
+      ? [
+          [/operator/, "Je brengt ideeën naar uitvoering."],
+          [/architect|architecture|architectuur|infrastructure/, "Je denkt lang voordat je bouwt."],
+          [/automation|automatisering/, "Je haalt herhaling weg voordat het duur wordt."],
+          [/business/, "Je zet momentum om in structuur."],
+          [/\bai\b|intelligence/, "Je vermenigvuldigt uitvoering met intelligentie."],
+          [/design|experience|taste/, "Je maakt systemen menselijk."],
+          [/system|systems|systemen/, "Je creëert hefboom."]
+        ]
+      : [
+          [/operator/, "You move ideas into execution."],
+          [/architect|architecture|infrastructure/, "You think long before you build."],
+          [/automation/, "You remove repetition before it becomes expensive."],
+          [/business/, "You turn momentum into structure."],
+          [/\bai\b|intelligence/, "You multiply execution with intelligence."],
+          [/design|experience|taste/, "You make systems feel human."],
+          [/system|systems/, "You create leverage."]
+        ];
+    const match = lines.find(([pattern]) => pattern.test(source));
+    if (match) return match[1];
+    return lang === "nl" ? "Je bouwt voordat de wereld bij is." : "You build before the world catches up.";
   }
 
   function currentStage() {
@@ -1805,6 +1840,7 @@
       path: pathLabel(state.path),
       automation_choice: automationLines().map((item) => item.replace(/^✓\s*/, "")),
       current_stage: currentStage(),
+      identity_line: builderIdentityLine(),
       joined_at: read(memoryKey, {}).joinedAt || state.journeyStartedAt || "",
       completion: completionPercent(),
       status: read(memoryKey, {}).foundingBuilder ? "Founding Builder" : "Builder",
@@ -2689,26 +2725,33 @@
     const builderCards = status.builder_cards || [];
     const builderPasses = status.builder_passes || [];
     const notConnected = status.placeholders?.builder_identities || status.placeholders?.wallet_passes;
+    const founderStatus = founder ? "Issued" : "Prepared";
+    const builderIssued = Number(counts.builder_issued ?? builderPasses.filter((item) => item.status === "issued").length);
     return `
       <section class="viewer-panel live-status-writer" aria-label="Identity">
         <div class="step-head">
           <span class="step-number">Identity</span>
-          <h2 class="step-title">Wallet Passes.</h2>
-          <p class="step-copy">${notConnected ? "Identity tables are ready in code. Apply the Phase 11 migration to store issued passes." : "Builder IDs, cards, and wallet status."}</p>
+          <h2 class="step-title">Identity.</h2>
+          <p class="step-copy">${notConnected ? "Identity tables are ready in code. Apply the Phase 11 migration to store issued passes." : "Founder and Builder passes, issued identities, and wallet readiness."}</p>
         </div>
-        <section class="activity-grid" aria-label="Wallet identity status">
-          ${hqMetric("Founder Pass", founder ? founder.status || "Issued" : "Prepared")}
-          ${hqMetric("Builder Passes", builderPasses.length)}
-          ${hqMetric("Issued", counts.issued || 0)}
-          ${hqMetric("Downloaded", counts.downloaded || 0)}
-          ${hqMetric("Active", counts.active || 0)}
-          ${hqList("Builder Cards", builderCards.map((item) => ({
-            label: item.journey_id || `Builder #${item.builder_number || ""}`,
-            count: item.builder_number ? `Builder #${item.builder_number}` : item.status || "Identity"
+        <section class="identity-status-grid" aria-label="Wallet identity status">
+          <article class="identity-status-card">
+            <span>Founder Pass</span>
+            <strong>${founderStatus}</strong>
+            <small>${founder ? "Unsigned until Apple certificates." : "Ready to issue."}</small>
+          </article>
+          <article class="identity-status-card">
+            <span>Builder Passes</span>
+            <strong>${builderIssued ? `${builderIssued} issued` : "Waiting"}</strong>
+            <small>${builderIssued ? "Unsigned until wallet credentials." : "Waiting for first Builder."}</small>
+          </article>
+          ${hqIdentityRows("Recent Builder Cards", builderCards.map((item) => ({
+            title: item.builder_number ? `Builder #${item.builder_number}` : item.journey_id || "Builder",
+            detail: [item.builder_type, item.status || "Founding Builder"].filter(Boolean).join(" · ") || "Founding Builder"
           })))}
-          ${hqList("Recent Wallet Passes", builderPasses.map((item) => ({
-            label: item.serial_number || item.journey_id || "Wallet pass",
-            count: `${item.provider || "wallet"} · ${item.status || "issued"}`
+          ${hqIdentityRows("Recent Wallet Passes", [founder, ...builderPasses].filter(Boolean).map((item) => ({
+            title: item.pass_kind === "founder" ? "Founder" : item.builder_number ? `Builder #${item.builder_number}` : item.serial_number || "Builder",
+            detail: `${walletStatusLabel(item.status)}${item.signed ? "" : " · Unsigned until credentials"}`
           })))}
         </section>
         <div class="live-status-actions">
@@ -2717,6 +2760,31 @@
         </div>
       </section>
     `;
+  }
+
+  function hqIdentityRows(title, rows = []) {
+    const items = rows.length ? rows : [{ title: "Waiting for first Builder.", detail: "" }];
+    return `
+      <article class="identity-status-card identity-status-card-wide">
+        <span>${escapeHtml(title)}</span>
+        <ul class="identity-row-list">
+          ${items.map((item) => `<li><strong>${escapeHtml(item.title || "")}</strong>${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ""}</li>`).join("")}
+        </ul>
+      </article>
+    `;
+  }
+
+  function walletStatusLabel(status = "") {
+    const value = String(status || "").trim().toLowerCase();
+    const labels = {
+      prepared: "Prepared",
+      issued: "Issued",
+      downloaded: "Downloaded",
+      active: "Active",
+      revoked: "Revoked",
+      expired: "Expired"
+    };
+    return labels[value] || "Issued";
   }
 
   function liveStatusForm(status = {}) {

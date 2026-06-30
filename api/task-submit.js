@@ -1849,6 +1849,7 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
   const builderIdentities = visiblePlatformRows(snapshot.builder_identities?.rows || [], includeTest);
   const walletPasses = visiblePlatformRows(snapshot.wallet_passes?.rows || [], includeTest);
   const walletIssued = walletPasses.filter((row) => row.status === "issued").length;
+  const builderWalletIssued = walletPasses.filter((row) => row.pass_kind === "builder" && row.status === "issued").length;
   const walletDownloaded = walletPasses.filter((row) => row.status === "downloaded").length;
   const walletActive = walletPasses.filter((row) => row.status === "active").length;
   const today = new Date();
@@ -1892,6 +1893,7 @@ function buildHqPlatformSnapshot(snapshot, options = {}) {
       builder_cards: builderIdentities.slice(0, 8),
       counts: {
         issued: walletIssued,
+        builder_issued: builderWalletIssued,
         downloaded: walletDownloaded,
         active: walletActive
       },
