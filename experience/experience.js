@@ -130,14 +130,14 @@
       nextFollow: "Next: Follow the journey",
       dmIdea: "DM us your build idea",
       solvePlaceholder: "What would this solve for you?",
-      journeyComplete: "Journey Complete.",
-      platformWelcome: "Welcome to DONEOVERNIGHT.",
+      journeyComplete: "Builder created.",
+      platformWelcome: "Welcome Builder.",
       unlockedExperience: "Experience unlocked",
       unlockedLive: "Live Builds unlocked",
       unlockedViewer: "Viewer Builds unlocked",
       unlockedJournal: "Build Journal unlocked",
       unlockedResources: "Resources unlocked",
-      earlyBuilder: "You are now one of the early builders.",
+      earlyBuilder: "You're officially inside.",
       journeyId: "Journey ID",
       journeyStarted: "Journey started",
       completion: "Completion",
@@ -148,15 +148,15 @@
       currentStage: "Current Stage",
       recommendedResources: "Recommended Resources",
       recommendedBuilds: "Recommended Builds",
-      journeyCompleteStatus: "Journey Complete",
+      journeyCompleteStatus: "Builder created",
       walletComingSoon: "Wallet support coming soon.",
       result: "Result",
-      openPlatform: "Open platform",
-      platformHub: "Platform Hub",
-      platformHubTitle: "DONEOVERNIGHT Headquarters.",
-      platformHubCopy: "Choose the next room.",
+      openPlatform: "Enter Builder Home",
+      platformHub: "Builder Home",
+      platformHubTitle: "Your Builder OS.",
+      platformHubCopy: "Choose the next module.",
       hubLibrary: "Library",
-      hubLibraryCopy: "Builder home and access.",
+      hubLibraryCopy: "Library module and access.",
       hubLive: "Live Builds",
       hubLiveCopy: "Current signal and status.",
       hubJournal: "Build Journal",
@@ -294,14 +294,14 @@
       nextFollow: "Volgende: volg de reis",
       dmIdea: "DM ons je build idee",
       solvePlaceholder: "Wat zou dit voor je oplossen?",
-      journeyComplete: "Reis voltooid.",
-      platformWelcome: "Welkom bij DONEOVERNIGHT.",
+      journeyComplete: "Builder aangemaakt.",
+      platformWelcome: "Welkom Builder.",
       unlockedExperience: "Experience ontgrendeld",
       unlockedLive: "Live Builds ontgrendeld",
       unlockedViewer: "Viewer Builds ontgrendeld",
       unlockedJournal: "Build Journal ontgrendeld",
       unlockedResources: "Resources ontgrendeld",
-      earlyBuilder: "Je bent nu een van de early builders.",
+      earlyBuilder: "Je zit er officieel in.",
       journeyId: "Journey ID",
       journeyStarted: "Reis gestart",
       completion: "Voltooiing",
@@ -312,15 +312,15 @@
       currentStage: "Fase",
       recommendedResources: "Aanbevolen resources",
       recommendedBuilds: "Aanbevolen builds",
-      journeyCompleteStatus: "Reis voltooid",
+      journeyCompleteStatus: "Builder aangemaakt",
       walletComingSoon: "Wallet ondersteuning komt eraan.",
       result: "Resultaat",
-      openPlatform: "Open platform",
-      platformHub: "Platform Hub",
-      platformHubTitle: "DONEOVERNIGHT Headquarters.",
-      platformHubCopy: "Kies de volgende ruimte.",
+      openPlatform: "Open Builder Home",
+      platformHub: "Builder Home",
+      platformHubTitle: "Jouw Builder OS.",
+      platformHubCopy: "Kies de volgende module.",
       hubLibrary: "Library",
-      hubLibraryCopy: "Builder home en toegang.",
+      hubLibraryCopy: "Library module en toegang.",
       hubLive: "Live Builds",
       hubLiveCopy: "Huidig signaal en status.",
       hubJournal: "Build Journal",
@@ -1391,13 +1391,14 @@
     fill("#builder-profile-type", type);
     fill("#journey-id", state.journeyId || "");
     fill("#builder-number", `#${builderNo}`);
-    fill("#builder-status", copy[lang].journeyCompleteStatus || "Journey Complete");
+    fill("#builder-status", copy[lang].journeyCompleteStatus || "Builder created");
     fill("#builder-joined", joined);
     fill("#journey-completion", `${completionPercent()}%`);
     fill("#journey-path", pathLabel(state.path) || "Curious");
     fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
     fill("#builder-automation", automationLines().map((item) => item.replace(/^✓\s*/, "")).join(", ") || "Not selected");
     fill("#builder-identity-line", line);
+    fill("#completion-welcome", builderNo ? `Welcome Builder #${builderNo}.` : copy[lang].platformWelcome);
     fill("#builder-stage", currentStage());
     fill("#builder-resources", recommendedResources().join(", "));
     fill("#builder-builds", recommendedBuilds().join(", "));
@@ -1417,6 +1418,8 @@
     const hub = document.getElementById("platform-hub");
     if (button && panel && hub) {
       button.onclick = () => {
+        window.location.href = "/builder";
+        return;
         panel.hidden = true;
         hub.hidden = false;
         state.platformOpened = true;
@@ -2902,14 +2905,23 @@
     const categories = ["Automation", "AI", "Repositories", "Prompt Packs", "Operating Systems", "Templates", "UI Components", "Internal Notes", "SOPs", "Case Studies", "Deployment Breakdowns", "Journal"];
     const products = ["Lead Operating System", "Restaurant OS", "Builder Pack", "Prompt Pack", "Automation Pack", "Repository"];
     const states = ["Research", "Planning", "Building", "Testing", "Released", "Archived"];
+    const builderHomes = (data.recent_builders || data.wallet_status?.recent_builder_cards || []).slice(0, 6);
     return `
       <section class="viewer-panel live-status-writer" aria-label="Library">
         <div class="step-head">
           <span class="step-number">Library</span>
-          <h2 class="step-title">Builder Library.</h2>
-          <p class="step-copy">Products, categories, resource states, and Builder interest. Management remains lightweight until the backend editor is needed.</p>
+          <h2 class="step-title">Builder ecosystem.</h2>
+          <p class="step-copy">Builder Homes, activity, products, categories, resource states, and Builder interest. Management remains lightweight until the backend editor is needed.</p>
         </div>
         <section class="identity-status-grid" aria-label="Library management">
+          ${hqIdentityRows("Builder Homes", builderHomes.length ? builderHomes.map((item) => ({
+            title: item.builder_number ? `Builder #${item.builder_number}` : item.journey_id || "Builder",
+            detail: item.builder_type || item.status || "Recently active"
+          })) : [{ title: "Waiting for first Builder Home", detail: "Future activity layer" }])}
+          ${hqIdentityRows("Builder Activity", [
+            { title: "Recently Active Builders", detail: "Future support" },
+            { title: "Progression", detail: "Explorer -> Builder -> Operator -> Founder -> Partner" }
+          ])}
           ${hqIdentityRows("Products", products.map((title) => ({ title, detail: title === "Lead Operating System" || title === "Automation Pack" ? "Building" : "Prepared" })))}
           ${hqIdentityRows("Categories", categories.map((title) => ({ title, detail: "Expandable" })))}
           ${hqIdentityRows("States", states.map((title) => ({ title, detail: title === "Released" ? "Visible when shipped" : "Roadmap" })))}
