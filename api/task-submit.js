@@ -1352,6 +1352,13 @@ function isBuilderWalletRequest(req, input = {}) {
     input.intent === "builder_wallet";
 }
 
+function isBuilderIdentityRequest(req, input = {}) {
+  return String(req.url || "").includes("builder_identity=1") ||
+    String(req.url || "").includes("/api/builder-identity") ||
+    input.action === "builder_identity" ||
+    input.intent === "builder_identity";
+}
+
 function platformClientContext(req) {
   return {
     userAgent: req.headers["user-agent"] || "",
@@ -1751,6 +1758,36 @@ async function handleBuilderWalletRequest(req, res, input = {}) {
   });
 }
 
+async function handleBuilderIdentityRequest(req, res, input = {}) {
+  const passKind = String(input.pass_kind || input.passKind || input.type || "builder").toLowerCase();
+  if (passKind && passKind !== "builder") {
+    return send(res, 400, { ok: false, saved: false, error: "unsupported_identity_type" });
+  }
+  const baseIdentity = builderIdentity(input);
+  const result = await issueBuilderIdentity({
+    ...input,
+    pass_kind: "builder",
+    builder_type: input.builder_type || input.builderType || baseIdentity.builderType,
+    status: input.status || baseIdentity.status,
+    identity_payload: baseIdentity
+  });
+  const issuedInput = {
+    ...input,
+    builder_number: result.builder_number || input.builder_number || input.builderNumber,
+    builder_type: input.builder_type || input.builderType || baseIdentity.builderType,
+    status: input.status || baseIdentity.status
+  };
+  const identity = builderIdentity(issuedInput);
+  return send(res, result.saved ? 200 : 503, {
+    ok: result.saved === true,
+    saved: result.saved === true,
+    status: result.status || "failed",
+    reason: result.reason || "",
+    identity,
+    identity_storage: result
+  });
+}
+
 function countSince(rows = [], field, since) {
   const floor = since.getTime();
   return rows.filter((row) => {
@@ -1953,6 +1990,11 @@ async function handlePlatformDataRequest(req, res) {
   if (view === "visitor") {
     const journeyId = String(url.searchParams.get("journey_id") || "").trim();
     const journey = snapshot.journeys.rows.find((row) => row.journey_id === journeyId) || null;
+    const identity = (snapshot.builder_identities?.rows || []).find((row) => row.journey_id === journeyId) || null;
+    const walletPasses = (snapshot.wallet_passes?.rows || []).filter((row) => row.journey_id === journeyId);
+    const viewerBuildCount = snapshot.viewer_builds.rows.filter((row) => row.journey_id === journeyId).length;
+    const resourceInterestCount = snapshot.resource_interest.rows.filter((row) => row.journey_id === journeyId).length;
+    const deploymentCount = snapshot.live_status.rows.filter((row) => row.latest_deployment || row.current_commit || row.current_branch).length;
     const progress = snapshot.page_events.rows.filter((row) => row.journey_id === journeyId).slice(0, 8);
     return send(res, 200, {
       ok: true,
@@ -1966,9 +2008,47 @@ async function handlePlatformDataRequest(req, res) {
         builder_result: journey.builder_result,
         last_page: journey.last_page
       } : null,
+      identity: identity ? {
+        builder_number: identity.builder_number,
+        builder_type: identity.builder_type,
+        status: identity.status,
+        identity_payload: identity.identity_payload || {},
+        created_at: identity.created_at,
+        updated_at: identity.updated_at
+      } : null,
+      wallet_passes: walletPasses.map((row) => ({
+        pass_kind: row.pass_kind,
+        provider: row.provider,
+        status: row.status,
+        signed: row.signed,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+      })),
+      viewer_builds_count: viewerBuildCount,
+      resource_interest_count: resourceInterestCount,
+      latest_deployments_count: deploymentCount,
       recent_pages: progress,
       new_journal_entries: snapshot.journal.rows.length,
       new_resources: snapshot.resource_interest.rows.length
+    });
+  }
+
+  if (view === "builder") {
+    const builderNumber = String(url.searchParams.get("builder_number") || url.searchParams.get("id") || "").replace(/^#|builder\s*#/i, "").trim();
+    const identity = (snapshot.builder_identities?.rows || []).find((row) => String(row.builder_number || "") === builderNumber) || null;
+    const journeyId = identity?.journey_id || "";
+    const journey = journeyId ? snapshot.journeys.rows.find((row) => row.journey_id === journeyId) || null : null;
+    const walletPasses = (snapshot.wallet_passes?.rows || []).filter((row) => String(row.builder_number || "") === builderNumber || (journeyId && row.journey_id === journeyId));
+    const viewerBuilds = journeyId ? snapshot.viewer_builds.rows.filter((row) => row.journey_id === journeyId).slice(0, 6) : [];
+    return send(res, 200, {
+      ok: true,
+      view,
+      placeholder: snapshot.placeholder,
+      identity,
+      journey,
+      wallet_passes: walletPasses,
+      viewer_builds: viewerBuilds,
+      latest_activity: snapshot.page_events.rows.filter((row) => row.journey_id === journeyId).slice(0, 8)
     });
   }
 
@@ -2460,6 +2540,9 @@ module.exports = async function handler(req, res) {
     if (url.searchParams.get("builder_wallet") === "1" || isBuilderWalletRequest(req, {})) {
       return await handleBuilderWalletRequest(req, res, Object.fromEntries(url.searchParams.entries()));
     }
+    if (url.searchParams.get("builder_identity") === "1" || isBuilderIdentityRequest(req, {})) {
+      return await handleBuilderIdentityRequest(req, res, Object.fromEntries(url.searchParams.entries()));
+    }
     return handleReviewStateRequest(req, res);
   }
 
@@ -2492,6 +2575,10 @@ module.exports = async function handler(req, res) {
 
     if (isBuilderWalletRequest(req, input)) {
       return await handleBuilderWalletRequest(req, res, input);
+    }
+
+    if (isBuilderIdentityRequest(req, input)) {
+      return await handleBuilderIdentityRequest(req, res, input);
     }
 
     if (isPlatformEventsRequest(req, input)) {

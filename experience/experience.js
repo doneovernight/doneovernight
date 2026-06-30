@@ -93,9 +93,12 @@
       expected: "Expected",
       foundingBuilder: "Founding Builder",
       builderNumber: "Builder #",
+      builderPending: "Preparing",
       joined: "Joined",
       lastVisit: "Last visit",
       sinceLastVisit: "Since your last visit",
+      deployments: "deployments",
+      journalUpdates: "journal updates",
       resourcesOpened: "Resources opened",
       liveVisits: "Live visits",
       recentActivity: "Recent Activity",
@@ -250,9 +253,12 @@
       expected: "Verwacht",
       foundingBuilder: "Founding Builder",
       builderNumber: "Builder #",
+      builderPending: "Voorbereiden",
       joined: "Aangesloten",
       lastVisit: "Laatste bezoek",
       sinceLastVisit: "Sinds je laatste bezoek",
+      deployments: "deployments",
+      journalUpdates: "journal updates",
       resourcesOpened: "Resources geopend",
       liveVisits: "Live bezoeken",
       recentActivity: "Recente activiteit",
@@ -1261,7 +1267,7 @@
     const memory = read(memoryKey, {});
     const visits = Number(memory.totalVisits || 0) + 1;
     const previousVisit = memory.lastVisit || "";
-    const builderNumber = memory.builderNumber || String(Math.abs(hashString(state.journeyId || "doneovernight")) % 9000 + 100).padStart(4, "0");
+    const builderNumber = permanentBuilderNumber(memory);
     const next = {
       ...memory,
       journeyId: state.journeyId || "",
@@ -1392,6 +1398,7 @@
     fill("#builder-card-journey", state.journeyId || "");
     fill("#builder-card-line", line);
     bindWalletActions();
+    prepareBuilderIdentity();
   }
 
   function bindPlatformHub() {
@@ -1790,11 +1797,50 @@
     return labels.some((label) => interests.has(label));
   }
 
+  function permanentBuilderNumber(memory = read(memoryKey, {})) {
+    const candidate = memory.builderNumber || state.builderNumber || "";
+    const value = String(candidate || "").replace(/^#|builder\s*#/i, "").trim();
+    return /^\d+$/.test(value) ? value : "";
+  }
+
   function builderNumberValue() {
     const memory = read(memoryKey, {});
-    const number = memory.builderNumber || String(Math.abs(hashString(state.journeyId || "doneovernight")) % 9000 + 100).padStart(4, "0");
-    if (memory.builderNumber !== number) updateMemory({ builderNumber: number });
-    return number;
+    return permanentBuilderNumber(memory) || copy[lang].builderPending;
+  }
+
+  async function prepareBuilderIdentity() {
+    if (pageName() !== "how-it-works") return;
+    if (completionPercent() < 100) return;
+    const memory = read(memoryKey, {});
+    if (permanentBuilderNumber(memory)) return;
+    if (state.identityPreparing) return;
+    state.identityPreparing = true;
+    save(storageKey, state);
+    try {
+      const response = await fetch("/api/builder-identity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(builderIdentityPayload({ includeBuilderNumber: false }))
+      });
+      const result = await response.json().catch(() => ({}));
+      const issuedNumber = result.identity?.builderNumber || result.identity_storage?.builder_number || result.identity_storage?.identity?.builder_number;
+      if (response.ok && issuedNumber) {
+        state.builderNumber = String(issuedNumber);
+        state.identityPrepared = true;
+        delete state.identityPreparing;
+        save(storageKey, state);
+        updateMemory({
+          builderNumber: String(issuedNumber),
+          identityPreparedAt: new Date().toISOString(),
+          builderStatus: result.identity?.status || "Founding Builder"
+        });
+        renderPassport();
+        persistVisitorProgress();
+        return;
+      }
+    } catch (error) {}
+    delete state.identityPreparing;
+    save(storageKey, state);
   }
 
   function bindWalletActions() {
@@ -1830,11 +1876,11 @@
     }
   }
 
-  function builderIdentityPayload() {
-    return {
+  function builderIdentityPayload(options = {}) {
+    const number = permanentBuilderNumber();
+    const payload = {
       pass_kind: "builder",
       journey_id: state.journeyId || "",
-      builder_number: builderNumberValue(),
       builder_type: builderType(),
       interests: state.interests || [],
       path: pathLabel(state.path),
@@ -1846,6 +1892,8 @@
       status: read(memoryKey, {}).foundingBuilder ? "Founding Builder" : "Builder",
       ...platformLanguagePayload()
     };
+    if (options.includeBuilderNumber !== false && number) payload.builder_number = number;
+    return payload;
   }
 
   function normalizeProfileLabel(value) {
@@ -2473,12 +2521,23 @@
     if (!note || !state.journeyId) return;
     const data = await fetchPlatformData(`view=visitor&journey_id=${encodeURIComponent(state.journeyId)}`);
     if (!data.ok || !data.journey) return;
+    if (data.identity?.builder_number) {
+      state.builderNumber = String(data.identity.builder_number);
+      save(storageKey, state);
+      updateMemory({
+        builderNumber: String(data.identity.builder_number),
+        builderStatus: data.identity.status || "Founding Builder",
+        builderType: data.identity.builder_type || read(memoryKey, {}).builderType || ""
+      });
+    }
     const pct = Math.max(completionPercent(), Number(data.journey.completion_percentage || 0));
     note.hidden = false;
     note.innerHTML = returnVisitorMarkup({
       pct,
       previousVisit: read(memoryKey, {}).previousVisit,
       since: [
+        Number(data.latest_deployments_count || 0) ? `${Number(data.latest_deployments_count || 0)} ${copy[lang].deployments}` : "",
+        Number(data.new_journal_entries || 0) ? `${Number(data.new_journal_entries || 0)} ${copy[lang].journalUpdates}` : "",
         Number(data.viewer_builds_count || 0) ? `${Number(data.viewer_builds_count || 0)} Viewer Builds` : "",
         Number(data.resource_interest_count || 0) ? `${Number(data.resource_interest_count || 0)} ${copy[lang].resourcesOpened.toLowerCase()}` : ""
       ].filter(Boolean)
@@ -2753,6 +2812,13 @@
             title: item.pass_kind === "founder" ? "Founder" : item.builder_number ? `Builder #${item.builder_number}` : item.serial_number || "Builder",
             detail: `${walletStatusLabel(item.status)}${item.signed ? "" : " · Unsigned until credentials"}`
           })))}
+          ${hqIdentityRows("Identity Types", [
+            { title: "Founder", detail: "Wallet Pass · Profile · Platform history" },
+            { title: "Builder", detail: "Wallet Pass · Builder Profile · Resources" },
+            { title: "Operator", detail: "Future permissions · Delivery history" },
+            { title: "Client", detail: "Future workspace · Project history" },
+            { title: "Partner", detail: "Future access · Shared systems" }
+          ])}
         </section>
         <div class="live-status-actions">
           <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">Founder Pass</a>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Builder Profile | DONEOVERNIGHT</title>
+  <meta name="description" content="DONEOVERNIGHT Builder Profile. A permanent identity layer for Builders, wallet passes, journeys, resources, and platform history.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="https://doneovernight.com/builder">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="DONEOVERNIGHT">
+  <meta property="og:title" content="Builder Profile | DONEOVERNIGHT">
+  <meta property="og:description" content="A permanent DONEOVERNIGHT Builder identity.">
+  <meta property="og:image" content="https://doneovernight.com/brand/doneovernight-neutral.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Builder Profile | DONEOVERNIGHT">
+  <meta name="twitter:description" content="A permanent DONEOVERNIGHT Builder identity.">
+  <meta name="twitter:image" content="https://doneovernight.com/brand/doneovernight-neutral.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#050608">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/experience/experience.css">
+</head>
+<body>
+  <div class="vignette"></div>
+  <div class="grain"></div>
+  <nav class="experience-nav" aria-label="Builder profile">
+    <a class="experience-brand" href="/"><img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT"></a>
+    <a class="open-live" href="/how-it-works">How It Works</a>
+  </nav>
+  <main class="experience-shell builder-profile-page">
+    <section class="connect-hero" aria-label="DONEOVERNIGHT Builder Profile">
+      <div class="connect-identity">
+        <span class="eyebrow">DONEOVERNIGHT</span>
+        <h1 class="display" id="builder-profile-heading">Builder Profile</h1>
+        <p class="connect-name" id="builder-profile-type">Permanent identity.</p>
+        <p class="connect-role" id="builder-profile-status">Waiting for Builder data.</p>
+        <p class="lede" id="builder-profile-line">Builder profiles connect journey, resources, wallet status, and platform history.</p>
+      </div>
+      <article class="passport-card builder-profile-card" aria-label="Builder identity">
+        <span>Identity</span>
+        <strong id="builder-profile-number">Builder pending</strong>
+        <dl>
+          <div><dt>Journey ID</dt><dd id="builder-profile-journey">Waiting</dd></div>
+          <div><dt>Joined</dt><dd id="builder-profile-joined">Waiting</dd></div>
+          <div><dt>Completion</dt><dd id="builder-profile-completion">Waiting</dd></div>
+          <div><dt>Primary Interests</dt><dd id="builder-profile-interests">Waiting</dd></div>
+          <div><dt>Chosen Path</dt><dd id="builder-profile-path">Waiting</dd></div>
+          <div><dt>Automation Focus</dt><dd id="builder-profile-automation">Waiting</dd></div>
+          <div><dt>Wallet Status</dt><dd id="builder-profile-wallet">Waiting</dd></div>
+          <div><dt>Viewer Builds</dt><dd id="builder-profile-builds">Waiting</dd></div>
+        </dl>
+        <div class="wallet-actions">
+          <a class="quiet-action secondary" href="/how-it-works">Continue Journey</a>
+          <a class="quiet-action secondary" href="/resources">Resources</a>
+          <a class="quiet-action secondary" href="/live">Live</a>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const number = decodeURIComponent(location.pathname.split("/").filter(Boolean)[1] || new URLSearchParams(location.search).get("builder") || "").replace(/^#|builder\\s*#/i, "").trim();
+      const fill = (id, value) => {
+        const node = document.getElementById(id);
+        if (node && value) node.textContent = value;
+      };
+      const asList = (value) => Array.isArray(value) ? value.filter(Boolean).join(", ") : (value || "");
+      const formatDate = (value) => {
+        if (!value) return "";
+        try { return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value)); }
+        catch (error) { return value; }
+      };
+      if (!number) return;
+      fill("builder-profile-heading", `Builder #${number}`);
+      fill("builder-profile-number", `Builder #${number}`);
+      fetch(`/api/platform-data?view=builder&builder_number=${encodeURIComponent(number)}`, { cache: "no-store" })
+        .then((response) => response.json())
+        .then((data) => {
+          if (!data.ok || !data.identity) return;
+          const payload = data.identity.identity_payload || {};
+          const journey = data.journey || {};
+          const wallet = Array.isArray(data.wallet_passes) && data.wallet_passes.length ? data.wallet_passes[0] : {};
+          fill("builder-profile-type", data.identity.builder_type || payload.builderType || payload.builder_type || "Builder");
+          fill("builder-profile-status", data.identity.status || payload.status || "Founding Builder");
+          fill("builder-profile-line", payload.identityLine || payload.identity_line || "Permanent DONEOVERNIGHT identity.");
+          fill("builder-profile-journey", data.identity.journey_id || payload.journeyId || payload.journey_id);
+          fill("builder-profile-joined", formatDate(data.identity.created_at || payload.joinedAt || payload.joined_at));
+          fill("builder-profile-completion", `${journey.completion_percentage || payload.completion || 0}%`);
+          fill("builder-profile-interests", asList(journey.chosen_interests || payload.interests || payload.chosen_interests));
+          fill("builder-profile-path", journey.chosen_path || payload.path || payload.chosen_path);
+          fill("builder-profile-automation", asList(payload.automationChoice || payload.automation_choice));
+          fill("builder-profile-wallet", wallet.status ? `${wallet.provider || "wallet"} · ${wallet.status}${wallet.signed ? "" : " · unsigned"}` : "Prepared");
+          fill("builder-profile-builds", data.viewer_builds?.length ? `${data.viewer_builds.length} submitted` : "Waiting");
+        })
+        .catch(() => {});
+    })();
+  </script>
+</body>
+</html>
