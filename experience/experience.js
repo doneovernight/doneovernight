@@ -2796,6 +2796,8 @@
     const builderPasses = status.builder_passes || [];
     const notConnected = status.placeholders?.builder_identities || status.placeholders?.wallet_passes;
     const founderStatus = founder ? "Issued" : "Prepared";
+    const founderSigned = founder?.signed === true;
+    const founderProvider = founder?.provider ? `${founder.provider} · ` : "";
     const builderIssued = Number(counts.builder_issued ?? builderPasses.filter((item) => item.status === "issued").length);
     return `
       <section class="viewer-panel live-status-writer" aria-label="Identity">
@@ -2808,7 +2810,7 @@
           <article class="identity-status-card">
             <span>Founder Pass</span>
             <strong>${founderStatus}</strong>
-            <small>${founder ? "Unsigned until Apple certificates." : "Ready to issue."}</small>
+            <small>${founder ? `${founderProvider}${founderSigned ? "signed" : "unsigned · certificates required"}` : "Ready to issue."}</small>
           </article>
           <article class="identity-status-card">
             <span>Builder Passes</span>
@@ -2831,8 +2833,11 @@
             { title: "Partner", detail: "Future access · Shared systems" }
           ])}
         </section>
+        <p class="form-note">Founder QR/NFC destination: /don. Use this page for QR/NFC sharing until signed Wallet delivery is configured.</p>
         <div class="live-status-actions">
-          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">Founder Pass</a>
+          <a class="quiet-action secondary" href="/don">Open /don</a>
+          <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=founder">Founder Apple Payload</a>
+          <a class="quiet-action secondary" href="/api/builder-wallet/google?type=founder">Founder Google Payload</a>
           <a class="quiet-action secondary" href="/api/builder-wallet/apple?type=builder">Builder Pass</a>
         </div>
       </section>
