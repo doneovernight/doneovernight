@@ -1,6 +1,6 @@
 # DONEOVERNIGHT v1.0 Freeze Report
 
-Status: implementation sprint completed locally.
+Status: implemented, committed, pushed, deployed, and production-verified.
 
 Scope: legal/policy copy, SEO/indexing hygiene, route decision documentation, wallet/product honesty, and platform readiness reporting. No new product features were added.
 
@@ -205,7 +205,60 @@ Results:
 - Robots file exists and is non-empty.
 - Stale wallet/metric wording scan returned no matches.
 
-Production verification is pending deployment.
+Production deployment:
+
+- Commit: `1cebdb6`
+- Deployment: `https://doneovernight-iho67adi1-doneovernights-projects.vercel.app`
+- Production alias: `https://doneovernight.com`
+- Vercel deployment ID: `dpl_Fa6JMThUkz39qbqDgbu3CfXVU7Qn`
+
+Production route smoke checks:
+
+```text
+200 https://doneovernight.com/
+200 https://doneovernight.com/how-it-works
+200 https://doneovernight.com/builder
+200 https://doneovernight.com/library
+200 https://doneovernight.com/resources
+200 https://doneovernight.com/journal
+200 https://doneovernight.com/products
+200 https://doneovernight.com/case-studies
+200 https://doneovernight.com/don
+200 https://doneovernight.com/connect
+200 https://doneovernight.com/live
+200 https://doneovernight.com/privacy
+200 https://doneovernight.com/terms
+200 https://doneovernight.com/refund
+200 https://doneovernight.com/trust
+200 https://doneovernight.com/enterprise
+200 https://doneovernight.com/hq
+200 https://doneovernight.com/hq/login
+200 https://admin.doneovernight.com
+200 https://ask.doneovernight.com
+200 https://doneovernight.com/robots.txt
+200 https://doneovernight.com/sitemap.xml
+```
+
+Production API sanity:
+
+- `/api/platform-data?view=live` returned `ok:true`, `placeholder:false`, and live status for commit `1cebdb6`.
+- `/api/builder-wallet/apple?type=founder` returned honest missing-certificate behavior:
+  - `configured:false`
+  - `status:"wallet_certificates_required"`
+  - missing Apple Wallet certificate env vars listed
+  - no fake `.pkpass`
+  - wallet storage saved a preparation row
+
+Production content checks confirmed:
+
+- `/privacy` includes Builder IDs, Supabase, wallet passes, and localStorage language.
+- `/terms` includes Platform access, Viewer Builds/public ideas, and Wallet passes.
+- `/refund` includes Platform products and "not paid purchases" clarification.
+- `/how-it-works` shows `Apple Wallet prepared`, `Google Wallet prepared`, and credential-required wallet copy.
+- `/library` shows public vs Builder/operator access clarification.
+- `robots.txt` includes `/hq`, `/start`, `/cp`, and SaiUniversity disallows.
+
+Browser note: direct browser automation was not available in this session. Production verification was performed through route, API, and deployed-content HTTP checks.
 
 ## Policies Needing Human / Legal Review
 
@@ -249,4 +302,3 @@ Specific review points:
 ## Manual SQL
 
 No manual SQL is required for this sprint.
-
