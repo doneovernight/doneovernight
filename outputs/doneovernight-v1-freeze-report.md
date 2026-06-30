@@ -207,10 +207,8 @@ Results:
 
 Production deployment:
 
-- Commit: `1cebdb6`
-- Deployment: `https://doneovernight-iho67adi1-doneovernights-projects.vercel.app`
-- Production alias: `https://doneovernight.com`
-- Vercel deployment ID: `dpl_Fa6JMThUkz39qbqDgbu3CfXVU7Qn`
+- Production was deployed through Vercel and aliased to `https://doneovernight.com`.
+- The final deployment URL/ID is intentionally not hardcoded in this report because report-only commits create a new deployment ID.
 
 Production route smoke checks:
 
@@ -241,7 +239,7 @@ Production route smoke checks:
 
 Production API sanity:
 
-- `/api/platform-data?view=live` returned `ok:true`, `placeholder:false`, and live status for commit `1cebdb6`.
+- `/api/platform-data?view=live` returned `ok:true` and platform data from production. When no manual `live_status` row is present, the API keeps the calm placeholder state and still surfaces real journal/deployment records where available.
 - `/api/builder-wallet/apple?type=founder` returned honest missing-certificate behavior:
   - `configured:false`
   - `status:"wallet_certificates_required"`
