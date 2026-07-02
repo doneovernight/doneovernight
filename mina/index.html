@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mina | DONEOVERNIGHT Creator OS</title>
+  <meta name="description" content="Mina's premium creator hub for live links, drops, community, and updates.">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      --bg: #08090b;
+      --panel: rgba(255,255,255,.08);
+      --panel-strong: rgba(255,255,255,.13);
+      --text: #fff7ec;
+      --muted: rgba(255,247,236,.72);
+      --line: rgba(255,255,255,.16);
+      --accent: #f2b35d;
+      --accent-2: #f06f9a;
+      --shadow: 0 28px 80px rgba(0,0,0,.34);
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 22% -12%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 30rem),
+        radial-gradient(circle at 100% 6%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 28rem),
+        linear-gradient(145deg, #08090b 0%, #111018 52%, #0b0d10 100%);
+      color: var(--text);
+    }
+    body.theme-rose { --accent: #fb7185; --accent-2: #f0abfc; }
+    body.theme-ocean { --accent: #38bdf8; --accent-2: #2dd4bf; }
+    body.theme-matcha { --accent: #a3e635; --accent-2: #34d399; }
+    body.theme-solar { --accent: #f59e0b; --accent-2: #ef4444; }
+    body.theme-violet { --accent: #a78bfa; --accent-2: #22d3ee; }
+    a { color: inherit; text-decoration: none; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .shell {
+      width: min(100%, 520px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 18px 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      min-height: 320px;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.74)),
+        linear-gradient(135deg, color-mix(in srgb, var(--accent) 78%, #101014), color-mix(in srgb, var(--accent-2) 58%, #050507));
+      box-shadow: var(--shadow);
+      isolation: isolate;
+    }
+    .hero.has-banner {
+      background-size: cover;
+      background-position: center;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.78));
+      z-index: -1;
+    }
+    .status-pill {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.26);
+      border-radius: 999px;
+      background: rgba(0,0,0,.32);
+      backdrop-filter: blur(14px);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #9ca3af;
+      box-shadow: 0 0 0 5px rgba(156,163,175,.14);
+    }
+    .is-live .dot {
+      background: #ef4444;
+      box-shadow: 0 0 0 5px rgba(239,68,68,.18), 0 0 24px rgba(239,68,68,.75);
+    }
+    .hero-content {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 12px;
+    }
+    .avatar {
+      width: 92px;
+      height: 92px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 26px;
+      border: 1px solid rgba(255,255,255,.34);
+      background: linear-gradient(135deg, rgba(255,255,255,.26), rgba(255,255,255,.08));
+      box-shadow: 0 20px 50px rgba(0,0,0,.34);
+      color: #fff;
+      font-size: 34px;
+      font-weight: 900;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 16vw, 76px);
+      line-height: .86;
+      letter-spacing: 0;
+    }
+    .handle, .bio, .meta, .foot { color: var(--muted); }
+    .handle { font-size: 14px; font-weight: 800; }
+    .bio { margin: 0; font-size: 17px; line-height: 1.5; }
+    .meta { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+    .primary {
+      min-height: 58px;
+      border: 0;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #090909;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 900;
+      box-shadow: 0 22px 58px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+    .primary[aria-disabled="true"] {
+      background: var(--panel-strong);
+      color: var(--muted);
+      border: 1px solid var(--line);
+      box-shadow: none;
+      cursor: default;
+    }
+    .grid { display: grid; gap: 10px; }
+    .link-card {
+      min-height: 58px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      backdrop-filter: blur(18px);
+    }
+    .link-card strong { font-size: 15px; }
+    .link-card span { color: var(--muted); font-size: 13px; }
+    .subscribe {
+      border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+      border-radius: 24px;
+      padding: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      box-shadow: var(--shadow);
+    }
+    .subscribe h2 { margin: 0 0 8px; font-size: 22px; }
+    .subscribe p { margin: 0 0 16px; color: var(--muted); line-height: 1.45; }
+    .email-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .email-row input {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      padding: 13px 14px;
+      font: inherit;
+    }
+    .email-row button {
+      border: 0;
+      border-radius: 15px;
+      background: var(--text);
+      color: #08090b;
+      padding: 0 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .future {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .future span {
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      color: rgba(255,247,236,.52);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .foot { padding: 8px 0 0; text-align: center; font-size: 12px; font-weight: 800; }
+    @media (min-width: 760px) {
+      .shell { width: min(100%, 720px); padding-top: 34px; }
+      .hero { min-height: 440px; border-radius: 38px; }
+      .hero-content { left: 28px; right: 28px; bottom: 28px; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .link-card { min-height: 68px; }
+    }
+  </style>
+</head>
+<body class="theme-onyx">
+  <main class="shell">
+    <section class="hero" id="hero">
+      <div class="status-pill" id="liveStatus"><span class="dot"></span><span>Loading</span></div>
+      <div class="hero-content">
+        <div class="avatar" id="avatar">M</div>
+        <div>
+          <h1 id="displayName">Mina</h1>
+          <div class="handle" id="handle">@mina</div>
+        </div>
+      </div>
+    </section>
+    <p class="bio" id="bio">A premium creator hub for drops, live moments, community links, and the next thing Mina is building.</p>
+    <div class="meta" id="location">Amsterdam, NL</div>
+    <a class="primary" id="primaryCta" href="#" aria-disabled="true">Offline / Next live soon</a>
+    <section class="grid" id="linkGrid" aria-label="Creator links"></section>
+    <section class="subscribe" id="subscribe">
+      <h2 id="popupTitle">Get Mina's next drop</h2>
+      <p id="popupCopy">Join the private update list for live alerts, community drops, and behind-the-scenes releases.</p>
+      <form class="email-row" id="subscribeForm">
+        <input type="email" aria-label="Email address" placeholder="you@example.com" required>
+        <button type="submit">Join</button>
+      </form>
+    </section>
+    <section class="future" aria-label="Future Creator OS modules">
+      <span>Ask Mina</span>
+      <span>Auto live detection</span>
+      <span>Analytics</span>
+      <span>Stream analyzer</span>
+    </section>
+    <footer class="foot">Powered by DONEOVERNIGHT®.</footer>
+  </main>
+  <script>
+    const fallback = {
+      display_name: "Mina",
+      username: "mina",
+      slug: "mina",
+      bio: "A premium creator hub for drops, live moments, community links, and the next thing Mina is building.",
+      location: "Amsterdam, NL",
+      avatar_url: "",
+      banner_url: "",
+      tiktok_url: "https://www.tiktok.com/@mina",
+      discord_url: "",
+      instagram_url: "https://www.instagram.com/mina",
+      tiktok_coins_url: "https://www.tiktok.com/coin",
+      business_email: "mina@doneovernight.com",
+      live_url: "",
+      live_status: false,
+      live_button_text: "Join Live",
+      theme_preset: "onyx",
+      subscribe_popup_enabled: true,
+      subscribe_popup_title: "Get Mina's next drop",
+      subscribe_popup_copy: "Join the private update list for live alerts, community drops, and behind-the-scenes releases."
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const themeMap = new Set(["onyx", "rose", "ocean", "matcha", "solar", "violet"]);
+
+    function safeUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.origin);
+        if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "mailto:") return url.href;
+      } catch (error) {}
+      return "";
+    }
+
+    function setText(id, value) {
+      $(id).textContent = value || "";
+    }
+
+    function renderAvatar(settings) {
+      const avatar = $("avatar");
+      avatar.textContent = (settings.display_name || "M").charAt(0).toUpperCase();
+      const url = safeUrl(settings.avatar_url);
+      if (url) {
+        avatar.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = settings.display_name + " avatar";
+        avatar.appendChild(img);
+      }
+    }
+
+    function renderLinks(settings) {
+      const links = [
+        ["TikTok", "Short-form drops", settings.tiktok_url],
+        ["Discord", "Community access", settings.discord_url],
+        ["Instagram", "Daily updates", settings.instagram_url],
+        ["TikTok Coins", "Support the live", settings.tiktok_coins_url],
+        ["Business email", settings.business_email, settings.business_email ? "mailto:" + settings.business_email : ""],
+        ["Live room", "Current live destination", settings.live_url]
+      ];
+      const grid = $("linkGrid");
+      grid.innerHTML = "";
+      links.filter((item) => item[2]).forEach((item) => {
+        const card = document.createElement("a");
+        card.className = "link-card";
+        card.href = safeUrl(item[2]);
+        card.target = item[2].startsWith("mailto:") ? "_self" : "_blank";
+        card.rel = "noreferrer";
+        const copy = document.createElement("div");
+        const title = document.createElement("strong");
+        title.textContent = item[0];
+        const sub = document.createElement("span");
+        sub.textContent = item[1];
+        copy.append(title, document.createElement("br"), sub);
+        const arrow = document.createElement("span");
+        arrow.textContent = "Open";
+        card.append(copy, arrow);
+        grid.appendChild(card);
+      });
+    }
+
+    function render(settings) {
+      const theme = themeMap.has(settings.theme_preset) ? settings.theme_preset : "onyx";
+      document.body.className = "theme-" + theme + (settings.live_status ? " is-live" : "");
+      setText("displayName", settings.display_name || "Mina");
+      setText("handle", "@" + (settings.username || settings.slug || "mina"));
+      setText("bio", settings.bio || fallback.bio);
+      setText("location", settings.location || "");
+      renderAvatar(settings);
+      const banner = safeUrl(settings.banner_url);
+      if (banner) {
+        $("hero").classList.add("has-banner");
+        $("hero").style.backgroundImage = "linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.74)), url('" + banner + "')";
+      }
+      const liveStatus = $("liveStatus").querySelector("span:last-child");
+      liveStatus.textContent = settings.live_status ? "Live now" : "Offline / Next live soon";
+      const cta = $("primaryCta");
+      if (settings.live_status && settings.live_url) {
+        cta.textContent = settings.live_button_text || "Join Live";
+        cta.href = safeUrl(settings.live_url);
+        cta.removeAttribute("aria-disabled");
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+      } else {
+        cta.textContent = "Offline / Next live soon";
+        cta.href = "#";
+        cta.setAttribute("aria-disabled", "true");
+        cta.removeAttribute("target");
+      }
+      renderLinks(settings);
+      $("subscribe").hidden = !settings.subscribe_popup_enabled;
+      setText("popupTitle", settings.subscribe_popup_title || fallback.subscribe_popup_title);
+      setText("popupCopy", settings.subscribe_popup_copy || fallback.subscribe_popup_copy);
+    }
+
+    $("subscribeForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector("button");
+      button.textContent = "Saved";
+      setTimeout(() => { button.textContent = "Join"; }, 1800);
+    });
+
+    fetch("/api/creator-settings?slug=mina")
+      .then((response) => response.json())
+      .then((data) => render({ ...fallback, ...(data.creator || {}) }))
+      .catch(() => render(fallback));
+  </script>
+</body>
+</html>
