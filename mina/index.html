@@ -126,7 +126,7 @@
       line-height: .86;
       letter-spacing: 0;
     }
-    .handle, .bio, .meta, .foot { color: var(--muted); }
+    .handle, .bio, .meta { color: var(--muted); }
     .handle { font-size: 14px; font-weight: 800; }
     .bio { margin: 0; font-size: 17px; line-height: 1.5; }
     .meta { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
@@ -166,6 +166,18 @@
     }
     .link-card strong { font-size: 15px; }
     .link-card span { color: var(--muted); font-size: 13px; }
+    .link-action {
+      flex: 0 0 auto;
+      min-width: 74px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255,255,255,.06);
+      color: rgba(255,247,236,.82) !important;
+      font-size: 12px !important;
+      font-weight: 900;
+      text-align: center;
+    }
     .subscribe {
       border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
       border-radius: 24px;
@@ -208,13 +220,59 @@
       font-weight: 800;
       text-align: center;
     }
-    .foot { padding: 8px 0 0; text-align: center; font-size: 12px; font-weight: 800; }
+    .footer-zone {
+      position: relative;
+      min-height: 118px;
+      margin-top: 2px;
+      padding: 40px 0 4px;
+      display: grid;
+      place-items: end center;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .footer-watermark {
+      position: absolute;
+      left: 50%;
+      bottom: -34px;
+      z-index: -1;
+      width: max-content;
+      max-width: none;
+      transform: translateX(-50%);
+      color: rgba(255,247,236,.055);
+      font-size: clamp(46px, 17vw, 122px);
+      font-weight: 950;
+      line-height: .72;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+    }
+    .foot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 20px;
+      color: rgba(255,247,236,.46);
+      font-size: 11px;
+      font-weight: 750;
+      text-align: center;
+    }
+    .foot img {
+      width: 112px;
+      height: auto;
+      opacity: .5;
+      filter: saturate(.75);
+      display: block;
+    }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 34px; }
       .hero { min-height: 440px; border-radius: 38px; }
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
       .grid { grid-template-columns: repeat(2, 1fr); }
       .link-card { min-height: 68px; }
+      .footer-zone { min-height: 154px; padding-top: 58px; }
+      .foot img { width: 132px; }
     }
   </style>
 </head>
@@ -248,7 +306,13 @@
       <span>Analytics</span>
       <span>Stream analyzer</span>
     </section>
-    <footer class="foot">Powered by DONEOVERNIGHT®.</footer>
+    <div class="footer-zone" aria-label="DONEOVERNIGHT footer">
+      <div class="footer-watermark" aria-hidden="true">DONEOVERNIGHT</div>
+      <footer class="foot">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </footer>
+    </div>
   </main>
   <script>
     const fallback = {
@@ -304,12 +368,12 @@
 
     function renderLinks(settings) {
       const links = [
-        ["TikTok", "Short-form drops", settings.tiktok_url],
-        ["Discord", "Community access", settings.discord_url],
-        ["Instagram", "Daily updates", settings.instagram_url],
-        ["TikTok Coins", "Support the live", settings.tiktok_coins_url],
-        ["Business email", settings.business_email, settings.business_email ? "mailto:" + settings.business_email : ""],
-        ["Live room", "Current live destination", settings.live_url]
+        ["TikTok", "Short-form drops", settings.tiktok_url, "Watch"],
+        ["Discord", "Community access", settings.discord_url, "Join"],
+        ["Instagram", "Daily updates", settings.instagram_url, "View"],
+        ["TikTok Coins", "Support the live", settings.tiktok_coins_url, "Support"],
+        ["Business email", settings.business_email, settings.business_email ? "mailto:" + settings.business_email : "", "Email"],
+        ["Live room", "Current live destination", settings.live_url, "Join live"]
       ];
       const grid = $("linkGrid");
       grid.innerHTML = "";
@@ -326,7 +390,8 @@
         sub.textContent = item[1];
         copy.append(title, document.createElement("br"), sub);
         const arrow = document.createElement("span");
-        arrow.textContent = "Open";
+        arrow.className = "link-action";
+        arrow.textContent = item[3];
         card.append(copy, arrow);
         grid.appendChild(card);
       });
