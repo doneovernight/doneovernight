@@ -123,6 +123,31 @@
       text-transform: uppercase;
     }
 
+    .language-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: rgba(245, 241, 234, 0.34);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .language-toggle button {
+      padding: 4px 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    .language-toggle button.is-active {
+      color: var(--gold);
+    }
+
+    .language-toggle span {
+      color: rgba(245, 241, 234, 0.22);
+    }
+
     .nav-links a,
     .footer-links a,
     .button {
@@ -226,8 +251,8 @@
       transform: scale(1.01);
     }
 
-    .slide:nth-child(1) img { object-position: 50% 58%; }
-    .slide:nth-child(2) img { object-position: 54% 45%; }
+    .slide:nth-child(1) img { object-position: 50% 56%; }
+    .slide:nth-child(2) img { object-position: 54% 44%; }
     .slide:nth-child(3) img { object-position: 50% 58%; }
     .slide:nth-child(4) img { object-position: 50% 50%; }
     .slide:nth-child(5) img { object-position: 50% 34%; }
@@ -435,18 +460,18 @@
     .footer {
       position: relative;
       overflow: hidden;
-      padding: clamp(56px, 8vw, 100px) 0 clamp(98px, 11vw, 156px);
+      padding: clamp(56px, 8vw, 100px) 0 clamp(122px, 13vw, 188px);
       border-top: 1px solid rgba(245, 241, 234, 0.07);
     }
 
     .footer-wordmark {
       position: absolute;
       right: 50%;
-      bottom: -0.2em;
+      bottom: -0.11em;
       transform: translateX(50%);
-      color: rgba(245, 241, 234, 0.055);
+      color: rgba(245, 241, 234, 0.075);
       font-family: var(--serif);
-      font-size: clamp(78px, 15.5vw, 224px);
+      font-size: clamp(84px, 16.5vw, 238px);
       font-style: italic;
       font-weight: 400;
       line-height: 0.78;
@@ -460,12 +485,22 @@
       z-index: 1;
       display: flex;
       flex-wrap: wrap;
-      gap: 18px;
+      gap: 10px;
       color: rgba(245, 241, 234, 0.48);
       font-family: var(--mono);
       font-size: 10px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
+    }
+
+    .footer-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 13px;
+      border: 1px solid rgba(245, 241, 234, 0.09);
+      border-radius: 999px;
+      background: rgba(245, 241, 234, 0.012);
     }
 
     @media (max-width: 1180px) {
@@ -509,16 +544,20 @@
       .slider-frame { aspect-ratio: 4 / 5; }
       .profile-section,
       .introduction { padding: 68px 0; }
-      .section-title { font-size: clamp(34px, 8.8vw, 48px); line-height: 1.07; }
+      .section-title { font-size: clamp(32px, 8vw, 43px); line-height: 1.1; }
       .lead-line { font-size: clamp(29px, 8.2vw, 40px); }
       .pillars { gap: 30px; margin-top: 38px; }
       .builds { gap: 30px; margin-top: 38px; }
-      .intro-core { font-size: clamp(26px, 7.2vw, 38px); }
+      .intro-core { font-size: clamp(23px, 6.2vw, 32px); line-height: 1.16; }
       .ask-section { padding: 66px 0 76px; }
-      .ask-title { font-size: clamp(36px, 9.4vw, 50px); line-height: 1.05; }
+      .ask-title { font-size: clamp(32px, 8.4vw, 44px); line-height: 1.08; }
       .button { width: 100%; }
-      .footer { padding: 44px 0 90px; }
-      .footer-wordmark { font-size: clamp(70px, 21vw, 118px); }
+      .footer { padding: 44px 0 104px; }
+      .footer-wordmark {
+        bottom: -0.08em;
+        color: rgba(245, 241, 234, 0.08);
+        font-size: clamp(72px, 22vw, 126px);
+      }
     }
 
     @media (max-width: 520px) {
@@ -527,6 +566,11 @@
         gap: 16px;
       }
       .nav-links { justify-content: flex-start; max-width: none; }
+      .nav-right {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+      }
       .slider-meta {
         align-items: flex-start;
         flex-direction: column;
@@ -557,17 +601,22 @@
           <a href="https://ask.doneovernight.com">Ask</a>
           <a href="/don" aria-current="page">Don</a>
         </div>
+        <div class="language-toggle" aria-label="Language">
+          <button class="is-active" type="button" data-lang="nl" aria-pressed="true">NL</button>
+          <span>|</span>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
       </div>
     </nav>
 
     <main>
       <section class="hero" aria-labelledby="page-title">
         <div>
-          <span class="eyebrow">Founder of DONEOVERNIGHT</span>
+          <span class="eyebrow" data-i18n data-nl="Founder of DONEOVERNIGHT" data-en="Founder of DONEOVERNIGHT">Founder of DONEOVERNIGHT</span>
           <h1 class="hero-title" id="page-title">Donovan van der Poel</h1>
           <div class="intro">
-            <p>Ik bouw de digitale systemen achter moderne bedrijven.</p>
-            <p>Websites, automatiseringen, AI-workflows, klantportalen en operating systems — ontworpen om dagelijks gebruikt te worden.</p>
+            <p data-i18n data-nl="Ik bouw de digitale systemen achter moderne bedrijven." data-en="I build the digital systems behind modern companies.">Ik bouw de digitale systemen achter moderne bedrijven.</p>
+            <p data-i18n data-nl="Websites, automatiseringen, AI-workflows, klantportalen en operating systems — ontworpen om dagelijks gebruikt te worden." data-en="Websites, automations, AI workflows, client portals and operating systems — designed for daily use.">Websites, automatiseringen, AI-workflows, klantportalen en operating systems — ontworpen om dagelijks gebruikt te worden.</p>
           </div>
           <p class="quote">&ldquo;While you sleep, we execute.&rdquo;</p>
         </div>
@@ -606,66 +655,66 @@
       </section>
 
       <section class="profile-section editorial" aria-labelledby="why-title">
-        <h2 class="section-title" id="why-title">Technologie moet rust brengen in een bedrijf. Niet meer ruis.</h2>
+        <h2 class="section-title" id="why-title" data-i18n data-nl="Technologie moet rust brengen in een bedrijf. Niet meer ruis." data-en="Technology should bring calm into a company. Not more noise.">Technologie moet rust brengen in een bedrijf. Niet meer ruis.</h2>
         <div class="section-copy">
-          <p>DONEOVERNIGHT bouwt systemen die werk structureren, processen versnellen en ruimte creëren voor betere beslissingen.</p>
+          <p data-i18n data-nl="DONEOVERNIGHT bouwt systemen die werk structureren, processen versnellen en ruimte creëren voor betere beslissingen." data-en="DONEOVERNIGHT builds systems that structure work, speed up processes and create room for better decisions.">DONEOVERNIGHT bouwt systemen die werk structureren, processen versnellen en ruimte creëren voor betere beslissingen.</p>
         </div>
       </section>
 
       <section class="profile-section" aria-labelledby="work-title">
-        <h2 class="section-title" id="work-title">Mijn werk.</h2>
+        <h2 class="section-title" id="work-title" data-i18n data-nl="Mijn werk." data-en="My work.">Mijn werk.</h2>
         <div class="pillars">
           <article class="pillar">
-            <h3>Merk</h3>
-            <p>Positionering, websites en digitale aanwezigheid.</p>
+            <h3 data-i18n data-nl="Merk" data-en="Brand">Merk</h3>
+            <p data-i18n data-nl="Positionering, websites en digitale aanwezigheid." data-en="Positioning, websites and digital presence.">Positionering, websites en digitale aanwezigheid.</p>
           </article>
           <article class="pillar">
-            <h3>Systeem</h3>
-            <p>Portals, automatiseringen en AI-workflows.</p>
+            <h3 data-i18n data-nl="Systeem" data-en="System">Systeem</h3>
+            <p data-i18n data-nl="Portals, automatiseringen en AI-workflows." data-en="Portals, automations and AI workflows.">Portals, automatiseringen en AI-workflows.</p>
           </article>
           <article class="pillar">
-            <h3>Operatie</h3>
-            <p>Structuur, processen en dagelijkse uitvoering.</p>
+            <h3 data-i18n data-nl="Operatie" data-en="Operation">Operatie</h3>
+            <p data-i18n data-nl="Structuur, processen en dagelijkse uitvoering." data-en="Structure, processes and daily execution.">Structuur, processen en dagelijkse uitvoering.</p>
           </article>
         </div>
       </section>
 
       <section class="profile-section editorial" aria-labelledby="builds-title">
         <div>
-          <h2 class="section-title" id="builds-title">Gebouwd in de praktijk.</h2>
+          <h2 class="section-title" id="builds-title" data-i18n data-nl="Gebouwd in de praktijk." data-en="Built in practice.">Gebouwd in de praktijk.</h2>
           <div class="builds">
             <article class="build-item">
               <h3>Restaurant operations platform</h3>
-              <p>Voor reserveringen, communicatie en dagelijkse operationele structuur.</p>
+              <p data-i18n data-nl="Voor reserveringen, communicatie en dagelijkse operationele structuur." data-en="For reservations, communication and daily operational structure.">Voor reserveringen, communicatie en dagelijkse operationele structuur.</p>
             </article>
             <article class="build-item">
               <h3>Lead intake &amp; follow-up automation</h3>
-              <p>Voor aanvragen, opvolging en kwalificatie zonder onnodige ruis.</p>
+              <p data-i18n data-nl="Voor aanvragen, opvolging en kwalificatie zonder onnodige ruis." data-en="For intake, follow-up and qualification without unnecessary noise.">Voor aanvragen, opvolging en kwalificatie zonder onnodige ruis.</p>
             </article>
             <article class="build-item">
               <h3>Client portals &amp; workspaces</h3>
-              <p>Voor status, bestanden, feedback en samenwerking op één plek.</p>
+              <p data-i18n data-nl="Voor status, bestanden, feedback en samenwerking op één plek." data-en="For status, files, feedback and collaboration in one place.">Voor status, bestanden, feedback en samenwerking op één plek.</p>
             </article>
             <article class="build-item">
               <h3>Premium websites &amp; brand systems</h3>
-              <p>Voor bedrijven die digitaal scherper en betrouwbaarder moeten overkomen.</p>
+              <p data-i18n data-nl="Voor bedrijven die digitaal scherper en betrouwbaarder moeten overkomen." data-en="For companies that need to feel sharper and more trusted online.">Voor bedrijven die digitaal scherper en betrouwbaarder moeten overkomen.</p>
             </article>
           </div>
         </div>
       </section>
 
       <section class="introduction" aria-labelledby="intro-title">
-        <h2 class="section-title" id="intro-title">Waarom mensen mij introduceren.</h2>
+        <h2 class="section-title" id="intro-title" data-i18n data-nl="Waarom mensen mij introduceren." data-en="Why people introduce me.">Waarom mensen mij introduceren.</h2>
         <div class="intro-core">
-          <p>Don is iemand die bedrijven niet benadert als losse projecten, maar als systemen.</p>
-          <p>Hij combineert design, software, automatisering en operatie om bedrijven professioneler, rustiger en schaalbaarder te laten werken.</p>
+          <p data-i18n data-nl="Don kijkt niet naar bedrijven als losse projecten, maar als systemen." data-en="Don does not look at companies as separate projects, but as systems.">Don kijkt niet naar bedrijven als losse projecten, maar als systemen.</p>
+          <p data-i18n data-nl="Hij combineert design, software, automatisering en operatie om bedrijven professioneler, rustiger en schaalbaarder te laten werken." data-en="He combines design, software, automation and operations to help companies work with more professionalism, calm and scale.">Hij combineert design, software, automatisering en operatie om bedrijven professioneler, rustiger en schaalbaarder te laten werken.</p>
         </div>
       </section>
 
       <section class="ask-section" aria-labelledby="ask-title">
         <div>
-          <h2 class="ask-title" id="ask-title">Een bedrijf, idee of proces dat slimmer kan?</h2>
-          <p class="ask-copy">Stuur het via Ask. Dan kijken we wat er gebouwd moet worden.</p>
+          <h2 class="ask-title" id="ask-title" data-i18n data-nl="Een bedrijf, idee of proces dat slimmer kan?" data-en="A company, idea or process that could work smarter?">Een bedrijf, idee of proces dat slimmer kan?</h2>
+          <p class="ask-copy" data-i18n data-nl="Stuur het via Ask. Dan kijken we wat er gebouwd moet worden." data-en="Send it through Ask. Then we will look at what needs to be built.">Stuur het via Ask. Dan kijken we wat er gebouwd moet worden.</p>
         </div>
         <div class="actions">
           <a class="button primary" href="https://ask.doneovernight.com">Ask</a>
@@ -691,7 +740,22 @@
     const slides = Array.from(document.querySelectorAll(".slide"));
     const dots = Array.from(document.querySelectorAll(".dot"));
     const buttons = Array.from(document.querySelectorAll(".slider-button"));
+    const languageButtons = Array.from(document.querySelectorAll("[data-lang]"));
+    const translatedNodes = Array.from(document.querySelectorAll("[data-i18n]"));
     let activeSlide = 0;
+
+    function setLanguage(language) {
+      document.documentElement.lang = language;
+      translatedNodes.forEach((node) => {
+        const copy = node.dataset[language];
+        if (copy) node.textContent = copy;
+      });
+      languageButtons.forEach((button) => {
+        const isActive = button.dataset.lang === language;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    }
 
     function setSlide(index) {
       activeSlide = (index + slides.length) % slides.length;
@@ -707,6 +771,10 @@
       button.addEventListener("click", () => {
         setSlide(activeSlide + Number(button.dataset.direction || 1));
       });
+    });
+
+    languageButtons.forEach((button) => {
+      button.addEventListener("click", () => setLanguage(button.dataset.lang));
     });
 
     window.setInterval(() => {
