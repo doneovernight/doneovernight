@@ -51,7 +51,7 @@ insert into public.creators (
   '',
   '/assets/mosyaamosya/intro.mp4',
   'https://www.tiktok.com/@mosyaamosya',
-  '',
+  'https://discord.gg/GGE7WsUZR',
   '',
   'https://www.tiktok.com/coin',
   'mina@doneovernight.com',

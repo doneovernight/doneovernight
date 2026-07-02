@@ -6,6 +6,15 @@
   <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
+  <script>
+    try {
+      if (localStorage.getItem("creator_intro_mosyaamosya_v1") !== "done") {
+        document.documentElement.classList.add("intro-pending");
+      }
+    } catch (error) {
+      document.documentElement.classList.add("intro-pending");
+    }
+  </script>
   <style>
     :root {
       --bg: #080504;
@@ -19,6 +28,7 @@
       --chocolate: #3a2119;
       --deep: #0b0706;
       --shadow: 0 28px 88px rgba(5,2,1,.45);
+      --serif: Georgia, "Times New Roman", serif;
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -53,10 +63,12 @@
       width: min(100%, 520px);
       min-height: 100vh;
       margin: 0 auto;
-      padding: 14px 14px 28px;
+      padding: 14px 14px calc(34px + env(safe-area-inset-bottom));
       display: grid;
       gap: 16px;
+      transition: opacity .35s ease;
     }
+    .intro-pending .shell { opacity: 0; }
     .hero {
       position: relative;
       min-height: 76vh;
@@ -73,9 +85,9 @@
       width: 106%;
       height: 106%;
       object-fit: cover;
-      filter: blur(2px) saturate(.88) contrast(1.02);
-      transform: scale(1.025);
-      opacity: .78;
+      filter: blur(.55px) saturate(.94) contrast(1.04);
+      transform: scale(1.012);
+      opacity: .82;
       z-index: -3;
     }
     .hero::before {
@@ -118,6 +130,11 @@
       font-weight: 900;
       box-shadow: inset 0 1px rgba(255,255,255,.14);
     }
+    a.mini-pill { cursor: pointer; }
+    a.mini-pill:focus-visible {
+      outline: 2px solid var(--pink);
+      outline-offset: 3px;
+    }
     .live-dot {
       width: 8px;
       height: 8px;
@@ -132,7 +149,7 @@
     .sound-button {
       position: fixed;
       right: 16px;
-      bottom: 16px;
+      bottom: calc(16px + env(safe-area-inset-bottom));
       z-index: 20;
       width: 48px;
       height: 48px;
@@ -289,9 +306,10 @@
     }
     .footer-zone {
       position: relative;
-      min-height: 148px;
-      margin-top: 10px;
-      padding: 58px 0 8px;
+      width: 100vw;
+      min-height: 180px;
+      margin: 40px 0 0 calc(50% - 50vw);
+      padding: 100px 6vw calc(40px + env(safe-area-inset-bottom));
       display: grid;
       place-items: end center;
       overflow: hidden;
@@ -300,14 +318,17 @@
     .footer-watermark {
       position: absolute;
       left: 50%;
-      bottom: -26px;
+      bottom: -10px;
       z-index: -1;
-      width: 760px;
-      max-width: none;
-      opacity: .045;
+      font-family: var(--serif);
+      font-size: clamp(64px, 12vw, 180px);
+      line-height: .85;
+      font-style: italic;
+      color: var(--text);
+      letter-spacing: -.04em;
+      opacity: .07;
       transform: translateX(-50%);
-      filter: saturate(.7);
-      mask-image: linear-gradient(to bottom, transparent 0%, black 38%, black 100%);
+      white-space: nowrap;
       pointer-events: none;
       user-select: none;
     }
@@ -334,15 +355,17 @@
       transition: opacity .55s ease;
       overflow: hidden;
     }
-    .intro.is-visible { opacity: 1; pointer-events: auto; }
+    .intro-pending .intro { opacity: 1; pointer-events: auto; }
+    .intro[hidden] { display: none; }
+    .intro.is-done { opacity: 0; pointer-events: none; }
     .intro video {
       position: absolute;
-      inset: -4%;
-      width: 108%;
-      height: 108%;
+      inset: -2%;
+      width: 104%;
+      height: 104%;
       object-fit: cover;
-      filter: blur(4px) saturate(.86);
-      opacity: .62;
+      filter: blur(2px) saturate(.9);
+      opacity: .66;
     }
     .intro::after {
       content: "";
@@ -389,7 +412,6 @@
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
       .button-grid { grid-template-columns: repeat(2, 1fr); }
       .link-button { min-height: 70px; }
-      .footer-watermark { width: 1120px; bottom: -40px; }
       .footer-zone { min-height: 190px; }
     }
   </style>
@@ -399,7 +421,7 @@
     <section class="hero" id="hero">
       <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
       <div class="hero-top">
-        <span class="mini-pill" id="location">Chicago 🇺🇸</span>
+        <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
       </div>
       <div class="hero-content">
@@ -433,7 +455,7 @@
     </section>
 
     <div class="footer-zone" aria-label="DONEOVERNIGHT footer">
-      <img class="footer-watermark" src="/assets/doneovernight-wordmark.svg" alt="" aria-hidden="true">
+      <div class="footer-watermark" aria-hidden="true">done overnight.</div>
       <footer class="foot">
         <span>Powered by</span>
         <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
@@ -467,7 +489,7 @@
       avatar_url: "/assets/mosyaamosya/profile-v2.jpg",
       hero_video_url: "/assets/mosyaamosya/intro.mp4",
       tiktok_url: "https://www.tiktok.com/@mosyaamosya",
-      discord_url: "",
+      discord_url: "https://discord.gg/GGE7WsUZR",
       tiktok_coins_url: "https://www.tiktok.com/coin",
       business_email: "mina@doneovernight.com",
       live_url: "",
@@ -506,6 +528,7 @@
     function setText(id, value) { $(id).textContent = value || ""; }
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
+    function revealPage() { document.documentElement.classList.remove("intro-pending"); }
 
     function actionUrl(action, settings) {
       if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
@@ -569,14 +592,19 @@
 
     function setupIntro(settings) {
       const intro = $("intro");
-      if (!settings.welcome_intro_enabled || localStorage.getItem(introKey) === "done") return;
+      if (!settings.welcome_intro_enabled || localStorage.getItem(introKey) === "done") {
+        intro.hidden = true;
+        revealPage();
+        return;
+      }
       const video = $("introVideo");
       video.src = heroVideo(settings);
-      intro.classList.add("is-visible");
+      intro.hidden = false;
       const dismiss = () => {
         localStorage.setItem(introKey, "done");
-        intro.classList.remove("is-visible");
-        setTimeout(() => { intro.remove(); }, 650);
+        intro.classList.add("is-done");
+        revealPage();
+        setTimeout(() => { intro.hidden = true; }, 650);
       };
       intro.addEventListener("click", dismiss, { once: true });
       window.addEventListener("keydown", dismiss, { once: true });
