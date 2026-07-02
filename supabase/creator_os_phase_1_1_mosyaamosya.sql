@@ -47,7 +47,7 @@ insert into public.creators (
   'mosyaamosya',
   'Daily livestreams, community, yapping, and soft chaos from Chicago.',
   'Chicago 🇺🇸',
-  '/assets/mosyaamosya/profile.jpg',
+  '/assets/mosyaamosya/profile-v2.jpg',
   '',
   '/assets/mosyaamosya/intro.mp4',
   'https://www.tiktok.com/@mosyaamosya',

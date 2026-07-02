@@ -40,7 +40,7 @@ const DEFAULT_MINA_SETTINGS = {
   slug: "mosyaamosya",
   bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
   location: "Chicago 🇺🇸",
-  avatar_url: "/assets/mosyaamosya/profile.jpg",
+  avatar_url: "/assets/mosyaamosya/profile-v2.jpg",
   banner_url: "",
   hero_video_url: "/assets/mosyaamosya/intro.mp4",
   tiktok_url: "https://www.tiktok.com/@mosyaamosya",
