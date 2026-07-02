@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
+  <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      --bg: #080504;
+      --text: #fff5f7;
+      --muted: rgba(255,245,247,.68);
+      --soft: rgba(255,245,247,.1);
+      --line: rgba(255,226,232,.16);
+      --pink: #ffd3df;
+      --pink-strong: #ff9fbd;
+      --brown: #8b5f4a;
+      --chocolate: #3a2119;
+      --deep: #0b0706;
+      --shadow: 0 28px 88px rgba(5,2,1,.45);
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--deep); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem),
+        radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem),
+        linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px);
+      background-size: 100% 34px;
+      mask-image: linear-gradient(to bottom, transparent, black 18%, transparent 92%);
+      opacity: .18;
+    }
+    a, button { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 520px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 14px 14px 28px;
+      display: grid;
+      gap: 16px;
+    }
+    .hero {
+      position: relative;
+      min-height: 76vh;
+      overflow: hidden;
+      border: 1px solid rgba(255,211,223,.18);
+      border-radius: 34px;
+      background: linear-gradient(160deg, #26100c, #080504);
+      box-shadow: var(--shadow), inset 0 1px rgba(255,255,255,.18);
+      isolation: isolate;
+    }
+    .hero-video {
+      position: absolute;
+      inset: -3%;
+      width: 106%;
+      height: 106%;
+      object-fit: cover;
+      filter: blur(2px) saturate(.88) contrast(1.02);
+      transform: scale(1.025);
+      opacity: .78;
+      z-index: -3;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(180deg, rgba(5,3,2,.1), rgba(5,3,2,.76) 68%, rgba(5,3,2,.94)),
+        radial-gradient(circle at 22% 24%, rgba(255,211,223,.2), transparent 28rem);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      box-shadow: inset 0 -120px 120px rgba(7,4,3,.66);
+      pointer-events: none;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+    }
+    .status-pill, .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(15,8,7,.44);
+      color: rgba(255,245,247,.86);
+      backdrop-filter: blur(18px);
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: inset 0 1px rgba(255,255,255,.14);
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #1f1715;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 0 0 5px rgba(255,255,255,.05);
+    }
+    .is-live .live-dot {
+      background: #55f19b;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.3), 0 0 0 5px rgba(85,241,155,.15), 0 0 28px rgba(85,241,155,.58);
+    }
+    .sound-button {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 20;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255,211,223,.22);
+      border-radius: 999px;
+      background: rgba(21,10,8,.68);
+      color: var(--pink);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 46px rgba(0,0,0,.32), 0 0 32px rgba(255,159,189,.12);
+      backdrop-filter: blur(18px);
+      cursor: pointer;
+    }
+    .sound-button[hidden] { display: none; }
+    .hero-content {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .identity {
+      display: grid;
+      gap: 12px;
+    }
+    .avatar {
+      width: 92px;
+      height: 92px;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(255,211,223,.34);
+      background: rgba(255,255,255,.12);
+      box-shadow: 0 22px 58px rgba(0,0,0,.42), 0 0 44px rgba(255,159,189,.12);
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    h1 {
+      max-width: 7ch;
+      margin: 0;
+      font-size: clamp(52px, 18vw, 88px);
+      line-height: .82;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .handle {
+      color: rgba(255,245,247,.78);
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .bio {
+      margin: 0;
+      color: rgba(255,245,247,.78);
+      font-size: 16px;
+      line-height: 1.48;
+      text-wrap: pretty;
+    }
+    .live-card, .glass-card, .link-button {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(255,245,247,.13), rgba(255,245,247,.055));
+      box-shadow: inset 0 1px rgba(255,255,255,.14), 0 20px 62px rgba(0,0,0,.26);
+      backdrop-filter: blur(22px);
+    }
+    .live-card {
+      display: grid;
+      gap: 12px;
+      border-radius: 24px;
+      padding: 16px;
+    }
+    .live-copy {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+    .live-copy strong { display: block; font-size: 13px; letter-spacing: .04em; }
+    .live-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .primary {
+      min-height: 54px;
+      border: 0;
+      border-radius: 17px;
+      background: linear-gradient(135deg, var(--pink), var(--pink-strong));
+      color: #25110f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 950;
+      box-shadow: 0 18px 54px rgba(255,159,189,.32);
+    }
+    .primary[aria-disabled="true"] {
+      border: 1px solid rgba(255,245,247,.14);
+      background: rgba(255,245,247,.08);
+      color: rgba(255,245,247,.52);
+      box-shadow: none;
+      cursor: default;
+    }
+    .button-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .link-button {
+      min-height: 62px;
+      border-radius: 20px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .link-button.is-disabled {
+      opacity: .52;
+      pointer-events: none;
+    }
+    .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .icon-badge {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,211,223,.12);
+      color: var(--pink);
+      box-shadow: inset 0 1px rgba(255,255,255,.15);
+    }
+    .icon-badge svg { width: 19px; height: 19px; }
+    .button-text { min-width: 0; display: grid; gap: 2px; }
+    .button-text strong { font-size: 15px; }
+    .button-text span { color: var(--muted); font-size: 12px; }
+    .button-action {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,211,223,.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255,211,223,.09);
+      color: rgba(255,245,247,.84);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .future {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .future span {
+      border: 1px dashed rgba(255,211,223,.13);
+      border-radius: 16px;
+      padding: 12px 8px;
+      color: rgba(255,245,247,.42);
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+    }
+    .footer-zone {
+      position: relative;
+      min-height: 148px;
+      margin-top: 10px;
+      padding: 58px 0 8px;
+      display: grid;
+      place-items: end center;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .footer-watermark {
+      position: absolute;
+      left: 50%;
+      bottom: -26px;
+      z-index: -1;
+      width: 760px;
+      max-width: none;
+      opacity: .045;
+      transform: translateX(-50%);
+      filter: saturate(.7);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 38%, black 100%);
+      pointer-events: none;
+      user-select: none;
+    }
+    .foot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: rgba(255,245,247,.44);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .foot img { width: 118px; opacity: .5; filter: saturate(.75); }
+    .intro {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: #080504;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .55s ease;
+      overflow: hidden;
+    }
+    .intro.is-visible { opacity: 1; pointer-events: auto; }
+    .intro video {
+      position: absolute;
+      inset: -4%;
+      width: 108%;
+      height: 108%;
+      object-fit: cover;
+      filter: blur(4px) saturate(.86);
+      opacity: .62;
+    }
+    .intro::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(7,4,3,.32), rgba(7,4,3,.76));
+    }
+    .intro-copy {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 420px);
+      display: grid;
+      gap: 12px;
+      text-align: left;
+    }
+    .intro-copy span {
+      display: block;
+      font-size: clamp(34px, 11vw, 62px);
+      line-height: .92;
+      font-weight: 950;
+      letter-spacing: 0;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: rise .7s ease forwards;
+    }
+    .intro-copy span:nth-child(2) { animation-delay: .12s; }
+    .intro-copy span:nth-child(3) { animation-delay: .24s; }
+    .intro-copy span:nth-child(4) { animation-delay: .36s; }
+    .intro-copy span:nth-child(5) { animation-delay: .48s; }
+    .intro-copy span:nth-child(6) { animation-delay: .6s; }
+    .intro-copy small {
+      margin-top: 18px;
+      color: rgba(255,245,247,.64);
+      font-weight: 900;
+      letter-spacing: .02em;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise .7s ease .86s forwards;
+    }
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+    @media (min-width: 760px) {
+      .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
+      .hero { min-height: 760px; border-radius: 42px; }
+      .hero-content { left: 28px; right: 28px; bottom: 28px; }
+      .button-grid { grid-template-columns: repeat(2, 1fr); }
+      .link-button { min-height: 70px; }
+      .footer-watermark { width: 1120px; bottom: -40px; }
+      .footer-zone { min-height: 190px; }
+    }
+  </style>
+</head>
+<body class="theme-mina">
+  <main class="shell">
+    <section class="hero" id="hero">
+      <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile.jpg"></video>
+      <div class="hero-top">
+        <span class="mini-pill" id="location">Chicago 🇺🇸</span>
+        <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
+      </div>
+      <div class="hero-content">
+        <div class="identity">
+          <div class="avatar"><img id="avatarImage" src="/assets/mosyaamosya/profile.jpg" alt="Mina Mosya"></div>
+          <div>
+            <h1 id="displayName">Mina Mosya</h1>
+            <div class="handle" id="handle">@mosyaamosya</div>
+          </div>
+          <p class="bio" id="bio">Daily livestreams, community, yapping, and soft chaos from Chicago.</p>
+        </div>
+        <section class="live-card" id="liveCard">
+          <div class="live-copy">
+            <div>
+              <strong id="liveTitle">⚫ Offline</strong>
+              <span id="liveCopy">See you at the next stream.</span>
+            </div>
+          </div>
+          <a class="primary" id="primaryCta" href="#" aria-disabled="true">Join Live</a>
+        </section>
+      </div>
+    </section>
+
+    <section class="button-grid" id="buttonGrid" aria-label="Mina links"></section>
+
+    <section class="future" aria-label="Future Creator OS modules">
+      <span>Ask Mina</span>
+      <span>Live Detection</span>
+      <span>Analytics</span>
+      <span>Stream Analyzer</span>
+    </section>
+
+    <div class="footer-zone" aria-label="DONEOVERNIGHT footer">
+      <img class="footer-watermark" src="/assets/doneovernight-wordmark.svg" alt="" aria-hidden="true">
+      <footer class="foot">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </footer>
+    </div>
+  </main>
+
+  <button class="sound-button" id="soundButton" type="button" aria-label="Toggle music" hidden></button>
+  <audio id="music" preload="none"></audio>
+
+  <section class="intro" id="intro" aria-label="Welcome intro">
+    <video id="introVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile.jpg"></video>
+    <div class="intro-copy">
+      <span>Welcome.</span>
+      <span>Meet Mina.</span>
+      <span>Chicago.</span>
+      <span>Daily livestreams.</span>
+      <span>Community.</span>
+      <span>Yapping.</span>
+      <small>Tap anywhere to enter.</small>
+    </div>
+  </section>
+
+  <script>
+    const fallback = {
+      display_name: "Mina Mosya",
+      username: "mosyaamosya",
+      slug: "mosyaamosya",
+      bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
+      location: "Chicago 🇺🇸",
+      avatar_url: "/assets/mosyaamosya/profile.jpg",
+      hero_video_url: "/assets/mosyaamosya/intro.mp4",
+      tiktok_url: "https://www.tiktok.com/@mosyaamosya",
+      discord_url: "",
+      tiktok_coins_url: "https://www.tiktok.com/coin",
+      business_email: "mina@doneovernight.com",
+      live_url: "",
+      live_status: false,
+      live_button_text: "Join Live",
+      theme_preset: "mina",
+      background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
+      welcome_intro_enabled: true,
+      music_enabled: false,
+      music_url: "",
+      music_volume: 0.35,
+      music_loop: true,
+      redirect_mina_enabled: true
+    };
+    const icons = {
+      live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9a8 8 0 0 1 16 0"/><path d="M7 12a5 5 0 0 1 10 0"/><circle cx="12" cy="17" r="2"/></svg>',
+      discord: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 18c-2.8-.8-4-2.4-4-2.4.4-4.2 1.8-7 1.8-7 2-1.4 3.8-1.5 3.8-1.5l.5 1"/><path d="M16 18c2.8-.8 4-2.4 4-2.4-.4-4.2-1.8-7-1.8-7-2-1.4-3.8-1.5-3.8-1.5l-.5 1"/><path d="M9 16s1 1 3 1 3-1 3-1"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>',
+      tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 3c.5 3 2.2 4.8 5 5v3.1c-1.9 0-3.5-.6-5-1.7v6.1A5.5 5.5 0 1 1 9.5 10c.4 0 .8 0 1.1.1v3.4a2.2 2.2 0 1 0 1.6 2.1V3h2.8Z"/></svg>',
+      heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>',
+      mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/></svg>',
+      sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9.5a4 4 0 0 1 0 5"/><path d="M17.7 6.8a8 8 0 0 1 0 10.4"/></svg>',
+      muted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m19 9-6 6"/><path d="m13 9 6 6"/></svg>'
+    };
+    const $ = (id) => document.getElementById(id);
+    const introKey = "creator_intro_mosyaamosya_v1";
+    const musicKey = "creator_music_mosyaamosya_enabled";
+
+    function safeUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.origin);
+        if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "mailto:") return url.href;
+      } catch (error) {}
+      return "";
+    }
+    function setText(id, value) { $(id).textContent = value || ""; }
+    function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile.jpg"; }
+    function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
+
+    function actionUrl(action, settings) {
+      if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
+      return safeUrl(settings[action.field]);
+    }
+
+    function renderButtons(settings) {
+      const actions = [
+        { key: "discord", title: "Discord", sub: "Community", field: "discord_url", label: "Join", icon: icons.discord },
+        { key: "tiktok", title: "TikTok", sub: "@mosyaamosya", field: "tiktok_url", label: "Watch", icon: icons.tiktok },
+        { key: "support", title: "Support Stream", sub: "TikTok coins", field: "tiktok_coins_url", label: "Support", icon: icons.heart },
+        { key: "business", title: "Business", sub: settings.business_email || "Booking and collabs", field: "business_email", label: "Email", icon: icons.mail }
+      ];
+      const grid = $("buttonGrid");
+      grid.innerHTML = "";
+      actions.forEach((action) => {
+        const url = actionUrl(action, settings);
+        const item = document.createElement(url ? "a" : "div");
+        item.className = "link-button" + (url ? "" : " is-disabled");
+        if (url) {
+          item.href = url;
+          item.target = url.startsWith("mailto:") ? "_self" : "_blank";
+          item.rel = "noreferrer";
+        }
+        item.innerHTML =
+          '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
+          action.title + '</strong><span>' + action.sub + '</span></span></span><span class="button-action">' +
+          action.label + '</span>';
+        grid.appendChild(item);
+      });
+    }
+
+    function setupMusic(settings) {
+      const button = $("soundButton");
+      const audio = $("music");
+      const url = safeUrl(settings.music_url);
+      if (!settings.music_enabled || !url) {
+        button.hidden = true;
+        audio.removeAttribute("src");
+        return;
+      }
+      audio.src = url;
+      audio.volume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
+      audio.loop = settings.music_loop !== false;
+      button.hidden = false;
+      button.innerHTML = localStorage.getItem(musicKey) === "on" ? icons.sound : icons.muted;
+      button.onclick = async () => {
+        if (audio.paused) {
+          try {
+            await audio.play();
+            localStorage.setItem(musicKey, "on");
+            button.innerHTML = icons.sound;
+          } catch (error) {}
+        } else {
+          audio.pause();
+          localStorage.setItem(musicKey, "off");
+          button.innerHTML = icons.muted;
+        }
+      };
+    }
+
+    function setupIntro(settings) {
+      const intro = $("intro");
+      if (!settings.welcome_intro_enabled || localStorage.getItem(introKey) === "done") return;
+      const video = $("introVideo");
+      video.src = heroVideo(settings);
+      intro.classList.add("is-visible");
+      const dismiss = () => {
+        localStorage.setItem(introKey, "done");
+        intro.classList.remove("is-visible");
+        setTimeout(() => { intro.remove(); }, 650);
+      };
+      intro.addEventListener("click", dismiss, { once: true });
+      window.addEventListener("keydown", dismiss, { once: true });
+    }
+
+    function render(settings) {
+      document.body.classList.toggle("is-live", Boolean(settings.live_status));
+      if (settings.background_gradient) document.body.style.background = settings.background_gradient;
+      setText("displayName", settings.display_name || "Mina Mosya");
+      setText("handle", "@" + (settings.username || settings.slug || "mosyaamosya"));
+      setText("bio", settings.bio || fallback.bio);
+      setText("location", settings.location || fallback.location);
+      $("avatarImage").src = profileImage(settings);
+      $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
+      $("heroVideo").src = heroVideo(settings);
+      $("statusPill").querySelector("span:last-child").textContent = settings.live_status ? "LIVE NOW" : "Offline";
+      setText("liveTitle", settings.live_status ? "🟢 LIVE NOW" : "⚫ Offline");
+      setText("liveCopy", settings.live_status ? "Join the stream" : "See you at the next stream.");
+      const cta = $("primaryCta");
+      const liveUrl = safeUrl(settings.live_url);
+      if (settings.live_status && liveUrl) {
+        cta.textContent = settings.live_button_text || "Join Live";
+        cta.href = liveUrl;
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+        cta.removeAttribute("aria-disabled");
+      } else {
+        cta.textContent = "Join Live";
+        cta.href = "#";
+        cta.setAttribute("aria-disabled", "true");
+        cta.removeAttribute("target");
+      }
+      renderButtons(settings);
+      setupMusic(settings);
+      setupIntro(settings);
+    }
+
+    fetch("/api/creator-settings?slug=mosyaamosya")
+      .then((response) => response.json())
+      .then((data) => render({ ...fallback, ...(data.creator || {}) }))
+      .catch(() => render(fallback));
+  </script>
+</body>
+</html>

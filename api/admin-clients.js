@@ -10,6 +10,14 @@ const CREATOR_FIELDS = [
   "location",
   "avatar_url",
   "banner_url",
+  "hero_video_url",
+  "music_enabled",
+  "music_url",
+  "music_volume",
+  "music_loop",
+  "welcome_intro_enabled",
+  "background_gradient",
+  "redirect_mina_enabled",
   "tiktok_url",
   "discord_url",
   "instagram_url",
@@ -27,25 +35,33 @@ const CREATOR_FIELDS = [
 
 const DEFAULT_MINA_SETTINGS = {
   id: MINA_CREATOR_ID,
-  display_name: "Mina",
-  username: "mina",
-  slug: "mina",
-  bio: "A premium creator hub for drops, live moments, community links, and the next thing Mina is building.",
-  location: "Amsterdam, NL",
-  avatar_url: "",
+  display_name: "Mina Mosya",
+  username: "mosyaamosya",
+  slug: "mosyaamosya",
+  bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
+  location: "Chicago 🇺🇸",
+  avatar_url: "/assets/mosyaamosya/profile.jpg",
   banner_url: "",
-  tiktok_url: "https://www.tiktok.com/@mina",
+  hero_video_url: "/assets/mosyaamosya/intro.mp4",
+  tiktok_url: "https://www.tiktok.com/@mosyaamosya",
   discord_url: "",
-  instagram_url: "https://www.instagram.com/mina",
+  instagram_url: "",
   tiktok_coins_url: "https://www.tiktok.com/coin",
   business_email: "mina@doneovernight.com",
   live_url: "",
   live_status: false,
   live_button_text: "Join Live",
-  theme_preset: "onyx",
-  subscribe_popup_enabled: true,
-  subscribe_popup_title: "Get Mina's next drop",
-  subscribe_popup_copy: "Join the private update list for live alerts, community drops, and behind-the-scenes releases.",
+  theme_preset: "mina",
+  subscribe_popup_enabled: false,
+  subscribe_popup_title: "",
+  subscribe_popup_copy: "",
+  music_enabled: false,
+  music_url: "",
+  music_volume: 0.35,
+  music_loop: true,
+  welcome_intro_enabled: true,
+  background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
+  redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
 
@@ -177,9 +193,14 @@ function normalizeSlug(value) {
 }
 
 function normalizeTheme(value) {
-  const allowed = new Set(["onyx", "rose", "ocean", "matcha", "solar", "violet"]);
+  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet"]);
   const preset = clean(value || DEFAULT_MINA_SETTINGS.theme_preset).toLowerCase();
   return allowed.has(preset) ? preset : DEFAULT_MINA_SETTINGS.theme_preset;
+}
+
+function number(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function normalizeCreator(row = {}) {
@@ -194,6 +215,14 @@ function normalizeCreator(row = {}) {
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
+    hero_video_url: clean(row.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    music_enabled: bool(row.music_enabled, false),
+    music_url: clean(row.music_url),
+    music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
+    music_loop: bool(row.music_loop, true),
+    welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
+    background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    redirect_mina_enabled: bool(row.redirect_mina_enabled, true),
     tiktok_url: clean(row.tiktok_url),
     discord_url: clean(row.discord_url),
     instagram_url: clean(row.instagram_url),
@@ -209,7 +238,7 @@ function normalizeCreator(row = {}) {
   };
 }
 
-async function fetchCreatorFromTable(slug = "mina") {
+async function fetchCreatorFromTable(slug = "mosyaamosya") {
   const safeSlug = encodeURIComponent(normalizeSlug(slug));
   const rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS + "&limit=1", {
     context: "Creator settings"
@@ -220,7 +249,7 @@ async function fetchCreatorFromTable(slug = "mina") {
 
 async function fetchCreatorFromAnalyticsBridge() {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_settings_mina&select=metadata,created_at&order=created_at.desc&limit=1",
+    "analytics_events?event_type=eq.creator_settings_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
     { context: "Creator analytics bridge" }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -228,7 +257,7 @@ async function fetchCreatorFromAnalyticsBridge() {
   return normalizeCreator(metadata.creator || metadata);
 }
 
-async function fetchCreator(slug = "mina") {
+async function fetchCreator(slug = "mosyaamosya") {
   try {
     const creator = await fetchCreatorFromTable(slug);
     if (creator) return { creator, source: "database" };
@@ -256,6 +285,14 @@ function creatorPayload(input = {}) {
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
+    hero_video_url: clean(input.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    music_enabled: bool(input.music_enabled, false),
+    music_url: clean(input.music_url),
+    music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
+    music_loop: bool(input.music_loop, true),
+    welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
+    background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    redirect_mina_enabled: bool(input.redirect_mina_enabled, true),
     tiktok_url: clean(input.tiktok_url),
     discord_url: clean(input.discord_url),
     instagram_url: clean(input.instagram_url),
@@ -288,9 +325,9 @@ async function saveCreatorToAnalyticsBridge(payload) {
     method: "POST",
     prefer: "return=representation",
     body: {
-      event_type: "creator_settings_mina",
+      event_type: "creator_settings_mosyaamosya",
       source: "creator_os_admin",
-      route: "/mina",
+      route: "/mosyaamosya",
       metadata: { creator: payload }
     },
     context: "Creator analytics bridge"
@@ -313,7 +350,7 @@ async function handleCreatorSettings(req, res) {
   if (req.method === "GET") {
     try {
       const query = getQuery(req);
-      const result = await fetchCreator(clean(query.slug) || "mina");
+      const result = await fetchCreator(clean(query.slug) || "mosyaamosya");
       return send(res, 200, { success: true, creator: result.creator, source: result.source });
     } catch (error) {
       return send(res, 200, {
@@ -339,7 +376,7 @@ async function handleCreatorSettings(req, res) {
 
   if (input.action === "load") {
     try {
-      const result = await fetchCreator(input.slug || "mina");
+      const result = await fetchCreator(input.slug || "mosyaamosya");
       return send(res, 200, { success: true, creator: result.creator, source: result.source });
     } catch (error) {
       return send(res, 200, {
