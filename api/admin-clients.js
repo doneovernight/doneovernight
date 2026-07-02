@@ -209,13 +209,41 @@ function normalizeCreator(row = {}) {
   };
 }
 
-async function fetchCreator(slug = "mina") {
+async function fetchCreatorFromTable(slug = "mina") {
   const safeSlug = encodeURIComponent(normalizeSlug(slug));
   const rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS + "&limit=1", {
     context: "Creator settings"
   });
-  if (!Array.isArray(rows) || rows.length === 0) return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
-  return { creator: normalizeCreator(rows[0]), source: "database" };
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return normalizeCreator(rows[0]);
+}
+
+async function fetchCreatorFromAnalyticsBridge() {
+  const rows = await supabaseFetch(
+    "analytics_events?event_type=eq.creator_settings_mina&select=metadata,created_at&order=created_at.desc&limit=1",
+    { context: "Creator analytics bridge" }
+  );
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const metadata = rows[0].metadata || {};
+  return normalizeCreator(metadata.creator || metadata);
+}
+
+async function fetchCreator(slug = "mina") {
+  try {
+    const creator = await fetchCreatorFromTable(slug);
+    if (creator) return { creator, source: "database" };
+  } catch (error) {
+    // The dedicated creators table may not exist until the SQL file is applied.
+  }
+
+  try {
+    const creator = await fetchCreatorFromAnalyticsBridge();
+    if (creator) return { creator, source: "analytics_bridge" };
+  } catch (error) {
+    // If the bridge table is unavailable, fall through to the seeded defaults.
+  }
+
+  return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
 }
 
 function creatorPayload(input = {}) {
@@ -244,15 +272,41 @@ function creatorPayload(input = {}) {
   };
 }
 
-async function saveCreator(input = {}) {
+async function saveCreatorToTable(payload) {
   const rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS, {
     method: "POST",
     prefer: "resolution=merge-duplicates,return=representation",
-    body: [creatorPayload(input)],
+    body: [payload],
     context: "Creator settings"
   });
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : creatorPayload(input);
-  return normalizeCreator(row);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
+  return { creator: normalizeCreator(row), source: "database" };
+}
+
+async function saveCreatorToAnalyticsBridge(payload) {
+  const rows = await supabaseFetch("analytics_events?select=metadata,created_at", {
+    method: "POST",
+    prefer: "return=representation",
+    body: {
+      event_type: "creator_settings_mina",
+      source: "creator_os_admin",
+      route: "/mina",
+      metadata: { creator: payload }
+    },
+    context: "Creator analytics bridge"
+  });
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  const metadata = row && row.metadata ? row.metadata : { creator: payload };
+  return { creator: normalizeCreator(metadata.creator || metadata), source: "analytics_bridge" };
+}
+
+async function saveCreator(input = {}) {
+  const payload = creatorPayload(input);
+  try {
+    return await saveCreatorToTable(payload);
+  } catch (error) {
+    return saveCreatorToAnalyticsBridge(payload);
+  }
 }
 
 async function handleCreatorSettings(req, res) {
@@ -297,8 +351,8 @@ async function handleCreatorSettings(req, res) {
     }
   }
 
-  const creator = await saveCreator(input.creator || input);
-  return send(res, 200, { success: true, creator, source: "database" });
+  const result = await saveCreator(input.creator || input);
+  return send(res, 200, { success: true, creator: result.creator, source: result.source });
 }
 
 module.exports = async function handler(req, res) {
