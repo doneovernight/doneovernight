@@ -120,6 +120,7 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "faq_link_subtitle",
   "faq_link_cta_label",
   "faq_link_url",
+  "faq_items",
   "community_link_visible",
   "community_link_title",
   "community_link_subtitle",
@@ -145,12 +146,21 @@ const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible"),
   INTRO_AUDIO_CREATOR_FIELDS
 ).join(",");
+const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible" && field !== "faq_items"),
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
 const CREATOR_FIELDS_WITHOUT_POLL = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
   PHASE_2_CREATOR_FIELDS,
   PHASE_3_CREATOR_FIELDS,
-  LINK_BLOCK_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "faq_items"),
   INTRO_AUDIO_CREATOR_FIELDS
 ).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
@@ -238,10 +248,11 @@ const DEFAULT_MINA_SETTINGS = {
   newsletter_cta_label: "Subscribe to the Mailing List",
   newsletter_destination: "",
   faq_link_visible: false,
-  faq_link_title: "FAQ",
-  faq_link_subtitle: "Questions and answers",
-  faq_link_cta_label: "Open",
+  faq_link_title: "Frequently Asked on Stream",
+  faq_link_subtitle: "Quick answers from Mina's livestreams.",
+  faq_link_cta_label: "Read",
   faq_link_url: "",
+  faq_items: [],
   community_link_visible: true,
   community_link_title: "Community",
   community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
@@ -759,6 +770,26 @@ function normalizeCustomLinks(value) {
   }));
 }
 
+function normalizeFaqItems(value) {
+  let items = value;
+  if (typeof items === "string") {
+    try {
+      items = JSON.parse(items);
+    } catch (error) {
+      items = [];
+    }
+  }
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, 20)
+    .map((item, index) => ({
+      id: clean(item && item.id) || "faq-" + (index + 1),
+      visible: bool(item && item.visible, true),
+      question: clean(item && item.question),
+      answer: clean(item && item.answer)
+    }))
+    .filter((item) => item.question || item.answer);
+}
+
 function normalizeDateTime(value) {
   const input = clean(value);
   if (!input) return "";
@@ -1006,6 +1037,7 @@ function normalizeCreator(row = {}) {
     faq_link_subtitle: clean(row.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
     faq_link_cta_label: clean(row.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
     faq_link_url: clean(row.faq_link_url),
+    faq_items: normalizeFaqItems(row.faq_items),
     community_link_visible: bool(row.community_link_visible, true),
     community_link_title: clean(row.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
     community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
@@ -1038,13 +1070,19 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
       });
     } catch (legacyError) {
       try {
-        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
+        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS + "&limit=1", {
           context: "Creator settings"
         });
-      } catch (pollError) {
-        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
-          context: "Creator settings"
-        });
+      } catch (faqError) {
+        try {
+          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
+            context: "Creator settings"
+          });
+        } catch (pollError) {
+          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
+            context: "Creator settings"
+          });
+        }
       }
     }
   }
@@ -1177,6 +1215,7 @@ function creatorPayload(input = {}) {
     faq_link_subtitle: clean(input.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
     faq_link_cta_label: clean(input.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
     faq_link_url: clean(input.faq_link_url),
+    faq_items: normalizeFaqItems(input.faq_items),
     community_link_visible: bool(input.community_link_visible, true),
     community_link_title: clean(input.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
     community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
@@ -1206,13 +1245,23 @@ async function saveCreatorToTable(payload) {
       context: "Creator settings"
     });
   } catch (error) {
-    const { share_link_visible, ...legacyPayload } = payload;
-    rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=representation",
-      body: [legacyPayload],
-      context: "Creator settings"
-    });
+    const { share_link_visible, ...legacyVisibilityPayload } = payload;
+    try {
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: [legacyVisibilityPayload],
+        context: "Creator settings"
+      });
+    } catch (legacyError) {
+      const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS, {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: [legacyFaqPayload],
+        context: "Creator settings"
+      });
+    }
     await saveCreatorToAnalyticsBridge(payload).catch(() => null);
   }
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;

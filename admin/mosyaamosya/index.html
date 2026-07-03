@@ -339,6 +339,8 @@
     .link-card-title span { color: var(--muted); font-size: 12px; }
     .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .link-card-fields .wide { grid-column: 1 / -1; }
+    .faq-builder-head { padding-top: 2px; }
+    .faq-answer { min-height: 88px; }
     .link-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .link-card-actions .button { min-height: 36px; padding: 0 11px; font-size: 12px; }
     .advanced-box {
@@ -945,15 +947,21 @@
 
             <section class="link-card">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>FAQ</strong><span>Optional FAQ destination.</span></div>
+                <div class="link-card-title"><strong>Frequently Asked on Stream</strong><span>Answers Mina can point viewers to during livestreams.</span></div>
                 <label class="switch" aria-label="FAQ visible"><input name="faq_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="faq_link_title"></label>
-                <label>CTA<input name="faq_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="faq_link_subtitle"></label>
-                <label class="wide">Destination<input name="faq_link_url" type="url"></label>
               </div>
+              <div class="link-card-head faq-builder-head">
+                <div class="link-card-title"><strong>FAQ items</strong><span>Only visible items with a question and answer appear publicly.</span></div>
+                <button class="button" id="addFaqItem" type="button">Add FAQ item</button>
+              </div>
+              <div class="link-list" id="faqItemsList"></div>
+              <input name="faq_items" type="hidden" value="[]">
+              <input name="faq_link_cta_label" type="hidden" value="Read">
+              <input name="faq_link_url" type="hidden" value="">
             </section>
 
             <section class="link-card">
@@ -1924,6 +1932,65 @@
       list.appendChild(createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" }));
       syncCustomLinksField();
     }
+    function faqItemId() {
+      return "faq-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+    }
+    function readFaqItems() {
+      const rows = Array.from(document.querySelectorAll("[data-faq-item-row]"));
+      return rows.map((row) => ({
+        id: row.dataset.faqItemId || faqItemId(),
+        visible: Boolean(row.querySelector("[data-faq-visible]") && row.querySelector("[data-faq-visible]").checked),
+        question: String(row.querySelector("[data-faq-question]")?.value || "").trim(),
+        answer: String(row.querySelector("[data-faq-answer]")?.value || "").trim()
+      })).filter((item) => item.question || item.answer);
+    }
+    function syncFaqItemsField() {
+      const field = form.elements.faq_items;
+      if (field) field.value = JSON.stringify(readFaqItems());
+    }
+    function createFaqItemRow(item = {}) {
+      const row = document.createElement("section");
+      row.className = "link-card";
+      row.dataset.faqItemRow = "true";
+      row.dataset.faqItemId = item.id || faqItemId();
+      row.innerHTML = [
+        '<div class="link-card-head">',
+          '<div class="link-card-title"><strong>FAQ item</strong><span>Visible questions appear in the public accordion.</span></div>',
+          '<label class="switch" aria-label="FAQ item visible"><input data-faq-visible type="checkbox"><span class="track"></span></label>',
+        '</div>',
+        '<div class="link-card-fields">',
+          '<label class="wide">Question<input data-faq-question placeholder="What do viewers ask on stream?"></label>',
+          '<label class="wide">Answer<textarea class="faq-answer" data-faq-answer placeholder="Short answer Mina can send viewers to."></textarea></label>',
+        '</div>',
+        '<div class="link-card-actions">',
+          '<button class="button danger" data-remove-faq-item type="button">Delete</button>',
+        '</div>'
+      ].join("");
+      row.querySelector("[data-faq-visible]").checked = item.visible !== false;
+      row.querySelector("[data-faq-question]").value = item.question || "";
+      row.querySelector("[data-faq-answer]").value = item.answer || "";
+      row.addEventListener("input", syncFaqItemsField);
+      row.addEventListener("change", syncFaqItemsField);
+      row.querySelector("[data-remove-faq-item]").addEventListener("click", () => {
+        row.remove();
+        syncFaqItemsField();
+      });
+      return row;
+    }
+    function writeFaqItems(items = []) {
+      const list = $("faqItemsList");
+      if (!list) return;
+      list.replaceChildren();
+      const normalized = Array.isArray(items) ? items : [];
+      normalized.forEach((item) => list.appendChild(createFaqItemRow(item)));
+      syncFaqItemsField();
+    }
+    function addFaqItem() {
+      const list = $("faqItemsList");
+      if (!list) return;
+      list.appendChild(createFaqItemRow({ visible: true, question: "", answer: "" }));
+      syncFaqItemsField();
+    }
     function readPollOptions() {
       const rows = Array.from(document.querySelectorAll("[data-poll-option-row]"));
       const seen = new Set();
@@ -2211,6 +2278,7 @@
         faq_link_subtitle: String(data.get("faq_link_subtitle") || "").trim(),
         faq_link_cta_label: String(data.get("faq_link_cta_label") || "").trim(),
         faq_link_url: String(data.get("faq_link_url") || "").trim(),
+        faq_items: readFaqItems(),
         community_link_visible: boolField("community_link_visible", true),
         community_link_title: String(data.get("community_link_title") || "").trim(),
         community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
@@ -2276,6 +2344,7 @@
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
       syncLinkCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);
+      writeFaqItems(settings.faq_items || []);
       writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
@@ -2921,6 +2990,7 @@
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
     $("addCustomLink").addEventListener("click", addCustomLink);
+    $("addFaqItem").addEventListener("click", addFaqItem);
     $("addPollOption").addEventListener("click", addPollOption);
     $("refreshResponses").addEventListener("click", loadResponses);
     $("resetPollResults").addEventListener("click", resetPollResults);
