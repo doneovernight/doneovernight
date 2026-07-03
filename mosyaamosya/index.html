@@ -397,6 +397,13 @@
     }
     .primary:not([aria-disabled="true"]):hover { transform: translateY(-1px); filter: saturate(1.04); }
     .primary:not([aria-disabled="true"]):active { transform: translateY(1px) scale(.992); }
+    .primary.battle-attention:not([aria-disabled="true"]) {
+      animation: battleCtaPulse 3.2s ease-in-out infinite;
+    }
+    @keyframes battleCtaPulse {
+      0%, 82%, 100% { transform: translateY(0) scale(1); box-shadow: 0 14px 36px var(--ambient-primary-glow), inset 0 1px rgba(255,255,255,.35); }
+      42% { transform: translateY(-1px) scale(1.012); box-shadow: 0 18px 42px rgba(255,159,189,.28), inset 0 1px rgba(255,255,255,.38); }
+    }
     .primary[aria-disabled="true"] {
       border: 1px solid rgba(255,245,247,.14);
       background: rgba(255,245,247,.08);
@@ -531,6 +538,7 @@
     .runtime-pinned.is-visible { display: grid; gap: 4px; }
     .runtime-pinned strong { color: var(--text); font-size: 14px; }
     .runtime-pinned span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .runtime-pinned .button-action { justify-self: end; margin-top: 6px; }
     .newsletter-start, .newsletter-thanks {
       width: 100%;
       min-height: 46px;
@@ -1067,6 +1075,9 @@
       .hero-video {
         animation: none !important;
       }
+      .primary.battle-attention {
+        animation: none !important;
+      }
       .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .faq-card::before {
         transform: none !important;
       }
@@ -1350,6 +1361,7 @@
     const $ = (id) => document.getElementById(id);
     const introKey = "creator_intro_mosyaamosya_v1";
     let countdownTimer = null;
+    let countdownZeroChecked = false;
     let liveRuntimeTimer = null;
     let liveVisibilityHandler = null;
     let liveMessageHandler = null;
@@ -1611,7 +1623,7 @@
       const manualLive = !confirmed && source === "manual-fallback" && liveState.manualMode === true && isLive;
       const manualOffline = !confirmed && source === "manual-fallback" && liveState.manualMode !== true && !isLive;
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
-      const hasBattleMode = liveState && liveState.battleActive === true && capabilities.battleActive === true && featureOn(settings, "battle_link_visible", true);
+      const hasBattleMode = liveState && liveState.battleActive === true && featureOn(settings, "battle_link_visible", true);
       const displayLive = (confirmed && isLive) || manualLive || hasBattleMode;
       const confirmedOffline = (confirmed || manualOffline) && !isLive && !hasBattleMode;
       const unknownStatus = !loadingStatus && !displayLive && !confirmedOffline;
@@ -1621,9 +1633,9 @@
       const hasManualStreak = hasBattleMode && capabilities.battleWinStreak === true && Number.isFinite(Number(liveState.battleWinStreak)) && Number(liveState.battleWinStreak) > 0;
       document.body.classList.toggle("is-live", displayLive);
       $("statusPill").querySelector("span:last-child").textContent = loadingStatus ? "Checking" : (displayLive ? "Live" : (unknownStatus ? "Unknown" : "Offline"));
-      setText("liveTitle", loadingStatus ? "Checking live status" : (hasBattleMode ? "Battle Mode" : (displayLive ? "LIVE NOW" : (unknownStatus ? "Live status unavailable" : "Offline"))));
+      setText("liveTitle", loadingStatus ? "Checking live status" : (hasBattleMode ? "Battle in Progress" : (displayLive ? "LIVE NOW" : (unknownStatus ? "Live status unavailable" : "Offline"))));
       if (hasBattleMode) {
-        setText("liveCopy", "Support the Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
+        setText("liveCopy", "Prepare for Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
@@ -1638,6 +1650,7 @@
       if (loadingStatus) {
         cta.textContent = "Checking...";
         cta.href = "#";
+        cta.classList.remove("battle-attention");
         delete cta.dataset.analyticsEvent;
         delete cta.dataset.analyticsBlockTitle;
         cta.setAttribute("aria-disabled", "true");
@@ -1651,15 +1664,18 @@
         cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
         cta.dataset.analyticsEvent = hasBattleMode ? "prepare_click" : "join_live_click";
         cta.dataset.analyticsBlockTitle = hasBattleMode ? "Prepare for Battle" : "Join Live";
+        cta.classList.toggle("battle-attention", hasBattleMode);
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
         return;
       }
+      cta.classList.remove("battle-attention");
 
       if (unknownStatus) {
         cta.textContent = "Watch TikTok";
         cta.href = safeUrl(settings.tiktok_url) || fallbackLiveUrl(settings);
+        cta.classList.remove("battle-attention");
         cta.dataset.analyticsEvent = "tiktok_click";
         cta.dataset.analyticsBlockTitle = "Watch TikTok";
         cta.target = "_blank";
@@ -1674,6 +1690,40 @@
       cta.setAttribute("aria-disabled", "true");
       cta.removeAttribute("target");
       cta.removeAttribute("rel");
+      cta.classList.remove("battle-attention");
+    }
+
+    function runtimeSettingsChanged(next = {}, current = {}) {
+      const keys = [
+        "updated_at",
+        "live_status",
+        "manual_live_fallback_enabled",
+        "battle_mode_enabled",
+        "battle_opponent",
+        "battle_result",
+        "battle_win_streak",
+        "pinned_block",
+        "quick_announcement",
+        "poll_enabled",
+        "poll_question",
+        "next_live_datetime"
+      ];
+      return keys.some((key) => JSON.stringify(next[key] ?? "") !== JSON.stringify(current[key] ?? ""));
+    }
+
+    async function refreshCreatorSettingsIfNeeded(settings) {
+      try {
+        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(settings.slug || "mosyaamosya"), {
+          cache: "no-store",
+          headers: { Accept: "application/json" }
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const nextSettings = { ...fallback, ...(data.creator || {}) };
+        if (runtimeSettingsChanged(nextSettings, currentSettings)) {
+          render(nextSettings);
+        }
+      } catch (error) {}
     }
 
     async function refreshLiveRuntime(settings) {
@@ -1685,6 +1735,7 @@
         if (!response.ok) throw new Error("Live runtime unavailable");
         const liveState = await response.json();
         applyLiveState(liveState, settings);
+        refreshCreatorSettingsIfNeeded(settings);
       } catch (error) {
         applyLiveState({
           isLive: false,
@@ -1697,6 +1748,7 @@
           error: "LIVE_RUNTIME_UNAVAILABLE",
           capabilities: {}
         }, settings);
+        refreshCreatorSettingsIfNeeded(settings);
       }
     }
 
@@ -2097,7 +2149,8 @@
         });
         list.appendChild(button);
       });
-      insertBeforeFooter(card);
+      if (String(settings.pinned_block || "").toLowerCase() === "poll") insertRuntimeTop(card);
+      else insertBeforeFooter(card);
       if (stored) refreshPollCard(card, settings, stored);
     }
 
@@ -2141,7 +2194,8 @@
         });
         list.appendChild(row);
       });
-      insertBeforeFooter(card);
+      if (String(settings.pinned_block || "").toLowerCase() === "faq") insertRuntimeTop(card);
+      else insertBeforeFooter(card);
     }
 
     function communityUrl(settings) {
@@ -2213,18 +2267,22 @@
     function renderPinnedBlock(settings) {
       removeElement("runtimePinned");
       const block = String(settings.pinned_block || "").toLowerCase();
+      if (!block) return;
+      if (["faq", "poll", "community", "newsletter"].includes(block)) return;
       const announcement = String(settings.quick_announcement || "").trim();
       const nextDate = nextLiveDate(settings);
       const activeCommunityUrl = communityUrl(settings);
       const battleUrl = safeUrl(settings.tiktok_coins_url);
       const content = {
-        prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
-        faq: featureOn(settings, "faq_link_visible", false) && normalizeFaqItems(settings.faq_items).length ? [textSetting(settings, "faq_link_title", "Frequently Asked on Stream"), textSetting(settings, "faq_link_subtitle", "Quick answers from Mina's livestreams.")] : null,
-        poll: null,
-        announcement: ["Announcement", announcement || "No announcement yet."],
-        community: !communityEnabled(settings) || !activeCommunityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
-        newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
-        countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
+        prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? {
+          title: textSetting(settings, "battle_link_title", "Prepare for Battle"),
+          copy: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."),
+          label: textSetting(settings, "battle_link_cta_label", "Prepare"),
+          url: battleUrl,
+          event: "prepare_click"
+        } : null,
+        announcement: announcement ? { title: "Announcement", copy: announcement } : null,
+        countdown: nextDate ? { title: "Countdown", copy: countdownText(nextDate) } : null
       }[block];
       const shouldShow = content && (block !== "announcement" || announcement);
       if (!shouldShow) return;
@@ -2234,9 +2292,21 @@
       pinned.setAttribute("aria-live", "polite");
       const title = document.createElement("strong");
       const copy = document.createElement("span");
-      title.textContent = content[0];
-      copy.textContent = content[1];
+      title.textContent = content.title;
+      copy.textContent = content.copy;
       pinned.append(title, copy);
+      if (content.url) {
+        const action = document.createElement("a");
+        action.className = "button-action";
+        action.href = content.url;
+        action.target = content.url.startsWith("mailto:") ? "_self" : "_blank";
+        action.rel = "noreferrer";
+        action.textContent = content.label || "Open";
+        action.dataset.analyticsEvent = content.event || block + "_click";
+        action.dataset.analyticsBlockTitle = content.title;
+        action.dataset.analyticsDestination = content.url;
+        pinned.appendChild(action);
+      }
       const community = $("communityCard");
       const grid = $("buttonGrid");
       const shell = document.querySelector(".shell");
@@ -2255,6 +2325,12 @@
       const shell = document.querySelector(".shell");
       if (!element || !shell) return;
       shell.insertBefore(element, footerNav || shell.querySelector(".doneovernight-creator-footer"));
+    }
+
+    function insertRuntimeTop(element) {
+      const shell = document.querySelector(".shell");
+      if (!element || !shell) return;
+      shell.insertBefore(element, $("communityCard") || $("buttonGrid") || $("footerNav") || shell.querySelector(".doneovernight-creator-footer"));
     }
 
     function renderCommunity(settings) {
@@ -2346,7 +2422,8 @@
         '<input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">' +
         '<button class="primary" id="newsletterSubmit" type="submit">Submit</button>' +
         '</form><div class="newsletter-error" id="newsletterError" aria-live="polite"></div><div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>';
-      insertBeforeFooter(block);
+      if (String(settings.pinned_block || "").toLowerCase() === "newsletter") insertRuntimeTop(block);
+      else insertBeforeFooter(block);
       const start = $("newsletterStart");
       start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
     }
@@ -2721,12 +2798,27 @@
         clearInterval(countdownTimer);
         countdownTimer = null;
       }
+      countdownZeroChecked = false;
       if (!settings.live_status && nextDate) {
         const renderCountdown = () => {
+          if (nextDate.getTime() <= Date.now()) {
+            if (!countdownZeroChecked) {
+              countdownZeroChecked = true;
+              countdown.textContent = "Checking live status...";
+              refreshLiveRuntime(settings);
+            } else {
+              countdown.textContent = "Live soon";
+            }
+            if (countdownTimer) {
+              clearInterval(countdownTimer);
+              countdownTimer = null;
+            }
+            return;
+          }
           countdown.textContent = countdownText(nextDate) + " · " + (settings.timezone || fallback.timezone);
         };
         renderCountdown();
-        countdownTimer = setInterval(renderCountdown, 60000);
+        countdownTimer = setInterval(renderCountdown, 1000);
         countdown.classList.add("is-visible");
       } else {
         countdown.textContent = "";

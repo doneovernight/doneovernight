@@ -1204,8 +1204,9 @@
             <div class="runtime-section">
               <h3>Pinned Block</h3>
               <div class="segmented" id="pinnedBlockControls">
+                <button class="segment" type="button" data-pinned-block="">None</button>
                 <button class="segment" type="button" data-pinned-block="prepare">Prepare for Battle</button>
-                <button class="segment" type="button" data-pinned-block="faq">FAQ</button>
+                <button class="segment" type="button" data-pinned-block="faq">Frequently Asked on Stream</button>
                 <button class="segment" type="button" data-pinned-block="poll">Poll</button>
                 <button class="segment" type="button" data-pinned-block="announcement">Announcement</button>
                 <button class="segment" type="button" data-pinned-block="community">Community</button>
@@ -1502,6 +1503,7 @@
     let unlockResetTimer = 0;
     let pendingSaveScroll = null;
     let latestConnections = [];
+    let runtimeAutosaveTimer = 0;
     const mediaState = {
       avatar: {},
       hero: {},
@@ -2248,7 +2250,10 @@
       row.dataset.pollOptionRow = "true";
       row.innerHTML = '<input data-poll-option-label aria-label="Poll answer option"><button class="button danger" type="button" data-remove-poll-option>Remove</button>';
       row.querySelector("[data-poll-option-label]").value = label;
-      row.addEventListener("input", syncPollOptionsField);
+      row.addEventListener("input", () => {
+        syncPollOptionsField();
+        queueRuntimeAutosave("Poll Updated");
+      });
       row.querySelector("[data-remove-poll-option]").addEventListener("click", () => {
         if (document.querySelectorAll("[data-poll-option-row]").length <= 2) {
           setStatus("Poll needs at least two answers.", true, "responseStatus");
@@ -2256,6 +2261,7 @@
         }
         row.remove();
         syncPollOptionsField();
+        queueRuntimeAutosave("Poll Updated");
       });
       return row;
     }
@@ -2277,6 +2283,7 @@
       }
       list.appendChild(createPollOptionRow("Option " + (list.children.length + 1)));
       syncPollOptionsField();
+      queueRuntimeAutosave("Poll Updated");
     }
     function renderPollResults(poll = {}) {
       const target = $("pollResults");
@@ -2700,14 +2707,38 @@
         }
         writeBattleSnapshot(undo);
         form.elements.battle_undo_snapshot.value = "";
-        await saveSettings();
-        setStatus("Battle change undone.");
+        await saveRuntimeState("Battle Change Undone");
         return;
       }
       saveUndoSnapshot(previous);
       writeBattleSnapshot(next);
-      await saveSettings();
-      setStatus("Battle control saved.");
+      await saveRuntimeState(action === "start" ? "Battle Mode Enabled" : action === "end" ? "Battle Mode Disabled" : "Battle Saved");
+    }
+    async function saveRuntimeState(successMessage = "Runtime updated.") {
+      const values = valuesFromForm();
+      const data = await api({
+        action: "set_runtime_state",
+        creator_session: creatorSession(),
+        slug: "mosyaamosya",
+        ...values,
+        current_win_streak: values.battle_win_streak
+      });
+      fillForm(data.creator);
+      refreshPreviewLiveRuntime();
+      loadLiveRuntime();
+      updateOverview(data.creator && data.creator.updated_at);
+      setStatus(successMessage);
+      return data;
+    }
+    function queueRuntimeAutosave(successMessage = "Runtime Updated") {
+      window.clearTimeout(runtimeAutosaveTimer);
+      runtimeAutosaveTimer = window.setTimeout(async () => {
+        try {
+          await saveRuntimeState(successMessage);
+        } catch (error) {
+          setStatus("Runtime update failed: " + readableMessage(error, "Unknown error"), true);
+        }
+      }, 550);
     }
     async function applyRuntimeAction(action) {
       if (action === "start-live") {
@@ -2736,7 +2767,7 @@
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
-          setStatus("Live mode on");
+          setStatus("Live Started");
         } catch (error) {
           setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
         }
@@ -2761,7 +2792,7 @@
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
-          setStatus("Live mode off");
+          setStatus("Live Ended");
         } catch (error) {
           setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
         }
@@ -2779,15 +2810,13 @@
       }
       updateBattleSummary();
       updateRuntimeUi();
-      await saveSettings();
-      setStatus("Runtime updated.");
+      await saveRuntimeState(action === "reset-streak" ? "Win Streak Reset" : action === "push-announcement" ? "Announcement Updated" : "Runtime updated.");
     }
     async function setPinnedBlock(value) {
       form.elements.pinned_block.value = value;
       if (value === "poll" && form.elements.poll_enabled) setBoolField("poll_enabled", true);
       updateRuntimeUi();
-      await saveSettings();
-      setStatus("Pinned block updated.");
+      await saveRuntimeState("Pinned Block Updated");
     }
     function setAdminTab(name) {
       const active = name || "overview";
@@ -2797,7 +2826,7 @@
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
         panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
       });
-      $("saveFloating").hidden = active === "overview" || active === "analytics" || active === "connections";
+      $("saveFloating").hidden = active === "overview" || active === "analytics" || active === "connections" || active === "runtime";
       if (active === "runtime") {
         loadLiveRuntime();
         loadResponses();
@@ -3478,6 +3507,16 @@
       button.addEventListener("click", async () => {
         try { await setPinnedBlock(button.dataset.pinnedBlock); } catch (error) { setStatus(error.message || "Pinned block update failed", true); }
       });
+    });
+    ["battle_opponent", "next_live_datetime", "quick_announcement", "poll_question"].forEach((name) => {
+      const field = form.elements[name];
+      if (!field) return;
+      field.addEventListener("change", () => queueRuntimeAutosave(name === "battle_opponent" ? "Battle Saved" : name === "next_live_datetime" ? "Countdown Updated" : name === "quick_announcement" ? "Announcement Updated" : "Poll Updated"));
+    });
+    ["manual_live_fallback_enabled", "poll_enabled"].forEach((name) => {
+      const field = form.elements[name];
+      if (!field) return;
+      field.addEventListener("change", () => queueRuntimeAutosave(name === "manual_live_fallback_enabled" ? "Manual Live Mode Updated" : "Poll Updated"));
     });
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(sessionFlag);

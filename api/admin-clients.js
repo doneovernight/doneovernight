@@ -1323,6 +1323,46 @@ async function setCreatorLiveMode(input = {}) {
   };
 }
 
+async function setCreatorRuntimeState(input = {}) {
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(DEFAULT_MINA_SETTINGS) }));
+  const current = currentResult.creator || normalizeCreator(DEFAULT_MINA_SETTINGS);
+  const now = new Date().toISOString();
+  const patch = {
+    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, current.manual_live_fallback_enabled),
+    live_status: bool(input.live_status, current.live_status),
+    live_url: clean(input.live_url) || clean(current.live_url),
+    battle_mode_enabled: bool(input.battle_mode_enabled, current.battle_mode_enabled),
+    battle_opponent: clean(input.battle_opponent),
+    battle_result: normalizeBattleResult(input.battle_result),
+    battle_win_streak: Math.max(0, Math.floor(number(input.current_win_streak ?? input.battle_win_streak, current.battle_win_streak))),
+    battle_updated_at: normalizeDateTime(input.battle_updated_at) || now,
+    battle_undo_snapshot: clean(input.battle_undo_snapshot),
+    pinned_block: normalizePinnedBlock(input.pinned_block),
+    quick_announcement: clean(input.quick_announcement),
+    quick_poll: clean(input.quick_poll),
+    poll_enabled: bool(input.poll_enabled, current.poll_enabled),
+    poll_question: clean(input.poll_question),
+    poll_options: normalizePollOptions(input.poll_options),
+    next_live_datetime: normalizeDateTime(input.next_live_datetime),
+    updated_at: now
+  };
+  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
+  if (patch.live_status && !patch.live_url) patch.live_url = "https://www.tiktok.com/@" + username + "/live";
+
+  const rows = await supabaseFetch("creators?id=eq." + encodeURIComponent(current.id || MINA_CREATOR_ID) + "&select=" + CREATOR_FIELDS, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: patch,
+    context: "Creator runtime state"
+  });
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  return {
+    creator: normalizeCreator({ ...current, ...patch, ...row }),
+    source: "database"
+  };
+}
+
 function connectionStatusLabel(status) {
   if (status === "connected") return "Connected";
   if (status === "needs_attention") return "Needs attention";
@@ -2245,6 +2285,11 @@ async function handleCreatorSettings(req, res) {
 
   if (input.action === "set_live_mode") {
     const result = await setCreatorLiveMode(input);
+    return send(res, 200, { success: true, creator: result.creator, source: result.source });
+  }
+
+  if (input.action === "set_runtime_state") {
+    const result = await setCreatorRuntimeState(input);
     return send(res, 200, { success: true, creator: result.creator, source: result.source });
   }
 
