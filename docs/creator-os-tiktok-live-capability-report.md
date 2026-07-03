@@ -5,46 +5,52 @@ Creator: Mina Mosya (`mosyaamosya`)
 
 ## Current Runtime
 
-Creator OS currently exposes `/api/creator-live-status?slug=mosyaamosya` from a Vercel Serverless Function.
+Creator OS exposes `/api/creator-live-status?slug=mosyaamosya` from a Vercel Serverless Function, but the function no longer tries to be the live runtime. Its source order is:
 
-The current production runtime can:
+1. Confirmed Supabase snapshot from the persistent Creator OS Live Runtime worker.
+2. Trusted provider endpoint if configured.
+3. Manual admin fallback, clearly marked unconfirmed.
+
+The production live runtime can:
 
 - Read creator settings from Supabase.
+- Read confirmed runtime snapshots from Supabase `creator_live_runtime`.
 - Normalize a trusted JSON live-status provider if `TIKTOK_LIVE_STATUS_API_URL` is configured.
 - Fall back to manual admin live state and manual Battle Mode.
 - Cache each response for about 45 seconds.
 
-The current production runtime does not run a persistent TikTok Webcast connection. Because of that, it cannot confirm event-stream metadata such as gifts, top gifters, likes, or battle events by itself.
+The Vercel function does not run a persistent TikTok WebCast connection. The standalone worker at `workers/creator-live-runtime` does.
 
 HTML scraping of TikTok live pages is intentionally disabled. TikTok page markup is not a stable API surface, can be blocked by CAPTCHA/verification, and must not be used for Creator OS metadata.
 
 ## Capability Matrix
 
-| Metadata | Current API | TikTokLive / TikTok-Live-Connector | Public rendering policy |
+| Metadata | Runtime support | Evidence | Public rendering policy |
 | --- | --- | --- | --- |
-| Current viewer count | Partially supported | Supported by room user / room user sequence events while connected | Show only when `capabilities.viewerCount === true` |
-| Total live likes | Partially supported | Supported by like events, but not every stream reliably emits every like event | Show only when `capabilities.likeCount === true` |
-| Live duration | Partially supported | Can be derived from confirmed room start time or worker connection state | Show only when `capabilities.liveDuration === true` |
-| Battle active | Partially supported | Supported by link-mic battle events while connected | Show only when confirmed by worker/provider or manual Battle Mode |
-| Battle opponent | Partially supported | Usually available from link-mic/battle payloads, but payload shape can vary | Show only when confirmed by worker/provider or manual admin entry |
-| Gifts | Partially supported | Supported by gift events while connected | Do not render from serverless polling |
-| Top gifters | Partially supported | Supported by room user rank list / ranking events while connected | Do not render unless a worker/provider marks it confirmed |
+| Live/offline room state | Fully supported while worker can connect | TikTok-Live-Connector `connect()` resolves room state and `streamEnd` fires when the host ends the live | Show confirmed live/offline when `confidence === "confirmed"` |
+| Room id | Fully supported on successful connection | TikTok-Live-Connector `connect()` returns `state.roomId`; TikTokLive exposes `client.room_id` | Show only when `capabilities.roomId === true` |
+| Current viewer count | Fully supported while room user events arrive | TikTok-Live-Connector `roomUser` contains viewer count; TikTokLive `RoomUserSeqEvent` has `total` / `total_user` | Show only when `capabilities.viewerCount === true` |
+| Total live likes | Partially supported | TikTok-Live-Connector README says like events are not always triggered by TikTok for streams with many viewers; TikTokLive `LikeEvent` has `total` | Show only after a confirmed like event with `capabilities.likeCount === true` |
+| Live duration | Partially supported | Can be derived only when room metadata includes a real start/create timestamp | Show only when `capabilities.liveDuration === true` |
+| Battle active | Fully supported while battle events arrive | TikTok-Live-Connector exposes `linkMicBattle`; TikTokLive has `LinkMicBattleEvent` | Show only when `capabilities.battleActive === true` or manual Battle Mode is enabled |
+| Battle opponent | Partially supported | Battle payloads contain anchor/user lists, but exact payload shapes vary by region/feature | Show only when a worker/provider or manual admin entry supplies it |
+| Battle result | Partially supported | TikTokLive `LinkMicBattleEvent` has `battle_result`, but mapping it authoritatively to Mina after reconnect requires complete battle context | Keep manual unless worker can prove the creator mapping |
+| Battle win streak | Unsupported as authoritative runtime field | No stable top-level win-streak field appears in TikTokLive generated events or TikTok-Live-Connector documented event payloads | Manual Creator OS win streak remains source of truth |
+| Gifts | Fully supported after worker connection | TikTok-Live-Connector and TikTokLive both expose gift events, including repeat/streak handling | Store/display only from worker with `capabilities.gifts === true` |
+| Top gifters | Fully supported when room user rank list arrives | TikTok-Live-Connector `roomUser` documents a top-gifter list; TikTokLive `RoomUserSeqEvent` exposes ranks | Store/display only when `capabilities.topGifters === true` |
+| Rankings | Partially supported | TikTokLive exposes `RankUpdateEvent`; TikTok-Live-Connector exposes `rankUpdate` | Store/display only when emitted and capability is true |
 
-## Fully Supported Today
+## Fully Supported By The Persistent Worker
 
-No TikTok event-stream metadata is fully supported by the current Vercel Serverless runtime alone.
-
-Manual creator-controlled fields are fully supported:
-
-- live/offline fallback
-- manual Battle Mode
-- opponent name
-- battle result
-- current win streak
+- confirmed live/offline state
+- room id
+- viewer count when room-user events arrive
+- gifts after connection
+- top gifters when room-user rank lists arrive
+- battle active when battle events arrive
+- stream end
 
 ## Partially Supported
-
-The API schema already supports these fields:
 
 - `viewerCount`
 - `likeCount`
@@ -55,36 +61,29 @@ The API schema already supports these fields:
 - `battleOpponent`
 - `gifts`
 - `topGifters`
+- `rankings`
 
-They are exposed only when a trusted provider or future worker returns the value and sets the corresponding capability flag. If the value is missing, blocked, stale, or unconfirmed, the field stays `null` and the capability stays `false`.
+They are exposed only when the worker/provider returns the value and sets the corresponding capability flag. If the value is missing, blocked, stale, or unconfirmed, the field stays `null` and the capability stays `false`.
 
-## Unsupported In Current Serverless Runtime
+## Unsupported As Automatic Authoritative Data
 
-These must not be inferred from 45-second Vercel polling:
-
-- battle active
-- battle opponent
-- battle result
-- gifts during battle
-- top gifters
-- rankings
 - win streak
 
-Win streak is not a reliable TikTok Webcast primitive. Creator OS should keep it manual unless a future product rule defines how to derive it from confirmed battle results.
+Win streak is not a reliable TikTok WebCast primitive in the inspected protocol wrappers. TikTok likely computes or stores battle streak state server-side for the app experience, but it is not exposed as a stable documented field through the generated `LinkMicBattle`, `LinkMicArmies`, `RankUpdate`, or room-user events. Creator OS keeps manual win streak as fallback.
 
-## Recommended Long-Term Architecture
+## Production Architecture
 
-Build a separate Creator OS Live Runtime worker:
-
-- Persistent Node or Python process outside Vercel Serverless Functions.
-- Uses TikTok-Live-Connector or TikTokLive to connect to TikTok Webcast only while the creator is live.
+- Persistent Node worker outside Vercel Serverless Functions.
+- Uses TikTok-Live-Connector to connect to TikTok WebCast.
 - Subscribes to room user, like, gift, rank, link-mic battle, armies, punish-finish, and stream-end events.
-- Normalizes confirmed event-stream state into Supabase.
+- Normalizes confirmed event-stream state into Supabase `creator_live_runtime`.
 - Marks every field with a confidence/capability flag.
-- Public Creator OS pages read only the normalized runtime snapshot.
+- Public Creator OS pages read only the normalized runtime snapshot through the API.
 - Manual Battle Control remains available as a creator override and fallback.
 
 Primary references:
 
-- TikTok-Live-Connector README: https://github.com/zerodytrash/TikTok-Live-Connector
+- TikTok-Live-Connector README and event docs: https://github.com/zerodytrash/TikTok-Live-Connector
+- TikTok-Live-Connector current event constants/types: https://github.com/zerodytrash/TikTok-Live-Connector/blob/ts-rewrite/src/types/events.ts
 - TikTokLive README: https://github.com/isaackogan/TikTokLive
+- TikTokLive generated proto event wrappers: https://github.com/isaackogan/TikTokLive/blob/master/TikTokLive/events/proto_events.py

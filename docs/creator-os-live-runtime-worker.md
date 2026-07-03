@@ -1,14 +1,15 @@
 # Creator OS Live Runtime Worker
 
-Creator OS must not infer TikTok battle metadata from Vercel polling. The production page can use the serverless live-status endpoint for coarse live/offline state, but confirmed battle metadata needs a separate long-running worker.
+Creator OS must not infer TikTok metadata from Vercel polling or HTML scraping. Confirmed live state now comes from a separate long-running worker at `workers/creator-live-runtime`.
 
-## Recommended Worker
+## Production Worker
 
-- Run a persistent Node or Python process outside Vercel Serverless Functions.
-- Connect to TikTok LIVE with a Webcast client only while the creator is live.
-- Subscribe to battle and room events such as battle start, battle armies/points, battle punish finish, gifts, room user updates, and ranking updates.
-- Normalize events into a small creator runtime record in Supabase.
-- Mark every field with confidence before the public page renders it.
+- Runs as a persistent Node process outside Vercel Serverless Functions.
+- Uses `tiktok-live-connector` and TikTok's WebCast push connection.
+- Reconnects automatically with exponential backoff.
+- Writes confirmed runtime snapshots to Supabase `creator_live_runtime`.
+- Marks every field with a capability flag before the public page can render it.
+- Marks the snapshot stale on disconnect/shutdown so old live state is not shown as current.
 
 ## Runtime State
 
@@ -19,19 +20,25 @@ Recommended fields:
 - `battle_active`
 - `battle_opponent`
 - `battle_result`
-- `battle_score_creator`
-- `battle_score_opponent`
 - `viewer_count`
+- `like_count`
+- `live_duration`
+- `room_id`
+- `live_title`
 - `gifts`
 - `top_gifters`
 - `rankings`
+- `checked_at`
 - `last_event_at`
+- `stale_after`
 - `source`
 - `confidence`
+- `capabilities`
+- `error`
 
 ## Manual Fallback
 
-Battle win streak is not a reliably documented TikTok Webcast field. Creator OS should keep the manual battle controls as the source of truth for:
+Battle win streak is not exposed as a reliable top-level TikTok WebCast primitive in the libraries inspected. Creator OS keeps manual battle controls as the source of truth for:
 
 - current battle active
 - opponent name
@@ -39,4 +46,4 @@ Battle win streak is not a reliably documented TikTok Webcast field. Creator OS 
 - current win streak
 - undo last result
 
-The public page should only render battle values when they are either manually confirmed or emitted by the future worker with confirmed confidence.
+The public page only renders battle values when they are either manually confirmed or emitted by the worker with confirmed confidence/capability flags.
