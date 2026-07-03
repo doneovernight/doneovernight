@@ -143,7 +143,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">DONEOVERNIGHT Creator OS / Phase 1.1</div>
+        <div class="eyebrow">DONEOVERNIGHT Creator OS / Phase 2.1</div>
         <h1>Mina Mosya</h1>
         <div class="muted">Public page: <a href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">doneovernight.com/mosyaamosya</a></div>
       </div>
@@ -220,6 +220,25 @@
           <div class="theme-grid" id="themeGrid"></div>
           <div style="height:12px"></div>
           <label>Background Gradient<textarea name="background_gradient"></textarea></label>
+        </section>
+
+        <section class="panel">
+          <h2>Ambient mode</h2>
+          <div class="fields">
+            <div class="span-2 switch-row">
+              <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to Mina's local time.</span></div>
+              <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
+            <div class="span-2 switch-row">
+              <div><strong>Seasonal effects enabled</strong><span>Subtle seasonal lighting and gradient shifts.</span></div>
+              <label class="switch" aria-label="Seasonal effects enabled"><input name="seasonal_effects_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="span-2 switch-row">
+              <div><strong>Holiday effects enabled</strong><span>Premium holiday atmosphere without gimmicks.</span></div>
+              <label class="switch" aria-label="Holiday effects enabled"><input name="holiday_effects_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+          </div>
         </section>
 
         <section class="panel">
@@ -305,6 +324,10 @@
         music_loop: form.elements.music_loop.checked,
         theme_preset: activeTheme,
         background_gradient: String(data.get("background_gradient") || "").trim(),
+        ambient_mode_enabled: form.elements.ambient_mode_enabled.checked,
+        timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
+        seasonal_effects_enabled: form.elements.seasonal_effects_enabled.checked,
+        holiday_effects_enabled: form.elements.holiday_effects_enabled.checked,
         redirect_mina_enabled: form.elements.redirect_mina_enabled.checked
       };
     }
@@ -313,10 +336,13 @@
         if (!form.elements[key] || typeof form.elements[key].checked === "boolean") return;
         form.elements[key].value = value || "";
       });
-      ["live_status", "welcome_intro_enabled", "music_enabled", "music_loop", "redirect_mina_enabled"].forEach((key) => {
+      ["live_status", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
         if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
       });
       if (settings.music_loop === undefined && form.elements.music_loop) form.elements.music_loop.checked = true;
+      if (settings.ambient_mode_enabled === undefined && form.elements.ambient_mode_enabled) form.elements.ambient_mode_enabled.checked = true;
+      if (settings.seasonal_effects_enabled === undefined && form.elements.seasonal_effects_enabled) form.elements.seasonal_effects_enabled.checked = true;
+      if (settings.holiday_effects_enabled === undefined && form.elements.holiday_effects_enabled) form.elements.holiday_effects_enabled.checked = true;
       if (settings.redirect_mina_enabled === undefined && form.elements.redirect_mina_enabled) form.elements.redirect_mina_enabled.checked = true;
       activeTheme = settings.theme_preset || "mina";
       renderThemes();

@@ -1,7 +1,7 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
-const CREATOR_FIELDS = [
+const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
   "username",
@@ -31,7 +31,15 @@ const CREATOR_FIELDS = [
   "subscribe_popup_title",
   "subscribe_popup_copy",
   "updated_at"
-].join(",");
+];
+const AMBIENT_CREATOR_FIELDS = [
+  "ambient_mode_enabled",
+  "timezone",
+  "seasonal_effects_enabled",
+  "holiday_effects_enabled"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS).join(",");
+const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
   id: MINA_CREATOR_ID,
@@ -61,6 +69,10 @@ const DEFAULT_MINA_SETTINGS = {
   music_loop: true,
   welcome_intro_enabled: true,
   background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
+  ambient_mode_enabled: true,
+  timezone: "America/Chicago",
+  seasonal_effects_enabled: true,
+  holiday_effects_enabled: true,
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
@@ -222,6 +234,10 @@ function normalizeCreator(row = {}) {
     music_loop: bool(row.music_loop, true),
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
     background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
+    timezone: clean(row.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    seasonal_effects_enabled: bool(row.seasonal_effects_enabled, true),
+    holiday_effects_enabled: bool(row.holiday_effects_enabled, true),
     redirect_mina_enabled: bool(row.redirect_mina_enabled, true),
     tiktok_url: clean(row.tiktok_url),
     discord_url: clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
@@ -240,9 +256,16 @@ function normalizeCreator(row = {}) {
 
 async function fetchCreatorFromTable(slug = "mosyaamosya") {
   const safeSlug = encodeURIComponent(normalizeSlug(slug));
-  const rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS + "&limit=1", {
-    context: "Creator settings"
-  });
+  let rows;
+  try {
+    rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS + "&limit=1", {
+      context: "Creator settings"
+    });
+  } catch (error) {
+    rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
+      context: "Creator settings"
+    });
+  }
   if (!Array.isArray(rows) || rows.length === 0) return null;
   return normalizeCreator(rows[0]);
 }
@@ -292,6 +315,10 @@ function creatorPayload(input = {}) {
     music_loop: bool(input.music_loop, true),
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
     background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
+    timezone: clean(input.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    seasonal_effects_enabled: bool(input.seasonal_effects_enabled, true),
+    holiday_effects_enabled: bool(input.holiday_effects_enabled, true),
     redirect_mina_enabled: bool(input.redirect_mina_enabled, true),
     tiktok_url: clean(input.tiktok_url),
     discord_url: clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
