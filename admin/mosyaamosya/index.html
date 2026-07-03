@@ -153,6 +153,31 @@
     .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; }
     .status.error { color: #fecdd3; }
     .status.success { color: #bbf7d0; }
+    .save-toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(88px + env(safe-area-inset-bottom));
+      z-index: 30;
+      min-width: 132px;
+      max-width: min(320px, calc(100vw - 28px));
+      transform: translate3d(-50%, 10px, 0) scale(.98);
+      border: 1px solid rgba(255,211,223,.18);
+      border-radius: 999px;
+      background: rgba(20,10,9,.82);
+      color: var(--text);
+      padding: 11px 16px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 18px 46px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.13);
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(18px) saturate(1.12);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .save-toast.is-visible { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1); }
+    .save-toast.is-error { border-color: rgba(251,113,133,.32); color: #fecdd3; }
     .media-control { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.04); }
     .media-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
     .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
@@ -223,7 +248,16 @@
       background: rgba(255,211,223,.12);
     }
     .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .sticky-save { position: sticky; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 5; width: min(100%, 360px); justify-self: center; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
+    .sticky-save {
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 20;
+      width: min(360px, calc(100vw - 28px));
+      transform: translateX(-50%);
+      box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2);
+    }
+    .sticky-save[hidden] { display: none !important; }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
     iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
@@ -283,7 +317,7 @@
     </nav>
 
     <section class="grid">
-      <form class="stack" id="settingsForm">
+      <form class="stack" id="settingsForm" novalidate>
         <section class="panel tab-panel" data-admin-panel="overview">
           <h2>Overview</h2>
           <div class="overview-grid">
@@ -662,6 +696,7 @@
       </aside>
     </section>
   </main>
+  <div class="save-toast" id="saveToast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script>
     const sessionFlag = "doneovernight_creator_mosyaamosya";
@@ -700,14 +735,72 @@
     let activeTheme = "mina";
     let activeDna = "streamer";
     let saving = false;
+    let toastTimer = 0;
+    let pendingSaveScroll = null;
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
+    form.noValidate = true;
 
     function setStatus(message, isError, targetId = "saveStatus") {
       const status = $(targetId);
       status.textContent = message || "";
       status.classList.toggle("error", Boolean(isError));
       status.classList.toggle("success", Boolean(message) && !isError);
+    }
+    function showToast(message, isError) {
+      const toast = $("saveToast");
+      if (!toast) return;
+      window.clearTimeout(toastTimer);
+      toast.textContent = message || "";
+      toast.classList.toggle("is-error", Boolean(isError));
+      toast.classList.add("is-visible");
+      toastTimer = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+      }, isError ? 3200 : 2400);
+    }
+    function blurActiveControl() {
+      const active = document.activeElement;
+      if (active && form.contains(active) && typeof active.blur === "function") active.blur();
+    }
+    function restoreScrollPosition(position) {
+      window.requestAnimationFrame(() => window.scrollTo(position.x, position.y));
+    }
+    function captureSaveTap() {
+      pendingSaveScroll = { x: window.scrollX, y: window.scrollY };
+      blurActiveControl();
+    }
+    function fieldName(element) {
+      const label = element.closest("label");
+      if (!label) return element.name || "field";
+      return Array.from(label.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent.trim())
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ") || element.name || "field";
+    }
+    function isAcceptableUrl(value) {
+      if (!value) return true;
+      if (value.startsWith("/")) return true;
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    function validateSettingsForm() {
+      const elements = Array.from(form.elements).filter((element) => {
+        return element.name && !element.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
+      });
+      for (const element of elements) {
+        const value = String(element.value || "").trim();
+        if (element.required && !value) return fieldName(element) + " is required.";
+        if (value && element.type === "url" && !isAcceptableUrl(value)) return "Enter a valid URL for " + fieldName(element) + ".";
+        if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
+        if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
+      }
+      return "";
     }
     function setLoginStatus(message, isError) {
       const status = $("loginStatus");
@@ -1119,6 +1212,16 @@
     }
     async function saveSettings() {
       if (saving) return;
+      const scrollPosition = pendingSaveScroll || { x: window.scrollX, y: window.scrollY };
+      pendingSaveScroll = null;
+      blurActiveControl();
+      const validationError = validateSettingsForm();
+      if (validationError) {
+        setStatus(validationError, true);
+        showToast(validationError, true);
+        restoreScrollPosition(scrollPosition);
+        throw new Error(validationError);
+      }
       saving = true;
       const button = $("saveFloating");
       if (button) {
@@ -1132,9 +1235,13 @@
         updatePreviewFrame();
         loadLiveRuntime();
         updateOverview(data.creator && data.creator.updated_at);
-        setStatus("Saved Mina Mosya page.");
+        setStatus("Page saved");
+        showToast("Page saved");
+        restoreScrollPosition(scrollPosition);
       } catch (error) {
         setStatus(error.message || "Save failed", true);
+        showToast(error.message || "Save failed", true);
+        restoreScrollPosition(scrollPosition);
         throw error;
       } finally {
         saving = false;
@@ -1242,7 +1349,16 @@
       event.preventDefault();
       try { await saveSettings(); } catch (error) { setStatus(error.message || "Save failed", true); }
     });
-    $("saveFloating").addEventListener("click", async () => {
+    form.addEventListener("invalid", (event) => {
+      event.preventDefault();
+      const message = validateSettingsForm() || "Check the highlighted field.";
+      setStatus(message, true);
+      showToast(message, true);
+    }, true);
+    $("saveFloating").addEventListener("pointerdown", captureSaveTap);
+    $("saveFloating").addEventListener("touchstart", captureSaveTap, { passive: true });
+    $("saveFloating").addEventListener("click", async (event) => {
+      event.preventDefault();
       try { await saveSettings(); } catch (error) { setStatus(error.message || "Save failed", true); }
     });
     document.querySelectorAll("[data-admin-tab]").forEach((button) => {
