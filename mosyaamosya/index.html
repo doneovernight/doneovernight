@@ -826,9 +826,6 @@
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <div class="hero-actions">
           <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
-          <button class="mini-pill share-trigger" id="shareButton" type="button" aria-label="Share Mina">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2"/><path d="m8.6 13.4 6.8 4.2"/></svg>
-          </button>
         </div>
       </div>
       <div class="hero-content">
@@ -854,33 +851,12 @@
       </div>
     </section>
 
-    <section class="runtime-pinned" id="runtimePinned" aria-live="polite"></section>
-
-    <section class="community-card" id="communityCard">
-      <div>
-        <h2>Community</h2>
-        <p>Join Mina's Discord for stream updates and community drops.</p>
-      </div>
-      <a class="primary" id="communityCta" href="https://discord.gg/GGE7WsUZR" target="_blank" rel="noreferrer">Join Discord</a>
-    </section>
-
     <section class="button-grid" id="buttonGrid" aria-label="Mina content blocks"></section>
 
-    <section class="newsletter-card" id="newsletterBlock" data-block-type="newsletter">
-      <button class="newsletter-start" id="newsletterStart" type="button">Subscribe to the Mailing List</button>
-      <form class="newsletter-form" id="newsletterForm">
-        <input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">
-        <button class="primary" id="newsletterSubmit" type="submit">Submit</button>
-      </form>
-      <div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>
-    </section>
-
-    <nav class="footer-nav" aria-label="Creator OS links">
+    <nav class="footer-nav" id="footerNav" aria-label="Creator OS links">
       <a href="#privacy" data-open-sheet="privacySheet">Privacy</a>
       <span aria-hidden="true">•</span>
       <a href="#report" data-open-sheet="reportSheet">Report</a>
-      <span aria-hidden="true">•</span>
-      <a href="#creator-passport" data-open-sheet="passportSheet">Creator Passport</a>
       <span aria-hidden="true">•</span>
       <a href="#about-creator-os" data-open-sheet="aboutCreatorOsSheet">About Creator OS</a>
     </nav>
@@ -894,24 +870,8 @@
     </div>
   </main>
 
-  <button class="sound-button" id="soundButton" type="button" aria-label="Toggle music" hidden></button>
   <div class="preview-badge" id="previewBadge" hidden>Preview Mode</div>
   <audio id="introAudio" preload="none"></audio>
-
-  <section class="sheet" id="shareSheet" aria-label="Share Mina Mosya" aria-hidden="true">
-    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
-      <div class="sheet-handle"></div>
-      <div class="sheet-head">
-        <div class="sheet-title"><strong id="shareTitle">Share Mina</strong><span>Creator card and quick links</span></div>
-        <button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button>
-      </div>
-      <div class="creator-share-card">
-        <img id="shareAvatar" src="/assets/mosyaamosya/profile-v2.jpg" alt="">
-        <div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div>
-      </div>
-      <div class="share-grid" id="shareGrid"></div>
-    </div>
-  </section>
 
   <section class="sheet" id="privacySheet" aria-label="Privacy" aria-hidden="true">
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
@@ -941,23 +901,6 @@
       <div class="sheet-copy">
         <p>Reports are reviewed by DONEOVERNIGHT. Include the creator URL and a short description of the issue.</p>
         <p><a href="mailto:support@doneovernight.com?subject=Report%20Creator%20OS%20page%20-%20Mina%20Mosya">support@doneovernight.com</a></p>
-      </div>
-    </div>
-  </section>
-
-  <section class="sheet" id="passportSheet" aria-label="Creator Passport" aria-hidden="true">
-    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="passportTitle">
-      <div class="sheet-handle"></div>
-      <div class="sheet-head">
-        <div class="sheet-title"><strong id="passportTitle">Creator Passport</strong><span>Mina Mosya on Creator OS</span></div>
-        <button class="icon-button" type="button" data-close-sheet="passportSheet" aria-label="Close Creator Passport">&times;</button>
-      </div>
-      <div class="passport-grid">
-        <div class="passport-row"><span>Mina Mosya</span><strong>Joined Creator OS</strong></div>
-        <div class="passport-row"><span>Joined</span><strong>July 2026</strong></div>
-        <div class="passport-row"><span>Creator DNA</span><strong>Streamer · Influencer</strong></div>
-        <div class="passport-row"><span>Timezone</span><strong>Chicago</strong></div>
-        <div class="passport-row"><span>Powered by</span><strong>DONEOVERNIGHT Creator OS</strong></div>
       </div>
     </div>
   </section>
@@ -1068,6 +1011,7 @@
       community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
       community_link_cta_label: "Join Discord",
       community_link_url: "https://discord.gg/GGE7WsUZR",
+      share_link_visible: true,
       custom_links: []
     };
     const params = new URLSearchParams(window.location.search);
@@ -1328,7 +1272,7 @@
     function applyLiveState(liveState, settings) {
       const isLive = Boolean(liveState && liveState.isLive);
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
-      const hasBattleMode = liveState.battleActive === true && capabilities.battleActive === true;
+      const hasBattleMode = liveState.battleActive === true && capabilities.battleActive === true && featureOn(settings, "battle_link_visible", true);
       const displayLive = isLive || hasBattleMode;
       const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
       const hasRealLikeCount = displayLive && capabilities.likeCount === true && Number.isFinite(Number(liveState.likeCount));
@@ -1572,18 +1516,22 @@
       if (element) element.remove();
     }
 
+    function featureOn(settings, key, fallbackValue = true) {
+      return settings[key] === undefined ? fallbackValue : settings[key] === true;
+    }
+
     function discordEnabled(settings) {
-      return settings.discord_link_visible !== false && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
+      return featureOn(settings, "discord_link_visible", true) && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
     }
 
     function renderButtons(settings) {
       const actions = [
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
-        { key: "tiktok", visible: settings.tiktok_link_visible !== false, title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
-        { key: "support", visible: settings.battle_link_visible !== false, title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
-        { key: "business", visible: settings.business_link_visible !== false, title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
-        { key: "music", visible: settings.music_link_visible === true && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound },
-        { key: "faq", visible: settings.faq_link_visible === true && Boolean(safeUrl(settings.faq_link_url)), title: textSetting(settings, "faq_link_title", "FAQ"), sub: textSetting(settings, "faq_link_subtitle", "Questions and answers"), field: "faq_link_url", label: textSetting(settings, "faq_link_cta_label", "Open"), icon: icons.mail }
+        { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
+        { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
+        { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
+        { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound },
+        { key: "faq", visible: featureOn(settings, "faq_link_visible", false) && Boolean(safeUrl(settings.faq_link_url)), title: textSetting(settings, "faq_link_title", "FAQ"), sub: textSetting(settings, "faq_link_subtitle", "Questions and answers"), field: "faq_link_url", label: textSetting(settings, "faq_link_cta_label", "Open"), icon: icons.mail }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
         key: "custom",
         visible: true,
@@ -1594,6 +1542,7 @@
         icon: icons.heart
       })));
       const grid = $("buttonGrid");
+      if (!grid) return;
       grid.innerHTML = "";
       actions.forEach((action) => {
         const url = action.url || actionUrl(action, settings);
@@ -1612,40 +1561,71 @@
           escapeHtml(action.label) + '</span>';
         grid.appendChild(item);
       });
+      if (!actions.length) grid.remove();
     }
 
     function renderPinnedBlock(settings) {
-      const pinned = $("runtimePinned");
-      if (!pinned) return;
+      removeElement("runtimePinned");
       const block = String(settings.pinned_block || "").toLowerCase();
       const announcement = String(settings.quick_announcement || "").trim();
       const poll = String(settings.quick_poll || "").trim();
       const nextDate = nextLiveDate(settings);
       const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
       const content = {
-        prepare: settings.battle_link_visible === false ? null : [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")],
-        faq: settings.faq_link_visible === true && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
+        prepare: featureOn(settings, "battle_link_visible", true) ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
+        faq: featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
         poll: poll ? ["Poll", poll] : null,
         announcement: ["Announcement", announcement || "No announcement yet."],
-        community: settings.community_link_visible === false || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
-        newsletter: settings.subscribe_popup_enabled === false ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
+        community: !featureOn(settings, "community_link_visible", true) || !discordEnabled(settings) || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
+        newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
         countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
       }[block];
       const shouldShow = content && (block !== "announcement" || announcement);
-      pinned.classList.toggle("is-visible", Boolean(shouldShow));
-      pinned.replaceChildren();
       if (!shouldShow) return;
+      const pinned = document.createElement("section");
+      pinned.className = "runtime-pinned is-visible";
+      pinned.id = "runtimePinned";
+      pinned.setAttribute("aria-live", "polite");
       const title = document.createElement("strong");
       const copy = document.createElement("span");
       title.textContent = content[0];
       copy.textContent = content[1];
       pinned.append(title, copy);
+      const community = $("communityCard");
+      const grid = $("buttonGrid");
+      const shell = document.querySelector(".shell");
+      if (shell) shell.insertBefore(pinned, community || grid || $("footerNav"));
     }
 
     function setSheetOpen(id, open) {
       const sheet = $(id);
+      if (!sheet) return;
       sheet.classList.toggle("is-open", open);
       sheet.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function insertBeforeFooter(element) {
+      const footerNav = $("footerNav");
+      const shell = document.querySelector(".shell");
+      if (!element || !shell) return;
+      shell.insertBefore(element, footerNav || shell.querySelector(".doneovernight-creator-footer"));
+    }
+
+    function renderCommunity(settings) {
+      removeElement("communityCard");
+      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
+      if (!featureOn(settings, "community_link_visible", true) || !discordEnabled(settings) || !communityUrl) return;
+      const card = document.createElement("section");
+      card.className = "community-card";
+      card.id = "communityCard";
+      card.innerHTML =
+        '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>' +
+        escapeHtml(textSetting(settings, "community_link_subtitle", "Join Mina\\'s Discord for stream updates and community drops.")) +
+        '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(communityUrl) + '" target="_blank" rel="noreferrer">' +
+        escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
+      const grid = $("buttonGrid");
+      const shell = document.querySelector(".shell");
+      if (shell) shell.insertBefore(card, grid || $("footerNav"));
     }
 
     function setupNewsletter() {
@@ -1681,13 +1661,20 @@
     }
 
     function renderNewsletter(settings) {
-      const block = $("newsletterBlock");
+      removeElement("newsletterBlock");
+      if (!featureOn(settings, "subscribe_popup_enabled", true)) return;
+      const block = document.createElement("section");
+      block.className = "newsletter-card";
+      block.id = "newsletterBlock";
+      block.dataset.blockType = "newsletter";
+      block.innerHTML =
+        '<button class="newsletter-start" id="newsletterStart" type="button"></button>' +
+        '<form class="newsletter-form" id="newsletterForm">' +
+        '<input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">' +
+        '<button class="primary" id="newsletterSubmit" type="submit">Submit</button>' +
+        '</form><div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>';
+      insertBeforeFooter(block);
       const start = $("newsletterStart");
-      if (!block || !start) return;
-      if (settings.subscribe_popup_enabled === false) {
-        block.remove();
-        return;
-      }
       start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
     }
 
@@ -1704,6 +1691,32 @@
     }
 
     function setupShare(settings) {
+      removeElement("shareButton");
+      removeElement("shareSheet");
+      if (!featureOn(settings, "share_link_visible", true)) return;
+      const heroActions = document.querySelector(".hero-actions");
+      if (!heroActions) return;
+      const trigger = document.createElement("button");
+      trigger.className = "mini-pill share-trigger";
+      trigger.id = "shareButton";
+      trigger.type = "button";
+      trigger.setAttribute("aria-label", "Share Mina");
+      trigger.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2"/><path d="m8.6 13.4 6.8 4.2"/></svg>';
+      heroActions.appendChild(trigger);
+
+      const sheet = document.createElement("section");
+      sheet.className = "sheet";
+      sheet.id = "shareSheet";
+      sheet.setAttribute("aria-label", "Share Mina Mosya");
+      sheet.setAttribute("aria-hidden", "true");
+      sheet.innerHTML =
+        '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">' +
+        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="shareTitle">Share Mina</strong><span>Creator card and quick links</span></div>' +
+        '<button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button></div>' +
+        '<div class="creator-share-card"><img id="shareAvatar" src="/assets/mosyaamosya/profile-v2.jpg" alt=""><div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div></div>' +
+        '<div class="share-grid" id="shareGrid"></div></div>';
+      document.body.insertBefore(sheet, $("privacySheet"));
+
       const pageUrl = "https://doneovernight.com/" + (settings.slug || "mosyaamosya");
       $("shareName").textContent = settings.display_name || "Mina Mosya";
       $("shareHandle").textContent = "@" + (settings.username || settings.slug || "mosyaamosya");
@@ -1729,6 +1742,12 @@
       if (discordEnabled(settings)) {
         shareItems.splice(4, 0, ["Discord", "Open Mina's community", safeUrl(settings.discord_invite_url || settings.discord_url)]);
       }
+      if (featureOn(settings, "music_link_visible", false) && externalUrl(settings.music_url)) {
+        shareItems.push(["Music", textSetting(settings, "music_link_subtitle", "Mina's current sound"), externalUrl(settings.music_url)]);
+      }
+      if (featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url)) {
+        shareItems.push(["FAQ", textSetting(settings, "faq_link_subtitle", "Questions and answers"), safeUrl(settings.faq_link_url)]);
+      }
       if (navigator.share) {
         shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
           event.preventDefault();
@@ -1749,7 +1768,10 @@
         if (handler) item.addEventListener("click", handler);
         grid.appendChild(item);
       });
-      $("shareButton").onclick = () => setSheetOpen("shareSheet", true);
+      trigger.onclick = () => setSheetOpen("shareSheet", true);
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen("shareSheet", false);
+      });
     }
 
     function setupLivingGlassMotion() {
@@ -1778,14 +1800,18 @@
 
     setupLivingGlassMotion();
 
-    document.querySelectorAll("[data-close-sheet]").forEach((button) => {
-      button.addEventListener("click", () => setSheetOpen(button.dataset.closeSheet, false));
-    });
-    document.querySelectorAll("[data-open-sheet]").forEach((button) => {
-      button.addEventListener("click", (event) => {
+    document.addEventListener("click", (event) => {
+      const closeButton = event.target.closest("[data-close-sheet]");
+      if (closeButton) {
         event.preventDefault();
-        setSheetOpen(button.dataset.openSheet, true);
-      });
+        setSheetOpen(closeButton.dataset.closeSheet, false);
+        return;
+      }
+      const openButton = event.target.closest("[data-open-sheet]");
+      if (openButton) {
+        event.preventDefault();
+        setSheetOpen(openButton.dataset.openSheet, true);
+      }
     });
     document.querySelectorAll(".sheet").forEach((sheet) => {
       sheet.addEventListener("click", (event) => {
@@ -1809,19 +1835,25 @@
     });
 
     function setupMusic(settings) {
-      const button = $("soundButton");
+      let button = $("soundButton");
       const audio = $("introAudio");
       const introInfo = introAudioInfo(settings);
       const musicInfo = musicLinkInfo(settings);
-      button.onclick = null;
-      button.removeAttribute("data-mode");
-      if (!introInfo.enabled && !musicInfo.enabled) {
-        button.hidden = true;
+      if (!featureOn(settings, "music_link_visible", false) || (!introInfo.enabled && !musicInfo.enabled)) {
+        if (button) button.remove();
         audio.pause();
         audio.removeAttribute("src");
         return;
       }
-      button.hidden = false;
+      if (!button) {
+        button = document.createElement("button");
+        button.className = "sound-button";
+        button.id = "soundButton";
+        button.type = "button";
+        document.body.insertBefore(button, $("previewBadge"));
+      }
+      button.onclick = null;
+      button.removeAttribute("data-mode");
       audio.loop = false;
       button.innerHTML = icons.sound;
       if (introInfo.enabled) {
@@ -1838,6 +1870,61 @@
       button.title = "Open music link";
       button.setAttribute("aria-label", "Open music link");
       button.onclick = () => window.open(musicInfo.url, "_blank", "noopener,noreferrer");
+    }
+
+    function renderFooterNav(settings) {
+      const nav = $("footerNav");
+      if (!nav) return;
+      const items = [
+        ["Privacy", "privacySheet", "#privacy"],
+        ["Report", "reportSheet", "#report"]
+      ];
+      if (featureOn(settings, "creator_passport_visible", true)) {
+        items.push(["Creator Passport", "passportSheet", "#creator-passport"]);
+      }
+      items.push(["About Creator OS", "aboutCreatorOsSheet", "#about-creator-os"]);
+      nav.replaceChildren();
+      items.forEach(([label, sheetId, href], index) => {
+        if (index) {
+          const separator = document.createElement("span");
+          separator.setAttribute("aria-hidden", "true");
+          separator.textContent = "•";
+          nav.appendChild(separator);
+        }
+        const link = document.createElement("a");
+        link.href = href;
+        link.dataset.openSheet = sheetId;
+        link.textContent = label;
+        nav.appendChild(link);
+      });
+    }
+
+    function renderPassport(settings) {
+      removeElement("passportSheet");
+      if (!featureOn(settings, "creator_passport_visible", true)) return;
+      const sheet = document.createElement("section");
+      sheet.className = "sheet";
+      sheet.id = "passportSheet";
+      sheet.setAttribute("aria-label", "Creator Passport");
+      sheet.setAttribute("aria-hidden", "true");
+      const displayName = escapeHtml(settings.display_name || "Mina Mosya");
+      const dna = escapeHtml(String(settings.creator_dna || "streamer").replace(/^\w/, (letter) => letter.toUpperCase()));
+      const timezone = escapeHtml((settings.timezone || fallback.timezone).replace("America/", ""));
+      sheet.innerHTML =
+        '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="passportTitle">' +
+        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="passportTitle">Creator Passport</strong><span>' + displayName + ' on Creator OS</span></div>' +
+        '<button class="icon-button" type="button" data-close-sheet="passportSheet" aria-label="Close Creator Passport">&times;</button></div>' +
+        '<div class="passport-grid">' +
+        '<div class="passport-row"><span>' + displayName + '</span><strong>Joined Creator OS</strong></div>' +
+        '<div class="passport-row"><span>Joined</span><strong>July 2026</strong></div>' +
+        '<div class="passport-row"><span>Creator DNA</span><strong>' + dna + '</strong></div>' +
+        '<div class="passport-row"><span>Timezone</span><strong>' + timezone + '</strong></div>' +
+        '<div class="passport-row"><span>Powered by</span><strong>DONEOVERNIGHT Creator OS</strong></div>' +
+        '</div></div>';
+      document.body.insertBefore(sheet, $("aboutCreatorOsSheet"));
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen("passportSheet", false);
+      });
     }
 
     function setupIntro(settings) {
@@ -1897,32 +1984,11 @@
         countdown.textContent = "";
         countdown.classList.remove("is-visible");
       }
-      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
-      const communityCard = $("communityCard");
-      if (communityCard && (settings.community_link_visible === false || !communityUrl)) {
-        communityCard.remove();
-      }
-      const passportLink = document.querySelector('[data-open-sheet="passportSheet"]');
-      if (settings.creator_passport_visible === false) {
-        if (passportLink) {
-          const previousSeparator = passportLink.previousElementSibling;
-          const nextSeparator = passportLink.nextElementSibling;
-          if (previousSeparator && previousSeparator.getAttribute("aria-hidden") === "true") previousSeparator.remove();
-          else if (nextSeparator && nextSeparator.getAttribute("aria-hidden") === "true") nextSeparator.remove();
-          passportLink.remove();
-        }
-        removeElement("passportSheet");
-      }
-      const community = $("communityCta");
-      if (communityCard && communityCard.isConnected && community) {
-        communityCard.querySelector("h2").textContent = textSetting(settings, "community_link_title", "Community");
-        communityCard.querySelector("p").textContent = textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.");
-        community.textContent = textSetting(settings, "community_link_cta_label", "Join Discord");
-        community.href = communityUrl;
-        community.removeAttribute("aria-disabled");
-      }
+      renderCommunity(settings);
       renderButtons(settings);
       renderNewsletter(settings);
+      renderFooterNav(settings);
+      renderPassport(settings);
       renderPinnedBlock(settings);
       setupNewsletter();
       setupShare(settings);

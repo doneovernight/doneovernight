@@ -103,6 +103,7 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "community_link_subtitle",
   "community_link_cta_label",
   "community_link_url",
+  "share_link_visible",
   "custom_links"
 ];
 const INTRO_AUDIO_CREATOR_FIELDS = [
@@ -113,6 +114,14 @@ const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_stop_after"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible"),
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
@@ -204,6 +213,7 @@ const DEFAULT_MINA_SETTINGS = {
   community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
   community_link_cta_label: "Join Discord",
   community_link_url: "https://discord.gg/GGE7WsUZR",
+  share_link_visible: true,
   custom_links: [],
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
@@ -737,6 +747,7 @@ function normalizeCreator(row = {}) {
     community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(row.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
     community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    share_link_visible: bool(row.share_link_visible, true),
     custom_links: normalizeCustomLinks(row.custom_links),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
@@ -757,9 +768,15 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
       context: "Creator settings"
     });
   } catch (error) {
-    rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
-      context: "Creator settings"
-    });
+    try {
+      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY + "&limit=1", {
+        context: "Creator settings"
+      });
+    } catch (legacyError) {
+      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
+        context: "Creator settings"
+      });
+    }
   }
   if (!Array.isArray(rows) || rows.length === 0) return null;
   return normalizeCreator(rows[0]);
@@ -884,6 +901,7 @@ function creatorPayload(input = {}) {
     community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(input.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
     community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    share_link_visible: bool(input.share_link_visible, true),
     custom_links: normalizeCustomLinks(input.custom_links),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
@@ -898,14 +916,25 @@ function creatorPayload(input = {}) {
 }
 
 async function saveCreatorToTable(payload) {
-  const rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS, {
-    method: "POST",
-    prefer: "resolution=merge-duplicates,return=representation",
-    body: [payload],
-    context: "Creator settings"
-  });
+  let rows;
+  try {
+    rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS, {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=representation",
+      body: [payload],
+      context: "Creator settings"
+    });
+  } catch (error) {
+    const { share_link_visible, ...legacyPayload } = payload;
+    rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=representation",
+      body: [legacyPayload],
+      context: "Creator settings"
+    });
+  }
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
-  return { creator: normalizeCreator(row), source: "database" };
+  return { creator: normalizeCreator({ ...payload, ...row }), source: "database" };
 }
 
 async function saveCreatorToAnalyticsBridge(payload) {

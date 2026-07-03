@@ -682,6 +682,13 @@
 
             <section class="link-card">
               <div class="link-card-head">
+                <div class="link-card-title"><strong>Share</strong><span>Creator share button and share sheet.</span></div>
+                <label class="switch" aria-label="Share visible"><input name="share_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
                 <div class="link-card-title"><strong>Custom Links</strong><span>Creator-defined blocks.</span></div>
                 <button class="button" id="addCustomLink" type="button">Add Link</button>
               </div>
@@ -1241,6 +1248,7 @@
         community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
         community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
         community_link_url: String(data.get("community_link_url") || "").trim(),
+        share_link_visible: boolField("share_link_visible", true),
         custom_links: readCustomLinks(),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
         intro_audio_enabled: boolField("intro_audio_enabled"),
@@ -1276,7 +1284,7 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
@@ -1296,6 +1304,7 @@
       if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
       if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
       if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
+      if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
       writeCustomLinks(settings.custom_links || []);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
