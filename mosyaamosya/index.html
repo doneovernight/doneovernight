@@ -1146,6 +1146,60 @@
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
+    function musicUrlInfo(settings) {
+      const url = safeUrl(settings.music_url);
+      if (!settings.music_enabled || !url) return { url: "", mode: "none" };
+      try {
+        const parsed = new URL(url);
+        const directAudio = /\.(mp3|m4a|aac|wav|ogg|oga|opus|webm)$/i.test(parsed.pathname);
+        return { url, mode: directAudio ? "audio" : "external" };
+      } catch (error) {
+        return { url: "", mode: "none" };
+      }
+    }
+    function setAudioSource(settings, url) {
+      const audio = $("music");
+      if (audio.src !== url) audio.src = url;
+      audio.volume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
+      audio.loop = settings.music_loop !== false;
+    }
+    async function playDirectMusic(settings) {
+      const info = musicUrlInfo(settings);
+      if (info.mode !== "audio") return false;
+      const audio = $("music");
+      const button = $("soundButton");
+      setAudioSource(settings, info.url);
+      try {
+        await audio.play();
+        localStorage.setItem(musicKey, "on");
+        if (button) button.innerHTML = icons.sound;
+        return true;
+      } catch (error) {
+        if (button) button.title = "Music could not play. Tap again to retry.";
+        return false;
+      }
+    }
+    function fadeOutDirectMusic(settings) {
+      const audio = $("music");
+      if (!audio || audio.paused) return;
+      const targetVolume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
+      const startVolume = audio.volume || targetVolume;
+      let step = 0;
+      const steps = 14;
+      const timer = window.setInterval(() => {
+        step += 1;
+        audio.volume = Math.max(0, startVolume * (1 - step / steps));
+        if (step >= steps) {
+          window.clearInterval(timer);
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = targetVolume;
+          localStorage.setItem(musicKey, "off");
+          const button = $("soundButton");
+          if (button) button.innerHTML = icons.muted;
+        }
+      }, 45);
+    }
     function previewSettings(settings) {
       const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
       const theme = params.get("preview_theme");
@@ -1242,7 +1296,6 @@
         setText("liveCopy", displayLive ? "" : "See you at the next stream.");
       }
       setLiveMeta([
-        hasRealViewerCount ? compactNumber(liveState.viewerCount) + " watching" : "",
         hasRealLikeCount ? compactNumber(liveState.likeCount) + " likes" : "",
         hasLiveDuration ? "Live for " + liveState.liveDuration.trim() : ""
       ]);
@@ -1643,24 +1696,34 @@
     function setupMusic(settings) {
       const button = $("soundButton");
       const audio = $("music");
-      const url = safeUrl(settings.music_url);
-      if (!settings.music_enabled || !url) {
+      const info = musicUrlInfo(settings);
+      button.onclick = null;
+      button.removeAttribute("data-mode");
+      if (info.mode === "none") {
         button.hidden = true;
+        audio.pause();
         audio.removeAttribute("src");
         return;
       }
-      audio.src = url;
-      audio.volume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
-      audio.loop = settings.music_loop !== false;
       button.hidden = false;
-      button.innerHTML = localStorage.getItem(musicKey) === "on" ? icons.sound : icons.muted;
+      if (info.mode === "external") {
+        audio.pause();
+        audio.removeAttribute("src");
+        button.dataset.mode = "external";
+        button.innerHTML = icons.sound;
+        button.title = "Open music";
+        button.setAttribute("aria-label", "Open music");
+        button.onclick = () => window.open(info.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      setAudioSource(settings, info.url);
+      button.dataset.mode = "audio";
+      button.title = "Toggle music";
+      button.setAttribute("aria-label", "Toggle music");
+      button.innerHTML = !audio.paused && localStorage.getItem(musicKey) === "on" ? icons.sound : icons.muted;
       button.onclick = async () => {
         if (audio.paused) {
-          try {
-            await audio.play();
-            localStorage.setItem(musicKey, "on");
-            button.innerHTML = icons.sound;
-          } catch (error) {}
+          await playDirectMusic(settings);
         } else {
           audio.pause();
           localStorage.setItem(musicKey, "off");
@@ -1680,6 +1743,9 @@
       video.src = heroVideo(settings);
       intro.hidden = false;
       const dismiss = () => {
+        playDirectMusic(settings).then((played) => {
+          if (played) window.setTimeout(() => fadeOutDirectMusic(settings), 520);
+        });
         if (!forceExperience) localStorage.setItem(introKey, "done");
         intro.classList.add("is-done");
         revealPage();

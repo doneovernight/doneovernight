@@ -34,7 +34,7 @@
     }
     button, input, textarea { font: inherit; }
     a { color: inherit; }
-    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 48px; }
+    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 128px; }
     .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
     .brand { display: grid; gap: 6px; }
     .eyebrow { color: var(--accent); font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
@@ -88,6 +88,7 @@
     }
     .button.primary { border: 0; background: linear-gradient(135deg, var(--accent), #ff9fbd); color: #24100e; box-shadow: 0 16px 42px rgba(255,159,189,.22); }
     .button.danger { color: #fecdd3; border-color: rgba(251,113,133,.36); }
+    .button[disabled] { opacity: .62; cursor: wait; }
     .gate { min-height: 100svh; display: grid; place-items: start center; padding: 28px 14px; }
     .gate-card, .panel {
       border: 1px solid var(--line);
@@ -201,7 +202,7 @@
       background: rgba(255,211,223,.12);
     }
     .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .sticky-save { position: sticky; bottom: 12px; z-index: 5; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
+    .sticky-save { position: sticky; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 5; width: min(100%, 360px); justify-self: center; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
     iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
@@ -214,7 +215,7 @@
       .preview { display: none; }
     }
     @media (max-width: 620px) {
-      .shell { width: min(100% - 18px, 1180px); padding-top: 12px; }
+      .shell { width: min(100% - 18px, 1180px); padding-top: 12px; padding-bottom: 150px; }
       .panel { padding: 14px; border-radius: 16px; }
       .topbar { margin-bottom: 12px; }
       .stack { gap: 12px; }
@@ -242,15 +243,11 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">DONEOVERNIGHT Creator OS / Revision 2</div>
         <h1>Mina Mosya</h1>
-        <div class="muted">Public page: <a href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">doneovernight.com/mosyaamosya</a></div>
       </div>
       <div class="actions">
         <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
-        <a class="button" href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">Open Public Page</a>
         <button class="button danger" id="logoutButton" type="button">Logout</button>
-        <button class="button primary" id="saveTop" type="button">Save page</button>
       </div>
     </header>
 
@@ -436,6 +433,7 @@
               <label class="switch" aria-label="Music enabled"><input name="music_enabled" type="checkbox"><span class="track"></span></label>
             </div>
             <label class="span-2">Music URL<input name="music_url" type="url"></label>
+            <div class="span-2 help-panel">Direct .mp3/.m4a files can play in-page. Apple Music/Spotify links open externally.</div>
             <label>Volume<input name="music_volume" type="number" min="0" max="1" step="0.05"></label>
             <div class="switch-row">
               <div><strong>Loop</strong><span>Repeat the music track.</span></div>
@@ -539,7 +537,7 @@
           </div>
         </section>
 
-        <button class="button primary sticky-save tab-panel" data-admin-panel="settings" type="submit">Save page</button>
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings" id="saveFloating" type="button">Save page</button>
         <div class="status" id="saveStatus"></div>
       </form>
 
@@ -589,6 +587,7 @@
     ];
     let activeTheme = "mina";
     let activeDna = "streamer";
+    let saving = false;
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
 
@@ -885,8 +884,6 @@
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
         panel.hidden = panel.dataset.adminPanel !== active;
       });
-      const saveVisible = active === "settings";
-      $("saveTop").hidden = !saveVisible;
       if (active === "runtime") loadLiveRuntime();
     }
     function applyAdminTheme(theme) {
@@ -978,13 +975,31 @@
       setStatus("Loaded Mina Mosya settings.");
     }
     async function saveSettings() {
+      if (saving) return;
+      saving = true;
+      const button = $("saveFloating");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Saving...";
+      }
       setStatus("Saving Mina...");
-      const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
-      fillForm(data.creator);
-      updatePreviewFrame();
-      loadLiveRuntime();
-      updateOverview(data.creator && data.creator.updated_at);
-      setStatus("Saved Mina Mosya page.");
+      try {
+        const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
+        fillForm(data.creator);
+        updatePreviewFrame();
+        loadLiveRuntime();
+        updateOverview(data.creator && data.creator.updated_at);
+        setStatus("Saved Mina Mosya page.");
+      } catch (error) {
+        setStatus(error.message || "Save failed", true);
+        throw error;
+      } finally {
+        saving = false;
+        if (button) {
+          button.disabled = false;
+          button.textContent = "Save page";
+        }
+      }
     }
     async function loadLiveRuntime() {
       const status = $("liveRuntimeStatus");
@@ -1084,7 +1099,7 @@
       event.preventDefault();
       try { await saveSettings(); } catch (error) { setStatus(error.message || "Save failed", true); }
     });
-    $("saveTop").addEventListener("click", async () => {
+    $("saveFloating").addEventListener("click", async () => {
       try { await saveSettings(); } catch (error) { setStatus(error.message || "Save failed", true); }
     });
     document.querySelectorAll("[data-admin-tab]").forEach((button) => {
