@@ -859,6 +859,61 @@
       box-shadow: 0 14px 40px rgba(0,0,0,.22);
     }
     .preview-badge[hidden] { display: none; }
+    .tiktok-browser-helper {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: calc(72px + env(safe-area-inset-bottom));
+      z-index: 58;
+      width: min(492px, calc(100vw - 28px));
+      margin: 0 auto;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 22px;
+      padding: 12px;
+      background: linear-gradient(145deg, rgba(22,12,11,.82), rgba(9,5,4,.72));
+      color: rgba(255,245,247,.76);
+      box-shadow: 0 18px 54px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.12);
+      backdrop-filter: blur(18px) saturate(1.08);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .intro-pending .tiktok-browser-helper,
+    .tiktok-browser-helper[hidden] { display: none; }
+    .tiktok-browser-helper p {
+      margin: 0;
+      display: grid;
+      gap: 3px;
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+    .tiktok-browser-helper p span {
+      color: rgba(255,245,247,.52);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .tiktok-helper-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .tiktok-helper-actions button {
+      min-height: 34px;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: rgba(255,245,247,.78);
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .tiktok-helper-actions button:first-child {
+      border-color: rgba(255,211,223,.22);
+      color: var(--pink);
+    }
     .intro {
       position: fixed;
       inset: 0;
@@ -1155,6 +1210,7 @@
       custom_links: []
     };
     const params = new URLSearchParams(window.location.search);
+    const TIKTOK_BROWSER_HELPER_ENABLED = true;
     const forceExperience = params.get("experience") === "1";
     const previewMode = params.get("preview") === "1";
     const themePresets = {
@@ -1216,6 +1272,7 @@
     let liveRuntimeTimer = null;
     let liveVisibilityHandler = null;
     let currentSettings = { ...fallback };
+    let pageViewTracked = false;
     const blockRegistry = {
       link: { implemented: true },
       discord: { implemented: true },
@@ -1450,6 +1507,8 @@
       if (loadingStatus) {
         cta.textContent = "Checking...";
         cta.href = "#";
+        delete cta.dataset.analyticsEvent;
+        delete cta.dataset.analyticsBlockTitle;
         cta.setAttribute("aria-disabled", "true");
         cta.removeAttribute("target");
         cta.removeAttribute("rel");
@@ -1459,6 +1518,8 @@
         const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
         cta.textContent = hasBattleMode ? textSetting(settings, "battle_link_cta_label", "Prepare") : (settings.live_button_text || "Join Live");
         cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
+        cta.dataset.analyticsEvent = hasBattleMode ? "prepare_click" : "join_live_click";
+        cta.dataset.analyticsBlockTitle = hasBattleMode ? "Prepare for Battle" : "Join Live";
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
@@ -1468,6 +1529,8 @@
       if (unknownStatus) {
         cta.textContent = "Watch TikTok";
         cta.href = safeUrl(settings.tiktok_url) || fallbackLiveUrl(settings);
+        cta.dataset.analyticsEvent = "tiktok_click";
+        cta.dataset.analyticsBlockTitle = "Watch TikTok";
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
@@ -1475,6 +1538,8 @@
       }
       cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
       cta.href = "#";
+      delete cta.dataset.analyticsEvent;
+      delete cta.dataset.analyticsBlockTitle;
       cta.setAttribute("aria-disabled", "true");
       cta.removeAttribute("target");
       cta.removeAttribute("rel");
@@ -1712,6 +1777,20 @@
       return data;
     }
 
+    const analyticsSessionId = (() => {
+      const key = "creator_os_session_id";
+      try {
+        let value = sessionStorage.getItem(key) || "";
+        if (!value) {
+          value = (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+          sessionStorage.setItem(key, value);
+        }
+        return value;
+      } catch (error) {
+        return String(Date.now()) + Math.random().toString(16).slice(2);
+      }
+    })();
+
     function pollStorageId() {
       const key = "creator_os_visitor_id";
       let value = "";
@@ -1725,6 +1804,25 @@
         value = String(Date.now()) + Math.random().toString(16).slice(2);
       }
       return value;
+    }
+
+    function trackCreatorEvent(eventName, metadata = {}) {
+      if (previewMode || !eventName) return;
+      fetch("/api/creator-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "track_creator_event",
+          slug: currentSettings.slug || "mosyaamosya",
+          event_name: eventName,
+          visitor_id: pollStorageId(),
+          session_id: analyticsSessionId,
+          route: location.pathname,
+          referrer: document.referrer,
+          metadata
+        }),
+        keepalive: true
+      }).catch(() => {});
     }
 
     function pollLocalKey(pollKey) {
@@ -1902,6 +2000,10 @@
           item.href = url;
           item.target = url.startsWith("mailto:") ? "_self" : "_blank";
           item.rel = "noreferrer";
+          item.dataset.analyticsEvent = action.key === "support" ? "prepare_click" : action.key + "_click";
+          item.dataset.analyticsBlockKey = action.key;
+          item.dataset.analyticsBlockTitle = action.title;
+          item.dataset.analyticsDestination = url;
         }
         item.innerHTML =
           (showBattleDiscount ? '<img class="battle-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">' : "") +
@@ -1972,6 +2074,9 @@
         escapeHtml(textSetting(settings, "community_link_subtitle", "Join Mina\\'s Discord for stream updates and community drops.")) +
         '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(activeCommunityUrl) + '" target="_blank" rel="noreferrer">' +
         escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
+      card.querySelector("#communityCta").dataset.analyticsEvent = "community_click";
+      card.querySelector("#communityCta").dataset.analyticsBlockTitle = textSetting(settings, "community_link_title", "Community");
+      card.querySelector("#communityCta").dataset.analyticsDestination = activeCommunityUrl;
       const grid = $("buttonGrid");
       const shell = document.querySelector(".shell");
       if (shell) shell.insertBefore(card, grid || $("footerNav"));
@@ -1988,6 +2093,7 @@
       if (form.dataset.ready === "true") return;
       form.dataset.ready = "true";
       start.addEventListener("click", () => {
+        trackCreatorEvent("newsletter_open", { block_key: "newsletter", block_title: "Newsletter" });
         block.classList.remove("has-error");
         if (errorText) errorText.textContent = "";
         block.classList.add("is-editing");
@@ -2149,9 +2255,15 @@
           item.rel = "noreferrer";
         }
         if (handler) item.addEventListener("click", handler);
+        item.addEventListener("click", () => {
+          trackCreatorEvent("share_item_click", { block_key: "share", block_title: title, destination: href });
+        });
         grid.appendChild(item);
       });
-      trigger.onclick = () => setSheetOpen("shareSheet", true);
+      trigger.onclick = () => {
+        trackCreatorEvent("share_open", { block_key: "share", block_title: "Share" });
+        setSheetOpen("shareSheet", true);
+      };
       sheet.addEventListener("click", (event) => {
         if (event.target === sheet) setSheetOpen("shareSheet", false);
       });
@@ -2175,15 +2287,25 @@
       window.addEventListener("pointermove", (event) => {
         apply((event.clientX / window.innerWidth) * 100, (event.clientY / window.innerHeight) * 100);
       }, { passive: true });
-      window.addEventListener("deviceorientation", (event) => {
-        if (typeof event.gamma !== "number" || typeof event.beta !== "number") return;
-        apply(50 + Math.max(-18, Math.min(18, event.gamma)) * .7, 42 + Math.max(-22, Math.min(22, event.beta - 35)) * .45);
-      }, { passive: true });
+      if (window.isSecureContext) {
+        window.addEventListener("deviceorientation", (event) => {
+          if (typeof event.gamma !== "number" || typeof event.beta !== "number") return;
+          apply(50 + Math.max(-18, Math.min(18, event.gamma)) * .7, 42 + Math.max(-22, Math.min(22, event.beta - 35)) * .45);
+        }, { passive: true });
+      }
     }
 
     setupLivingGlassMotion();
 
     document.addEventListener("click", (event) => {
+      const tracked = event.target.closest("[data-analytics-event]");
+      if (tracked && tracked.getAttribute("aria-disabled") !== "true") {
+        trackCreatorEvent(tracked.dataset.analyticsEvent, {
+          block_key: tracked.dataset.analyticsBlockKey || "",
+          block_title: tracked.dataset.analyticsBlockTitle || tracked.textContent || "",
+          destination: tracked.dataset.analyticsDestination || tracked.href || ""
+        });
+      }
       const closeButton = event.target.closest("[data-close-sheet]");
       if (closeButton) {
         event.preventDefault();
@@ -2253,6 +2375,48 @@
       button.title = "Open music link";
       button.setAttribute("aria-label", "Open music link");
       button.onclick = () => window.open(musicInfo.url, "_blank", "noopener,noreferrer");
+    }
+
+    function looksLikeTikTokBrowser() {
+      const ua = String(navigator.userAgent || "");
+      return /tiktok|musical_ly|bytedancewebview|bytedance|aweme|trill/i.test(ua);
+    }
+
+    function setupTikTokBrowserHelper(settings) {
+      removeElement("tiktokBrowserHelper");
+      const isMina = String(settings.slug || "mosyaamosya").toLowerCase() === "mosyaamosya";
+      const key = "creator_tiktok_browser_helper_dismissed_" + (settings.slug || "mosyaamosya");
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(key) === "true"; } catch (error) {}
+      if (!TIKTOK_BROWSER_HELPER_ENABLED || !isMina || dismissed || !looksLikeTikTokBrowser()) return;
+
+      const helper = document.createElement("aside");
+      helper.className = "tiktok-browser-helper";
+      helper.id = "tiktokBrowserHelper";
+      helper.setAttribute("aria-label", "Open in browser helper");
+      helper.innerHTML =
+        '<p>For the best experience, open this page in your browser.<span>Tap ••• and choose Open in browser.</span></p>' +
+        '<div class="tiktok-helper-actions">' +
+        '<button type="button" data-copy-helper-link>Copy link</button>' +
+        '<button type="button" data-dismiss-helper aria-label="Dismiss browser helper">&times;</button>' +
+        '</div>';
+      document.body.insertBefore(helper, $("previewBadge"));
+
+      const dismiss = () => {
+        try { localStorage.setItem(key, "true"); } catch (error) {}
+        helper.hidden = true;
+      };
+      helper.querySelector("[data-dismiss-helper]").addEventListener("click", dismiss);
+      helper.querySelector("[data-copy-helper-link]").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          button.textContent = "Copied";
+        } catch (error) {
+          button.textContent = "Copy failed";
+        }
+        window.setTimeout(() => { if (!helper.hidden) button.textContent = "Copy link"; }, 1800);
+      });
     }
 
     function renderFooterNav(settings) {
@@ -2386,7 +2550,12 @@
       setupShare(settings);
       setupLiveRuntime(settings);
       setupMusic(settings);
+      setupTikTokBrowserHelper(settings);
       setupIntro(settings);
+      if (!pageViewTracked) {
+        pageViewTracked = true;
+        trackCreatorEvent("page_view", { block_key: "page", block_title: settings.display_name || "Mina Mosya" });
+      }
     }
 
     fetch("/api/creator-settings?slug=mosyaamosya")

@@ -447,6 +447,22 @@
     .inbox-list { display: grid; gap: 8px; max-height: 260px; overflow: auto; }
     .inbox-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,245,247,.08); padding: 0 0 8px; color: rgba(255,245,247,.78); font-size: 12px; }
     .inbox-row strong { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
+    .analytics-cockpit { display: grid; gap: 14px; }
+    .analytics-section { border: 1px solid var(--line); border-radius: 20px; padding: 16px; background: rgba(255,255,255,.045); display: grid; gap: 13px; }
+    .analytics-section h3 { margin: 0; font-size: 16px; }
+    .analytics-section > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .pulse-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .pulse-card { min-width: 0; border: 1px solid rgba(255,211,223,.12); border-radius: 16px; padding: 13px; background: rgba(0,0,0,.14); }
+    .pulse-card span { display: block; color: rgba(255,245,247,.56); font-size: 10px; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+    .pulse-card strong { display: block; margin-top: 7px; font-size: 22px; line-height: 1; overflow-wrap: anywhere; }
+    .pulse-card.wide { grid-column: span 3; }
+    .insight-list { display: grid; gap: 9px; }
+    .insight-row { display: flex; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgba(255,245,247,.08); padding-bottom: 9px; color: rgba(255,245,247,.7); font-size: 13px; }
+    .insight-row strong { color: var(--text); text-align: right; }
+    .motivation-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+    .motivation-strip span { border: 1px solid rgba(255,211,223,.14); border-radius: 999px; padding: 8px 10px; color: rgba(255,245,247,.78); background: rgba(255,255,255,.04); font-size: 12px; font-weight: 850; }
+    .analytics-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+    .analytics-actions .button { min-height: 52px; border-radius: 16px; padding: 0 10px; }
     .sticky-save {
       position: fixed;
       left: 50%;
@@ -549,7 +565,8 @@
       .fields { grid-template-columns: 1fr; }
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
-      .overview-grid, .runtime-actions, .runtime-actions.two, .segmented { grid-template-columns: 1fr; }
+      .overview-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .pulse-card.wide { grid-column: auto; }
       .theme-grid { grid-template-columns: repeat(2, 1fr); }
       .dna-grid { grid-template-columns: 1fr; }
       .span-2 { grid-column: auto; }
@@ -912,7 +929,36 @@
           <h2>Analytics</h2>
           <div class="section-note">What happened?</div>
           <div style="height:12px"></div>
-          <div class="help-panel">Analytics will live here when Creator OS reporting is enabled.</div>
+          <div class="analytics-cockpit">
+            <section class="analytics-section">
+              <h3>Live Pulse</h3>
+              <p>For the moments when the stream is open and you just need the signal.</p>
+              <div class="pulse-grid" id="analyticsLivePulse">
+                <div class="pulse-card"><span>Visitors now</span><strong>0</strong></div>
+                <div class="pulse-card"><span>Join Live clicks</span><strong>0</strong></div>
+                <div class="pulse-card"><span>Prepare clicks</span><strong>0</strong></div>
+                <div class="pulse-card"><span>Poll votes</span><strong>0</strong></div>
+                <div class="pulse-card"><span>New emails</span><strong>0</strong></div>
+                <div class="pulse-card"><span>Live status</span><strong>Checking</strong></div>
+              </div>
+            </section>
+            <section class="analytics-section">
+              <h3>What Worked</h3>
+              <div class="motivation-strip" id="analyticsMotivation"></div>
+              <div class="insight-list" id="analyticsWhatWorked"></div>
+            </section>
+            <section class="analytics-section">
+              <h3>Quick Actions</h3>
+              <div class="analytics-actions">
+                <button class="button" type="button" data-analytics-action="pin-prepare">Pin Prepare</button>
+                <button class="button" type="button" data-analytics-action="pin-poll">Pin Poll</button>
+                <button class="button" type="button" data-analytics-action="show-poll">Poll Results</button>
+                <button class="button" type="button" data-analytics-action="start-countdown">Start Countdown</button>
+                <button class="button" type="button" data-analytics-action="export-emails">Export Emails</button>
+              </div>
+              <div class="status" id="analyticsStatus" aria-live="polite"></div>
+            </section>
+          </div>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="experience" hidden>
@@ -1703,6 +1749,95 @@
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
+    function formatMetric(value) {
+      const number = Number(value) || 0;
+      return number.toLocaleString();
+    }
+    function liveStatusLabel(status = {}) {
+      if (!status) return "Unknown";
+      if (status.isLive && status.confidence === "confirmed") return "Live";
+      if (status.stale) return "Unavailable";
+      if (status.confidence === "confirmed") return "Offline";
+      return "Unknown";
+    }
+    function renderAnalytics(analytics = {}) {
+      const pulse = analytics.livePulse || {};
+      const worked = analytics.whatWorked || {};
+      const livePulse = $("analyticsLivePulse");
+      if (livePulse) {
+        const cards = [
+          ["Visitors now", formatMetric(pulse.visitorsNow)],
+          ["Join Live clicks", formatMetric(pulse.joinLiveClicks)],
+          ["Prepare clicks", formatMetric(pulse.prepareClicks)],
+          ["Poll votes", formatMetric(pulse.pollVotes)],
+          ["New emails", formatMetric(pulse.newsletterSignups)],
+          ["Live status", liveStatusLabel(pulse.liveStatus)]
+        ];
+        livePulse.innerHTML = cards.map(([label, value]) => '<div class="pulse-card"><span>' + escapeAdmin(label) + '</span><strong>' + escapeAdmin(value) + '</strong></div>').join("");
+      }
+      const motivation = $("analyticsMotivation");
+      if (motivation) {
+        const lines = Array.isArray(analytics.motivation) && analytics.motivation.length ? analytics.motivation : ["Waiting for the first signal."];
+        motivation.innerHTML = lines.map((line) => '<span>' + escapeAdmin(line) + '</span>').join("");
+      }
+      const list = $("analyticsWhatWorked");
+      if (list) {
+        const rows = [
+          ["Top clicked action", worked.topClickedActionCount ? worked.topClickedAction + " · " + formatMetric(worked.topClickedActionCount) : worked.topClickedAction || "No clicks yet"],
+          ["Total page views", formatMetric(worked.totalPageViews)],
+          ["Total clicks", formatMetric(worked.totalClicks)],
+          ["Best block", worked.bestPerformingBlock || "Waiting for traffic"],
+          ["New emails collected", formatMetric(worked.newEmailsCollected)],
+          ["Poll participation", formatMetric(worked.pollParticipation)]
+        ];
+        list.innerHTML = rows.map(([label, value]) => '<div class="insight-row"><span>' + escapeAdmin(label) + '</span><strong>' + escapeAdmin(value) + '</strong></div>').join("");
+      }
+      const status = $("analyticsStatus");
+      if (status) {
+        const refreshed = analytics.refreshedAt ? new Date(analytics.refreshedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+        setStatus(refreshed ? "Updated " + refreshed : "Analytics updated.", false, "analyticsStatus");
+      }
+    }
+    async function loadAnalytics() {
+      setStatus("Loading analytics...", false, "analyticsStatus");
+      try {
+        const data = await api({ action: "load_creator_analytics", creator_session: creatorSession(), slug: "mosyaamosya" });
+        renderAnalytics(data.analytics || {});
+      } catch (error) {
+        setStatus(readableMessage(error, "Could not load analytics."), true, "analyticsStatus");
+      }
+    }
+    async function runAnalyticsAction(action) {
+      if (action === "pin-prepare") {
+        await setPinnedBlock("prepare");
+        await loadAnalytics();
+        setStatus("Prepare for Battle pinned.", false, "analyticsStatus");
+        return;
+      }
+      if (action === "pin-poll") {
+        await setPinnedBlock("poll");
+        await loadAnalytics();
+        setStatus("Poll pinned.", false, "analyticsStatus");
+        return;
+      }
+      if (action === "show-poll") {
+        setAdminTab("runtime");
+        await loadResponses();
+        $("pollResults")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (action === "start-countdown") {
+        setAdminTab("runtime");
+        form.elements.next_live_datetime?.focus();
+        setStatus("Set the next live time, then Save page.", false);
+        return;
+      }
+      if (action === "export-emails") {
+        if (!latestNewsletterRows.length) await loadResponses();
+        exportNewsletterCsv();
+        setStatus("Email export ready.", false, "analyticsStatus");
+      }
+    }
     function valuesFromForm() {
       syncLinkCompatibilityFields();
       syncPollOptionsField();
@@ -2001,9 +2136,12 @@
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
         panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
       });
+      $("saveFloating").hidden = active === "overview" || active === "analytics";
       if (active === "runtime") {
         loadLiveRuntime();
         loadResponses();
+      } else if (active === "analytics") {
+        loadAnalytics();
       }
     }
     function applyAdminTheme(theme) {
@@ -2333,6 +2471,11 @@
     $("refreshResponses").addEventListener("click", loadResponses);
     $("resetPollResults").addEventListener("click", resetPollResults);
     $("exportNewsletterCsv").addEventListener("click", exportNewsletterCsv);
+    document.querySelectorAll("[data-analytics-action]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await runAnalyticsAction(button.dataset.analyticsAction); } catch (error) { setStatus(readableMessage(error, "Analytics action failed."), true, "analyticsStatus"); }
+      });
+    });
     ["poll_enabled", "poll_question"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("change", syncPollOptionsField);
       if (form.elements[key]) form.elements[key].addEventListener("input", syncPollOptionsField);
@@ -2368,6 +2511,9 @@
     });
     loadLiveRuntime();
     window.setInterval(loadLiveRuntime, 60000);
+    window.setInterval(() => {
+      if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) loadAnalytics();
+    }, 60000);
     renderThemes();
     renderDna();
     applyAdminTheme(activeTheme);

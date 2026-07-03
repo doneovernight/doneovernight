@@ -1280,10 +1280,14 @@ function newsletterSignupEventType(creator = {}) {
   return "creator_newsletter_signup_" + creatorEventSlug(creator);
 }
 
+function creatorAnalyticsEventType(creator = {}) {
+  return "creator_analytics_" + creatorEventSlug(creator);
+}
+
 async function fetchAnalyticsEvents(eventType, limit = 1000) {
   const rows = await supabaseFetch(
     "analytics_events?event_type=eq." + encodeURIComponent(eventType) +
-      "&select=metadata,created_at&order=created_at.desc&limit=" + encodeURIComponent(String(limit)),
+      "&select=metadata,created_at,session_id,user_agent_hash&order=created_at.desc&limit=" + encodeURIComponent(String(limit)),
     { context: "Creator response bridge" }
   );
   return Array.isArray(rows) ? rows : [];
@@ -1300,6 +1304,227 @@ async function saveAnalyticsEvent(eventType, metadata = {}) {
     },
     context: "Creator response bridge"
   });
+}
+
+function normalizeAnalyticsEventName(value) {
+  const event = clean(value).toLowerCase().replace(/[^a-z0-9_:-]+/g, "_").replace(/^_+|_+$/g, "");
+  const allowed = new Set([
+    "page_view",
+    "join_live_click",
+    "prepare_click",
+    "tiktok_click",
+    "discord_click",
+    "community_click",
+    "business_click",
+    "music_click",
+    "faq_click",
+    "custom_click",
+    "share_open",
+    "share_item_click",
+    "newsletter_open"
+  ]);
+  return allowed.has(event) ? event : "";
+}
+
+function analyticsVisitorHash(req, input = {}) {
+  const visitorId = clean(input.visitor_id || input.visitorId || input.device_id || input.deviceId);
+  const forwarded = clean(req.headers["x-forwarded-for"]).split(",")[0] || clean(req.socket && req.socket.remoteAddress);
+  const userAgent = clean(req.headers["user-agent"]);
+  return hashText([sessionSecret(), "creator_analytics", visitorId || forwarded, userAgent].join("|"));
+}
+
+async function trackCreatorAnalyticsEvent(req, input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  const eventName = normalizeAnalyticsEventName(input.event_name || input.eventName || input.name);
+  if (!eventName) {
+    const error = new Error("Analytics event is not available.");
+    error.statusCode = 400;
+    error.code = "INVALID_ANALYTICS_EVENT";
+    throw error;
+  }
+  const metadata = input.metadata && typeof input.metadata === "object" ? input.metadata : {};
+  await supabaseFetch("analytics_events", {
+    method: "POST",
+    body: {
+      event_type: creatorAnalyticsEventType(creator),
+      source: "creator_os_public",
+      route: clean(input.route) || "/" + publicCreatorSlug(creator),
+      referrer: clean(input.referrer).slice(0, 500),
+      session_id: clean(input.session_id || input.sessionId).slice(0, 160),
+      user_agent_hash: analyticsVisitorHash(req, input),
+      metadata: {
+        creator_id: creator.id || MINA_CREATOR_ID,
+        creator_slug: publicCreatorSlug(creator),
+        event_name: eventName,
+        block_key: clean(input.block_key || input.blockKey || metadata.block_key || metadata.blockKey).slice(0, 80),
+        block_title: clean(input.block_title || input.blockTitle || metadata.block_title || metadata.blockTitle).slice(0, 160),
+        destination: clean(input.destination || metadata.destination).slice(0, 500)
+      }
+    },
+    context: "Creator analytics event"
+  });
+  return { tracked: true };
+}
+
+function eventNameFromRow(row = {}) {
+  const metadata = row.metadata || {};
+  return clean(metadata.event_name);
+}
+
+function blockTitleFromRow(row = {}) {
+  const metadata = row.metadata || {};
+  return clean(metadata.block_title) || clean(metadata.block_key) || clean(metadata.event_name) || "Action";
+}
+
+function analyticsLabel(eventName, blockTitle = "") {
+  const labels = {
+    join_live_click: "Join Live",
+    prepare_click: "Prepare for Battle",
+    tiktok_click: "TikTok",
+    discord_click: "Discord",
+    community_click: "Community",
+    business_click: "Business",
+    music_click: "Music",
+    faq_click: "FAQ",
+    custom_click: blockTitle || "Custom link",
+    share_open: "Share",
+    share_item_click: "Share item",
+    newsletter_open: "Newsletter"
+  };
+  return labels[eventName] || blockTitle || eventName || "Action";
+}
+
+function countEvents(rows = [], name) {
+  return rows.filter((row) => eventNameFromRow(row) === name).length;
+}
+
+function clickRows(rows = []) {
+  return rows.filter((row) => {
+    const name = eventNameFromRow(row);
+    return name && name !== "page_view";
+  });
+}
+
+function uniqueVisitors(rows = []) {
+  const seen = new Set();
+  rows.forEach((row) => {
+    const key = clean(row.user_agent_hash) || clean(row.session_id);
+    if (key) seen.add(key);
+  });
+  return seen.size;
+}
+
+function topAction(rows = []) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const name = eventNameFromRow(row);
+    if (!name || name === "page_view") return;
+    const blockTitle = blockTitleFromRow(row);
+    const key = name + "|" + blockTitle;
+    const current = counts.get(key) || { eventName: name, title: blockTitle, count: 0 };
+    current.count += 1;
+    counts.set(key, current);
+  });
+  return Array.from(counts.values()).sort((a, b) => b.count - a.count)[0] || null;
+}
+
+function latestAt(rows = []) {
+  const first = rows.find((row) => row && row.created_at);
+  return first ? first.created_at : null;
+}
+
+async function loadCreatorAnalytics(input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  const [events, responses, liveStatus] = await Promise.all([
+    fetchAnalyticsEvents(creatorAnalyticsEventType(creator), 1000).catch(() => []),
+    loadCreatorResponses(input).catch(() => ({ poll: null, newsletter: [] })),
+    handleCreatorLiveStatusForAnalytics(input.slug || "mosyaamosya").catch(() => null)
+  ]);
+  const now = Date.now();
+  const liveWindow = events.filter((row) => {
+    const time = Date.parse(row.created_at || "");
+    return Number.isFinite(time) && now - time <= 5 * 60 * 1000;
+  });
+  const views = events.filter((row) => eventNameFromRow(row) === "page_view");
+  const clicks = clickRows(events);
+  const best = topAction(events);
+  const poll = responses.poll || { totalVotes: 0, enabled: false, latestResponseAt: null };
+  const newsletter = Array.isArray(responses.newsletter) ? responses.newsletter : [];
+  const prepareClicks = countEvents(events, "prepare_click");
+  const joinLiveClicks = countEvents(events, "join_live_click");
+  const motivational = [];
+  if (clicks.length > 0) motivational.push("People are clicking.");
+  if (prepareClicks > 0) motivational.push("Your battle CTA is working.");
+  if (newsletter.length > 0) motivational.push(newsletter.length + " new fan" + (newsletter.length === 1 ? "" : "s") + " joined your list.");
+  return {
+    livePulse: {
+      visitorsNow: uniqueVisitors(liveWindow),
+      joinLiveClicks,
+      prepareClicks,
+      pollVotes: Number(poll.totalVotes) || 0,
+      newsletterSignups: newsletter.length,
+      liveStatus: liveStatus ? {
+        isLive: Boolean(liveStatus.isLive),
+        source: clean(liveStatus.source),
+        confidence: clean(liveStatus.confidence),
+        stale: Boolean(liveStatus.stale),
+        error: clean(liveStatus.error)
+      } : null
+    },
+    whatWorked: {
+      topClickedAction: best ? analyticsLabel(best.eventName, best.title) : "No clicks yet",
+      topClickedActionCount: best ? best.count : 0,
+      totalPageViews: views.length,
+      totalClicks: clicks.length,
+      bestPerformingBlock: best ? analyticsLabel(best.eventName, best.title) : "Waiting for traffic",
+      newEmailsCollected: newsletter.length,
+      pollParticipation: Number(poll.totalVotes) || 0,
+      latestActivityAt: latestAt(events)
+    },
+    quickActions: {
+      canPinPrepare: Boolean(creator.tiktok_coins_url && creator.battle_link_visible !== false),
+      canPinPoll: Boolean(creator.poll_enabled && poll.enabled),
+      canShowPollResults: Boolean(poll.enabled),
+      canStartCountdown: true,
+      canExportEmails: newsletter.length > 0
+    },
+    motivation: motivational.length ? motivational : ["Waiting for the first signal."],
+    refreshedAt: new Date().toISOString()
+  };
+}
+
+async function handleCreatorLiveStatusForAnalytics(slug) {
+  const payload = await handleCreatorLiveStatus.resolveLiveStatusForAdmin?.(slug);
+  if (payload) return payload;
+  const fields = [
+    "creator_slug",
+    "username",
+    "is_live",
+    "confirmed",
+    "confidence",
+    "source",
+    "checked_at",
+    "stale",
+    "stale_after",
+    "error",
+    "capabilities"
+  ].join(",");
+  const rows = await supabaseFetch("creator_live_runtime?creator_slug=eq." + encodeURIComponent(normalizeSlug(slug)) + "&select=" + fields + "&limit=1", {
+    context: "Creator analytics live runtime"
+  });
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!row) return null;
+  const staleAfter = normalizeDateTime(row.stale_after);
+  const stale = bool(row.stale, false) || (staleAfter ? Date.parse(staleAfter) < Date.now() : false);
+  return {
+    isLive: bool(row.is_live, false) && !stale,
+    source: clean(row.source) || "runtime",
+    confidence: stale ? "unknown" : clean(row.confidence) || "unknown",
+    stale,
+    error: clean(row.error)
+  };
 }
 
 async function fetchPollVotesFromBridge(creator, pollKey) {
@@ -1574,6 +1799,11 @@ async function handleCreatorSettings(req, res) {
     return send(res, 200, { success: true, newsletter });
   }
 
+  if (input.action === "track_creator_event") {
+    const event = await trackCreatorAnalyticsEvent(req, input);
+    return send(res, 200, { success: true, event });
+  }
+
   if (input.action === "login") {
     const credential = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
     const creatorOk = await verifyCreatorPassword(credential);
@@ -1642,6 +1872,11 @@ async function handleCreatorSettings(req, res) {
   if (input.action === "load_responses") {
     const responses = await loadCreatorResponses(input);
     return send(res, 200, { success: true, responses });
+  }
+
+  if (input.action === "load_creator_analytics") {
+    const analytics = await loadCreatorAnalytics(input);
+    return send(res, 200, { success: true, analytics });
   }
 
   if (input.action === "reset_poll_results") {
