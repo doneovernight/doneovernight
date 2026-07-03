@@ -367,8 +367,14 @@
     .stat-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
     .stat-card strong { display: block; margin-top: 7px; font-size: 18px; }
     .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .runtime-board { display: grid; gap: 14px; }
+    .runtime-board { display: grid; gap: 14px; width: 100%; max-width: 100%; min-width: 0; overflow: visible; }
     .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; min-width: 0; max-width: 100%; overflow: hidden; }
+    .runtime-section,
+    .runtime-section * {
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+    }
     .runtime-section h3 { margin: 0; font-size: 15px; }
     .runtime-section label,
     .runtime-section input,
@@ -384,6 +390,39 @@
       min-width: 0;
       box-sizing: border-box;
     }
+    .runtime-section strong,
+    .runtime-section span,
+    .runtime-section .section-note,
+    .runtime-section .runtime-note,
+    .runtime-section .help-panel {
+      overflow-wrap: anywhere;
+    }
+    .runtime-section .switch-row {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      overflow: hidden;
+    }
+    .runtime-section .switch-row > div {
+      flex: 1 1 auto;
+      min-width: 180px;
+      max-width: calc(100% - 66px);
+    }
+    .runtime-section .switch-row strong,
+    .runtime-section .switch-row span {
+      overflow-wrap: normal;
+      word-break: normal;
+    }
+    .runtime-section .switch {
+      width: 54px;
+      min-width: 54px;
+      max-width: 54px;
+      flex: 0 0 54px;
+    }
     .runtime-section input[type="datetime-local"] {
       -webkit-appearance: none;
       appearance: none;
@@ -394,7 +433,7 @@
     }
     .runtime-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .runtime-actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; }
+    .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
     .runtime-actions .button.primary { font-size: 16px; }
     .runtime-field {
       border: 1px solid var(--line);
@@ -424,14 +463,18 @@
       background: rgba(255,211,223,.12);
     }
     .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .poll-options { display: grid; gap: 8px; }
+    .poll-options { display: grid; gap: 8px; width: 100%; max-width: 100%; min-width: 0; }
     .poll-option-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) minmax(82px, auto);
       gap: 8px;
       align-items: center;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
-    .poll-option-row .button { min-height: 42px; width: auto; padding: 0 12px; }
+    .poll-option-row input { width: 100%; max-width: 100%; min-width: 0; }
+    .poll-option-row .button { min-height: 42px; width: 100%; min-width: 82px; padding: 0 12px; white-space: nowrap; }
     .results-grid { display: grid; gap: 10px; }
     .result-row {
       border: 1px solid rgba(255,211,223,.12);
@@ -566,10 +609,27 @@
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
       .overview-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .runtime-section { padding: 12px; border-radius: 16px; }
+      .runtime-actions .button { min-height: 50px; }
       .pulse-card.wide { grid-column: auto; }
       .theme-grid { grid-template-columns: repeat(2, 1fr); }
       .dna-grid { grid-template-columns: 1fr; }
       .span-2 { grid-column: auto; }
+    }
+    @media (max-width: 380px) {
+      .runtime-section .switch-row {
+        align-items: flex-start;
+      }
+      .runtime-section .switch-row > div {
+        min-width: 0;
+      }
+      .poll-option-row {
+        grid-template-columns: 1fr;
+      }
+      .poll-option-row .button {
+        justify-self: end;
+        width: min(132px, 100%);
+      }
     }
   </style>
 </head>
