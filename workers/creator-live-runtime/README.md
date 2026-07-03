@@ -23,9 +23,70 @@ RUNTIME_STALE_SECONDS=75
 RUNTIME_HEARTBEAT_SECONDS=25
 RUNTIME_RECONNECT_MIN_MS=10000
 RUNTIME_RECONNECT_MAX_MS=300000
-TIKTOK_SIGN_API_KEY=
 TIKTOK_SESSION_COOKIE=
+TIKTOK_SIGN_API_KEY=
+TIKTOK_ALLOW_PUBLIC_SIGNING=false
+TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER=false
+TIKTOK_SIGN_SERVER_TRUSTED_HOST=
 ```
+
+## TikTok Authentication And Signing
+
+Creator OS should not depend on the shared public TikTok signing service in production. Shared public signing can hit `rate_limit_account_day` and leaves the live runtime unavailable.
+
+The `tiktok-live-connector` runtime supports creator-owned TikTok session cookies, but a TikTok session cookie is not enough by itself to open the LIVE WebSocket. The connector still needs a signed WebSocket URL. Upstream documents that `session.cookie` seeds the cookie jar with `sessionid` and `tt-target-idc`, and that `authenticateWs` forwards those credentials to the sign server. Upstream also documents that WebSocket URL signing is delegated to Euler Stream unless a custom signing route is configured.
+
+Production rule:
+
+- Use `TIKTOK_SESSION_COOKIE` for creator-owned TikTok authentication.
+- Use a dedicated/private signing provider or dedicated `TIKTOK_SIGN_API_KEY` for WebSocket signing.
+- Keep `TIKTOK_ALLOW_PUBLIC_SIGNING=false` in production.
+- Do not enable `TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER` unless the signer is private/trusted and `TIKTOK_SIGN_SERVER_TRUSTED_HOST` is set.
+
+### Required Cookie Names
+
+Set `TIKTOK_SESSION_COOKIE` to a cookie header containing:
+
+- `sessionid`, `sessionid_ss`, `sid_tt`, or `sid_guard`
+- `tt-target-idc`
+
+Example:
+
+```bash
+TIKTOK_SESSION_COOKIE='sessionid=YOUR_SESSION_ID; tt-target-idc=useast2a'
+```
+
+### Creator TikTok Linking Flow
+
+1. The creator logs into TikTok in a dedicated browser profile.
+2. Open `https://www.tiktok.com/`.
+3. Open browser DevTools -> Application -> Cookies -> `https://www.tiktok.com`.
+4. Copy `sessionid` and `tt-target-idc`, or copy a cookie header containing those values.
+5. On Hetzner, write the cookie only to:
+
+```bash
+/opt/doneovernight/app/workers/creator-live-runtime/.env
+```
+
+6. Restart the worker:
+
+```bash
+pm2 restart creator-live-runtime-mosyaamosya --update-env
+```
+
+### Refresh Strategy
+
+TikTok can rotate or revoke sessions after logout, password changes, security checks, or normal expiry. If that happens, replace `TIKTOK_SESSION_COOKIE` with a fresh creator session and restart PM2. The worker logs only whether the cookie is present/valid; it never prints the cookie value.
+
+### Security
+
+Treat `TIKTOK_SESSION_COOKIE` like a password:
+
+- Never expose it to the browser.
+- Never store it in Vercel public/client env.
+- Never commit it.
+- Never forward it to a shared public signing provider.
+- Only forward it to a private/trusted signing host controlled by DONEOVERNIGHT or a dedicated production provider.
 
 ## 1. Apply Supabase SQL First
 

@@ -13,7 +13,10 @@ const config = {
   reconnectMinMs: positiveInteger(process.env.RUNTIME_RECONNECT_MIN_MS, 10_000),
   reconnectMaxMs: positiveInteger(process.env.RUNTIME_RECONNECT_MAX_MS, 300_000),
   signApiKey: clean(process.env.TIKTOK_SIGN_API_KEY),
-  sessionCookie: clean(process.env.TIKTOK_SESSION_COOKIE)
+  sessionCookie: clean(process.env.TIKTOK_SESSION_COOKIE),
+  allowPublicSigning: bool(process.env.TIKTOK_ALLOW_PUBLIC_SIGNING, false),
+  authenticateWsWithSignServer: bool(process.env.TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER, false),
+  trustedSignServerHost: clean(process.env.TIKTOK_SIGN_SERVER_TRUSTED_HOST || process.env.WHITELIST_AUTHENTICATED_SESSION_ID_HOST)
 };
 
 if (!config.supabaseUrl || !config.serviceRoleKey) {
@@ -41,8 +44,93 @@ function positiveInteger(value, fallback) {
   return Number.isFinite(next) && next > 0 ? Math.floor(next) : fallback;
 }
 
+function bool(value, fallback = false) {
+  const next = clean(value).toLowerCase();
+  if (!next) return fallback;
+  return ["1", "true", "yes", "on"].includes(next);
+}
+
 function normalizeUsername(value) {
   return clean(value || "mosyaamosya").replace(/^@+/, "").toLowerCase().replace(/[^a-z0-9._-]/g, "") || "mosyaamosya";
+}
+
+function parseCookieHeader(value = "") {
+  return clean(value).split(";").reduce((cookies, part) => {
+    const item = part.trim();
+    if (!item || !item.includes("=")) return cookies;
+    const index = item.indexOf("=");
+    const key = decodeURIComponent(item.slice(0, index).trim());
+    const cookieValue = item.slice(index + 1).trim();
+    if (key && cookieValue) cookies[key] = cookieValue;
+    return cookies;
+  }, {});
+}
+
+function tikTokSessionFromCookie(value = "") {
+  const raw = clean(value);
+  if (!raw) return { raw: "", sessionId: "", ttTargetIdc: "", valid: false, missing: [] };
+  const cookies = raw.includes("=") ? parseCookieHeader(raw) : { sessionid: raw };
+  const sessionId = clean(cookies.sessionid || cookies.sessionid_ss || cookies.sid_tt || cookies.sid_guard);
+  const ttTargetIdc = clean(cookies["tt-target-idc"]);
+  const missing = [];
+  if (!sessionId) missing.push("sessionid");
+  if (!ttTargetIdc) missing.push("tt-target-idc");
+  return { raw, sessionId, ttTargetIdc, valid: missing.length === 0, missing };
+}
+
+function privateSigningRequiredProvider() {
+  const error = new Error(
+    "TikTok signed WebSocket provider is not configured. TIKTOK_SESSION_COOKIE can authenticate a TikTok session, " +
+    "but tiktok-live-connector still requires a signed WebSocket URL. Configure TIKTOK_SIGN_API_KEY for a dedicated provider, " +
+    "or set TIKTOK_ALLOW_PUBLIC_SIGNING=true only for temporary testing."
+  );
+  error.code = "PRIVATE_TIKTOK_SIGNING_PROVIDER_REQUIRED";
+  throw error;
+}
+
+function buildTikTokConnectionOptions() {
+  const session = tikTokSessionFromCookie(config.sessionCookie);
+  const useSession = session.valid;
+  const shouldAuthenticateWs = useSession && config.authenticateWsWithSignServer;
+
+  if (config.sessionCookie && !session.valid) {
+    log("tiktok_session_cookie_invalid", { missing: session.missing });
+  }
+
+  if (shouldAuthenticateWs) {
+    if (!config.trustedSignServerHost) {
+      const error = new Error(
+        "TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER requires TIKTOK_SIGN_SERVER_TRUSTED_HOST. " +
+        "Creator session cookies must only be sent to a trusted private signing host."
+      );
+      error.code = "TRUSTED_SIGN_SERVER_HOST_REQUIRED";
+      throw error;
+    }
+
+    process.env.WHITELIST_AUTHENTICATED_SESSION_ID_HOST = config.trustedSignServerHost;
+  }
+
+  const options = {
+    fetchRoomInfoOnConnect: true,
+    enableExtendedGiftInfo: true,
+    ...(config.signApiKey ? { signApiKey: config.signApiKey } : {}),
+    ...(useSession ? {
+      sessionId: session.sessionId,
+      ttTargetIdc: session.ttTargetIdc,
+      webClientOptions: {
+        headers: {
+          cookie: session.raw
+        }
+      }
+    } : {}),
+    ...(shouldAuthenticateWs ? { authenticateWs: true } : {})
+  };
+
+  if (!config.signApiKey && !config.allowPublicSigning) {
+    options.signedWebSocketProvider = privateSigningRequiredProvider;
+  }
+
+  return { options, session };
 }
 
 function iso(value = Date.now()) {
@@ -403,6 +491,9 @@ function scheduleHeartbeat() {
 
 function reconnectDelayForError(error) {
   const message = clean(error && (error.code || error.message || String(error))).toLowerCase();
+  if (message.includes("private_tiktok_signing_provider_required") || message.includes("trusted_sign_server_host_required")) {
+    return config.reconnectMaxMs;
+  }
   if (message.includes("rate_limit") || message.includes("rate limited") || message.includes("too many connections")) {
     return 120_000;
   }
@@ -423,15 +514,17 @@ async function connect() {
     if (connection && connection.isConnected) await connection.disconnect();
   } catch (error) {}
 
-  connection = new TikTokLiveConnection(config.username, {
-    fetchRoomInfoOnConnect: true,
-    enableExtendedGiftInfo: true,
-    ...(config.signApiKey ? { signApiKey: config.signApiKey } : {}),
-    ...(config.sessionCookie ? { session: { cookie: config.sessionCookie }, authenticateWs: true } : {})
-  });
-  attachHandlers(connection);
-
   try {
+    const { options, session } = buildTikTokConnectionOptions();
+    log("connect_start", {
+      username: config.username,
+      signing: config.signApiKey ? "dedicated-provider" : config.allowPublicSigning ? "public-provider-temporary" : "private-required",
+      sessionCookie: session.valid ? "present" : config.sessionCookie ? "invalid" : "missing",
+      authenticateWs: Boolean(options.authenticateWs)
+    });
+    connection = new TikTokLiveConnection(config.username, options);
+    attachHandlers(connection);
+
     const connectedState = await connection.connect();
     setLive(connectedState || {});
     log("connect_resolved", { roomId: state.roomId });
