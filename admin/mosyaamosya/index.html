@@ -299,6 +299,81 @@
     .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
     .media-preview.video { width: 120px; }
     .media-row audio { width: min(100%, 320px); }
+    .media-manager-grid { display: grid; gap: 14px; }
+    .media-health-grid,
+    .media-storage-grid,
+    .media-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .media-health-card,
+    .media-spec {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 16px;
+      padding: 13px;
+      background: rgba(0,0,0,.13);
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+    .media-health-card span,
+    .media-spec span {
+      color: rgba(255,245,247,.5);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .media-health-card strong,
+    .media-spec strong {
+      font-size: 14px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+    .media-asset-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255,255,255,.045);
+      display: grid;
+      gap: 14px;
+    }
+    .media-asset-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      min-width: 0;
+    }
+    .media-asset-title { display: grid; gap: 4px; min-width: 0; }
+    .media-asset-title strong { font-size: 17px; }
+    .media-asset-title span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .media-health-pill {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,211,223,.14);
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: rgba(0,0,0,.16);
+      color: rgba(255,245,247,.74);
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .media-health-pill.ready { color: #bbf7d0; }
+    .media-health-pill.warn { color: #fde68a; }
+    .media-health-pill.empty { color: rgba(255,245,247,.52); }
+    .media-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .media-actions .button { min-height: 38px; padding: 0 12px; font-size: 12px; }
+    .media-dev-row { display: none; }
+    body[data-dev-mode="true"] .media-dev-row { display: grid; }
+    .media-file-input {
+      width: 100%;
+      border: 1px dashed rgba(255,211,223,.18);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(0,0,0,.13);
+    }
     .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
     .link-list { display: grid; gap: 10px; }
     .links-section-head {
@@ -712,6 +787,9 @@
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
       .overview-grid, .connection-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .media-health-grid, .media-storage-grid, .media-spec-grid { grid-template-columns: 1fr; }
+      .media-asset-head { flex-direction: column; }
+      .media-health-pill { align-self: flex-start; }
       .connection-head { flex-direction: column; }
       .connection-status { align-self: flex-start; }
       .runtime-section { padding: 12px; border-radius: 16px; }
@@ -777,6 +855,7 @@
     <nav class="admin-tabs" aria-label="Creator admin sections">
       <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="media">Media</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience">Experience</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="connections">Connections</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
@@ -851,37 +930,85 @@
           </div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Profile Image</h2>
-          <div class="fields">
-            <label class="span-2">Profile Image URL<input name="avatar_url" type="url" placeholder="Paste asset URL if upload is unavailable"></label>
-            <div class="span-2 media-control">
-              <strong>Upload/change profile image</strong>
-              <span class="muted">Accepts image files. Paste an asset URL above if storage upload is unavailable.</span>
+        <section class="panel tab-panel" data-admin-panel="media" hidden>
+          <h2>Media</h2>
+          <div class="section-note">Creator OS prepares uploads for the page, then shows whether the media is ready for mobile visitors.</div>
+          <div style="height:12px"></div>
+          <div class="media-manager-grid">
+            <section class="media-asset-card">
+              <div class="media-asset-head">
+                <div class="media-asset-title"><strong>Media Health</strong><span>Simple readiness for Mina's public page.</span></div>
+                <span class="media-health-pill ready" id="mediaOverallHealth">Checking</span>
+              </div>
+              <div class="media-health-grid">
+                <div class="media-health-card"><span>Hero Video</span><strong id="heroHealth">Checking</strong></div>
+                <div class="media-health-card"><span>Profile Image</span><strong id="profileHealth">Checking</strong></div>
+                <div class="media-health-card"><span>Creator Signature</span><strong id="signatureHealth">Checking</strong></div>
+              </div>
+              <div class="media-storage-grid">
+                <div class="media-spec"><span>Images</span><strong id="imageStorageUsage">Unknown</strong></div>
+                <div class="media-spec"><span>Videos</span><strong id="videoStorageUsage">Unknown</strong></div>
+                <div class="media-spec"><span>Audio</span><strong id="audioStorageUsage">Unknown</strong></div>
+                <div class="media-spec"><span>Total Storage</span><strong id="totalStorageUsage">Unknown</strong></div>
+                <div class="media-spec"><span>Estimated Mobile Load</span><strong id="estimatedMobileLoad">Checking</strong></div>
+                <div class="media-spec"><span>Performance</span><strong id="mediaPerformance">Checking</strong></div>
+              </div>
+            </section>
+
+            <section class="media-asset-card">
+              <div class="media-asset-head">
+                <div class="media-asset-title"><strong>Profile Photo</strong><span>Creator OS strips metadata and resizes oversized images before upload.</span></div>
+                <span class="media-health-pill" id="avatarHealthPill">Checking</span>
+              </div>
+              <input name="avatar_url" type="hidden">
               <div class="media-row">
                 <img class="media-preview" id="avatarPreview" alt="Profile image preview">
-                <input id="avatarFile" type="file" accept="image/*">
-                <button class="button" id="uploadAvatar" type="button">Upload image</button>
+                <input class="media-file-input" id="avatarFile" type="file" accept="image/*">
               </div>
-            </div>
-          </div>
-        </section>
+              <div class="media-spec-grid">
+                <div class="media-spec"><span>Resolution</span><strong id="avatarResolution">Unknown</strong></div>
+                <div class="media-spec"><span>File size</span><strong id="avatarFileSize">Unknown</strong></div>
+                <div class="media-spec"><span>Last updated</span><strong id="avatarLastUpdated">Unknown</strong></div>
+                <div class="media-spec media-dev-row"><span>MIME</span><strong id="avatarMime">Hidden</strong></div>
+                <div class="media-spec media-dev-row"><span>Storage bucket</span><strong>creator-media</strong></div>
+                <div class="media-spec media-dev-row"><span>Asset URL</span><strong id="avatarAssetUrl">Hidden</strong></div>
+              </div>
+              <div class="media-actions">
+                <button class="button primary" id="uploadAvatar" type="button">Replace</button>
+                <button class="button" type="button" data-media-preview="avatar">Preview</button>
+                <button class="button danger" type="button" data-media-delete="avatar">Delete</button>
+                <button class="button" type="button" data-media-optimize="avatar">Optimize</button>
+              </div>
+            </section>
 
-        <section class="panel tab-panel" data-admin-panel="experience" hidden>
-          <h2>Hero</h2>
-          <div class="section-note">How does my page feel?</div>
-          <div style="height:12px"></div>
-          <div class="fields">
-            <label class="span-2">Hero Video URL<input name="hero_video_url" type="url" placeholder="Paste vertical video asset URL"></label>
-            <div class="span-2 media-control">
-              <strong>Upload/change hero video</strong>
-              <span class="muted">Vertical video recommended. Keep it short, roughly 7-10 seconds, muted/loop friendly.</span>
+            <section class="media-asset-card">
+              <div class="media-asset-head">
+                <div class="media-asset-title"><strong>Hero Video</strong><span>Vertical MP4 is preferred. Hero videos always loop muted and never use their own audio.</span></div>
+                <span class="media-health-pill" id="heroHealthPill">Checking</span>
+              </div>
+              <input name="hero_video_url" type="hidden">
               <div class="media-row">
                 <video class="media-preview video" id="heroPreview" muted loop playsinline controls></video>
-                <input id="heroFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
-                <button class="button" id="uploadHero" type="button">Upload video</button>
+                <input class="media-file-input" id="heroFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
               </div>
-            </div>
+              <div class="media-spec-grid">
+                <div class="media-spec"><span>Resolution</span><strong id="heroResolution">Unknown</strong></div>
+                <div class="media-spec"><span>Duration</span><strong id="heroDuration">Unknown</strong></div>
+                <div class="media-spec"><span>File size</span><strong id="heroFileSize">Unknown</strong></div>
+                <div class="media-spec media-dev-row"><span>Codec</span><strong id="heroCodec">Hidden</strong></div>
+                <div class="media-spec media-dev-row"><span>Bitrate</span><strong id="heroBitrate">Hidden</strong></div>
+                <div class="media-spec"><span>Last updated</span><strong id="heroLastUpdated">Unknown</strong></div>
+                <div class="media-spec media-dev-row"><span>MIME</span><strong id="heroMime">Hidden</strong></div>
+                <div class="media-spec media-dev-row"><span>Storage bucket</span><strong>creator-media</strong></div>
+                <div class="media-spec media-dev-row"><span>Asset URL</span><strong id="heroAssetUrl">Hidden</strong></div>
+              </div>
+              <div class="media-actions">
+                <button class="button primary" id="uploadHero" type="button">Replace</button>
+                <button class="button" type="button" data-media-preview="hero">Preview</button>
+                <button class="button danger" type="button" data-media-delete="hero">Delete</button>
+                <button class="button" type="button" data-media-optimize="hero">Optimize</button>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -1182,23 +1309,38 @@
           </div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+        <section class="panel tab-panel" data-admin-panel="media" hidden>
           <h2>Creator Signature</h2>
+          <div class="section-note">A short welcome sound that plays only after visitors tap to enter.</div>
+          <div style="height:10px"></div>
+          <span class="media-health-pill" id="signatureHealthPill">Checking</span>
+          <div style="height:12px"></div>
           <div class="fields">
             <div class="span-2 switch-row">
               <div><strong>Creator Signature Enabled</strong><span>Short welcome sound that plays when visitors enter.</span></div>
               <label class="switch" aria-label="Intro audio enabled"><input name="intro_audio_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Creator Signature URL<input name="intro_audio_url" type="url" placeholder="Paste direct audio asset URL"></label>
+            <input name="intro_audio_url" type="hidden">
             <div class="span-2 media-control">
               <strong>Upload Creator Signature</strong>
               <span class="muted">Upload a song or short sound. Creator OS will turn it into a short welcome signature that plays after visitors tap to enter.</span>
               <div class="media-row">
                 <audio id="introAudioPreview" controls preload="none"></audio>
-                <input id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
-                <button class="button" id="uploadIntroAudio" type="button">Upload audio</button>
+                <input class="media-file-input" id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
               </div>
               <div class="status" id="introAudioUploadStatus" aria-live="polite"></div>
+            </div>
+            <div class="span-2 media-spec-grid">
+              <div class="media-spec"><span>Filename</span><strong id="signatureFilename">Unknown</strong></div>
+              <div class="media-spec"><span>Duration</span><strong id="signatureDuration">Unknown</strong></div>
+              <div class="media-spec"><span>File size</span><strong id="signatureFileSize">Unknown</strong></div>
+              <div class="media-spec"><span>Start time</span><strong id="signatureStartTimeLabel">0s</strong></div>
+              <div class="media-spec"><span>Clip length</span><strong id="signatureClipLengthLabel">10s</strong></div>
+              <div class="media-spec"><span>Volume</span><strong id="signatureVolumeLabel">35%</strong></div>
+              <div class="media-spec"><span>Fade out</span><strong id="signatureFadeLabel">2s</strong></div>
+              <div class="media-spec media-dev-row"><span>MIME</span><strong id="signatureMime">Hidden</strong></div>
+              <div class="media-spec media-dev-row"><span>Storage bucket</span><strong>creator-media</strong></div>
+              <div class="media-spec media-dev-row"><span>Asset URL</span><strong id="signatureAssetUrl">Hidden</strong></div>
             </div>
             <label>Start time<input id="introAudioStartTime" type="number" min="0" max="3600" step="0.25" value="0"></label>
             <label>Clip length<input id="introAudioClipLength" type="number" min="1" max="15" step="0.25" value="10"></label>
@@ -1206,7 +1348,23 @@
             <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
             <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
             <div class="span-2 help-panel">Preferred intro length: 8-12 seconds. Videos always loop muted. Creator OS uploads only a short prepared audio clip, never the full song.</div>
+            <div class="span-2 media-actions">
+              <button class="button primary" id="uploadIntroAudio" type="button">Replace</button>
+              <button class="button" type="button" data-media-preview="signature">Preview</button>
+              <button class="button danger" type="button" data-media-delete="signature">Delete</button>
+              <button class="button" type="button" data-media-optimize="signature">Recreate Clip</button>
+            </div>
           </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="media" hidden>
+          <h2>Images</h2>
+          <div class="section-note">Additional gallery and block images will live here. Current image storage is tracked through the Profile Photo asset.</div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="media" hidden>
+          <h2>Future Uploads</h2>
+          <div class="section-note">Future media blocks will inherit the same automatic optimization and health checks.</div>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
@@ -1282,7 +1440,7 @@
           </div>
         </section>
 
-        <button class="button primary sticky-save tab-panel" data-admin-panel="settings experience links" data-save-state="idle" id="saveFloating" type="button" aria-live="polite">
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings media experience links" data-save-state="idle" id="saveFloating" type="button" aria-live="polite">
           <span class="save-button-content">
             <span class="save-spinner" aria-hidden="true"></span>
             <span class="save-check" aria-hidden="true">✓</span>
@@ -1344,9 +1502,15 @@
     let unlockResetTimer = 0;
     let pendingSaveScroll = null;
     let latestConnections = [];
+    const mediaState = {
+      avatar: {},
+      hero: {},
+      signature: {}
+    };
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
     form.noValidate = true;
+    document.body.dataset.devMode = new URLSearchParams(window.location.search).get("dev") === "1" || localStorage.getItem("creator_media_dev_mode") === "1" ? "true" : "false";
 
     function readableMessage(value, fallback = "Something went wrong.") {
       if (!value) return fallback;
@@ -2419,6 +2583,7 @@
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
       setIntroAudioPreview(settings.intro_audio_url || "", { loadingMessage: "Loading saved audio preview..." });
+      refreshMediaMetadata();
       renderThemes();
       renderDna();
       applyAdminTheme(activeTheme);
@@ -2636,6 +2801,8 @@
       if (active === "runtime") {
         loadLiveRuntime();
         loadResponses();
+      } else if (active === "media") {
+        refreshMediaMetadata();
       } else if (active === "connections") {
         loadConnections();
       } else if (active === "analytics") {
@@ -2917,6 +3084,252 @@
         reader.readAsDataURL(file);
       });
     }
+    function setText(id, value) {
+      const element = $(id);
+      if (element) element.textContent = value;
+    }
+    function formatBytes(bytes) {
+      const value = Number(bytes);
+      if (!Number.isFinite(value) || value <= 0) return "Unknown";
+      if (value < 1024) return value + " B";
+      const units = ["KB", "MB", "GB"];
+      let size = value / 1024;
+      let unit = units.shift();
+      while (size >= 1024 && units.length) {
+        size /= 1024;
+        unit = units.shift();
+      }
+      return (size >= 10 ? size.toFixed(1) : size.toFixed(2)).replace(/\.0+$/, "") + " " + unit;
+    }
+    function formatSeconds(seconds) {
+      const value = Number(seconds);
+      if (!Number.isFinite(value) || value <= 0) return "Unknown";
+      const minutes = Math.floor(value / 60);
+      const remainder = Math.round(value % 60);
+      if (!minutes) return remainder + "s";
+      return minutes + "m " + String(remainder).padStart(2, "0") + "s";
+    }
+    function mediaUrlFilename(url) {
+      try {
+        const path = new URL(url, window.location.origin).pathname;
+        return decodeURIComponent(path.split("/").filter(Boolean).pop() || "Uploaded asset");
+      } catch {
+        return "Uploaded asset";
+      }
+    }
+    function classifyHealth(kind, info = {}) {
+      if (!info.url) return { label: "Not set", className: "empty" };
+      if (kind === "hero") {
+        if (info.duration && info.duration > 16) return { label: "Needs Optimization", className: "warn" };
+        if (info.size && info.size > 8_000_000) return { label: "Needs Optimization", className: "warn" };
+        if (info.width && info.height && info.width > info.height) return { label: "Needs Optimization", className: "warn" };
+        return { label: "Optimized", className: "ready" };
+      }
+      if (kind === "avatar") {
+        if (info.size && info.size > 1_500_000) return { label: "Needs Optimization", className: "warn" };
+        return { label: "Optimized", className: "ready" };
+      }
+      if (kind === "signature") {
+        if (info.duration && info.duration > 15) return { label: "Needs Optimization", className: "warn" };
+        if (info.size && info.size > 2_000_000) return { label: "Needs Optimization", className: "warn" };
+        return { label: "Ready", className: "ready" };
+      }
+      return { label: "Ready", className: "ready" };
+    }
+    function applyHealthPill(id, health) {
+      const element = $(id);
+      if (!element) return;
+      element.textContent = health.label;
+      element.className = "media-health-pill " + health.className;
+    }
+    async function headMedia(url) {
+      if (!url) return {};
+      if (String(url).startsWith("blob:")) return {};
+      try {
+        const response = await fetch(url, { method: "HEAD", cache: "no-store" });
+        if (!response.ok) return {};
+        return {
+          size: Number(response.headers.get("content-length")) || 0,
+          mime: response.headers.get("content-type") || "",
+          updated: response.headers.get("last-modified") || ""
+        };
+      } catch {
+        return {};
+      }
+    }
+    function loadImageMetadata(url) {
+      return new Promise((resolve) => {
+        if (!url) return resolve({});
+        const image = new Image();
+        image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.onerror = () => resolve({});
+        image.src = url;
+      });
+    }
+    function loadVideoMetadata(url) {
+      return new Promise((resolve) => {
+        if (!url) return resolve({});
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.muted = true;
+        video.playsInline = true;
+        video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration });
+        video.onerror = () => resolve({});
+        video.src = url;
+      });
+    }
+    function loadAudioMetadata(url) {
+      return new Promise((resolve) => {
+        if (!url) return resolve({});
+        const audio = document.createElement("audio");
+        audio.preload = "metadata";
+        audio.onloadedmetadata = () => resolve({ duration: audio.duration });
+        audio.onerror = () => resolve({});
+        audio.src = url;
+      });
+    }
+    function updateSignatureControls() {
+      const start = Math.max(0, Number($("introAudioStartTime")?.value) || 0);
+      const length = Math.max(1, Math.min(15, Number($("introAudioClipLength")?.value) || 10));
+      const volume = Math.round((Number(form.elements.intro_audio_volume?.value) || 0.35) * 100);
+      const fade = Number(form.elements.intro_audio_fade_out_duration?.value) || 2;
+      setText("signatureStartTimeLabel", start + "s");
+      setText("signatureClipLengthLabel", length + "s");
+      setText("signatureVolumeLabel", volume + "%");
+      setText("signatureFadeLabel", fade + "s");
+    }
+    function renderMediaSummary() {
+      const avatar = mediaState.avatar || {};
+      const hero = mediaState.hero || {};
+      const signature = mediaState.signature || {};
+      const imageBytes = avatar.size || 0;
+      const videoBytes = hero.size || 0;
+      const audioBytes = signature.size || 0;
+      const totalBytes = imageBytes + videoBytes + audioBytes;
+      setText("imageStorageUsage", imageBytes ? formatBytes(imageBytes) : "Unknown");
+      setText("videoStorageUsage", videoBytes ? formatBytes(videoBytes) : "Unknown");
+      setText("audioStorageUsage", audioBytes ? formatBytes(audioBytes) : "Unknown");
+      setText("totalStorageUsage", totalBytes ? formatBytes(totalBytes) : "Unknown");
+      const loadLabel = !totalBytes ? "Checking" : totalBytes <= 5_000_000 ? "Fast" : totalBytes <= 12_000_000 ? "Good" : "Needs Optimization";
+      setText("estimatedMobileLoad", loadLabel);
+      setText("mediaPerformance", loadLabel);
+      const avatarHealth = classifyHealth("avatar", avatar);
+      const heroHealth = classifyHealth("hero", hero);
+      const signatureHealth = classifyHealth("signature", signature);
+      setText("profileHealth", avatarHealth.label);
+      setText("heroHealth", heroHealth.label);
+      setText("signatureHealth", signatureHealth.label);
+      applyHealthPill("avatarHealthPill", avatarHealth);
+      applyHealthPill("heroHealthPill", heroHealth);
+      applyHealthPill("mediaOverallHealth", [avatarHealth, heroHealth, signatureHealth].some((item) => item.className === "warn") ? { label: "Needs Optimization", className: "warn" } : { label: "Ready", className: "ready" });
+    }
+    async function refreshMediaMetadata() {
+      const avatarUrl = String(form.elements.avatar_url?.value || mediaState.avatar?.url || "").trim();
+      const heroUrl = String(form.elements.hero_video_url?.value || mediaState.hero?.url || "").trim();
+      const signatureUrl = String(form.elements.intro_audio_url?.value || mediaState.signature?.url || "").trim();
+      const [avatarHead, heroHead, signatureHead, avatarMeta, heroMeta, signatureMeta] = await Promise.all([
+        headMedia(avatarUrl),
+        headMedia(heroUrl),
+        headMedia(signatureUrl),
+        loadImageMetadata(avatarUrl),
+        loadVideoMetadata(heroUrl),
+        loadAudioMetadata(signatureUrl)
+      ]);
+      const avatarExisting = mediaState.avatar?.url === avatarUrl ? mediaState.avatar : {};
+      const heroExisting = mediaState.hero?.url === heroUrl ? mediaState.hero : {};
+      const signatureExisting = mediaState.signature?.url === signatureUrl ? mediaState.signature : {};
+      mediaState.avatar = { url: avatarUrl, ...avatarExisting, ...avatarHead, ...avatarMeta };
+      mediaState.hero = { url: heroUrl, ...heroExisting, ...heroHead, ...heroMeta };
+      mediaState.signature = { url: signatureUrl, ...signatureExisting, ...signatureHead, ...signatureMeta };
+      setText("avatarResolution", avatarMeta.width && avatarMeta.height ? avatarMeta.width + " x " + avatarMeta.height : "Unknown");
+      setText("avatarFileSize", formatBytes(avatarHead.size));
+      setText("avatarLastUpdated", avatarHead.updated ? new Date(avatarHead.updated).toLocaleDateString() : "Unknown");
+      setText("avatarMime", avatarHead.mime || "Unknown");
+      setText("avatarAssetUrl", avatarUrl || "Not set");
+      setText("heroResolution", heroMeta.width && heroMeta.height ? heroMeta.width + " x " + heroMeta.height : "Unknown");
+      setText("heroDuration", formatSeconds(heroMeta.duration));
+      setText("heroFileSize", formatBytes(heroHead.size));
+      setText("heroCodec", heroHead.mime && heroHead.mime.includes("mp4") ? "H.264 MP4 expected" : heroHead.mime ? "Browser supplied" : "Unknown");
+      setText("heroBitrate", heroHead.size && heroMeta.duration ? Math.round((heroHead.size * 8) / Math.max(1, heroMeta.duration) / 1000).toLocaleString() + " kbps" : "Unknown");
+      setText("heroLastUpdated", heroHead.updated ? new Date(heroHead.updated).toLocaleDateString() : "Unknown");
+      setText("heroMime", heroHead.mime || "Unknown");
+      setText("heroAssetUrl", heroUrl || "Not set");
+      setText("signatureFilename", signatureUrl ? mediaUrlFilename(signatureUrl) : "Not set");
+      setText("signatureDuration", formatSeconds(signatureMeta.duration));
+      setText("signatureFileSize", formatBytes(signatureHead.size));
+      setText("signatureMime", signatureHead.mime || "Unknown");
+      setText("signatureAssetUrl", signatureUrl || "Not set");
+      updateSignatureControls();
+      applyHealthPill("signatureHealthPill", classifyHealth("signature", mediaState.signature));
+      renderMediaSummary();
+    }
+    function openMediaPreview(kind) {
+      const field = kind === "avatar" ? "avatar_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
+      const stateKey = kind === "signature" ? "signature" : kind;
+      const url = String(form.elements[field]?.value || mediaState[stateKey]?.url || "").trim();
+      if (!url) {
+        setStatus("No media asset to preview.", true);
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+    function deleteMediaAsset(kind) {
+      const field = kind === "avatar" ? "avatar_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
+      if (!form.elements[field]) return;
+      form.elements[field].value = "";
+      if (kind === "avatar") $("avatarPreview").removeAttribute("src");
+      if (kind === "hero") $("heroPreview").removeAttribute("src");
+      if (kind === "signature") setIntroAudioPreview("");
+      mediaState[kind] = {};
+      setStatus("Media removed. Save page to publish the change.");
+      refreshMediaMetadata();
+    }
+    function selectedFileForKind(kind) {
+      const input = kind === "avatar" ? $("avatarFile") : kind === "signature" ? $("introAudioFile") : $("heroFile");
+      return input && input.files && input.files[0] ? input.files[0] : null;
+    }
+    async function optimizeMediaAsset(kind) {
+      if (kind === "hero") {
+        setStatus("Hero video health checked. Upload a short vertical MP4 for the fastest mobile load.", false);
+        await refreshMediaMetadata();
+        return;
+      }
+      const file = selectedFileForKind(kind);
+      if (!file) {
+        setStatus(kind === "signature" ? "Choose an audio file, then Recreate Clip." : "Choose an image file, then Optimize.", true);
+        return;
+      }
+      await uploadMedia(kind === "signature" ? "intro-audio" : "profile");
+    }
+    async function optimizeProfileImage(file) {
+      if (!file || !file.type.startsWith("image/") || file.type === "image/gif") return { file, message: "" };
+      const url = URL.createObjectURL(file);
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Could not prepare that image. Try another photo."));
+        img.src = url;
+      }).finally(() => URL.revokeObjectURL(url));
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || maxSide, image.naturalHeight || maxSide));
+      const width = Math.max(1, Math.round((image.naturalWidth || maxSide) * scale));
+      const height = Math.max(1, Math.round((image.naturalHeight || maxSide) * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) return { file, message: "" };
+      context.drawImage(image, 0, 0, width, height);
+      const type = canvas.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, .88));
+      if (!blob || blob.size >= file.size) return { file, message: "" };
+      const extension = type === "image/webp" ? "webp" : "jpg";
+      const name = String(file.name || "profile-photo").replace(/\.[^.]+$/, "") + "-optimized." + extension;
+      return {
+        file: new File([blob], name, { type }),
+        message: "Profile photo optimized for mobile."
+      };
+    }
     async function uploadMedia(kind) {
       const input = kind === "profile" ? $("avatarFile") : kind === "intro-audio" ? $("introAudioFile") : $("heroFile");
       const file = input.files && input.files[0];
@@ -2950,6 +3363,16 @@
           setStatus(message, true);
           return;
         }
+      } else if (kind === "profile") {
+        try {
+          setStatus("Optimizing profile photo...");
+          const optimized = await optimizeProfileImage(file);
+          uploadFile = optimized.file;
+          if (optimized.message) setStatus(optimized.message + " Uploading image...");
+        } catch (error) {
+          setStatus(readableMessage(error, "Could not optimize image."), true);
+          return;
+        }
       } else {
         preview.src = URL.createObjectURL(file);
       }
@@ -2972,8 +3395,15 @@
           setStatus(successMessage);
         } else {
           preview.src = data.media.url;
-          setStatus("Media uploaded. Save page to publish it.");
+          mediaState[kind === "profile" ? "avatar" : "hero"] = {
+            url: data.media.url,
+            size: data.media.size,
+            mime: data.media.contentType,
+            updated: new Date().toUTCString()
+          };
+          setStatus(kind === "profile" ? "Profile photo uploaded. Save page to publish it." : "Hero video uploaded. Save page to publish it.");
         }
+        await refreshMediaMetadata();
       } catch (error) {
         const message = readableMessage(error, "Upload unavailable");
         if (kind === "intro-audio") setIntroAudioStatus(message, true);
@@ -3057,6 +3487,46 @@
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
+    document.querySelectorAll("[data-media-preview]").forEach((button) => {
+      button.addEventListener("click", () => openMediaPreview(button.dataset.mediaPreview));
+    });
+    document.querySelectorAll("[data-media-delete]").forEach((button) => {
+      button.addEventListener("click", () => deleteMediaAsset(button.dataset.mediaDelete));
+    });
+    document.querySelectorAll("[data-media-optimize]").forEach((button) => {
+      button.addEventListener("click", () => optimizeMediaAsset(button.dataset.mediaOptimize));
+    });
+    $("avatarFile").addEventListener("change", () => {
+      const file = selectedFileForKind("avatar");
+      if (!file) return;
+      $("avatarPreview").src = URL.createObjectURL(file);
+      mediaState.avatar = { url: $("avatarPreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
+      refreshMediaMetadata();
+    });
+    $("heroFile").addEventListener("change", () => {
+      const file = selectedFileForKind("hero");
+      if (!file) return;
+      $("heroPreview").src = URL.createObjectURL(file);
+      mediaState.hero = { url: $("heroPreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
+      refreshMediaMetadata();
+    });
+    $("introAudioFile").addEventListener("change", () => {
+      const file = selectedFileForKind("signature");
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      setIntroAudioPreview(url, { loadingMessage: "Loading selected audio preview..." });
+      mediaState.signature = { url, size: file.size, mime: file.type, updated: new Date().toUTCString() };
+      setText("signatureFilename", file.name || "Selected audio");
+      refreshMediaMetadata();
+    });
+    ["introAudioStartTime", "introAudioClipLength"].forEach((id) => {
+      const input = $(id);
+      if (input) input.addEventListener("input", updateSignatureControls);
+    });
+    ["intro_audio_volume", "intro_audio_fade_out_duration"].forEach((name) => {
+      const input = form.elements[name];
+      if (input) input.addEventListener("input", updateSignatureControls);
+    });
     $("addCustomLink").addEventListener("click", addCustomLink);
     $("addFaqItem").addEventListener("click", addFaqItem);
     $("addPollOption").addEventListener("click", addPollOption);
