@@ -33,6 +33,7 @@
       font-family: var(--sans);
     }
     * { box-sizing: border-box; }
+    html { overflow-x: hidden; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -41,6 +42,7 @@
         radial-gradient(circle at 100% 0%, var(--admin-bg-b), transparent 28rem),
         #090504;
       color: var(--text);
+      overflow-x: hidden;
     }
     button, input, textarea, select { font: inherit; }
     a { color: inherit; }
@@ -57,6 +59,9 @@
       z-index: 12;
       display: flex;
       gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
       margin: 0 0 16px;
       padding: 8px;
       border: 1px solid rgba(255,211,223,.12);
@@ -64,6 +69,8 @@
       background: rgba(9,5,4,.72);
       backdrop-filter: blur(18px) saturate(1.12);
       overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
     }
     .admin-tab {
       min-height: 40px;
@@ -74,6 +81,7 @@
       padding: 0 14px;
       font-weight: 950;
       white-space: nowrap;
+      flex: 0 0 auto;
       cursor: pointer;
     }
     .admin-tab[aria-selected="true"] {
@@ -360,8 +368,30 @@
     .stat-card strong { display: block; margin-top: 7px; font-size: 18px; }
     .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
     .runtime-board { display: grid; gap: 14px; }
-    .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; }
+    .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; min-width: 0; max-width: 100%; overflow: hidden; }
     .runtime-section h3 { margin: 0; font-size: 15px; }
+    .runtime-section label,
+    .runtime-section input,
+    .runtime-section textarea,
+    .runtime-section select,
+    .runtime-section .button,
+    .runtime-section .runtime-field,
+    .runtime-section .runtime-actions,
+    .runtime-section .segmented,
+    .runtime-section .help-panel {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .runtime-section input[type="datetime-local"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: block;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      min-inline-size: 0;
+    }
     .runtime-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .runtime-actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; }
