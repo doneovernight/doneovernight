@@ -1053,13 +1053,15 @@
     function applyLiveState(liveState, settings) {
       const isLive = Boolean(liveState && liveState.isLive);
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
-      const hasRealViewerCount = isLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
-      const hasBattleMode = isLive && liveState.battleActive === true && capabilities.battleActive === true;
-      document.body.classList.toggle("is-live", isLive);
-      $("statusPill").querySelector("span:last-child").textContent = isLive ? "Live" : "Offline";
-      setText("liveTitle", hasBattleMode ? "Battle Live" : (isLive ? "🟢 LIVE NOW" : "⚫ Offline"));
+      const hasBattleMode = liveState.battleActive === true && capabilities.battleActive === true;
+      const displayLive = isLive || hasBattleMode;
+      const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
+      const hasManualStreak = hasBattleMode && capabilities.battleWinStreak === true && Number.isFinite(Number(liveState.battleWinStreak)) && Number(liveState.battleWinStreak) > 0;
+      document.body.classList.toggle("is-live", displayLive);
+      $("statusPill").querySelector("span:last-child").textContent = displayLive ? "Live" : "Offline";
+      setText("liveTitle", hasBattleMode ? "Battle Mode" : (displayLive ? "🟢 LIVE NOW" : "⚫ Offline"));
       if (hasBattleMode) {
-        setText("liveCopy", "Prepare for Battle");
+        setText("liveCopy", "Support the Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {

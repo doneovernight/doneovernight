@@ -55,7 +55,11 @@ const PHASE_2_CREATOR_FIELDS = [
   "auto_live_detection_enabled",
   "manual_live_fallback_enabled",
   "battle_mode_enabled",
-  "battle_opponent"
+  "battle_opponent",
+  "battle_result",
+  "battle_win_streak",
+  "battle_updated_at",
+  "battle_undo_snapshot"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
@@ -83,6 +87,10 @@ const DEFAULT_MINA_SETTINGS = {
   manual_live_fallback_enabled: true,
   battle_mode_enabled: false,
   battle_opponent: "",
+  battle_result: "",
+  battle_win_streak: 0,
+  battle_updated_at: "",
+  battle_undo_snapshot: "",
   next_live_datetime: "",
   theme_preset: "mina",
   creator_dna: "streamer",
@@ -395,6 +403,12 @@ function normalizeCreatorDna(value) {
   return allowed.has(dna) ? dna : DEFAULT_MINA_SETTINGS.creator_dna;
 }
 
+function normalizeBattleResult(value) {
+  const allowed = new Set(["won", "lost", "tie"]);
+  const result = clean(value).toLowerCase();
+  return allowed.has(result) ? result : "";
+}
+
 function normalizeDateTime(value) {
   const input = clean(value);
   if (!input) return "";
@@ -524,6 +538,10 @@ function normalizeCreator(row = {}) {
     manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
     battle_mode_enabled: bool(row.battle_mode_enabled, false),
     battle_opponent: clean(row.battle_opponent),
+    battle_result: normalizeBattleResult(row.battle_result),
+    battle_win_streak: Math.max(0, Math.floor(number(row.battle_win_streak, 0))),
+    battle_updated_at: normalizeDateTime(row.battle_updated_at),
+    battle_undo_snapshot: clean(row.battle_undo_snapshot),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -614,6 +632,10 @@ function creatorPayload(input = {}) {
     manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
     battle_mode_enabled: bool(input.battle_mode_enabled, false),
     battle_opponent: clean(input.battle_opponent),
+    battle_result: normalizeBattleResult(input.battle_result),
+    battle_win_streak: Math.max(0, Math.floor(number(input.battle_win_streak, 0))),
+    battle_updated_at: normalizeDateTime(input.battle_updated_at),
+    battle_undo_snapshot: clean(input.battle_undo_snapshot),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),

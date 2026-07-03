@@ -124,6 +124,11 @@
     .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
     .media-preview.video { width: 120px; }
     .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
+    .battle-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .battle-controls .button { min-height: 38px; padding: 0 10px; border-radius: 11px; font-size: 12px; }
+    .battle-controls .button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.12); }
+    .battle-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: rgba(255,245,247,.72); font-size: 12px; }
+    .battle-summary span { border: 1px solid rgba(255,211,223,.14); border-radius: 999px; padding: 7px 9px; background: rgba(255,255,255,.04); }
     .sticky-save { position: sticky; bottom: 12px; z-index: 5; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
@@ -245,6 +250,19 @@
               <label class="switch" aria-label="Manual Battle Mode"><input name="battle_mode_enabled" type="checkbox"><span class="track"></span></label>
             </div>
             <label class="span-2">Battle opponent<input name="battle_opponent" placeholder="Optional"></label>
+            <label>Current win streak<input name="battle_win_streak" type="number" min="0" step="1" inputmode="numeric"></label>
+            <label>Last result<input name="battle_result" readonly placeholder="None"></label>
+            <input name="battle_updated_at" type="hidden">
+            <input name="battle_undo_snapshot" type="hidden">
+            <div class="span-2 battle-controls" aria-label="Battle controls">
+              <button class="button primary" type="button" data-battle-action="start">Start Battle</button>
+              <button class="button" type="button" data-battle-action="end">End Battle</button>
+              <button class="button" type="button" data-battle-action="won">Won</button>
+              <button class="button" type="button" data-battle-action="lost">Lost</button>
+              <button class="button" type="button" data-battle-action="tie">Tie</button>
+              <button class="button" type="button" data-battle-action="undo">Undo last result</button>
+            </div>
+            <div class="span-2 battle-summary" id="battleSummary"></div>
             <label class="span-2">Live button text<input name="live_button_text"></label>
             <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
             <label>Timezone<input name="timezone" placeholder="America/Chicago"></label>
@@ -459,6 +477,10 @@
         manual_live_fallback_enabled: form.elements.manual_live_fallback_enabled.checked,
         battle_mode_enabled: form.elements.battle_mode_enabled.checked,
         battle_opponent: String(data.get("battle_opponent") || "").trim(),
+        battle_result: String(data.get("battle_result") || "").trim(),
+        battle_win_streak: Math.max(0, Math.floor(Number(data.get("battle_win_streak")) || 0)),
+        battle_updated_at: String(data.get("battle_updated_at") || "").trim(),
+        battle_undo_snapshot: String(data.get("battle_undo_snapshot") || "").trim(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         welcome_intro_enabled: form.elements.welcome_intro_enabled.checked,
         music_enabled: form.elements.music_enabled.checked,
@@ -479,8 +501,9 @@
     }
     function fillForm(settings) {
       Object.entries(settings || {}).forEach(([key, value]) => {
-        if (!form.elements[key] || typeof form.elements[key].checked === "boolean") return;
-        form.elements[key].value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
+        const element = form.elements[key];
+        if (!element || element.type === "checkbox") return;
+        element.value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
       });
       ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
         if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
@@ -499,7 +522,100 @@
       renderThemes();
       renderDna();
       applyAdminTheme(activeTheme);
+      updateBattleSummary();
       updatePreviewFrame(false);
+    }
+    function normalizeBattleResult(value) {
+      const result = String(value || "").toLowerCase();
+      return ["won", "lost", "tie"].includes(result) ? result : "";
+    }
+    function battleSnapshot() {
+      return {
+        battle_mode_enabled: Boolean(form.elements.battle_mode_enabled.checked),
+        live_status: Boolean(form.elements.live_status.checked),
+        manual_live_fallback_enabled: Boolean(form.elements.manual_live_fallback_enabled.checked),
+        battle_opponent: String(form.elements.battle_opponent.value || "").trim(),
+        battle_result: normalizeBattleResult(form.elements.battle_result.value),
+        battle_win_streak: Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)),
+        battle_updated_at: String(form.elements.battle_updated_at.value || "").trim()
+      };
+    }
+    function writeBattleSnapshot(snapshot) {
+      form.elements.battle_mode_enabled.checked = Boolean(snapshot.battle_mode_enabled);
+      form.elements.live_status.checked = Boolean(snapshot.live_status);
+      form.elements.manual_live_fallback_enabled.checked = snapshot.manual_live_fallback_enabled !== false;
+      form.elements.battle_opponent.value = snapshot.battle_opponent || "";
+      form.elements.battle_result.value = normalizeBattleResult(snapshot.battle_result);
+      form.elements.battle_win_streak.value = Math.max(0, Math.floor(Number(snapshot.battle_win_streak) || 0));
+      form.elements.battle_updated_at.value = snapshot.battle_updated_at || "";
+      updateBattleSummary();
+    }
+    function saveUndoSnapshot(snapshot) {
+      form.elements.battle_undo_snapshot.value = JSON.stringify(snapshot);
+    }
+    function readUndoSnapshot() {
+      try {
+        return JSON.parse(form.elements.battle_undo_snapshot.value || "");
+      } catch (error) {
+        return null;
+      }
+    }
+    function updateBattleSummary() {
+      const summary = $("battleSummary");
+      if (!summary || !form.elements.battle_mode_enabled) return;
+      const snapshot = battleSnapshot();
+      const active = snapshot.battle_mode_enabled ? "Battle active" : "Battle inactive";
+      const result = snapshot.battle_result ? "Last result: " + snapshot.battle_result : "No result";
+      const streak = snapshot.battle_win_streak > 0 ? snapshot.battle_win_streak + " win streak" : "No win streak";
+      const opponent = snapshot.battle_opponent ? "Opponent: " + snapshot.battle_opponent : "No opponent";
+      summary.innerHTML = [active, result, streak, opponent].map((item) => "<span>" + item + "</span>").join("");
+      document.querySelectorAll("[data-battle-action]").forEach((button) => {
+        const action = button.dataset.battleAction;
+        const pressed = (action === "start" && snapshot.battle_mode_enabled) ||
+          (action === "won" && snapshot.battle_result === "won") ||
+          (action === "lost" && snapshot.battle_result === "lost") ||
+          (action === "tie" && snapshot.battle_result === "tie");
+        button.setAttribute("aria-pressed", pressed ? "true" : "false");
+      });
+    }
+    async function applyBattleAction(action) {
+      const previous = battleSnapshot();
+      const next = { ...previous, battle_updated_at: new Date().toISOString() };
+      if (action === "start") {
+        next.battle_mode_enabled = true;
+        next.live_status = true;
+        next.manual_live_fallback_enabled = true;
+        next.battle_result = "";
+      } else if (action === "end") {
+        next.battle_mode_enabled = false;
+      } else if (action === "won") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "won";
+        next.battle_win_streak = previous.battle_win_streak + 1;
+      } else if (action === "lost") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "lost";
+        next.battle_win_streak = 0;
+      } else if (action === "tie") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "tie";
+        next.battle_win_streak = 0;
+      } else if (action === "undo") {
+        const undo = readUndoSnapshot();
+        if (!undo) {
+          setStatus("Nothing to undo.", true);
+          return;
+        }
+        writeBattleSnapshot(undo);
+        form.elements.battle_undo_snapshot.value = "";
+        await saveSettings();
+        setStatus("Battle change undone.");
+        return;
+      }
+      saveUndoSnapshot(previous);
+      writeBattleSnapshot(next);
+      await saveSettings();
+      setStatus("Battle control saved.");
     }
     function applyAdminTheme(theme) {
       const vars = themeVars[theme] || themeVars.mina;
@@ -605,14 +721,17 @@
         const data = await response.json();
         const capabilities = data.capabilities || {};
         const viewer = capabilities.viewerCount === true && Number.isFinite(Number(data.viewerCount)) ? Number(data.viewerCount).toLocaleString() : "unavailable";
+        const streak = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? Number(data.battleWinStreak).toLocaleString() : "not set";
         const error = data.error ? data.error : "none";
         status.textContent = [
           "Last checked: " + (data.checkedAt || "unknown"),
           "Status: " + (data.isLive ? "LIVE NOW" : "Offline"),
           "Source: " + (data.source || "unknown"),
           "Viewer count: " + viewer,
+          "Battle mode: " + (data.battleActive ? "active" : "inactive"),
+          "Win streak: " + streak,
           "Runtime error: " + error,
-          "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", gifts=" + Boolean(capabilities.gifts)
+          "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", battleWinStreak=" + Boolean(capabilities.battleWinStreak) + ", gifts=" + Boolean(capabilities.gifts)
         ].join(". ") + ".";
       } catch (error) {
         status.textContent = "Last checked: error. Status: unknown. Source: error.";
@@ -700,6 +819,19 @@
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("savePassword").addEventListener("click", savePassword);
+    ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
+      if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);
+      if (form.elements[key]) form.elements[key].addEventListener("change", updateBattleSummary);
+    });
+    document.querySelectorAll("[data-battle-action]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try {
+          await applyBattleAction(button.dataset.battleAction);
+        } catch (error) {
+          setStatus(error.message || "Battle control failed", true);
+        }
+      });
+    });
     loadLiveRuntime();
     window.setInterval(loadLiveRuntime, 60000);
     renderThemes();
