@@ -152,6 +152,19 @@ function markStale(error) {
   state.checkedAt = iso();
 }
 
+function markDisconnected() {
+  state.checkedAt = iso();
+  state.lastEventAt = state.lastEventAt || iso();
+  state.error = "RUNTIME_DISCONNECTED";
+  if (state.isLive && state.roomId) {
+    state.confirmed = true;
+    state.confidence = "confirmed";
+    state.stale = false;
+    return;
+  }
+  markStale("RUNTIME_DISCONNECTED");
+}
+
 function applyRoomInfo(roomInfo = {}) {
   const title = stringOrNull(roomInfo.title, roomInfo.liveTitle, roomInfo.live_title, roomInfo.room_title);
   if (title) {
@@ -309,7 +322,7 @@ function attachHandlers(nextConnection) {
   });
 
   nextConnection.on(ControlEvent.DISCONNECTED, async () => {
-    markStale("RUNTIME_DISCONNECTED");
+    markDisconnected();
     log("disconnected");
     await safeWrite("disconnected");
     scheduleReconnect();
