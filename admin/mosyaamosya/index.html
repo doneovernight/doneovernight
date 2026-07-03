@@ -510,6 +510,22 @@
     .connection-status.needs_attention::before { background: #fbbf24; box-shadow: 0 0 14px rgba(251,191,36,.25); }
     .connection-status.not_connected::before,
     .connection-status.disconnected::before { background: rgba(255,245,247,.32); }
+    .connection-required {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 16px;
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      display: grid;
+      gap: 10px;
+    }
+    .connection-required strong { font-size: 15px; }
+    .connection-benefits { display: grid; gap: 8px; color: rgba(255,245,247,.78); font-size: 13px; }
+    .connection-benefits span { display: block; }
+    .connection-runtime-note {
+      color: rgba(255,245,247,.66);
+      font-size: 12px;
+      line-height: 1.5;
+    }
     .connection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .connection-metric {
       border: 1px solid rgba(255,211,223,.12);
@@ -545,6 +561,7 @@
       font-weight: 950;
     }
     .connection-beta .fields { margin-top: 12px; }
+    body:not([data-dev-mode="true"]) .connection-dev-only { display: none !important; }
     .runtime-board { display: grid; gap: 14px; width: 100%; max-width: 100%; min-width: 0; overflow: visible; }
     .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; min-width: 0; max-width: 100%; overflow: hidden; }
     .runtime-section,
@@ -885,25 +902,35 @@
             <div class="connection-head">
               <div class="connection-title">
                 <strong>TikTok</strong>
-                <span>Profile identity now. Live Runtime uses a secure server-side connection when available.</span>
+                <span id="tiktokConnectionCopy">Connect your TikTok account to enable live features.</span>
               </div>
               <span class="connection-status not_connected" id="tiktokConnectionStatus">Not connected</span>
             </div>
-            <div class="connection-grid">
+            <div class="connection-required" id="tiktokConnectionRequired">
+              <strong>Connect your TikTok account to enable:</strong>
+              <div class="connection-benefits">
+                <span>✓ Live Detection</span>
+                <span>✓ Battle Mode</span>
+                <span>✓ Analytics</span>
+                <span>✓ Runtime</span>
+              </div>
+            </div>
+            <div class="connection-grid" id="tiktokConnectionDetails" hidden>
               <div class="connection-metric"><span>Username</span><strong id="tiktokConnectionUsername">@mosyaamosya</strong></div>
               <div class="connection-metric"><span>Live Runtime</span><strong id="tiktokConnectionRuntime">Unknown</strong></div>
               <div class="connection-metric"><span>Last sync</span><strong id="tiktokConnectionLastSync">Never</strong></div>
-              <div class="connection-metric"><span>Attention</span><strong id="tiktokConnectionError">None</strong></div>
+              <div class="connection-metric connection-dev-only"><span>Internal diagnostics</span><strong id="tiktokConnectionError">None</strong></div>
             </div>
-            <div class="fields">
+            <p class="connection-runtime-note" id="tiktokConnectionRuntimeNote" hidden></p>
+            <div class="fields connection-dev-only" id="tiktokConnectionFields">
               <label>Username<input id="tiktokConnectionUsernameInput" autocomplete="off" placeholder="mosyaamosya"></label>
             </div>
             <div class="connection-actions">
               <button class="button primary" id="connectTikTok" type="button">Connect TikTok</button>
-              <button class="button" id="reconnectTikTok" type="button">Reconnect</button>
-              <button class="button danger" id="disconnectTikTok" type="button">Disconnect</button>
+              <button class="button" id="reconnectTikTok" type="button" hidden>Reconnect</button>
+              <button class="button danger" id="disconnectTikTok" type="button" hidden>Disconnect</button>
             </div>
-            <details class="connection-beta">
+            <details class="connection-beta connection-dev-only">
               <summary>Internal beta runtime access</summary>
               <div class="fields">
                 <label class="span-2">TikTok session cookie<textarea id="tiktokSessionCookie" autocomplete="off" spellcheck="false" placeholder="Paste only while configuring the beta runtime"></textarea></label>
@@ -2937,17 +2964,28 @@
       latestConnections = Array.isArray(connections) ? connections : [];
       const tiktok = latestConnections.find((connection) => connection.provider === "tiktok") || {};
       const status = String(tiktok.status || "not_connected");
-      const statusLabel = tiktok.status_label || (status === "connected" ? "Connected" : status === "needs_attention" ? "Needs attention" : "Not connected");
+      const connected = status === "connected" || status === "needs_attention";
+      const statusLabel = status === "needs_attention" ? "Connection OK" : connected ? "🟢 Connected" : "Connection Required";
       const statusEl = $("tiktokConnectionStatus");
       statusEl.textContent = statusLabel;
-      statusEl.className = "connection-status " + status;
-      $("tiktokConnectionUsername").textContent = tiktok.username ? "@" + tiktok.username : "Not set";
-      $("tiktokConnectionRuntime").textContent = tiktok.live_runtime_status || "Unknown";
+      statusEl.className = "connection-status " + (connected ? "connected" : "not_connected");
+      $("tiktokConnectionCopy").textContent = connected
+        ? "TikTok is connected to Mina's creator workspace."
+        : "Connect your TikTok account to enable live features.";
+      $("tiktokConnectionRequired").hidden = connected;
+      $("tiktokConnectionDetails").hidden = !connected;
+      $("tiktokConnectionRuntimeNote").hidden = !connected || !tiktok.runtime_message;
+      $("tiktokConnectionRuntimeNote").textContent = tiktok.runtime_message || "";
+      $("tiktokConnectionUsername").textContent = tiktok.username ? "@" + tiktok.username : "@mosyaamosya";
+      $("tiktokConnectionRuntime").textContent = tiktok.live_runtime_status || "Trying to reconnect...";
       $("tiktokConnectionLastSync").textContent = formatConnectionDate(tiktok.last_sync_at || tiktok.updated_at);
-      $("tiktokConnectionError").textContent = tiktok.last_error || "None";
+      $("tiktokConnectionError").textContent = tiktok.last_error || tiktok.metadata?.runtime_error || "None";
       $("tiktokConnectionUsernameInput").value = tiktok.username || form.elements.tiktok_live_username.value || "mosyaamosya";
       $("tiktokRuntimeEnabled").checked = tiktok.runtime_enabled !== false;
-      $("connectTikTok").textContent = status === "connected" ? "Update TikTok" : "Connect TikTok";
+      $("connectTikTok").hidden = connected;
+      $("connectTikTok").textContent = "Connect TikTok";
+      $("reconnectTikTok").hidden = !connected;
+      $("disconnectTikTok").hidden = !connected;
     }
     async function loadConnections() {
       setStatus("Loading connections...", false, "connectionsStatus");
@@ -2983,7 +3021,7 @@
         $("tiktokSessionCookie").value = "";
         renderConnections([data.connection]);
         if (form.elements.tiktok_live_username) form.elements.tiktok_live_username.value = data.connection.username || "mosyaamosya";
-        setStatus(action === "reconnect_tiktok" ? "TikTok reconnected." : "TikTok connection saved.", false, "connectionsStatus");
+        setStatus(action === "reconnect_tiktok" ? "TikTok reconnected." : "TikTok connected.", false, "connectionsStatus");
       } catch (error) {
         setStatus(readableMessage(error, "Could not save TikTok connection."), true, "connectionsStatus");
       } finally {

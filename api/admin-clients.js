@@ -1365,8 +1365,8 @@ async function setCreatorRuntimeState(input = {}) {
 
 function connectionStatusLabel(status) {
   if (status === "connected") return "Connected";
-  if (status === "needs_attention") return "Needs attention";
-  return "Not connected";
+  if (status === "needs_attention") return "Connection OK";
+  return "Connection Required";
 }
 
 function sanitizeConnection(row = {}, runtime = null) {
@@ -1374,14 +1374,19 @@ function sanitizeConnection(row = {}, runtime = null) {
   const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
   const hasSecret = Boolean(clean(row.access_token_encrypted) || metadata.has_session_cookie);
   const runtimeError = runtime && runtime.error ? clean(runtime.error) : "";
+  const status = normalizeConnectionStatus(row.status, hasSecret ? "connected" : "not_connected");
   const runtimeState = runtime
     ? runtime.confidence === "confirmed"
       ? (runtime.is_live ? "Live confirmed" : "Offline confirmed")
       : runtimeError
-        ? "Needs attention"
-        : "Unknown"
-    : "Unknown";
-  const status = normalizeConnectionStatus(row.status, hasSecret ? "connected" : "not_connected");
+        ? "Trying to reconnect..."
+        : status === "connected"
+          ? "Trying to reconnect..."
+          : ""
+    : status === "connected" ? "Trying to reconnect..." : "";
+  const runtimeMessage = status === "connected" && runtimeError
+    ? "Runtime temporarily unavailable. Trying to reconnect..."
+    : "";
   return {
     provider,
     status,
@@ -1390,8 +1395,9 @@ function sanitizeConnection(row = {}, runtime = null) {
     external_id: clean(row.external_id),
     runtime_enabled: bool(row.runtime_enabled, false),
     live_runtime_status: runtimeState,
+    runtime_message: runtimeMessage,
     last_sync_at: clean(row.last_sync_at),
-    last_error: clean(row.last_error) || runtimeError,
+    last_error: clean(row.last_error),
     metadata: {
       credential_kind: clean(metadata.credential_kind),
       has_session_cookie: hasSecret,
@@ -1400,7 +1406,8 @@ function sanitizeConnection(row = {}, runtime = null) {
       beta_session_cookie: Boolean(metadata.beta_session_cookie),
       live_runtime_source: runtime ? clean(runtime.source) : "",
       live_runtime_confidence: runtime ? clean(runtime.confidence) : "",
-      live_runtime_stale: runtime ? Boolean(runtime.stale) : false
+      live_runtime_stale: runtime ? Boolean(runtime.stale) : false,
+      runtime_error: runtimeError
     },
     created_at: clean(row.created_at),
     updated_at: clean(row.updated_at)
@@ -1484,14 +1491,14 @@ function connectionPayload(input = {}) {
   return {
     creator_slug: normalizeSlug(input.slug || "mosyaamosya"),
     provider,
-    status: runtimeEnabled && !hasSessionCookie ? "needs_attention" : status,
+    status,
     username,
     external_id: clean(input.external_id),
     ...(sessionInfo.valid ? { access_token_encrypted: encryptConnectionSecret(sessionCookie) } : {}),
     session_reference: sessionInfo.valid ? "supabase:creator_connections:" + provider + ":" + normalizeSlug(input.slug || "mosyaamosya") : clean(input.session_reference),
     runtime_enabled: runtimeEnabled,
     last_sync_at: now,
-    last_error: sessionInfo.valid || !runtimeEnabled ? "" : "LIVE runtime needs a creator session cookie and private signing provider before it can be confirmed.",
+    last_error: "",
     metadata: {
       provider_version: "v1",
       credential_kind: sessionInfo.valid ? "tiktok_session_cookie" : "",
