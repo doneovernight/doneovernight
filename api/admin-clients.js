@@ -7,6 +7,19 @@ const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
 const CREATOR_MEDIA_BUCKET = process.env.CREATOR_MEDIA_BUCKET || "creator-media";
+const AUDIO_UPLOAD_MIME_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mpeg3",
+  "audio/x-mpeg",
+  "audio/x-mpeg-3",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/aac",
+  "audio/aacp"
+]);
+const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "binary/octet-stream"]);
 const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
@@ -235,6 +248,18 @@ function bool(value, fallback = false) {
   if (value === "true") return true;
   if (value === "false") return false;
   return fallback;
+}
+
+function isDirectIntroAudioUrl(value) {
+  const raw = clean(value);
+  if (!raw) return false;
+  try {
+    const parsed = new URL(raw, "https://doneovernight.com");
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      /\.(mp3|m4a|aac)$/i.test(parsed.pathname);
+  } catch (error) {
+    return false;
+  }
 }
 
 function timingSafeEqualText(left, right) {
@@ -569,24 +594,37 @@ function mediaExtension(mimeType, fallbackName = "") {
   if (mimeType === "video/mp4") return "mp4";
   if (mimeType === "video/webm") return "webm";
   if (mimeType === "video/quicktime") return "mov";
-  if (mimeType === "audio/mpeg") return "mp3";
-  if (mimeType === "audio/aac") return "aac";
-  if (mimeType === "audio/mp4" || mimeType === "audio/x-m4a") return named === "aac" ? "aac" : "m4a";
+  if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3"].includes(mimeType)) return "mp3";
+  if (["audio/aac", "audio/aacp"].includes(mimeType)) return "aac";
+  if (["audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mimeType)) return named === "aac" ? "aac" : "m4a";
   return named || "bin";
 }
 
 function isIntroAudioFile(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
-  return ["audio/mpeg", "audio/mp4", "audio/aac", "audio/x-m4a"].includes(mimeType) ||
+  const normalized = clean(mimeType).toLowerCase();
+  return (AUDIO_UPLOAD_MIME_TYPES.has(normalized) || GENERIC_UPLOAD_MIME_TYPES.has(normalized)) &&
     ["mp3", "m4a", "aac"].includes(named);
 }
 
-function parseDataUrl(value) {
-  const match = clean(value).match(/^data:([^;,]+);base64,(.+)$/);
+function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
+  const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  const named = ext ? ext[1] : "";
+  const normalized = clean(mimeType).toLowerCase();
+  if (!["mp3", "m4a", "aac"].includes(named)) return "";
+  if (normalized && !AUDIO_UPLOAD_MIME_TYPES.has(normalized) && !GENERIC_UPLOAD_MIME_TYPES.has(normalized)) return "";
+  if (named === "mp3") return "audio/mpeg";
+  if (named === "m4a") return "audio/mp4";
+  if (named === "aac") return "audio/aac";
+  return "";
+}
+
+function parseDataUrl(value, fallbackMimeType = "") {
+  const match = clean(value).match(/^data:([^;,]*);base64,(.+)$/);
   if (!match) return null;
   return {
-    mimeType: match[1],
+    mimeType: clean(match[1] || fallbackMimeType).toLowerCase(),
     buffer: Buffer.from(match[2], "base64")
   };
 }
@@ -594,7 +632,7 @@ function parseDataUrl(value) {
 async function uploadCreatorMedia(input = {}) {
   const kind = clean(input.kind);
   const file = input.file || {};
-  const parsed = parseDataUrl(file.data || file.dataUrl);
+  const parsed = parseDataUrl(file.data || file.dataUrl, file.type);
   if (!parsed) {
     const error = new Error("Paste an asset URL or choose a valid media file.");
     error.statusCode = 400;
@@ -604,6 +642,7 @@ async function uploadCreatorMedia(input = {}) {
   const isImage = parsed.mimeType.startsWith("image/");
   const isVideo = parsed.mimeType.startsWith("video/");
   const isIntroAudio = isIntroAudioFile(parsed.mimeType, file.name);
+  const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : parsed.mimeType;
   if (kind === "profile" && !isImage) {
     const error = new Error("Profile media must be an image file.");
     error.statusCode = 400;
@@ -622,6 +661,12 @@ async function uploadCreatorMedia(input = {}) {
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
+  if (kind === "intro-audio" && !uploadMimeType) {
+    const error = new Error("Intro audio MIME type does not match .mp3, .m4a, or .aac.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
   if (!["profile", "hero", "intro-audio"].includes(kind)) {
     const error = new Error("Unsupported media upload type.");
     error.statusCode = 400;
@@ -636,29 +681,57 @@ async function uploadCreatorMedia(input = {}) {
   }
 
   const { url, serviceRoleKey } = getSupabaseConfig("Creator media upload");
-  const ext = mediaExtension(parsed.mimeType, file.name);
+  const ext = mediaExtension(uploadMimeType, file.name);
   const path = "mosyaamosya/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
   const response = await fetch(url + "/storage/v1/object/" + CREATOR_MEDIA_BUCKET + "/" + path, {
     method: "POST",
     headers: {
       apikey: serviceRoleKey,
       Authorization: "Bearer " + serviceRoleKey,
-      "Content-Type": parsed.mimeType,
+      "Content-Type": uploadMimeType,
+      "Cache-Control": "public, max-age=31536000, immutable",
       "x-upsert": "true"
     },
     body: parsed.buffer
   });
   const text = await response.text();
   if (!response.ok) {
-    const error = new Error("Media upload is not configured. Paste an asset URL instead.");
+    let details = text;
+    try {
+      const json = JSON.parse(text);
+      details = json.message || json.error || text;
+    } catch (parseError) {}
+    const error = new Error("Media upload failed (" + response.status + "): " + (details || response.statusText || "Unknown storage error"));
     error.statusCode = response.status || 503;
     error.code = "MEDIA_UPLOAD_FAILED";
     error.details = text;
     throw error;
   }
+  const publicUrl = url + "/storage/v1/object/public/" + CREATOR_MEDIA_BUCKET + "/" + path;
+  if (kind === "intro-audio") {
+    const verify = await fetch(publicUrl, {
+      method: "HEAD",
+      headers: { Accept: uploadMimeType }
+    });
+    const servedType = clean(verify.headers.get("content-type")).toLowerCase();
+    if (!verify.ok) {
+      const error = new Error("Audio uploaded, but the public URL is not readable (" + verify.status + "). Check the creator-media bucket public policy.");
+      error.statusCode = verify.status || 503;
+      error.code = "MEDIA_PUBLIC_URL_FAILED";
+      throw error;
+    }
+    if (servedType && !servedType.startsWith("audio/")) {
+      const error = new Error("Audio uploaded, but storage is serving it as " + servedType + " instead of audio.");
+      error.statusCode = 415;
+      error.code = "MEDIA_CONTENT_TYPE_FAILED";
+      throw error;
+    }
+  }
   return {
     kind,
-    url: url + "/storage/v1/object/public/" + CREATOR_MEDIA_BUCKET + "/" + path
+    url: publicUrl,
+    contentType: uploadMimeType,
+    size: parsed.buffer.length
   };
 }
 
@@ -819,6 +892,14 @@ async function fetchCreator(slug = "mosyaamosya") {
 }
 
 function creatorPayload(input = {}) {
+  const introAudioEnabled = bool(input.intro_audio_enabled, false);
+  const introAudioUrl = clean(input.intro_audio_url);
+  if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
+    const error = new Error("Intro audio is enabled, but no valid direct .mp3, .m4a, or .aac URL is saved.");
+    error.statusCode = 400;
+    error.code = "INVALID_INTRO_AUDIO_URL";
+    throw error;
+  }
   return {
     id: MINA_CREATOR_ID,
     display_name: clean(input.display_name) || DEFAULT_MINA_SETTINGS.display_name,
@@ -833,8 +914,8 @@ function creatorPayload(input = {}) {
     music_url: clean(input.music_url),
     music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
     music_loop: bool(input.music_loop, true),
-    intro_audio_enabled: bool(input.intro_audio_enabled, false),
-    intro_audio_url: clean(input.intro_audio_url),
+    intro_audio_enabled: introAudioEnabled,
+    intro_audio_url: introAudioUrl,
     intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
     intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
     intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),

@@ -1191,10 +1191,12 @@
       try {
         await audio.play();
         if (button) button.innerHTML = icons.sound;
+        document.body.removeAttribute("data-intro-audio-error");
         if (scheduleStop) scheduleIntroAudioStop(settings);
         return true;
       } catch (error) {
         if (button) button.title = "Intro audio could not play. Tap again to retry.";
+        document.body.dataset.introAudioError = error && error.message ? error.message : "Intro audio playback was blocked.";
         return false;
       }
     }
@@ -1932,7 +1934,7 @@
       const audio = $("introAudio");
       const introInfo = introAudioInfo(settings);
       const musicInfo = musicLinkInfo(settings);
-      if (!featureOn(settings, "music_link_visible", false) || (!introInfo.enabled && !musicInfo.enabled)) {
+      if (!introInfo.enabled && !musicInfo.enabled) {
         if (button) button.remove();
         audio.pause();
         audio.removeAttribute("src");
@@ -2031,7 +2033,9 @@
       video.src = heroVideo(settings);
       intro.hidden = false;
       const dismiss = () => {
-        playIntroAudio(settings, true);
+        playIntroAudio(settings, true).then((played) => {
+          if (!played && introAudioInfo(settings).enabled) document.body.dataset.introAudioState = "waiting-for-user";
+        });
         if (!forceExperience) localStorage.setItem(introKey, "done");
         intro.classList.add("is-done");
         revealPage();

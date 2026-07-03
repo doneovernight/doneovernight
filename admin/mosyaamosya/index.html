@@ -853,6 +853,7 @@
                 <input id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
                 <button class="button" id="uploadIntroAudio" type="button">Upload audio</button>
               </div>
+              <div class="status" id="introAudioUploadStatus" aria-live="polite"></div>
             </div>
             <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
             <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
@@ -1074,6 +1075,97 @@
         return false;
       }
     }
+    function directAudioUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.origin);
+        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac)$/i.test(url.pathname)) return url.href;
+      } catch {}
+      return "";
+    }
+    function validateIntroAudioFile(file) {
+      if (!file) return "Choose an .mp3, .m4a, or .aac file first.";
+      const extensionOk = /\.(mp3|m4a|aac)$/i.test(file.name || "");
+      const mime = String(file.type || "").toLowerCase();
+      const mimeOk = !mime || mime === "application/octet-stream" || [
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mpeg3",
+        "audio/x-mpeg",
+        "audio/x-mpeg-3",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/x-m4a",
+        "audio/aac",
+        "audio/aacp"
+      ].includes(mime);
+      if (!extensionOk) return "Intro audio must use .mp3, .m4a, or .aac.";
+      if (!mimeOk) return "Unsupported audio MIME type: " + (mime || "unknown") + ".";
+      if (file.size > 10_000_000) return "Intro audio is too large. Use a file under 10 MB.";
+      return "";
+    }
+    function audioPreviewErrorMessage(audio) {
+      const error = audio && audio.error;
+      if (!error) return "Preview could not load this audio file.";
+      const messages = {
+        1: "Preview loading was aborted.",
+        2: "Preview failed because of a network error.",
+        3: "Preview failed because the audio could not be decoded.",
+        4: "Preview failed because the audio format is not supported by this browser."
+      };
+      return messages[error.code] || ("Preview error code " + error.code + ".");
+    }
+    function setIntroAudioStatus(message, isError) {
+      setStatus(message, isError, "introAudioUploadStatus");
+    }
+    async function setIntroAudioPreview(url, options = {}) {
+      const preview = $("introAudioPreview");
+      if (!preview) return false;
+      const src = String(url || "").trim();
+      preview.pause();
+      if (!src) {
+        preview.removeAttribute("src");
+        preview.load();
+        setIntroAudioStatus("", false);
+        return false;
+      }
+      preview.src = src;
+      preview.load();
+      setIntroAudioStatus(options.loadingMessage || "Loading audio preview...", false);
+      await new Promise((resolve) => {
+        let settled = false;
+        const done = (message, isError) => {
+          if (settled) return;
+          settled = true;
+          preview.removeEventListener("canplaythrough", onReady);
+          preview.removeEventListener("loadedmetadata", onReady);
+          preview.removeEventListener("error", onError);
+          if (message !== undefined) setIntroAudioStatus(message, isError);
+          resolve(!isError);
+        };
+        const onReady = () => done("Audio preview ready.", false);
+        const onError = () => done(audioPreviewErrorMessage(preview), true);
+        preview.addEventListener("canplaythrough", onReady, { once: true });
+        preview.addEventListener("loadedmetadata", onReady, { once: true });
+        preview.addEventListener("error", onError, { once: true });
+        window.setTimeout(() => done("Audio preview is still loading. Press play to test it.", false), 4500);
+      });
+      if (options.play) {
+        try {
+          preview.currentTime = 0;
+          await preview.play();
+          setIntroAudioStatus(options.successMessage || "Audio uploaded. Preview playing.", false);
+          return true;
+        } catch (error) {
+          const message = error && error.name === "NotAllowedError"
+            ? "Audio uploaded. Browser blocked autoplay in preview; press play to test it."
+            : "Audio uploaded, but preview playback failed: " + (error.message || audioPreviewErrorMessage(preview));
+          setIntroAudioStatus(message, error && error.name !== "NotAllowedError");
+          return false;
+        }
+      }
+      return true;
+    }
     function validateSettingsForm() {
       const elements = Array.from(form.elements).filter((element) => {
         return element.name && !element.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
@@ -1082,6 +1174,7 @@
         const value = String(element.value || "").trim();
         if (element.required && !value) return fieldName(element) + " is required.";
         if (value && element.name === "music_url" && !isExternalUrl(value)) return "Enter a valid external music link.";
+        if (element.name === "intro_audio_url" && boolField("intro_audio_enabled") && !directAudioUrl(value)) return "Intro audio is enabled. Upload or paste a direct .mp3, .m4a, or .aac URL.";
         if (value && element.type === "url" && !isAcceptableUrl(value)) return "Enter a valid URL for " + fieldName(element) + ".";
         if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
         if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
@@ -1372,7 +1465,7 @@
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
-      $("introAudioPreview").src = settings.intro_audio_url || "";
+      setIntroAudioPreview(settings.intro_audio_url || "", { loadingMessage: "Loading saved audio preview..." });
       renderThemes();
       renderDna();
       applyAdminTheme(activeTheme);
@@ -1649,7 +1742,7 @@
         setSaveButtonState("saved", { resetAfter: 700 });
         restoreScrollPosition(scrollPosition);
       } catch (error) {
-        setStatus("");
+        setStatus(error.message || "Save failed.", true);
         setSaveButtonState("failed", { resetAfter: 1500 });
         restoreScrollPosition(scrollPosition);
         throw error;
@@ -1716,21 +1809,21 @@
         return;
       }
       if (kind === "intro-audio") {
-        const audioNameOk = /\.(mp3|m4a|aac)$/i.test(file.name || "");
-        const audioTypeOk = ["audio/mpeg", "audio/mp4", "audio/aac", "audio/x-m4a"].includes(file.type);
-        if (!audioNameOk && !audioTypeOk) {
-          setStatus("Intro audio must be an .mp3, .m4a, or .aac file.", true);
-          return;
-        }
-        if (file.size > 10_000_000) {
-          setStatus("Intro audio is too large. Use a file under 10 MB.", true);
+        const audioError = validateIntroAudioFile(file);
+        if (audioError) {
+          setIntroAudioStatus(audioError, true);
+          setStatus(audioError, true);
           return;
         }
       }
       const field = kind === "profile" ? "avatar_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
       const preview = kind === "profile" ? $("avatarPreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
-      preview.src = URL.createObjectURL(file);
-      setStatus("Uploading media...");
+      if (kind === "intro-audio") {
+        await setIntroAudioPreview(URL.createObjectURL(file), { loadingMessage: "Checking selected audio..." });
+      } else {
+        preview.src = URL.createObjectURL(file);
+      }
+      setStatus(kind === "intro-audio" ? "Uploading audio..." : "Uploading media...");
       try {
         const data = await api({
           action: "upload_media",
@@ -1743,10 +1836,17 @@
           }
         });
         form.elements[field].value = data.media.url;
-        preview.src = data.media.url;
-        setStatus("Media uploaded. Save page to publish it.");
+        if (kind === "intro-audio") {
+          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage: "Audio uploaded" });
+          setStatus("Audio uploaded. Save page to publish it.");
+        } else {
+          preview.src = data.media.url;
+          setStatus("Media uploaded. Save page to publish it.");
+        }
       } catch (error) {
-        setStatus((error.message || "Upload unavailable") + " Paste a hosted asset URL instead.", true);
+        const message = error.message || "Upload unavailable";
+        if (kind === "intro-audio") setIntroAudioStatus(message, true);
+        setStatus(message + " Paste a hosted asset URL instead.", true);
       }
     }
     async function savePassword() {

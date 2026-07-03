@@ -30,7 +30,26 @@ values (
   'creator-media',
   true,
   10000000,
-  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime']
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/mpeg3',
+    'audio/x-mpeg',
+    'audio/x-mpeg-3',
+    'audio/mp4',
+    'audio/m4a',
+    'audio/x-m4a',
+    'audio/aac',
+    'audio/aacp',
+    'application/octet-stream'
+  ]
 )
 on conflict (id) do update set
   public = excluded.public,
