@@ -299,7 +299,7 @@
       line-height: 1.48;
       text-wrap: pretty;
     }
-    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card, .explore-card {
+    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card {
       position: relative;
       border: 1px solid var(--glass-line);
       background: var(--glass-bg);
@@ -307,7 +307,7 @@
       backdrop-filter: blur(18px) saturate(1.14);
       overflow: hidden;
     }
-    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .explore-card::before {
+    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -325,7 +325,7 @@
       border-radius: 26px;
       padding: 16px;
     }
-    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > *, .explore-card > * { position: relative; z-index: 1; }
+    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > * { position: relative; z-index: 1; }
     .live-copy {
       display: flex;
       justify-content: space-between;
@@ -460,30 +460,6 @@
       border-radius: 999px;
       padding: 6px;
     }
-    .explore-card {
-      display: grid;
-      gap: 13px;
-      border-radius: 28px;
-      padding: 18px;
-    }
-    .section-kicker {
-      color: rgba(255,245,247,.46);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-    .explore-card h2 {
-      margin: 0;
-      font-size: 20px;
-      letter-spacing: 0;
-    }
-    .explore-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
     .newsletter-start, .newsletter-thanks {
       width: 100%;
       min-height: 46px;
@@ -548,9 +524,57 @@
       display: inline-block;
       animation: spinGap .9s linear infinite;
     }
-    .explore-trigger {
-      justify-content: space-between;
-      padding-inline: 16px;
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px 4px;
+      color: rgba(255,245,247,.42);
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.7;
+      text-align: center;
+    }
+    .footer-nav button {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: rgba(255,245,247,.58);
+      cursor: pointer;
+      font: inherit;
+      transition: color .18s ease, opacity .18s ease;
+    }
+    .footer-nav button:hover,
+    .footer-nav button:focus-visible {
+      color: rgba(255,245,247,.86);
+      outline: none;
+    }
+    .footer-nav button:active { opacity: .72; }
+    .sheet-copy {
+      display: grid;
+      gap: 12px;
+      margin-top: 4px;
+      color: rgba(255,245,247,.72);
+      font-size: 13px;
+      line-height: 1.58;
+    }
+    .sheet-copy p { margin: 0; }
+    .sheet-copy strong {
+      color: rgba(255,245,247,.9);
+      font-size: 13px;
+    }
+    .sheet-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .sheet-list li {
+      border-top: 1px solid rgba(255,245,247,.1);
+      padding-top: 8px;
     }
     .sheet {
       position: fixed;
@@ -748,7 +772,7 @@
       .hero-video {
         animation: none !important;
       }
-      .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .explore-card::before {
+      .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
         transform: none !important;
       }
     }
@@ -817,12 +841,15 @@
       <div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>
     </section>
 
-    <section class="explore-card" id="exploreBlock" data-block-type="explore">
-      <div class="section-kicker">Discovery</div>
-      <h2>Explore Creator OS.</h2>
-      <p>Featured creators, DNA categories, themes, and new pages will live here.</p>
-      <button class="primary explore-trigger" id="exploreButton" type="button"><span>Open explore</span><span>Browse</span></button>
-    </section>
+    <nav class="footer-nav" aria-label="Creator OS links">
+      <button type="button" data-open-sheet="privacySheet">Privacy</button>
+      <span aria-hidden="true">•</span>
+      <button type="button" data-open-sheet="passportSheet">Creator Passport</button>
+      <span aria-hidden="true">•</span>
+      <button type="button" data-open-sheet="exploreSheet">Explore</button>
+      <span aria-hidden="true">•</span>
+      <button type="button" data-open-sheet="aboutCreatorOsSheet">About Creator OS</button>
+    </nav>
 
     <div class="doneovernight-creator-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
       <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
@@ -860,6 +887,53 @@
         <button class="icon-button" type="button" data-close-sheet="exploreSheet" aria-label="Close explore">&times;</button>
       </div>
       <div class="explore-grid" id="exploreGrid"></div>
+    </div>
+  </section>
+
+  <section class="sheet" id="privacySheet" aria-label="Privacy" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="privacyTitle">Privacy</strong><span>Creator OS visitor privacy</span></div>
+        <button class="icon-button" type="button" data-close-sheet="privacySheet" aria-label="Close privacy">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>This page is designed to keep Mina's creator experience focused and lightweight.</p>
+        <ul class="sheet-list">
+          <li>Creator links open directly to the services shown.</li>
+          <li>Newsletter interactions are kept minimal and only use the email you enter.</li>
+          <li>Live metadata is only shown when confirmed by Creator OS runtime capabilities.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" id="passportSheet" aria-label="Creator Passport" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="passportTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="passportTitle">Creator Passport</strong><span>Mina Mosya on Creator OS</span></div>
+        <button class="icon-button" type="button" data-close-sheet="passportSheet" aria-label="Close Creator Passport">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p><strong>DNA:</strong> Streamer</p>
+        <p><strong>Location:</strong> Chicago</p>
+        <p><strong>Runtime:</strong> Live hub, community, support, newsletter, and manual battle controls.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" id="aboutCreatorOsSheet" aria-label="About Creator OS" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="aboutCreatorOsTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="aboutCreatorOsTitle">About Creator OS</strong><span>DONEOVERNIGHT creator infrastructure</span></div>
+        <button class="icon-button" type="button" data-close-sheet="aboutCreatorOsSheet" aria-label="Close About Creator OS">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>Creator OS is a premium operating layer for creators: profile, live runtime, community, support, newsletter, and future discovery.</p>
+        <p>The creator stays first. The system appears only when a visitor asks for it.</p>
+      </div>
     </div>
   </section>
 
@@ -1378,7 +1452,6 @@
         item.innerHTML = title + "<span>" + copy + "</span>";
         grid.appendChild(item);
       });
-      $("exploreButton").onclick = () => setSheetOpen("exploreSheet", true);
     }
 
     function setupShare(settings) {
@@ -1456,6 +1529,9 @@
 
     document.querySelectorAll("[data-close-sheet]").forEach((button) => {
       button.addEventListener("click", () => setSheetOpen(button.dataset.closeSheet, false));
+    });
+    document.querySelectorAll("[data-open-sheet]").forEach((button) => {
+      button.addEventListener("click", () => setSheetOpen(button.dataset.openSheet, true));
     });
     document.querySelectorAll(".sheet").forEach((sheet) => {
       sheet.addEventListener("click", (event) => {
