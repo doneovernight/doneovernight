@@ -21,6 +21,9 @@ const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/aacp"
 ]);
 const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "binary/octet-stream"]);
+const CREATOR_CONNECTION_PROVIDERS = new Set(["tiktok"]);
+const CREATOR_CONNECTION_STATUSES = new Set(["connected", "not_connected", "needs_attention", "disconnected"]);
+const TIKTOK_SESSION_COOKIE_NAMES = ["sessionid", "sessionid_ss", "sid_tt", "sid_guard"];
 const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
@@ -319,6 +322,68 @@ function sessionSecret() {
 
 function signText(value) {
   return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url");
+}
+
+function connectionSecret() {
+  return process.env.CREATOR_CONNECTIONS_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || sessionSecret();
+}
+
+function connectionCipherKey() {
+  return crypto.createHash("sha256").update(connectionSecret() || "creator-connections-dev").digest();
+}
+
+function encryptConnectionSecret(value) {
+  const text = clean(value);
+  if (!text) return "";
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", connectionCipherKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [
+    "v1",
+    iv.toString("base64url"),
+    tag.toString("base64url"),
+    encrypted.toString("base64url")
+  ].join(":");
+}
+
+function normalizeConnectionProvider(value) {
+  const provider = clean(value || "tiktok").toLowerCase().replace(/[^a-z0-9_-]+/g, "");
+  return CREATOR_CONNECTION_PROVIDERS.has(provider) ? provider : "tiktok";
+}
+
+function normalizeConnectionStatus(value, fallback = "not_connected") {
+  const status = clean(value || fallback).toLowerCase().replace(/[^a-z_]+/g, "_");
+  return CREATOR_CONNECTION_STATUSES.has(status) ? status : fallback;
+}
+
+function parseCookieHeader(value = "") {
+  return clean(value).split(";").reduce((cookies, part) => {
+    const item = part.trim();
+    if (!item || !item.includes("=")) return cookies;
+    const index = item.indexOf("=");
+    const key = decodeURIComponent(item.slice(0, index).trim());
+    const cookieValue = item.slice(index + 1).trim();
+    if (key && cookieValue) cookies[key] = cookieValue;
+    return cookies;
+  }, {});
+}
+
+function inspectTikTokSessionCookie(value = "") {
+  const raw = clean(value);
+  if (!raw) return { present: false, valid: false, missing: [] };
+  const cookies = raw.includes("=") ? parseCookieHeader(raw) : { sessionid: raw };
+  const hasSessionId = TIKTOK_SESSION_COOKIE_NAMES.some((name) => clean(cookies[name]));
+  const hasTargetIdc = Boolean(clean(cookies["tt-target-idc"]));
+  const missing = [];
+  if (!hasSessionId) missing.push("sessionid");
+  if (!hasTargetIdc) missing.push("tt-target-idc");
+  return {
+    present: true,
+    valid: missing.length === 0,
+    missing,
+    cookieNames: Object.keys(cookies).filter((name) => TIKTOK_SESSION_COOKIE_NAMES.includes(name) || name === "tt-target-idc")
+  };
 }
 
 function createCreatorSession(role = "creator") {
@@ -1180,6 +1245,198 @@ async function saveCreator(input = {}) {
   }
 }
 
+function connectionStatusLabel(status) {
+  if (status === "connected") return "Connected";
+  if (status === "needs_attention") return "Needs attention";
+  return "Not connected";
+}
+
+function sanitizeConnection(row = {}, runtime = null) {
+  const provider = normalizeConnectionProvider(row.provider);
+  const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+  const hasSecret = Boolean(clean(row.access_token_encrypted) || metadata.has_session_cookie);
+  const runtimeError = runtime && runtime.error ? clean(runtime.error) : "";
+  const runtimeState = runtime
+    ? runtime.confidence === "confirmed"
+      ? (runtime.is_live ? "Live confirmed" : "Offline confirmed")
+      : runtimeError
+        ? "Needs attention"
+        : "Unknown"
+    : "Unknown";
+  const status = normalizeConnectionStatus(row.status, hasSecret ? "connected" : "not_connected");
+  return {
+    provider,
+    status,
+    status_label: connectionStatusLabel(status),
+    username: clean(row.username),
+    external_id: clean(row.external_id),
+    runtime_enabled: bool(row.runtime_enabled, false),
+    live_runtime_status: runtimeState,
+    last_sync_at: clean(row.last_sync_at),
+    last_error: clean(row.last_error) || runtimeError,
+    metadata: {
+      credential_kind: clean(metadata.credential_kind),
+      has_session_cookie: hasSecret,
+      oauth_connected: Boolean(metadata.oauth_connected),
+      runtime_requires_private_signing: metadata.runtime_requires_private_signing !== false,
+      beta_session_cookie: Boolean(metadata.beta_session_cookie),
+      live_runtime_source: runtime ? clean(runtime.source) : "",
+      live_runtime_confidence: runtime ? clean(runtime.confidence) : "",
+      live_runtime_stale: runtime ? Boolean(runtime.stale) : false
+    },
+    created_at: clean(row.created_at),
+    updated_at: clean(row.updated_at)
+  };
+}
+
+async function fetchCreatorRuntimeSnapshot(slug = "mosyaamosya") {
+  const fields = [
+    "creator_slug",
+    "username",
+    "is_live",
+    "confirmed",
+    "confidence",
+    "source",
+    "room_id",
+    "checked_at",
+    "last_event_at",
+    "stale",
+    "error",
+    "updated_at"
+  ].join(",");
+  const rows = await supabaseFetch(
+    "creator_live_runtime?creator_slug=eq." + encodeURIComponent(normalizeSlug(slug)) + "&select=" + fields + "&limit=1",
+    { context: "Creator connection runtime" }
+  );
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+function defaultTikTokConnection(runtime = null) {
+  return sanitizeConnection({
+    creator_slug: "mosyaamosya",
+    provider: "tiktok",
+    status: "not_connected",
+    username: DEFAULT_MINA_SETTINGS.tiktok_live_username,
+    runtime_enabled: true,
+    metadata: {
+      credential_kind: "",
+      has_session_cookie: false,
+      runtime_requires_private_signing: true
+    }
+  }, runtime);
+}
+
+async function fetchCreatorConnections(input = {}) {
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const runtime = await fetchCreatorRuntimeSnapshot(slug).catch(() => null);
+  let rows = [];
+  try {
+    rows = await supabaseFetch(
+      "creator_connections?creator_slug=eq." + encodeURIComponent(slug) +
+        "&select=creator_slug,provider,status,username,external_id,access_token_encrypted,session_reference,runtime_enabled,last_sync_at,last_error,metadata,created_at,updated_at&order=provider.asc",
+      { context: "Creator connections" }
+    );
+  } catch (error) {
+    return {
+      connections: [defaultTikTokConnection(runtime)],
+      runtime,
+      warning: error.statusCode === 404 ? "CREATOR_CONNECTIONS_TABLE_NOT_APPLIED" : (error.code || "CREATOR_CONNECTIONS_UNAVAILABLE")
+    };
+  }
+  const sanitized = Array.isArray(rows) ? rows.map((row) => sanitizeConnection(row, row.provider === "tiktok" ? runtime : null)) : [];
+  if (!sanitized.some((connection) => connection.provider === "tiktok")) sanitized.unshift(defaultTikTokConnection(runtime));
+  return { connections: sanitized, runtime };
+}
+
+function connectionPayload(input = {}) {
+  const provider = normalizeConnectionProvider(input.provider || "tiktok");
+  const username = normalizeUsername(input.username || input.tiktok_username || input.tiktokLiveUsername || DEFAULT_MINA_SETTINGS.tiktok_live_username);
+  const sessionCookie = clean(input.session_cookie || input.sessionCookie);
+  const sessionInfo = inspectTikTokSessionCookie(sessionCookie);
+  if (sessionCookie && !sessionInfo.valid) {
+    const error = new Error("TikTok session cookie is missing " + sessionInfo.missing.join(" and ") + ".");
+    error.statusCode = 400;
+    error.code = "INVALID_TIKTOK_SESSION_COOKIE";
+    throw error;
+  }
+  const now = new Date().toISOString();
+  const runtimeEnabled = bool(input.runtime_enabled, true);
+  const hasSessionCookie = sessionInfo.valid || bool(input.has_session_cookie, false);
+  const status = normalizeConnectionStatus(input.status, username ? "connected" : "not_connected");
+  return {
+    creator_slug: normalizeSlug(input.slug || "mosyaamosya"),
+    provider,
+    status: runtimeEnabled && !hasSessionCookie ? "needs_attention" : status,
+    username,
+    external_id: clean(input.external_id),
+    ...(sessionInfo.valid ? { access_token_encrypted: encryptConnectionSecret(sessionCookie) } : {}),
+    session_reference: sessionInfo.valid ? "supabase:creator_connections:" + provider + ":" + normalizeSlug(input.slug || "mosyaamosya") : clean(input.session_reference),
+    runtime_enabled: runtimeEnabled,
+    last_sync_at: now,
+    last_error: sessionInfo.valid || !runtimeEnabled ? "" : "LIVE runtime needs a creator session cookie and private signing provider before it can be confirmed.",
+    metadata: {
+      provider_version: "v1",
+      credential_kind: sessionInfo.valid ? "tiktok_session_cookie" : "",
+      has_session_cookie: hasSessionCookie,
+      cookie_names: sessionInfo.cookieNames || [],
+      beta_session_cookie: sessionInfo.valid,
+      oauth_connected: false,
+      oauth_capabilities: ["profile_identity"],
+      runtime_requires_private_signing: true,
+      runtime_gap: "TikTok OAuth does not provide WebCast LIVE runtime access.",
+      updated_by: "creator_admin"
+    },
+    updated_at: now
+  };
+}
+
+async function saveCreatorConnection(input = {}) {
+  const payload = connectionPayload(input);
+  const rows = await supabaseFetch("creator_connections?on_conflict=creator_slug,provider&select=creator_slug,provider,status,username,external_id,access_token_encrypted,session_reference,runtime_enabled,last_sync_at,last_error,metadata,created_at,updated_at", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=representation",
+    body: [payload],
+    context: "Creator connection save"
+  });
+  const runtime = await fetchCreatorRuntimeSnapshot(payload.creator_slug).catch(() => null);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
+  return sanitizeConnection(row, runtime);
+}
+
+async function disconnectCreatorConnection(input = {}) {
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const provider = normalizeConnectionProvider(input.provider || "tiktok");
+  const now = new Date().toISOString();
+  const payload = {
+    creator_slug: slug,
+    provider,
+    status: "disconnected",
+    username: normalizeUsername(input.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    external_id: "",
+    access_token_encrypted: null,
+    session_reference: null,
+    runtime_enabled: false,
+    last_sync_at: now,
+    last_error: "",
+    metadata: {
+      provider_version: "v1",
+      credential_kind: "",
+      has_session_cookie: false,
+      oauth_connected: false,
+      disconnected_at: now
+    },
+    updated_at: now
+  };
+  const rows = await supabaseFetch("creator_connections?on_conflict=creator_slug,provider&select=creator_slug,provider,status,username,external_id,access_token_encrypted,session_reference,runtime_enabled,last_sync_at,last_error,metadata,created_at,updated_at", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=representation",
+    body: [payload],
+    context: "Creator connection disconnect"
+  });
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
+  return sanitizeConnection(row, null);
+}
+
 async function fetchPollVotes(creator, pollKey) {
   let tableRows = [];
   try {
@@ -1836,6 +2093,29 @@ async function handleCreatorSettings(req, res) {
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
     }
+  }
+
+  if (input.action === "load_connections") {
+    const result = await fetchCreatorConnections(input);
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (input.action === "connect_tiktok" || input.action === "reconnect_tiktok") {
+    const connection = await saveCreatorConnection({
+      ...input.connection,
+      slug: input.slug || "mosyaamosya",
+      provider: "tiktok"
+    });
+    return send(res, 200, { success: true, connection });
+  }
+
+  if (input.action === "disconnect_tiktok") {
+    const connection = await disconnectCreatorConnection({
+      ...input.connection,
+      slug: input.slug || "mosyaamosya",
+      provider: "tiktok"
+    });
+    return send(res, 200, { success: true, connection });
   }
 
   if (input.action === "change_password") {

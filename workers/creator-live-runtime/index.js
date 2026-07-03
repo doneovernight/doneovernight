@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const { TikTokLiveConnection, WebcastEvent, ControlEvent } = require("tiktok-live-connector");
 
 const config = {
@@ -14,6 +15,7 @@ const config = {
   reconnectMaxMs: positiveInteger(process.env.RUNTIME_RECONNECT_MAX_MS, 300_000),
   signApiKey: clean(process.env.TIKTOK_SIGN_API_KEY),
   sessionCookie: clean(process.env.TIKTOK_SESSION_COOKIE),
+  sessionCookieSource: clean(process.env.TIKTOK_SESSION_COOKIE) ? "env" : "",
   allowPublicSigning: bool(process.env.TIKTOK_ALLOW_PUBLIC_SIGNING, false),
   authenticateWsWithSignServer: bool(process.env.TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER, false),
   trustedSignServerHost: clean(process.env.TIKTOK_SIGN_SERVER_TRUSTED_HOST || process.env.WHITELIST_AUTHENTICATED_SESSION_ID_HOST)
@@ -52,6 +54,32 @@ function bool(value, fallback = false) {
 
 function normalizeUsername(value) {
   return clean(value || "mosyaamosya").replace(/^@+/, "").toLowerCase().replace(/[^a-z0-9._-]/g, "") || "mosyaamosya";
+}
+
+function connectionSecret() {
+  return process.env.CREATOR_CONNECTIONS_SECRET || config.serviceRoleKey;
+}
+
+function connectionCipherKey() {
+  return crypto.createHash("sha256").update(connectionSecret() || "creator-connections-dev").digest();
+}
+
+function decryptConnectionSecret(value = "") {
+  const text = clean(value);
+  if (!text) return "";
+  const parts = text.split(":");
+  if (parts.length !== 4 || parts[0] !== "v1") {
+    const error = new Error("Unsupported Creator Connection secret format.");
+    error.code = "CONNECTION_SECRET_FORMAT_UNSUPPORTED";
+    throw error;
+  }
+  const [, ivText, tagText, encryptedText] = parts;
+  const decipher = crypto.createDecipheriv("aes-256-gcm", connectionCipherKey(), Buffer.from(ivText, "base64url"));
+  decipher.setAuthTag(Buffer.from(tagText, "base64url"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedText, "base64url")),
+    decipher.final()
+  ]).toString("utf8");
 }
 
 function parseCookieHeader(value = "") {
@@ -349,6 +377,100 @@ function applyRankUpdate(data = {}) {
   state.capabilities.rankings = true;
 }
 
+async function supabaseRest(pathname, options = {}) {
+  const response = await fetch(config.supabaseUrl + "/rest/v1/" + pathname, {
+    method: options.method || "GET",
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: "Bearer " + config.serviceRoleKey,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(options.prefer ? { Prefer: options.prefer } : {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (error) {
+    data = text || null;
+  }
+  if (!response.ok) {
+    const error = new Error("Supabase REST failed: " + response.status);
+    error.statusCode = response.status;
+    error.details = data;
+    throw error;
+  }
+  return data;
+}
+
+async function writeConnectionHeartbeat(status = "connected", lastError = "") {
+  try {
+    await supabaseRest("creator_connections?on_conflict=creator_slug,provider", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates",
+      body: [{
+        creator_slug: config.slug,
+        provider: "tiktok",
+        status,
+        username: config.username,
+        runtime_enabled: true,
+        last_sync_at: iso(),
+        last_error: clean(lastError),
+        metadata: {
+          provider_version: "v1",
+          credential_kind: config.sessionCookie ? "tiktok_session_cookie" : "",
+          runtime_source: "hetzner-worker",
+          has_session_cookie: Boolean(config.sessionCookie),
+          session_cookie_source: config.sessionCookieSource || "",
+          beta_session_cookie: config.sessionCookieSource === "creator_connections",
+          runtime_requires_private_signing: true
+        },
+        updated_at: iso()
+      }]
+    });
+  } catch (error) {}
+}
+
+async function refreshConnectionConfig() {
+  let rows = [];
+  try {
+    rows = await supabaseRest(
+      "creator_connections?creator_slug=eq." + encodeURIComponent(config.slug) +
+        "&provider=eq.tiktok&select=status,username,access_token_encrypted,runtime_enabled,last_error,metadata&limit=1"
+    );
+  } catch (error) {
+    if (error.statusCode !== 404) log("connection_config_unavailable", { statusCode: error.statusCode || null });
+    return;
+  }
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!row) return;
+  const status = clean(row.status || "not_connected");
+  if (row.runtime_enabled === false || status === "disconnected" || status === "not_connected") {
+    const error = new Error("Creator TikTok connection is not enabled for runtime.");
+    error.code = "RUNTIME_CONNECTION_DISABLED";
+    throw error;
+  }
+  if (row.username) config.username = normalizeUsername(row.username);
+  if (row.access_token_encrypted) {
+    try {
+      config.sessionCookie = decryptConnectionSecret(row.access_token_encrypted);
+      config.sessionCookieSource = "creator_connections";
+    } catch (error) {
+      error.code = error.code || "CONNECTION_SECRET_DECRYPT_FAILED";
+      throw error;
+    }
+  }
+  log("connection_config_loaded", {
+    provider: "tiktok",
+    status,
+    username: config.username,
+    runtimeEnabled: row.runtime_enabled !== false,
+    sessionCookie: config.sessionCookie ? "present" : "missing"
+  });
+}
+
 async function writeSnapshot(reason = "event") {
   updateDuration();
   const now = iso();
@@ -515,11 +637,13 @@ async function connect() {
   } catch (error) {}
 
   try {
+    await refreshConnectionConfig();
     const { options, session } = buildTikTokConnectionOptions();
     log("connect_start", {
       username: config.username,
       signing: config.signApiKey ? "dedicated-provider" : config.allowPublicSigning ? "public-provider-temporary" : "private-required",
       sessionCookie: session.valid ? "present" : config.sessionCookie ? "invalid" : "missing",
+      sessionCookieSource: config.sessionCookieSource || "",
       authenticateWs: Boolean(options.authenticateWs)
     });
     connection = new TikTokLiveConnection(config.username, options);
@@ -528,16 +652,21 @@ async function connect() {
     const connectedState = await connection.connect();
     setLive(connectedState || {});
     log("connect_resolved", { roomId: state.roomId });
+    await writeConnectionHeartbeat("connected", "");
     await safeWrite("connect");
   } catch (error) {
     const offlineCode = error && (error.name === "UserOfflineError" || error.code === "USER_OFFLINE");
     if (offlineCode) {
       setOffline(null);
       log("offline");
+      await writeConnectionHeartbeat("connected", "");
       await safeWrite("offline");
     } else {
       markStale(error && (error.code || error.message) || "RUNTIME_CONNECT_FAILED");
       log("connect_error", { message: state.error });
+      if (state.error !== "RUNTIME_CONNECTION_DISABLED") {
+        await writeConnectionHeartbeat("needs_attention", state.error);
+      }
       await safeWrite("connectError");
     }
     scheduleReconnect(reconnectDelayForError(error));

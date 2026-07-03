@@ -13,6 +13,7 @@ CREATOR_SLUG=mosyaamosya
 CREATOR_LIVE_USERNAME=mosyaamosya
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
+CREATOR_CONNECTIONS_SECRET=...
 ```
 
 Optional:
@@ -29,6 +30,8 @@ TIKTOK_ALLOW_PUBLIC_SIGNING=false
 TIKTOK_AUTHENTICATE_WS_WITH_SIGN_SERVER=false
 TIKTOK_SIGN_SERVER_TRUSTED_HOST=
 ```
+
+The worker first attempts to read TikTok connection config from Supabase `creator_connections` for `CREATOR_SLUG`. If that table or row is unavailable, it falls back to the env values below. This keeps the existing Hetzner worker stable while Creator OS moves provider setup into Creator Admin.
 
 ## TikTok Authentication And Signing
 

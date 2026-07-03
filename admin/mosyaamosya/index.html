@@ -367,6 +367,83 @@
     .stat-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
     .stat-card strong { display: block; margin-top: 7px; font-size: 18px; }
     .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .connection-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255,255,255,.045);
+      display: grid;
+      gap: 14px;
+    }
+    .connection-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .connection-title { display: grid; gap: 4px; }
+    .connection-title strong { font-size: 18px; }
+    .connection-title span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .connection-status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255,211,223,.14);
+      border-radius: 999px;
+      padding: 8px 10px;
+      color: rgba(255,245,247,.74);
+      background: rgba(0,0,0,.16);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .connection-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,245,247,.36);
+    }
+    .connection-status.connected::before { background: #86efac; box-shadow: 0 0 14px rgba(134,239,172,.28); }
+    .connection-status.needs_attention::before { background: #fbbf24; box-shadow: 0 0 14px rgba(251,191,36,.25); }
+    .connection-status.not_connected::before,
+    .connection-status.disconnected::before { background: rgba(255,245,247,.32); }
+    .connection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .connection-metric {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(0,0,0,.13);
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+    .connection-metric span {
+      color: rgba(255,245,247,.48);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .connection-metric strong {
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+    .connection-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .connection-beta {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(0,0,0,.14);
+    }
+    .connection-beta summary {
+      cursor: pointer;
+      color: rgba(255,245,247,.76);
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .connection-beta .fields { margin-top: 12px; }
     .runtime-board { display: grid; gap: 14px; width: 100%; max-width: 100%; min-width: 0; overflow: visible; }
     .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; min-width: 0; max-width: 100%; overflow: hidden; }
     .runtime-section,
@@ -608,7 +685,9 @@
       .fields { grid-template-columns: 1fr; }
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
-      .overview-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .overview-grid, .connection-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .connection-head { flex-direction: column; }
+      .connection-status { align-self: flex-start; }
       .runtime-section { padding: 12px; border-radius: 16px; }
       .runtime-actions .button { min-height: 50px; }
       .pulse-card.wide { grid-column: auto; }
@@ -673,6 +752,7 @@
       <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience">Experience</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="connections">Connections</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
@@ -690,6 +770,47 @@
             <div class="stat-card"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
             <div class="stat-card"><span>Last Save</span><strong id="overviewLastSave">Not yet</strong></div>
           </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="connections" hidden>
+          <h2>Connections</h2>
+          <div class="section-note">Connect the platforms that power your creator workspace.</div>
+          <div style="height:12px"></div>
+          <section class="connection-card" data-provider="tiktok">
+            <div class="connection-head">
+              <div class="connection-title">
+                <strong>TikTok</strong>
+                <span>Profile identity now. Live Runtime uses a secure server-side connection when available.</span>
+              </div>
+              <span class="connection-status not_connected" id="tiktokConnectionStatus">Not connected</span>
+            </div>
+            <div class="connection-grid">
+              <div class="connection-metric"><span>Username</span><strong id="tiktokConnectionUsername">@mosyaamosya</strong></div>
+              <div class="connection-metric"><span>Live Runtime</span><strong id="tiktokConnectionRuntime">Unknown</strong></div>
+              <div class="connection-metric"><span>Last sync</span><strong id="tiktokConnectionLastSync">Never</strong></div>
+              <div class="connection-metric"><span>Attention</span><strong id="tiktokConnectionError">None</strong></div>
+            </div>
+            <div class="fields">
+              <label>Username<input id="tiktokConnectionUsernameInput" autocomplete="off" placeholder="mosyaamosya"></label>
+            </div>
+            <div class="connection-actions">
+              <button class="button primary" id="connectTikTok" type="button">Connect TikTok</button>
+              <button class="button" id="reconnectTikTok" type="button">Reconnect</button>
+              <button class="button danger" id="disconnectTikTok" type="button">Disconnect</button>
+            </div>
+            <details class="connection-beta">
+              <summary>Internal beta runtime access</summary>
+              <div class="fields">
+                <label class="span-2">TikTok session cookie<textarea id="tiktokSessionCookie" autocomplete="off" spellcheck="false" placeholder="Paste only while configuring the beta runtime"></textarea></label>
+                <div class="switch-row span-2">
+                  <div><strong>Live Runtime enabled</strong><span>Uses server-side runtime only. Secrets are never exposed publicly.</span></div>
+                  <label class="switch" aria-label="TikTok runtime enabled"><input id="tiktokRuntimeEnabled" type="checkbox" checked><span class="track"></span></label>
+                </div>
+              </div>
+              <div class="help-panel">Official TikTok OAuth can identify the account, but it does not provide LIVE WebCast runtime access. This beta field stores an encrypted server-side session reference for the Hetzner worker.</div>
+            </details>
+            <div class="status" id="connectionsStatus" aria-live="polite"></div>
+          </section>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
@@ -1190,6 +1311,7 @@
     let saveFadeTimer = 0;
     let unlockResetTimer = 0;
     let pendingSaveScroll = null;
+    let latestConnections = [];
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
     form.noValidate = true;
@@ -2324,10 +2446,12 @@
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
         panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
       });
-      $("saveFloating").hidden = active === "overview" || active === "analytics";
+      $("saveFloating").hidden = active === "overview" || active === "analytics" || active === "connections";
       if (active === "runtime") {
         loadLiveRuntime();
         loadResponses();
+      } else if (active === "connections") {
+        loadConnections();
       } else if (active === "analytics") {
         loadAnalytics();
       }
@@ -2415,6 +2539,92 @@
       }
       return data;
     }
+    function formatConnectionDate(value) {
+      if (!value) return "Never";
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return "Never";
+      return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+    function renderConnections(connections = []) {
+      latestConnections = Array.isArray(connections) ? connections : [];
+      const tiktok = latestConnections.find((connection) => connection.provider === "tiktok") || {};
+      const status = String(tiktok.status || "not_connected");
+      const statusLabel = tiktok.status_label || (status === "connected" ? "Connected" : status === "needs_attention" ? "Needs attention" : "Not connected");
+      const statusEl = $("tiktokConnectionStatus");
+      statusEl.textContent = statusLabel;
+      statusEl.className = "connection-status " + status;
+      $("tiktokConnectionUsername").textContent = tiktok.username ? "@" + tiktok.username : "Not set";
+      $("tiktokConnectionRuntime").textContent = tiktok.live_runtime_status || "Unknown";
+      $("tiktokConnectionLastSync").textContent = formatConnectionDate(tiktok.last_sync_at || tiktok.updated_at);
+      $("tiktokConnectionError").textContent = tiktok.last_error || "None";
+      $("tiktokConnectionUsernameInput").value = tiktok.username || form.elements.tiktok_live_username.value || "mosyaamosya";
+      $("tiktokRuntimeEnabled").checked = tiktok.runtime_enabled !== false;
+      $("connectTikTok").textContent = status === "connected" ? "Update TikTok" : "Connect TikTok";
+    }
+    async function loadConnections() {
+      setStatus("Loading connections...", false, "connectionsStatus");
+      try {
+        const data = await api({ action: "load_connections", creator_session: creatorSession(), slug: "mosyaamosya" });
+        renderConnections(data.connections || []);
+        setStatus(data.warning ? "Connections loaded. Apply the Creator Connections SQL to enable persistent storage." : "Connections loaded.", Boolean(data.warning), "connectionsStatus");
+      } catch (error) {
+        setStatus(readableMessage(error, "Could not load connections."), true, "connectionsStatus");
+      }
+    }
+    function tiktokConnectionPayload() {
+      return {
+        provider: "tiktok",
+        username: $("tiktokConnectionUsernameInput").value.trim() || "mosyaamosya",
+        runtime_enabled: $("tiktokRuntimeEnabled").checked,
+        session_cookie: $("tiktokSessionCookie").value.trim()
+      };
+    }
+    async function saveTikTokConnection(action) {
+      const button = action === "reconnect_tiktok" ? $("reconnectTikTok") : $("connectTikTok");
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Saving...";
+      setStatus("", false, "connectionsStatus");
+      try {
+        const data = await api({
+          action,
+          creator_session: creatorSession(),
+          slug: "mosyaamosya",
+          connection: tiktokConnectionPayload()
+        });
+        $("tiktokSessionCookie").value = "";
+        renderConnections([data.connection]);
+        if (form.elements.tiktok_live_username) form.elements.tiktok_live_username.value = data.connection.username || "mosyaamosya";
+        setStatus(action === "reconnect_tiktok" ? "TikTok reconnected." : "TikTok connection saved.", false, "connectionsStatus");
+      } catch (error) {
+        setStatus(readableMessage(error, "Could not save TikTok connection."), true, "connectionsStatus");
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+    async function disconnectTikTokConnection() {
+      const button = $("disconnectTikTok");
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Disconnecting...";
+      try {
+        const data = await api({
+          action: "disconnect_tiktok",
+          creator_session: creatorSession(),
+          slug: "mosyaamosya",
+          connection: { username: $("tiktokConnectionUsernameInput").value.trim() || "mosyaamosya" }
+        });
+        $("tiktokSessionCookie").value = "";
+        renderConnections([data.connection]);
+        setStatus("TikTok disconnected.", false, "connectionsStatus");
+      } catch (error) {
+        setStatus(readableMessage(error, "Could not disconnect TikTok."), true, "connectionsStatus");
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
     async function login(password) {
       setLoginStatus("");
       const data = await api({ action: "login", creator_password: password, slug: "mosyaamosya" });
@@ -2428,6 +2638,7 @@
       const data = await api({ action: "load", creator_session: creatorSession(), slug: "mosyaamosya" });
       fillForm(data.creator);
       openApp();
+      loadConnections();
       setStatus("Loaded Mina Mosya settings.");
     }
     async function saveSettings() {
@@ -2659,6 +2870,9 @@
     $("refreshResponses").addEventListener("click", loadResponses);
     $("resetPollResults").addEventListener("click", resetPollResults);
     $("exportNewsletterCsv").addEventListener("click", exportNewsletterCsv);
+    $("connectTikTok").addEventListener("click", () => saveTikTokConnection("connect_tiktok"));
+    $("reconnectTikTok").addEventListener("click", () => saveTikTokConnection("reconnect_tiktok"));
+    $("disconnectTikTok").addEventListener("click", disconnectTikTokConnection);
     document.querySelectorAll("[data-analytics-action]").forEach((button) => {
       button.addEventListener("click", async () => {
         try { await runAnalyticsAction(button.dataset.analyticsAction); } catch (error) { setStatus(readableMessage(error, "Analytics action failed."), true, "analyticsStatus"); }
