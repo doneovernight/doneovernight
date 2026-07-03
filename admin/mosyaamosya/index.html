@@ -745,8 +745,11 @@
               <input name="tiktok_live_username" type="hidden">
               <input name="auto_live_detection_enabled" type="hidden" value="true">
               <input name="live_status" type="hidden" value="false">
-              <input name="manual_live_fallback_enabled" type="hidden" value="true">
               <input name="battle_mode_enabled" type="hidden" value="false">
+              <div class="switch-row">
+                <div><strong>Manual live mode</strong><span>Use only when automatic detection is unavailable.</span></div>
+                <label class="switch" aria-label="Manual live mode"><input id="manualLiveModeControl" name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
+              </div>
             </div>
 
             <div class="runtime-section">
@@ -1442,7 +1445,7 @@
     }
     function updateOverview(updatedAt) {
       const snapshot = battleSnapshot();
-      if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = boolField("live_status") || boolField("manual_live_fallback_enabled", true) ? "Live" : "Offline";
+      if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = boolField("live_status") ? (boolField("manual_live_fallback_enabled", true) ? "Manual live" : "Live") : "Offline";
       if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = snapshot.battle_mode_enabled ? "Active" : "Inactive";
       if ($("overviewWinStreak")) $("overviewWinStreak").textContent = String(snapshot.battle_win_streak || 0);
       if ($("overviewLastSave")) {
@@ -1661,20 +1664,36 @@
         const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { headers: { Accept: "application/json" } });
         const data = await response.json();
         const capabilities = data.capabilities || {};
+        const source = data.source || "unknown";
+        const confidence = data.confidence || (data.confirmed ? "confirmed" : "unknown");
+        const manualMode = data.manualMode === true || boolField("manual_live_fallback_enabled", true);
+        const blocked = data.error && /blocked|403|429|captcha|forbidden|rate/i.test(String(data.error));
+        const manualNotice = source === "manual-fallback"
+          ? (manualMode ? "Manual live mode is active." : "Live status unconfirmed.")
+          : "";
+        const blockedNotice = blocked
+          ? "TikTok blocked automatic detection. Manual live mode is " + (manualMode ? "active." : "available but off.")
+          : data.error === "AUTO_RUNTIME_NOT_CONFIGURED"
+          ? "Automatic live provider is not configured. Manual live mode is " + (manualMode ? "active." : "available but off.")
+          : "";
         const viewer = capabilities.viewerCount === true && Number.isFinite(Number(data.viewerCount)) ? Number(data.viewerCount).toLocaleString() : "unavailable";
         const streak = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? Number(data.battleWinStreak).toLocaleString() : "not set";
         const error = data.error ? data.error : "none";
         status.textContent = [
           "Last checked: " + (data.checkedAt || "unknown"),
           "Status: " + (data.isLive ? "LIVE NOW" : "Offline"),
-          "Source: " + (data.source || "unknown"),
+          "Source: " + source,
+          "Confidence: " + confidence,
+          "Manual override: " + (manualMode ? "ON" : "OFF"),
+          manualNotice,
+          blockedNotice,
           "Viewer count: " + viewer,
           "Battle mode: " + (data.battleActive ? "active" : "inactive"),
           "Win streak: " + streak,
           "Runtime error: " + error,
           "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", battleWinStreak=" + Boolean(capabilities.battleWinStreak) + ", gifts=" + Boolean(capabilities.gifts)
-        ].join(". ") + ".";
-        if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? "Live" : "Offline";
+        ].filter(Boolean).join(". ") + ".";
+        if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? (data.confirmed ? "Live" : "Manual live") : "Offline";
         if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = data.battleActive ? "Active" : "Inactive";
         if ($("overviewWinStreak")) $("overviewWinStreak").textContent = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? String(data.battleWinStreak) : String(Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)));
       } catch (error) {
@@ -1808,6 +1827,16 @@
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
     $("addCustomLink").addEventListener("click", addCustomLink);
+    $("manualLiveModeControl").addEventListener("change", async () => {
+      updateOverview();
+      try {
+        await saveSettings();
+        await loadLiveRuntime();
+        setStatus("Manual live mode updated.");
+      } catch (error) {
+        setStatus(error.message || "Manual live mode update failed", true);
+      }
+    });
     $("savePassword").addEventListener("click", savePassword);
     ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);

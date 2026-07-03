@@ -1074,6 +1074,7 @@
     const introKey = "creator_intro_mosyaamosya_v1";
     let countdownTimer = null;
     let liveRuntimeTimer = null;
+    let liveVisibilityHandler = null;
     let currentSettings = { ...fallback };
     const blockRegistry = {
       link: { implemented: true },
@@ -1269,31 +1270,49 @@
       }));
     }
 
+    function confirmedLiveSource(source) {
+      return source === "provider" || source === "runtime" || source === "confirmed";
+    }
+
     function applyLiveState(liveState, settings) {
+      const source = String(liveState && liveState.source || "");
+      const loadingStatus = source === "loading";
+      const confirmed = liveState && (liveState.confirmed === true || confirmedLiveSource(source));
       const isLive = Boolean(liveState && liveState.isLive);
+      const manualLive = !confirmed && source === "manual-fallback" && liveState.manualMode === true && isLive;
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
-      const hasBattleMode = liveState.battleActive === true && capabilities.battleActive === true && featureOn(settings, "battle_link_visible", true);
-      const displayLive = isLive || hasBattleMode;
+      const hasBattleMode = liveState && liveState.battleActive === true && capabilities.battleActive === true && featureOn(settings, "battle_link_visible", true);
+      const displayLive = (confirmed && isLive) || manualLive || hasBattleMode;
+      const confirmedOffline = confirmed && !isLive && !hasBattleMode;
+      const unknownStatus = !loadingStatus && !displayLive && !confirmedOffline;
       const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
       const hasRealLikeCount = displayLive && capabilities.likeCount === true && Number.isFinite(Number(liveState.likeCount));
       const hasLiveDuration = displayLive && capabilities.liveDuration === true && typeof liveState.liveDuration === "string" && liveState.liveDuration.trim();
       const hasManualStreak = hasBattleMode && capabilities.battleWinStreak === true && Number.isFinite(Number(liveState.battleWinStreak)) && Number(liveState.battleWinStreak) > 0;
       document.body.classList.toggle("is-live", displayLive);
-      $("statusPill").querySelector("span:last-child").textContent = displayLive ? "Live" : "Offline";
-      setText("liveTitle", hasBattleMode ? "Battle Mode" : (displayLive ? "LIVE NOW" : "Offline"));
+      $("statusPill").querySelector("span:last-child").textContent = loadingStatus ? "Checking" : (displayLive ? "Live" : (unknownStatus ? "Unknown" : "Offline"));
+      setText("liveTitle", loadingStatus ? "Checking live status" : (hasBattleMode ? "Battle Mode" : (displayLive ? "LIVE NOW" : (unknownStatus ? "Live status unavailable" : "Offline"))));
       if (hasBattleMode) {
         setText("liveCopy", "Support the Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
-        setText("liveCopy", displayLive ? "" : "See you at the next stream.");
+        setText("liveCopy", displayLive ? "" : (loadingStatus ? "" : (unknownStatus ? "Watch Mina on TikTok." : "Live soon")));
       }
       setLiveMeta([
-        hasRealLikeCount ? compactNumber(liveState.likeCount) + " likes" : "",
-        hasLiveDuration ? "Live for " + liveState.liveDuration.trim() : ""
+        hasRealLikeCount && confirmed ? compactNumber(liveState.likeCount) + " likes" : "",
+        hasLiveDuration && confirmed ? "Live for " + liveState.liveDuration.trim() : ""
       ]);
 
       const cta = $("primaryCta");
+      if (loadingStatus) {
+        cta.textContent = "Checking...";
+        cta.href = "#";
+        cta.setAttribute("aria-disabled", "true");
+        cta.removeAttribute("target");
+        cta.removeAttribute("rel");
+        return;
+      }
       if (displayLive) {
         const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
         cta.textContent = hasBattleMode ? textSetting(settings, "battle_link_cta_label", "Prepare") : (settings.live_button_text || "Join Live");
@@ -1304,6 +1323,14 @@
         return;
       }
 
+      if (unknownStatus) {
+        cta.textContent = "Watch TikTok";
+        cta.href = safeUrl(settings.tiktok_url) || fallbackLiveUrl(settings);
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+        cta.removeAttribute("aria-disabled");
+        return;
+      }
       cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
       cta.href = "#";
       cta.setAttribute("aria-disabled", "true");
@@ -1312,7 +1339,6 @@
     }
 
     async function refreshLiveRuntime(settings) {
-      if (settings.auto_live_detection_enabled === false && !settings.manual_live_fallback_enabled) return;
       try {
         const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "mosyaamosya"), {
           headers: { Accept: "application/json" }
@@ -1322,17 +1348,28 @@
         applyLiveState(liveState, settings);
       } catch (error) {
         applyLiveState({
-          isLive: Boolean(settings.manual_live_fallback_enabled || settings.live_status),
+          isLive: false,
           liveUrl: fallbackLiveUrl(settings),
-          viewerCount: null
+          viewerCount: null,
+          source: "error",
+          confidence: "unknown",
+          confirmed: false,
+          manualMode: false,
+          error: "LIVE_RUNTIME_UNAVAILABLE",
+          capabilities: {}
         }, settings);
       }
     }
 
     function setupLiveRuntime(settings) {
       if (liveRuntimeTimer) clearInterval(liveRuntimeTimer);
+      if (liveVisibilityHandler) document.removeEventListener("visibilitychange", liveVisibilityHandler);
       refreshLiveRuntime(settings);
-      liveRuntimeTimer = window.setInterval(() => refreshLiveRuntime(settings), 60000);
+      liveRuntimeTimer = window.setInterval(() => refreshLiveRuntime(settings), 45000);
+      liveVisibilityHandler = () => {
+        if (document.visibilityState === "visible") refreshLiveRuntime(settings);
+      };
+      document.addEventListener("visibilitychange", liveVisibilityHandler);
     }
 
     function creatorTimeParts(timezone) {
@@ -1985,9 +2022,14 @@
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       $("heroVideo").src = heroVideo(settings);
       applyLiveState({
-        isLive: Boolean(settings.live_status),
+        isLive: false,
         liveUrl: fallbackLiveUrl(settings),
-        viewerCount: null
+        viewerCount: null,
+        source: "loading",
+        confidence: "unknown",
+        confirmed: false,
+        manualMode: false,
+        capabilities: {}
       }, settings);
       const nextDate = nextLiveDate(settings);
       const countdown = $("countdown");
