@@ -322,10 +322,11 @@ function attachHandlers(nextConnection) {
   });
 
   nextConnection.on(ControlEvent.DISCONNECTED, async () => {
+    const hadConfirmedRoom = Boolean(state.isLive && state.roomId);
     markDisconnected();
     log("disconnected");
     await safeWrite("disconnected");
-    scheduleReconnect();
+    scheduleReconnect(hadConfirmedRoom ? 60_000 : null);
   });
 
   nextConnection.on(WebcastEvent.STREAM_END, async () => {
