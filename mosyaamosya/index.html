@@ -1520,8 +1520,12 @@
       return settings[key] === undefined ? fallbackValue : settings[key] === true;
     }
 
+    function communityUrl(settings) {
+      return safeUrl(settings.community_link_url);
+    }
+
     function communityEnabled(settings) {
-      return featureOn(settings, "community_link_visible", true) && Boolean(safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url));
+      return featureOn(settings, "community_link_visible", true) && Boolean(communityUrl(settings));
     }
 
     function discordEnabled(settings) {
@@ -1548,9 +1552,11 @@
       const grid = $("buttonGrid");
       if (!grid) return;
       grid.innerHTML = "";
+      let renderedActions = 0;
       actions.forEach((action) => {
         const url = action.url || actionUrl(action, settings);
         if (!url) return;
+        renderedActions += 1;
         const item = document.createElement(url ? "a" : "div");
         item.className = "link-button content-block";
         item.dataset.blockType = action.key === "discord" ? "discord" : "link";
@@ -1565,7 +1571,7 @@
           escapeHtml(action.label) + '</span>';
         grid.appendChild(item);
       });
-      if (!actions.length) grid.remove();
+      if (!renderedActions) grid.remove();
     }
 
     function renderPinnedBlock(settings) {
@@ -1574,13 +1580,14 @@
       const announcement = String(settings.quick_announcement || "").trim();
       const poll = String(settings.quick_poll || "").trim();
       const nextDate = nextLiveDate(settings);
-      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
+      const activeCommunityUrl = communityUrl(settings);
+      const battleUrl = safeUrl(settings.tiktok_coins_url);
       const content = {
-        prepare: featureOn(settings, "battle_link_visible", true) ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
+        prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
         faq: featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
         poll: poll ? ["Poll", poll] : null,
         announcement: ["Announcement", announcement || "No announcement yet."],
-        community: !communityEnabled(settings) || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
+        community: !communityEnabled(settings) || !activeCommunityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
         newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
         countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
       }[block];
@@ -1617,15 +1624,15 @@
 
     function renderCommunity(settings) {
       removeElement("communityCard");
-      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
-      if (!communityEnabled(settings) || !communityUrl) return;
+      const activeCommunityUrl = communityUrl(settings);
+      if (!communityEnabled(settings) || !activeCommunityUrl) return;
       const card = document.createElement("section");
       card.className = "community-card";
       card.id = "communityCard";
       card.innerHTML =
         '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>' +
         escapeHtml(textSetting(settings, "community_link_subtitle", "Join Mina\\'s Discord for stream updates and community drops.")) +
-        '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(communityUrl) + '" target="_blank" rel="noreferrer">' +
+        '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(activeCommunityUrl) + '" target="_blank" rel="noreferrer">' +
         escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
       const grid = $("buttonGrid");
       const shell = document.querySelector(".shell");
@@ -1747,7 +1754,7 @@
         shareItems.splice(4, 0, [
           textSetting(settings, "community_link_title", "Community"),
           textSetting(settings, "community_link_subtitle", "Open Mina's community"),
-          safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url)
+          communityUrl(settings)
         ]);
       }
       if (discordEnabled(settings)) {
