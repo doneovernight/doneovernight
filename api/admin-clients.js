@@ -371,7 +371,7 @@ function normalizeTheme(value) {
 }
 
 function normalizeCreatorDna(value) {
-  const allowed = new Set(["artist", "streamer", "influencer", "podcaster", "founder", "gamer"]);
+  const allowed = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
   const dna = clean(value || DEFAULT_MINA_SETTINGS.creator_dna).toLowerCase();
   return allowed.has(dna) ? dna : DEFAULT_MINA_SETTINGS.creator_dna;
 }

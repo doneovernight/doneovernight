@@ -18,6 +18,7 @@
       --danger: #fb7185;
       --admin-bg-a: rgba(255,211,223,.18);
       --admin-bg-b: rgba(139,95,74,.22);
+      --glass-panel: linear-gradient(140deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -59,15 +60,15 @@
     .gate { min-height: 100svh; display: grid; place-items: start center; padding: 28px 14px; }
     .gate-card, .panel {
       border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(255,245,247,.075);
-      box-shadow: 0 24px 70px rgba(0,0,0,.3);
-      backdrop-filter: blur(18px);
+      border-radius: 22px;
+      background: var(--glass-panel);
+      box-shadow: 0 18px 56px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.14);
+      backdrop-filter: blur(18px) saturate(1.12);
     }
     .gate-card { width: min(430px, 100%); padding: 22px; }
     .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; }
     .stack { display: grid; gap: 16px; }
-    .panel { padding: 18px; }
+    .panel { padding: 20px; }
     .panel h2 { margin: 0 0 14px; font-size: 18px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 850; }
@@ -75,10 +76,10 @@
       width: 100%;
       min-width: 0;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(0,0,0,.22);
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
       color: var(--text);
-      padding: 12px;
+      padding: 13px 14px;
       outline: none;
     }
     textarea { min-height: 110px; resize: vertical; }
@@ -103,8 +104,9 @@
     .switch input:checked + .track { background: var(--accent); }
     .switch input:checked + .track::after { transform: translateX(24px); background: #24100e; }
     .theme-grid, .dna-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .theme-option { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.055); color: var(--text); padding: 10px; display: grid; gap: 8px; cursor: pointer; text-align: left; font-weight: 850; }
-    .theme-option[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.13); }
+    .theme-option { border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.055); color: var(--text); padding: 12px; display: grid; gap: 9px; cursor: pointer; text-align: left; font-weight: 850; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+    .theme-option:hover { transform: translateY(-1px); background: rgba(255,255,255,.08); }
+    .theme-option[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.13), inset 0 1px rgba(255,255,255,.16); }
     .swatch { height: 34px; border-radius: 10px; }
     .mina { background: linear-gradient(135deg, #ffd3df, #8b5f4a 48%, #160b09); }
     .rose { background: linear-gradient(135deg, #fb7185, #f0abfc); }
@@ -162,7 +164,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">DONEOVERNIGHT Creator OS / Phase 2.1</div>
+        <div class="eyebrow">DONEOVERNIGHT Creator OS / Revision 2</div>
         <h1>Mina Mosya</h1>
         <div class="muted">Public page: <a href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">doneovernight.com/mosyaamosya</a></div>
       </div>
@@ -304,12 +306,11 @@
             </div>
             <div class="span-2 status" id="passwordStatus"></div>
             <div class="span-2 help-panel">
-              <strong>Install Creator OS</strong><br>
-              iPhone: open Experience My Page in Safari, tap Share, then Add to Home Screen.<br>
-              Android: open in Chrome, tap the menu, then Add to Home screen.<br>
-              Creator OS uses the DONEOVERNIGHT branded icon. Theme can change the feel; reinstall may be needed after icon-style changes.
+              <strong>Quick Access</strong><br>
+              Add to Home Screen for a faster creator dashboard feel.<br>
+              Preview icon: DONEOVERNIGHT wordmark. Mina can choose an icon theme; changing it later may require reinstalling.
             </div>
-            <a class="button span-2" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Install Creator OS</a>
+            <a class="button span-2" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Open Quick Access</a>
           </div>
         </section>
 
@@ -367,12 +368,17 @@
       founder: ["#e9c48a", "#111827", "rgba(233,196,138,.16)", "rgba(17,24,39,.24)"]
     };
     const dnaOptions = [
-      ["artist", "Artist", "Visual-first layout, softer drops, expressive intro prompts."],
       ["streamer", "Streamer", "Live-first CTA, Discord community, countdown priority."],
       ["influencer", "Influencer", "Social proof, collabs, and platform links first."],
-      ["podcaster", "Podcaster", "Episode cadence, audio-first prompts, guest CTAs."],
       ["founder", "Founder", "Business CTA, launches, waitlists, credibility blocks."],
-      ["gamer", "Gamer", "Live status, community, clips, and high-contrast prompts."]
+      ["artist", "Artist", "Visual-first layout, softer drops, expressive intro prompts."],
+      ["musician", "Musician", "Audio, releases, shows, and fan membership prompts."],
+      ["podcaster", "Podcaster", "Episode cadence, audio-first prompts, guest CTAs."],
+      ["gamer", "Gamer", "Live status, community, clips, and high-contrast prompts."],
+      ["realtor", "Realtor", "Listings, neighborhoods, lead capture, and trust blocks."],
+      ["coach", "Coach", "Programs, proof, booking, and newsletter conversion."],
+      ["restaurant", "Restaurant", "Menu, reservations, events, and local discovery."],
+      ["business", "Business", "Offer, credibility, contact, and productized services."]
     ];
     let activeTheme = "mina";
     let activeDna = "streamer";
@@ -478,11 +484,21 @@
       document.documentElement.style.setProperty("--admin-bg-a", vars[2]);
       document.documentElement.style.setProperty("--admin-bg-b", vars[3]);
     }
-    function updatePreviewFrame(refresh = true) {
+    function previewUrl() {
       const url = new URL("https://doneovernight.com/mosyaamosya");
       url.searchParams.set("preview", "1");
       url.searchParams.set("preview_theme", activeTheme);
       url.searchParams.set("creator_dna", activeDna);
+      return url;
+    }
+    function sendPreviewTheme() {
+      const frame = $("previewFrame");
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({ type: "creator-theme-preview", theme_preset: activeTheme, creator_dna: activeDna }, "https://doneovernight.com");
+      }
+    }
+    function updatePreviewFrame(refresh = true) {
+      const url = previewUrl();
       if (refresh) url.searchParams.set("refresh", Date.now());
       $("previewFrame").src = url.href;
     }
@@ -499,7 +515,7 @@
           activeTheme = value;
           applyAdminTheme(activeTheme);
           renderThemes();
-          updatePreviewFrame();
+          sendPreviewTheme();
         });
         grid.appendChild(button);
       });
@@ -518,7 +534,7 @@
         button.addEventListener("click", () => {
           activeDna = value;
           renderDna();
-          updatePreviewFrame();
+          sendPreviewTheme();
         });
         grid.appendChild(button);
       });
@@ -641,6 +657,7 @@
     renderThemes();
     renderDna();
     applyAdminTheme(activeTheme);
+    $("previewFrame").addEventListener("load", sendPreviewTheme);
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
       loadSettings().catch(() => {
         sessionStorage.removeItem(sessionFlag);

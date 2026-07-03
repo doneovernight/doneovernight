@@ -40,6 +40,10 @@
       --ambient-video-opacity: .82;
       --ambient-card-shadow: rgba(0,0,0,.26);
       --ambient-primary-glow: rgba(255,159,189,.32);
+      --glass-bg: linear-gradient(140deg, rgba(255,255,255,.16), rgba(255,255,255,.055) 54%, rgba(255,255,255,.025));
+      --glass-line: rgba(255,245,247,.18);
+      --glass-highlight: rgba(255,255,255,.28);
+      --glass-shadow: 0 18px 54px rgba(0,0,0,.24);
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -99,8 +103,9 @@
       border: 1px solid rgba(255,211,223,.18);
       border-radius: 34px;
       background: linear-gradient(160deg, #26100c, #080504);
-      box-shadow: var(--shadow), inset 0 1px rgba(255,255,255,.18);
+      box-shadow: 0 22px 74px rgba(5,2,1,.38), inset 0 1px rgba(255,255,255,.2);
       isolation: isolate;
+      transform: translateZ(0);
     }
     .hero-video {
       position: absolute;
@@ -108,9 +113,10 @@
       width: 106%;
       height: 106%;
       object-fit: cover;
-      filter: blur(.55px) saturate(var(--ambient-hero-saturate)) contrast(1.04) brightness(var(--ambient-hero-brightness));
-      transform: scale(1.012);
-      opacity: var(--ambient-video-opacity);
+      filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
+      transform: scale(1.006);
+      opacity: calc(var(--ambient-video-opacity) + .04);
+      animation: heroBreath 18s ease-in-out infinite;
       z-index: -3;
     }
     .hero::before {
@@ -138,6 +144,11 @@
       gap: 12px;
       padding: 16px;
     }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .status-pill, .mini-pill {
       display: inline-flex;
       align-items: center;
@@ -151,7 +162,23 @@
       backdrop-filter: blur(18px);
       font-size: 12px;
       font-weight: 900;
-      box-shadow: inset 0 1px rgba(255,255,255,.14);
+      box-shadow: inset 0 1px rgba(255,255,255,.14), 0 10px 30px rgba(0,0,0,.16);
+      position: relative;
+      overflow: hidden;
+    }
+    .status-pill::before, .mini-pill::before {
+      content: "";
+      position: absolute;
+      inset: 1px 8px auto 8px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
+      opacity: .55;
+    }
+    .share-trigger {
+      min-width: 38px;
+      justify-content: center;
+      color: var(--pink);
+      cursor: pointer;
     }
     a.mini-pill { cursor: pointer; }
     a.mini-pill:focus-visible {
@@ -229,18 +256,31 @@
       line-height: 1.48;
       text-wrap: pretty;
     }
-    .live-card, .glass-card, .link-button {
-      border: 1px solid var(--line);
-      background: linear-gradient(135deg, rgba(255,245,247,.13), rgba(255,245,247,.055));
-      box-shadow: inset 0 1px rgba(255,255,255,.14), 0 20px 62px var(--ambient-card-shadow);
-      backdrop-filter: blur(22px);
+    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card, .explore-card {
+      position: relative;
+      border: 1px solid var(--glass-line);
+      background: var(--glass-bg);
+      box-shadow: inset 0 1px rgba(255,255,255,.16), var(--glass-shadow);
+      backdrop-filter: blur(18px) saturate(1.14);
+      overflow: hidden;
+    }
+    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .explore-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.18), transparent 34%),
+        radial-gradient(circle at 18% 0%, rgba(255,255,255,.12), transparent 18rem);
+      opacity: .62;
     }
     .live-card {
       display: grid;
       gap: 12px;
-      border-radius: 24px;
+      border-radius: 26px;
       padding: 16px;
     }
+    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > *, .explore-card > * { position: relative; z-index: 1; }
     .live-copy {
       display: flex;
       justify-content: space-between;
@@ -263,7 +303,7 @@
     .primary {
       min-height: 54px;
       border: 0;
-      border-radius: 17px;
+      border-radius: 18px;
       background: linear-gradient(135deg, var(--pink), var(--pink-strong));
       color: #25110f;
       display: flex;
@@ -272,8 +312,11 @@
       gap: 10px;
       font-size: 16px;
       font-weight: 950;
-      box-shadow: 0 18px 54px var(--ambient-primary-glow);
+      box-shadow: 0 14px 36px var(--ambient-primary-glow), inset 0 1px rgba(255,255,255,.35);
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
     }
+    .primary:not([aria-disabled="true"]):hover { transform: translateY(-1px); filter: saturate(1.04); }
+    .primary:not([aria-disabled="true"]):active { transform: translateY(1px) scale(.992); }
     .primary[aria-disabled="true"] {
       border: 1px solid rgba(255,245,247,.14);
       background: rgba(255,245,247,.08);
@@ -286,14 +329,22 @@
       gap: 10px;
     }
     .link-button {
-      min-height: 62px;
-      border-radius: 20px;
-      padding: 12px 14px;
+      min-height: 64px;
+      border-radius: 24px;
+      padding: 13px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 14px;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      will-change: transform;
     }
+    .link-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,245,247,.28);
+      background: linear-gradient(140deg, rgba(255,255,255,.18), rgba(255,255,255,.07));
+    }
+    .link-button:active { transform: translateY(1px) scale(.993); }
     .link-button.is-disabled {
       opacity: .52;
       pointer-events: none;
@@ -327,12 +378,8 @@
     .community-card {
       display: grid;
       gap: 12px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 16px;
-      background: linear-gradient(135deg, rgba(255,245,247,.12), rgba(255,245,247,.05));
-      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 20px 62px var(--ambient-card-shadow);
-      backdrop-filter: blur(22px);
+      border-radius: 26px;
+      padding: 17px;
     }
     .community-card h2 {
       margin: 0;
@@ -345,20 +392,168 @@
       font-size: 13px;
       line-height: 1.45;
     }
-    .future {
+    .newsletter-card, .explore-card {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 13px;
+      border-radius: 28px;
+      padding: 18px;
     }
-    .future span {
-      border: 1px dashed rgba(255,211,223,.13);
-      border-radius: 16px;
-      padding: 12px 8px;
-      color: rgba(255,245,247,.42);
-      font-size: 12px;
+    .section-kicker {
+      color: rgba(255,245,247,.46);
+      font-size: 11px;
       font-weight: 900;
-      text-align: center;
+      letter-spacing: .12em;
+      text-transform: uppercase;
     }
+    .newsletter-card h2, .explore-card h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+    .newsletter-card p, .explore-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .newsletter-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+      align-items: center;
+      overflow: hidden;
+      transition: grid-template-columns .28s ease, opacity .28s ease, max-height .28s ease;
+      max-height: 64px;
+    }
+    .newsletter-form.is-done {
+      grid-template-columns: 1fr;
+      max-height: 34px;
+    }
+    .newsletter-form input {
+      min-width: 0;
+      height: 48px;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 16px;
+      padding: 0 13px;
+      background: rgba(0,0,0,.2);
+      color: var(--text);
+      outline: none;
+    }
+    .newsletter-form.is-done input { display: none; }
+    .newsletter-state {
+      min-height: 20px;
+      color: rgba(255,245,247,.62);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .gap-spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,245,247,.26);
+      border-top-color: var(--pink);
+      display: inline-block;
+      animation: spinGap .9s linear infinite;
+    }
+    .explore-trigger {
+      justify-content: space-between;
+      padding-inline: 16px;
+    }
+    .sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      align-items: end;
+      background: rgba(4,2,2,.38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .24s ease;
+    }
+    .sheet.is-open { opacity: 1; pointer-events: auto; }
+    .sheet-panel {
+      width: min(100%, 520px);
+      max-height: min(82vh, 760px);
+      margin: 0 auto;
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 32px 32px 0 0;
+      padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+      background: linear-gradient(150deg, rgba(23,13,12,.92), rgba(9,5,4,.92));
+      box-shadow: 0 -24px 74px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.16);
+      backdrop-filter: blur(20px) saturate(1.1);
+      transform: translateY(18px);
+      transition: transform .28s ease;
+      overflow: auto;
+    }
+    .sheet.is-open .sheet-panel { transform: translateY(0); }
+    .sheet-handle {
+      width: 42px;
+      height: 4px;
+      border-radius: 999px;
+      margin: 0 auto 14px;
+      background: rgba(255,245,247,.22);
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .sheet-title { display: grid; gap: 3px; }
+    .sheet-title strong { font-size: 18px; }
+    .sheet-title span { color: var(--muted); font-size: 12px; }
+    .icon-button {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .creator-share-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 24px;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+    }
+    .creator-share-card img {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      object-fit: cover;
+    }
+    .share-grid, .explore-grid {
+      display: grid;
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .share-item, .explore-item {
+      border: 1px solid rgba(255,245,247,.13);
+      border-radius: 18px;
+      padding: 13px;
+      background: rgba(255,255,255,.055);
+      color: var(--text);
+      text-align: left;
+      font-weight: 900;
+      text-decoration: none;
+    }
+    .share-item span, .explore-item span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    @keyframes heroBreath {
+      0%, 100% { transform: scale(1.006) translate3d(0,0,0); }
+      50% { transform: scale(1.018) translate3d(-.35%, -.2%, 0); }
+    }
+    @keyframes spinGap { to { transform: rotate(360deg); } }
     .foot {
       display: inline-flex;
       align-items: center;
@@ -457,6 +652,9 @@
         scroll-behavior: auto !important;
         transition-duration: .001ms !important;
       }
+      .hero-video {
+        animation: none !important;
+      }
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
@@ -464,6 +662,7 @@
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
       .button-grid { grid-template-columns: repeat(2, 1fr); }
       .link-button { min-height: 70px; }
+      .share-grid, .explore-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -473,7 +672,10 @@
       <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
       <div class="hero-top">
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
-        <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
+        <div class="hero-actions">
+          <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
+          <button class="mini-pill share-trigger" id="shareButton" type="button" aria-label="Share Mina Mosya">Share</button>
+        </div>
       </div>
       <div class="hero-content">
         <div class="identity">
@@ -505,13 +707,24 @@
       <a class="primary" id="communityCta" href="https://discord.gg/GGE7WsUZR" target="_blank" rel="noreferrer">Join Discord</a>
     </section>
 
-    <section class="button-grid" id="buttonGrid" aria-label="Mina links"></section>
+    <section class="button-grid" id="buttonGrid" aria-label="Mina content blocks"></section>
 
-    <section class="future" aria-label="Future Creator OS modules">
-      <span>Ask Mina</span>
-      <span>Live Detection</span>
-      <span>Analytics</span>
-      <span>Stream Analyzer</span>
+    <section class="newsletter-card" id="newsletterBlock" data-block-type="newsletter">
+      <div class="section-kicker">Updates</div>
+      <h2>Know when Mina goes live.</h2>
+      <p>A calm little ping for streams, community drops, and creator notes.</p>
+      <form class="newsletter-form" id="newsletterForm">
+        <input id="newsletterEmail" type="email" autocomplete="email" placeholder="Email" aria-label="Email">
+        <button class="primary" id="newsletterSubmit" type="submit">Notify me</button>
+      </form>
+      <div class="newsletter-state" id="newsletterState" aria-live="polite"></div>
+    </section>
+
+    <section class="explore-card" id="exploreBlock" data-block-type="explore">
+      <div class="section-kicker">Discovery</div>
+      <h2>Explore Creator OS.</h2>
+      <p>Featured creators, DNA categories, themes, and new pages will live here.</p>
+      <button class="primary explore-trigger" id="exploreButton" type="button"><span>Open explore</span><span>Browse</span></button>
     </section>
 
     <div class="doneovernight-creator-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
@@ -526,6 +739,32 @@
   <button class="sound-button" id="soundButton" type="button" aria-label="Toggle music" hidden></button>
   <div class="preview-badge" id="previewBadge" hidden>Preview Mode</div>
   <audio id="music" preload="none"></audio>
+
+  <section class="sheet" id="shareSheet" aria-label="Share Mina Mosya" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="shareTitle">Share Mina</strong><span>Creator card and quick links</span></div>
+        <button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button>
+      </div>
+      <div class="creator-share-card">
+        <img id="shareAvatar" src="/assets/mosyaamosya/profile-v2.jpg" alt="">
+        <div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div>
+      </div>
+      <div class="share-grid" id="shareGrid"></div>
+    </div>
+  </section>
+
+  <section class="sheet" id="exploreSheet" aria-label="Explore Creator OS" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="exploreTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="exploreTitle">Explore Creator OS</strong><span>Discovery architecture preview</span></div>
+        <button class="icon-button" type="button" data-close-sheet="exploreSheet" aria-label="Close explore">&times;</button>
+      </div>
+      <div class="explore-grid" id="exploreGrid"></div>
+    </div>
+  </section>
 
   <section class="intro" id="intro" aria-label="Welcome intro">
     <video id="introVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
@@ -633,6 +872,34 @@
     const introKey = "creator_intro_mosyaamosya_v1";
     const musicKey = "creator_music_mosyaamosya_enabled";
     let countdownTimer = null;
+    let currentSettings = { ...fallback };
+    const blockRegistry = {
+      link: { implemented: true },
+      discord: { implemented: true },
+      countdown: { implemented: true },
+      newsletter: { implemented: true },
+      explore: { implemented: true },
+      video: { implemented: false },
+      image: { implemented: false },
+      gallery: { implemented: false },
+      schedule: { implemented: false },
+      shop: { implemented: false },
+      faq: { implemented: false },
+      quote: { implemented: false },
+      location: { implemented: false },
+      youtube: { implemented: false },
+      spotify: { implemented: false },
+      tiktok: { implemented: false },
+      products: { implemented: false },
+      events: { implemented: false }
+    };
+    const discoveryArchitecture = [
+      ["Featured Creators", "Curated Creator OS showcases will appear here."],
+      ["Trending", "Fast-rising pages and live moments."],
+      ["Browse by DNA", "Streamer, Artist, Founder, Gamer, Coach, Business."],
+      ["Featured Themes", "Premium theme presets and seasonal looks."],
+      ["Recently Joined", "New Creator OS pages as they launch."]
+    ];
 
     function safeUrl(value) {
       if (!value) return "";
@@ -647,7 +914,7 @@
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
     function previewSettings(settings) {
-      const allowedDna = new Set(["artist", "streamer", "influencer", "podcaster", "founder", "gamer"]);
+      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
       const theme = params.get("preview_theme");
       const dna = params.get("creator_dna");
       return {
@@ -854,7 +1121,8 @@
       actions.forEach((action) => {
         const url = actionUrl(action, settings);
         const item = document.createElement(url ? "a" : "div");
-        item.className = "link-button" + (url ? "" : " is-disabled");
+        item.className = "link-button content-block" + (url ? "" : " is-disabled");
+        item.dataset.blockType = action.key === "discord" ? "discord" : "link";
         if (url) {
           item.href = url;
           item.target = url.startsWith("mailto:") ? "_self" : "_blank";
@@ -867,6 +1135,119 @@
         grid.appendChild(item);
       });
     }
+
+    function setSheetOpen(id, open) {
+      const sheet = $(id);
+      sheet.classList.toggle("is-open", open);
+      sheet.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function setupNewsletter() {
+      const form = $("newsletterForm");
+      const input = $("newsletterEmail");
+      const button = $("newsletterSubmit");
+      const state = $("newsletterState");
+      if (form.dataset.ready === "true") return;
+      form.dataset.ready = "true";
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!input.value.trim()) {
+          input.focus();
+          return;
+        }
+        button.innerHTML = '<span class="gap-spinner" aria-hidden="true"></span>';
+        button.setAttribute("aria-label", "Joining");
+        state.textContent = "";
+        window.setTimeout(() => {
+          form.classList.add("is-done");
+          button.textContent = "You're in.";
+          state.textContent = "You're in. Mina can reach you when the next stream is ready.";
+        }, 700);
+      });
+    }
+
+    function setupExplore() {
+      const grid = $("exploreGrid");
+      grid.innerHTML = "";
+      discoveryArchitecture.forEach(([title, copy]) => {
+        const item = document.createElement("div");
+        item.className = "explore-item";
+        item.innerHTML = title + "<span>" + copy + "</span>";
+        grid.appendChild(item);
+      });
+      $("exploreButton").onclick = () => setSheetOpen("exploreSheet", true);
+    }
+
+    function setupShare(settings) {
+      const pageUrl = "https://doneovernight.com/" + (settings.slug || "mosyaamosya");
+      $("shareName").textContent = settings.display_name || "Mina Mosya";
+      $("shareHandle").textContent = "@" + (settings.username || settings.slug || "mosyaamosya");
+      $("shareAvatar").src = profileImage(settings);
+      const text = "Meet " + (settings.display_name || "Mina Mosya") + " on DONEOVERNIGHT Creator OS";
+      const encodedUrl = encodeURIComponent(pageUrl);
+      const encodedText = encodeURIComponent(text + " " + pageUrl);
+      const shareItems = [
+        ["Copy Link", "Save Mina's Creator OS URL", "#", async (event) => {
+          event.preventDefault();
+          try {
+            await navigator.clipboard.writeText(pageUrl);
+            event.currentTarget.querySelector("span").textContent = "Copied.";
+          } catch (error) {
+            event.currentTarget.querySelector("span").textContent = pageUrl;
+          }
+        }],
+        ["WhatsApp", "Send to a chat", "https://wa.me/?text=" + encodedText],
+        ["Messages", "Open SMS", "sms:?&body=" + encodedText],
+        ["Instagram", "Open Instagram", "https://www.instagram.com/direct/inbox/"],
+        ["Discord", "Open Mina's community", safeUrl(settings.discord_invite_url || settings.discord_url) || "https://discord.com/channels/@me"],
+        ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent("Mina Mosya") + "&body=" + encodedText]
+      ];
+      if (navigator.share) {
+        shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
+          event.preventDefault();
+          await navigator.share({ title: "Mina Mosya", text, url: pageUrl }).catch(() => {});
+        }]);
+      }
+      const grid = $("shareGrid");
+      grid.innerHTML = "";
+      shareItems.forEach(([title, copy, href, handler]) => {
+        const item = document.createElement("a");
+        item.className = "share-item";
+        item.href = href;
+        item.innerHTML = title + "<span>" + copy + "</span>";
+        if (!href.startsWith("mailto:") && !href.startsWith("sms:") && href !== "#") {
+          item.target = "_blank";
+          item.rel = "noreferrer";
+        }
+        if (handler) item.addEventListener("click", handler);
+        grid.appendChild(item);
+      });
+      $("shareButton").onclick = () => setSheetOpen("shareSheet", true);
+    }
+
+    document.querySelectorAll("[data-close-sheet]").forEach((button) => {
+      button.addEventListener("click", () => setSheetOpen(button.dataset.closeSheet, false));
+    });
+    document.querySelectorAll(".sheet").forEach((sheet) => {
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen(sheet.id, false);
+      });
+    });
+
+    window.addEventListener("message", (event) => {
+      if (!String(event.origin || "").endsWith("doneovernight.com")) return;
+      const data = event.data || {};
+      if (data.type !== "creator-theme-preview") return;
+      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
+      currentSettings = {
+        ...currentSettings,
+        theme_preset: themePresets[data.theme_preset] ? data.theme_preset : currentSettings.theme_preset,
+        creator_dna: allowedDna.has(data.creator_dna) ? data.creator_dna : currentSettings.creator_dna
+      };
+      $("previewBadge").hidden = false;
+      applyTheme(currentSettings);
+      applyAmbient(currentSettings);
+    });
 
     function setupMusic(settings) {
       const button = $("soundButton");
@@ -919,6 +1300,7 @@
 
     function render(settings) {
       settings = previewSettings(settings);
+      currentSettings = settings;
       $("previewBadge").hidden = !previewMode;
       document.body.classList.toggle("is-live", Boolean(settings.live_status));
       applyTheme(settings);
@@ -980,6 +1362,9 @@
         community.setAttribute("aria-disabled", "true");
       }
       renderButtons(settings);
+      setupNewsletter();
+      setupExplore();
+      setupShare(settings);
       setupMusic(settings);
       setupIntro(settings);
     }
