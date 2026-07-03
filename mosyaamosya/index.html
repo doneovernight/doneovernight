@@ -848,6 +848,9 @@
       live_url: "",
       live_status: false,
       live_button_text: "Join Live",
+      tiktok_live_username: "mosyaamosya",
+      auto_live_detection_enabled: true,
+      manual_live_fallback_enabled: true,
       next_live_datetime: "",
       theme_preset: "mina",
       background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
@@ -923,6 +926,7 @@
     const introKey = "creator_intro_mosyaamosya_v1";
     const musicKey = "creator_music_mosyaamosya_enabled";
     let countdownTimer = null;
+    let liveRuntimeTimer = null;
     let currentSettings = { ...fallback };
     const blockRegistry = {
       link: { implemented: true },
@@ -1010,6 +1014,63 @@
       if (days > 0) return "Next stream in " + days + "d " + hours + "h";
       if (hours > 0) return "Next stream in " + hours + "h " + mins + "m";
       return "Next stream in " + mins + "m";
+    }
+
+    function fallbackLiveUrl(settings) {
+      const username = String(settings.tiktok_live_username || settings.username || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+      return safeUrl(settings.live_url) || "https://www.tiktok.com/@" + username + "/live";
+    }
+
+    function applyLiveState(liveState, settings) {
+      const isLive = Boolean(liveState && liveState.isLive);
+      document.body.classList.toggle("is-live", isLive);
+      $("statusPill").querySelector("span:last-child").textContent = isLive ? "LIVE NOW" : "Offline";
+      setText("liveTitle", isLive ? "🟢 LIVE NOW" : "⚫ Offline");
+      if (isLive && Number.isFinite(Number(liveState.viewerCount))) {
+        setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
+      } else {
+        setText("liveCopy", isLive ? "Join the stream" : "See you at the next stream.");
+      }
+
+      const cta = $("primaryCta");
+      if (isLive) {
+        cta.textContent = settings.live_button_text || "Join Live";
+        cta.href = safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+        cta.removeAttribute("aria-disabled");
+        return;
+      }
+
+      cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
+      cta.href = "#";
+      cta.setAttribute("aria-disabled", "true");
+      cta.removeAttribute("target");
+      cta.removeAttribute("rel");
+    }
+
+    async function refreshLiveRuntime(settings) {
+      if (settings.auto_live_detection_enabled === false && !settings.manual_live_fallback_enabled) return;
+      try {
+        const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "mosyaamosya"), {
+          headers: { Accept: "application/json" }
+        });
+        if (!response.ok) throw new Error("Live runtime unavailable");
+        const liveState = await response.json();
+        applyLiveState(liveState, settings);
+      } catch (error) {
+        applyLiveState({
+          isLive: Boolean(settings.manual_live_fallback_enabled || settings.live_status),
+          liveUrl: fallbackLiveUrl(settings),
+          viewerCount: null
+        }, settings);
+      }
+    }
+
+    function setupLiveRuntime(settings) {
+      if (liveRuntimeTimer) clearInterval(liveRuntimeTimer);
+      refreshLiveRuntime(settings);
+      liveRuntimeTimer = window.setInterval(() => refreshLiveRuntime(settings), 60000);
     }
 
     function creatorTimeParts(timezone) {
@@ -1396,29 +1457,11 @@
       $("avatarImage").src = profileImage(settings);
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       $("heroVideo").src = heroVideo(settings);
-      $("statusPill").querySelector("span:last-child").textContent = settings.live_status ? "LIVE NOW" : "Offline";
-      setText("liveTitle", settings.live_status ? "🟢 LIVE NOW" : "⚫ Offline");
-      setText("liveCopy", settings.live_status ? "Join the stream" : "See you at the next stream.");
-      const cta = $("primaryCta");
-      const liveUrl = safeUrl(settings.live_url);
-      if (settings.live_status) {
-        cta.textContent = settings.live_button_text || "Join Live";
-        if (liveUrl) {
-          cta.href = liveUrl;
-          cta.target = "_blank";
-          cta.rel = "noreferrer";
-          cta.removeAttribute("aria-disabled");
-        } else {
-          cta.href = "#";
-          cta.setAttribute("aria-disabled", "true");
-          cta.removeAttribute("target");
-        }
-      } else {
-        cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
-        cta.href = "#";
-        cta.setAttribute("aria-disabled", "true");
-        cta.removeAttribute("target");
-      }
+      applyLiveState({
+        isLive: Boolean(settings.live_status),
+        liveUrl: fallbackLiveUrl(settings),
+        viewerCount: null
+      }, settings);
       const nextDate = nextLiveDate(settings);
       const countdown = $("countdown");
       if (countdownTimer) {
@@ -1449,6 +1492,7 @@
       setupNewsletter();
       setupExplore();
       setupShare(settings);
+      setupLiveRuntime(settings);
       setupMusic(settings);
       setupIntro(settings);
     }

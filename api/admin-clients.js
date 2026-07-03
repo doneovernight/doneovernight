@@ -49,7 +49,10 @@ const PHASE_1_4_CREATOR_FIELDS = [
   "discord_server_id"
 ];
 const PHASE_2_CREATOR_FIELDS = [
-  "creator_dna"
+  "creator_dna",
+  "tiktok_live_username",
+  "auto_live_detection_enabled",
+  "manual_live_fallback_enabled"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
@@ -72,6 +75,9 @@ const DEFAULT_MINA_SETTINGS = {
   live_url: "",
   live_status: false,
   live_button_text: "Join Live",
+  tiktok_live_username: "mosyaamosya",
+  auto_live_detection_enabled: true,
+  manual_live_fallback_enabled: true,
   next_live_datetime: "",
   theme_preset: "mina",
   creator_dna: "streamer",
@@ -364,6 +370,14 @@ function normalizeSlug(value) {
   return slug || DEFAULT_MINA_SETTINGS.slug;
 }
 
+function normalizeUsername(value) {
+  const username = clean(value || DEFAULT_MINA_SETTINGS.username)
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "");
+  return username || DEFAULT_MINA_SETTINGS.username;
+}
+
 function normalizeTheme(value) {
   const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder"]);
   const preset = clean(value || DEFAULT_MINA_SETTINGS.theme_preset).toLowerCase();
@@ -500,6 +514,9 @@ function normalizeCreator(row = {}) {
     live_url: clean(row.live_url),
     live_status: bool(row.live_status, false),
     live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
+    tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    auto_live_detection_enabled: bool(row.auto_live_detection_enabled, true),
+    manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -585,6 +602,9 @@ function creatorPayload(input = {}) {
     live_url: clean(input.live_url),
     live_status: bool(input.live_status, false),
     live_button_text: clean(input.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
+    tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    auto_live_detection_enabled: bool(input.auto_live_detection_enabled, true),
+    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),

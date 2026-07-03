@@ -227,13 +227,25 @@
         <section class="panel">
           <h2>Live</h2>
           <div class="fields">
+            <label>TikTok username<input name="tiktok_live_username" placeholder="mosyaamosya"></label>
+            <div class="switch-row">
+              <div><strong>Auto live detection</strong><span>Checks TikTok server-side with cached polling.</span></div>
+              <label class="switch" aria-label="Auto live detection"><input name="auto_live_detection_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
             <div class="span-2 switch-row">
-              <div><strong>Manual live status</strong><span>Controls the public live card.</span></div>
+              <div><strong>Manual live status</strong><span>Used as fallback if TikTok blocks the checker.</span></div>
               <label class="switch" aria-label="Manual live status"><input name="live_status" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="span-2 switch-row">
+              <div><strong>Manual fallback live</strong><span>Immediately marks Mina live when auto-check fails.</span></div>
+              <label class="switch" aria-label="Manual fallback live"><input name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
             </div>
             <label class="span-2">Live button text<input name="live_button_text"></label>
             <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
             <label>Timezone<input name="timezone" placeholder="America/Chicago"></label>
+            <div class="span-2 help-panel" id="liveRuntimeStatus">
+              Last checked: not yet. Status: unknown. Source: unknown.
+            </div>
           </div>
         </section>
 
@@ -437,6 +449,9 @@
         live_url: String(data.get("live_url") || "").trim(),
         live_status: form.elements.live_status.checked,
         live_button_text: String(data.get("live_button_text") || "").trim() || "Join Live",
+        tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || "mosyaamosya",
+        auto_live_detection_enabled: form.elements.auto_live_detection_enabled.checked,
+        manual_live_fallback_enabled: form.elements.manual_live_fallback_enabled.checked,
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         welcome_intro_enabled: form.elements.welcome_intro_enabled.checked,
         music_enabled: form.elements.music_enabled.checked,
@@ -460,9 +475,11 @@
         if (!form.elements[key] || typeof form.elements[key].checked === "boolean") return;
         form.elements[key].value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
       });
-      ["live_status", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
         if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
       });
+      if (settings.auto_live_detection_enabled === undefined && form.elements.auto_live_detection_enabled) form.elements.auto_live_detection_enabled.checked = true;
+      if (settings.manual_live_fallback_enabled === undefined && form.elements.manual_live_fallback_enabled) form.elements.manual_live_fallback_enabled.checked = true;
       if (settings.music_loop === undefined && form.elements.music_loop) form.elements.music_loop.checked = true;
       if (settings.ambient_mode_enabled === undefined && form.elements.ambient_mode_enabled) form.elements.ambient_mode_enabled.checked = true;
       if (settings.seasonal_effects_enabled === undefined && form.elements.seasonal_effects_enabled) form.elements.seasonal_effects_enabled.checked = true;
@@ -570,7 +587,19 @@
       const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
       fillForm(data.creator);
       updatePreviewFrame();
+      loadLiveRuntime();
       setStatus("Saved Mina Mosya page.");
+    }
+    async function loadLiveRuntime() {
+      const status = $("liveRuntimeStatus");
+      if (!status) return;
+      try {
+        const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { headers: { Accept: "application/json" } });
+        const data = await response.json();
+        status.textContent = "Last checked: " + (data.checkedAt || "unknown") + ". Status: " + (data.isLive ? "LIVE NOW" : "Offline") + ". Source: " + (data.source || "unknown") + ".";
+      } catch (error) {
+        status.textContent = "Last checked: error. Status: unknown. Source: error.";
+      }
     }
     function readFileData(file) {
       return new Promise((resolve, reject) => {
@@ -654,6 +683,8 @@
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("savePassword").addEventListener("click", savePassword);
+    loadLiveRuntime();
+    window.setInterval(loadLiveRuntime, 60000);
     renderThemes();
     renderDna();
     applyAdminTheme(activeTheme);
