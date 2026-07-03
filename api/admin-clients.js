@@ -243,6 +243,28 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function readableError(value, fallback = "Unknown error") {
+  if (!value) return fallback;
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message || fallback;
+  if (typeof value === "object") {
+    const parts = [];
+    ["message", "error", "details", "hint", "code", "status", "statusCode"].forEach((key) => {
+      if (value[key] && typeof value[key] !== "object") parts.push(String(value[key]));
+    });
+    if (value.error && typeof value.error === "object") parts.push(readableError(value.error, ""));
+    if (value.details && typeof value.details === "object") parts.push(readableError(value.details, ""));
+    const message = parts.filter(Boolean).join(" ");
+    if (message) return message;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return String(value);
+}
+
 function bool(value, fallback = false) {
   if (typeof value === "boolean") return value;
   if (value === "true") return true;
@@ -406,11 +428,18 @@ async function supabaseFetch(pathname, options = {}) {
     });
 
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (parseError) {
+      data = text || null;
+    }
     if (!response.ok) {
-      const error = new Error("Supabase request failed: " + response.status);
+      const detail = readableError(data, response.statusText || "Supabase request failed");
+      const error = new Error((options.context || "Supabase request") + " failed (" + response.status + "): " + detail);
       error.statusCode = response.status;
       error.details = data;
+      error.code = data && data.code ? data.code : "SUPABASE_REQUEST_FAILED";
       throw error;
     }
     return data;
@@ -699,7 +728,7 @@ async function uploadCreatorMedia(input = {}) {
     let details = text;
     try {
       const json = JSON.parse(text);
-      details = json.message || json.error || text;
+      details = readableError(json, text);
     } catch (parseError) {}
     const error = new Error("Media upload failed (" + response.status + "): " + (details || response.statusText || "Unknown storage error"));
     error.statusCode = response.status || 503;

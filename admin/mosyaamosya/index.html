@@ -283,7 +283,7 @@
     .neon { background: linear-gradient(135deg, #67e8f9, #fb7185); }
     .founder { background: linear-gradient(135deg, #e9c48a, #111827); }
     .suggestion { border: 1px solid rgba(255,211,223,.14); border-radius: 14px; padding: 12px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 12px; line-height: 1.5; }
-    .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; }
+    .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; white-space: pre-line; }
     .status.error { color: #fecdd3; }
     .status.success { color: #bbf7d0; }
     .media-control { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.04); }
@@ -1000,9 +1000,38 @@
     const $ = (id) => document.getElementById(id);
     form.noValidate = true;
 
+    function readableMessage(value, fallback = "Something went wrong.") {
+      if (!value) return fallback;
+      if (typeof value === "string") return value;
+      if (value instanceof Error) return value.message || fallback;
+      if (typeof value === "object") {
+        const parts = [];
+        const add = (item) => {
+          if (!item) return;
+          if (typeof item === "string") parts.push(item);
+          else if (typeof item === "object") {
+            ["message", "error", "details", "hint", "code", "status", "statusCode"].forEach((key) => {
+              if (item[key] && typeof item[key] !== "object") parts.push(String(item[key]));
+            });
+          }
+        };
+        add(value);
+        add(value.error);
+        add(value.details);
+        add(value.data);
+        const message = parts.filter(Boolean).join(" ");
+        if (message) return message;
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return fallback;
+        }
+      }
+      return String(value);
+    }
     function setStatus(message, isError, targetId = "saveStatus") {
       const status = $(targetId);
-      status.textContent = message || "";
+      status.textContent = message ? readableMessage(message, "") : "";
       status.classList.toggle("error", Boolean(isError));
       status.classList.toggle("success", Boolean(message) && !isError);
     }
@@ -1118,6 +1147,12 @@
     function setIntroAudioStatus(message, isError) {
       setStatus(message, isError, "introAudioUploadStatus");
     }
+    function introAudioSaveContext() {
+      return boolField("intro_audio_enabled") || Boolean(String(form.elements.intro_audio_url && form.elements.intro_audio_url.value || "").trim());
+    }
+    function introAudioSaveError(reason) {
+      return "Could not save intro audio.\n\nReason:\n" + readableMessage(reason, "Unknown save error.");
+    }
     async function setIntroAudioPreview(url, options = {}) {
       const preview = $("introAudioPreview");
       if (!preview) return false;
@@ -1154,7 +1189,7 @@
         try {
           preview.currentTime = 0;
           await preview.play();
-          setIntroAudioStatus(options.successMessage || "Audio uploaded. Preview playing.", false);
+          setIntroAudioStatus(options.successMessage || "✓ Audio uploaded\nPreview available\nReady to save", false);
           return true;
         } catch (error) {
           const message = error && error.name === "NotAllowedError"
@@ -1699,8 +1734,19 @@
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(payload)
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.success !== true) throw new Error(data.error || "Creator settings request failed");
+      const text = await response.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (error) {
+        data = { error: text || response.statusText };
+      }
+      if (!response.ok || data.success !== true) {
+        const error = new Error(readableMessage(data.error || data.message || data, "Creator settings request failed"));
+        error.status = response.status;
+        error.payload = data;
+        throw error;
+      }
       return data;
     }
     async function login(password) {
@@ -1742,7 +1788,7 @@
         setSaveButtonState("saved", { resetAfter: 700 });
         restoreScrollPosition(scrollPosition);
       } catch (error) {
-        setStatus(error.message || "Save failed.", true);
+        setStatus(introAudioSaveContext() ? introAudioSaveError(error) : readableMessage(error, "Save failed."), true);
         setSaveButtonState("failed", { resetAfter: 1500 });
         restoreScrollPosition(scrollPosition);
         throw error;
@@ -1771,7 +1817,7 @@
           : "";
         const viewer = capabilities.viewerCount === true && Number.isFinite(Number(data.viewerCount)) ? Number(data.viewerCount).toLocaleString() : "unavailable";
         const streak = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? Number(data.battleWinStreak).toLocaleString() : "not set";
-        const error = data.error ? data.error : "none";
+        const error = data.error ? readableMessage(data.error, "Unknown runtime error") : "none";
         status.textContent = [
           "Last checked: " + (data.checkedAt || "unknown"),
           "Status: " + (data.isLive ? "LIVE NOW" : "Offline"),
@@ -1837,14 +1883,14 @@
         });
         form.elements[field].value = data.media.url;
         if (kind === "intro-audio") {
-          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage: "Audio uploaded" });
-          setStatus("Audio uploaded. Save page to publish it.");
+          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage: "✓ Audio uploaded\nPreview available\nReady to save" });
+          setStatus("✓ Audio uploaded\nPreview available\nReady to save");
         } else {
           preview.src = data.media.url;
           setStatus("Media uploaded. Save page to publish it.");
         }
       } catch (error) {
-        const message = error.message || "Upload unavailable";
+        const message = readableMessage(error, "Upload unavailable");
         if (kind === "intro-audio") setIntroAudioStatus(message, true);
         setStatus(message + " Paste a hosted asset URL instead.", true);
       }
