@@ -924,16 +924,16 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="experience" hidden>
-          <h2>Intro Audio</h2>
+          <h2>Creator Signature</h2>
           <div class="fields">
             <div class="span-2 switch-row">
-              <div><strong>Intro Audio Enabled</strong><span>Short welcome sound that plays when visitors enter.</span></div>
+              <div><strong>Creator Signature Enabled</strong><span>Short welcome sound that plays when visitors enter.</span></div>
               <label class="switch" aria-label="Intro audio enabled"><input name="intro_audio_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Intro Audio URL<input name="intro_audio_url" type="url" placeholder="Paste .mp3, .m4a, or .aac asset URL"></label>
+            <label class="span-2">Creator Signature URL<input name="intro_audio_url" type="url" placeholder="Paste direct audio asset URL"></label>
             <div class="span-2 media-control">
-              <strong>Upload Intro Audio</strong>
-              <span class="muted">Supported: .mp3, .m4a, .aac. Maximum size: 10 MB. Recommended length: 5-10 seconds.</span>
+              <strong>Upload Creator Signature</strong>
+              <span class="muted">Upload a song or short sound. Creator OS will turn it into a short welcome signature.</span>
               <div class="media-row">
                 <audio id="introAudioPreview" controls preload="none"></audio>
                 <input id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
@@ -941,10 +941,12 @@
               </div>
               <div class="status" id="introAudioUploadStatus" aria-live="polite"></div>
             </div>
+            <label>Start time<input id="introAudioStartTime" type="number" min="0" max="3600" step="0.25" value="0"></label>
+            <label>Clip length<input id="introAudioClipLength" type="number" min="1" max="15" step="0.25" value="10"></label>
             <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
             <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
             <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
-            <div class="span-2 help-panel">This sound plays only when visitors enter your page. Use a short signature intro.</div>
+            <div class="span-2 help-panel">Preferred intro length: 8-12 seconds. Creator OS uploads only a short prepared clip, never the full song.</div>
           </div>
         </section>
 
@@ -1194,7 +1196,7 @@
       if (!value) return "";
       try {
         const url = new URL(value, window.location.origin);
-        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac)$/i.test(url.pathname)) return url.href;
+        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac|wav)$/i.test(url.pathname)) return url.href;
       } catch {}
       return "";
     }
@@ -1216,8 +1218,115 @@
       ].includes(mime);
       if (!extensionOk) return "Intro audio must use .mp3, .m4a, or .aac.";
       if (!mimeOk) return "Unsupported audio MIME type: " + (mime || "unknown") + ".";
-      if (file.size > 10_000_000) return "Intro audio is too large. Use a file under 10 MB.";
       return "";
+    }
+    const INTRO_AUDIO_MAX_UPLOAD_BYTES = 2_000_000;
+    const INTRO_AUDIO_MAX_CLIP_SECONDS = 15;
+    const INTRO_AUDIO_DEFAULT_CLIP_SECONDS = 10;
+    const INTRO_AUDIO_TARGET_SAMPLE_RATE = 44100;
+
+    function introAudioClipControls() {
+      const startInput = $("introAudioStartTime");
+      const lengthInput = $("introAudioClipLength");
+      const start = Math.max(0, Number(startInput && startInput.value) || 0);
+      const length = Math.max(1, Math.min(INTRO_AUDIO_MAX_CLIP_SECONDS, Number(lengthInput && lengthInput.value) || INTRO_AUDIO_DEFAULT_CLIP_SECONDS));
+      if (lengthInput && Number(lengthInput.value) !== length) lengthInput.value = String(length);
+      if (startInput && Number(startInput.value) !== start) startInput.value = String(start);
+      return { start, length };
+    }
+    function decodeAudioArrayBuffer(arrayBuffer) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error("This browser cannot prepare audio clips. Try Safari, Chrome, or a shorter direct file.");
+      const context = new AudioContextClass();
+      return new Promise((resolve, reject) => {
+        const close = () => {
+          if (typeof context.close === "function") context.close().catch(() => {});
+        };
+        const onSuccess = (buffer) => {
+          close();
+          resolve(buffer);
+        };
+        const onFailure = () => {
+          close();
+          reject(new Error("This browser could not decode that audio file. Try an .mp3 file or choose a different song."));
+        };
+        try {
+          const result = context.decodeAudioData(arrayBuffer.slice(0), onSuccess, onFailure);
+          if (result && typeof result.then === "function") result.then(onSuccess).catch(onFailure);
+        } catch (error) {
+          onFailure();
+        }
+      });
+    }
+    async function renderIntroAudioClip(sourceBuffer, start, length) {
+      const OfflineContextClass = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OfflineContextClass) throw new Error("This browser cannot trim audio before upload. Try Safari or Chrome.");
+      const available = Math.max(0, sourceBuffer.duration - start);
+      const duration = Math.min(length, INTRO_AUDIO_MAX_CLIP_SECONDS, available);
+      if (duration < 0.5) throw new Error("Start time is past the usable part of the audio. Choose an earlier start time.");
+      const frameCount = Math.max(1, Math.ceil(duration * INTRO_AUDIO_TARGET_SAMPLE_RATE));
+      const offline = new OfflineContextClass(1, frameCount, INTRO_AUDIO_TARGET_SAMPLE_RATE);
+      const source = offline.createBufferSource();
+      source.buffer = sourceBuffer;
+      source.connect(offline.destination);
+      source.start(0, start, duration);
+      const rendered = await offline.startRendering();
+      return { buffer: rendered, duration };
+    }
+    function wavBlobFromAudioBuffer(audioBuffer) {
+      const samples = audioBuffer.getChannelData(0);
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+      const writeString = (offset, value) => {
+        for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+      };
+      writeString(0, "RIFF");
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, audioBuffer.sampleRate, true);
+      view.setUint32(28, audioBuffer.sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(36, "data");
+      view.setUint32(40, samples.length * 2, true);
+      let offset = 44;
+      for (let index = 0; index < samples.length; index += 1, offset += 2) {
+        const sample = Math.max(-1, Math.min(1, samples[index]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+      return new Blob([buffer], { type: "audio/wav" });
+    }
+    function introAudioClipName(file) {
+      const base = String(file && file.name || "creator-signature")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-z0-9._-]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 56) || "creator-signature";
+      return base + "-intro-clip.wav";
+    }
+    async function prepareIntroAudioUpload(file) {
+      const error = validateIntroAudioFile(file);
+      if (error) throw new Error(error);
+      const sourceBuffer = await decodeAudioArrayBuffer(await file.arrayBuffer());
+      if (sourceBuffer.duration <= INTRO_AUDIO_MAX_CLIP_SECONDS && file.size <= INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        return { file, message: "", previewUrl: URL.createObjectURL(file), duration: sourceBuffer.duration, clipped: false };
+      }
+      const { start, length } = introAudioClipControls();
+      setIntroAudioStatus("Creating a short intro clip before upload...", false);
+      const clip = await renderIntroAudioClip(sourceBuffer, start, length);
+      const blob = wavBlobFromAudioBuffer(clip.buffer);
+      if (blob.size > INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        throw new Error("The prepared intro clip is still too large. Choose a shorter clip length under 15 seconds.");
+      }
+      const clippedFile = new File([blob], introAudioClipName(file), { type: "audio/wav" });
+      const message = sourceBuffer.duration > INTRO_AUDIO_MAX_CLIP_SECONDS
+        ? "We created a short intro clip from the beginning of your song."
+        : "We prepared a short upload-safe creator signature.";
+      return { file: clippedFile, message, previewUrl: URL.createObjectURL(clippedFile), duration: clip.duration, clipped: true };
     }
     function audioPreviewErrorMessage(audio) {
       const error = audio && audio.error;
@@ -1295,7 +1404,7 @@
         const value = String(element.value || "").trim();
         if (element.required && !value) return fieldName(element) + " is required.";
         if (value && element.name === "music_url" && !isExternalUrl(value)) return "Enter a valid external music link.";
-        if (element.name === "intro_audio_url" && boolField("intro_audio_enabled") && !directAudioUrl(value)) return "Intro audio is enabled. Upload or paste a direct .mp3, .m4a, or .aac URL.";
+        if (element.name === "intro_audio_url" && boolField("intro_audio_enabled") && !directAudioUrl(value)) return "Creator Signature is enabled. Upload audio or paste a direct audio URL.";
         if (value && element.type === "url" && !isAcceptableUrl(value)) return "Enter a valid URL for " + fieldName(element) + ".";
         if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
         if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
@@ -2096,8 +2205,22 @@
       }
       const field = kind === "profile" ? "avatar_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
       const preview = kind === "profile" ? $("avatarPreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
+      let uploadFile = file;
+      let preparedIntroAudio = null;
       if (kind === "intro-audio") {
-        await setIntroAudioPreview(URL.createObjectURL(file), { loadingMessage: "Checking selected audio..." });
+        try {
+          setStatus("Preparing Creator Signature...");
+          setIntroAudioStatus("Preparing Creator Signature...", false);
+          preparedIntroAudio = await prepareIntroAudioUpload(file);
+          uploadFile = preparedIntroAudio.file;
+          await setIntroAudioPreview(preparedIntroAudio.previewUrl, { loadingMessage: "Loading prepared audio preview..." });
+          if (preparedIntroAudio.message) setIntroAudioStatus(preparedIntroAudio.message + "\nReady to upload.", false);
+        } catch (error) {
+          const message = readableMessage(error, "Could not create intro clip.");
+          setIntroAudioStatus(message, true);
+          setStatus(message, true);
+          return;
+        }
       } else {
         preview.src = URL.createObjectURL(file);
       }
@@ -2108,15 +2231,16 @@
           creator_session: creatorSession(),
           kind,
           file: {
-            name: file.name,
-            type: file.type,
-            data: await readFileData(file)
+            name: uploadFile.name,
+            type: uploadFile.type,
+            data: await readFileData(uploadFile)
           }
         });
         form.elements[field].value = data.media.url;
         if (kind === "intro-audio") {
-          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage: "✓ Audio uploaded\nPreview available\nReady to save" });
-          setStatus("✓ Audio uploaded\nPreview available\nReady to save");
+          const successMessage = (preparedIntroAudio && preparedIntroAudio.message ? preparedIntroAudio.message + "\n" : "") + "✓ Audio uploaded\nPreview available\nReady to save";
+          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage });
+          setStatus(successMessage);
         } else {
           preview.src = data.media.url;
           setStatus("Media uploaded. Save page to publish it.");

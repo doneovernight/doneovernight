@@ -6,6 +6,7 @@ const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
+const MAX_INTRO_AUDIO_BYTES = 2_000_000;
 const CREATOR_MEDIA_BUCKET = process.env.CREATOR_MEDIA_BUCKET || "creator-media";
 const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/mpeg",
@@ -17,7 +18,10 @@ const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/m4a",
   "audio/x-m4a",
   "audio/aac",
-  "audio/aacp"
+  "audio/aacp",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav"
 ]);
 const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "binary/octet-stream"]);
 const BASE_CREATOR_FIELDS = [
@@ -295,7 +299,7 @@ function isDirectIntroAudioUrl(value) {
   try {
     const parsed = new URL(raw, "https://doneovernight.com");
     return (parsed.protocol === "http:" || parsed.protocol === "https:") &&
-      /\.(mp3|m4a|aac)$/i.test(parsed.pathname);
+      /\.(mp3|m4a|aac|wav)$/i.test(parsed.pathname);
   } catch (error) {
     return false;
   }
@@ -718,6 +722,7 @@ function mediaExtension(mimeType, fallbackName = "") {
   if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3"].includes(mimeType)) return "mp3";
   if (["audio/aac", "audio/aacp"].includes(mimeType)) return "aac";
   if (["audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mimeType)) return named === "aac" ? "aac" : "m4a";
+  if (["audio/wav", "audio/wave", "audio/x-wav"].includes(mimeType)) return "wav";
   return named || "bin";
 }
 
@@ -726,18 +731,19 @@ function isIntroAudioFile(mimeType, fallbackName = "") {
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
   return (AUDIO_UPLOAD_MIME_TYPES.has(normalized) || GENERIC_UPLOAD_MIME_TYPES.has(normalized)) &&
-    ["mp3", "m4a", "aac"].includes(named);
+    ["mp3", "m4a", "aac", "wav"].includes(named);
 }
 
 function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
-  if (!["mp3", "m4a", "aac"].includes(named)) return "";
+  if (!["mp3", "m4a", "aac", "wav"].includes(named)) return "";
   if (normalized && !AUDIO_UPLOAD_MIME_TYPES.has(normalized) && !GENERIC_UPLOAD_MIME_TYPES.has(normalized)) return "";
   if (named === "mp3") return "audio/mpeg";
   if (named === "m4a") return "audio/mp4";
   if (named === "aac") return "audio/aac";
+  if (named === "wav") return "audio/wav";
   return "";
 }
 
@@ -777,13 +783,13 @@ async function uploadCreatorMedia(input = {}) {
     throw error;
   }
   if (kind === "intro-audio" && !isIntroAudio) {
-    const error = new Error("Intro audio must be an .mp3, .m4a, or .aac file.");
+    const error = new Error("Intro audio must be an .mp3, .m4a, .aac, or prepared .wav file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
   if (kind === "intro-audio" && !uploadMimeType) {
-    const error = new Error("Intro audio MIME type does not match .mp3, .m4a, or .aac.");
+    const error = new Error("Intro audio MIME type does not match a supported direct audio file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
@@ -794,8 +800,9 @@ async function uploadCreatorMedia(input = {}) {
     error.code = "INVALID_MEDIA_KIND";
     throw error;
   }
-  if (parsed.buffer.length > MAX_MEDIA_BYTES) {
-    const error = new Error(kind === "intro-audio" ? "Intro audio is too large. Use an .mp3, .m4a, or .aac file under 10 MB." : "Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
+  const maxBytes = kind === "intro-audio" ? MAX_INTRO_AUDIO_BYTES : MAX_MEDIA_BYTES;
+  if (parsed.buffer.length > maxBytes) {
+    const error = new Error(kind === "intro-audio" ? "Prepared intro audio is too large. Upload a clip under 2 MB." : "Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
     error.statusCode = 413;
     error.code = "MEDIA_TOO_LARGE";
     throw error;
@@ -1025,7 +1032,7 @@ function creatorPayload(input = {}) {
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
-    const error = new Error("Intro audio is enabled, but no valid direct .mp3, .m4a, or .aac URL is saved.");
+    const error = new Error("Creator Signature is enabled, but no valid direct audio URL is saved.");
     error.statusCode = 400;
     error.code = "INVALID_INTRO_AUDIO_URL";
     throw error;
