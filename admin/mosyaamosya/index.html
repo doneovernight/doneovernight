@@ -513,6 +513,7 @@
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
     </nav>
 
     <section class="grid">
@@ -534,7 +535,6 @@
             <label>Username / slug<input name="username" required></label>
             <label class="span-2">Bio<textarea name="bio"></textarea></label>
             <label>Location<input name="location"></label>
-            <label>Slug override<input name="slug"></label>
           </div>
         </section>
 
@@ -569,26 +569,6 @@
           <div class="section-note">Manage every public block here. Turning a block off removes it from the public page and related visitor surfaces.</div>
           <div style="height:12px"></div>
           <div class="link-list">
-            <section class="link-card">
-              <div class="link-card-head">
-                <div class="link-card-title"><strong>Discord</strong><span>Direct Discord block.</span></div>
-                <label class="switch" aria-label="Discord link visible"><input name="discord_link_visible" type="checkbox"><span class="track"></span></label>
-              </div>
-              <div class="link-card-fields">
-                <label>Title<input name="discord_link_title"></label>
-                <label>Subtitle<input name="discord_link_subtitle"></label>
-                <label>CTA<input name="discord_link_cta_label"></label>
-                <label class="wide">Discord invite URL<input name="discord_invite_url" type="url"></label>
-              </div>
-              <details class="advanced-box">
-                <summary>Advanced</summary>
-                <div class="fields">
-                  <label>Discord fallback URL<input name="discord_url" type="url"></label>
-                  <label>Discord server ID<input name="discord_server_id"></label>
-                </div>
-              </details>
-            </section>
-
             <section class="link-card">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>TikTok</strong><span>Main TikTok profile link.</span></div>
@@ -669,14 +649,14 @@
 
             <section class="link-card">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Community</strong><span>Dedicated community block above links.</span></div>
-                <label class="switch" aria-label="Community block visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
+                <div class="link-card-title"><strong>Community / Discord</strong><span>One community destination for Discord and community surfaces.</span></div>
+                <label class="switch" aria-label="Community visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="community_link_title"></label>
                 <label>CTA<input name="community_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="community_link_subtitle"></label>
-                <label class="wide">Destination<input name="community_link_url" type="url"></label>
+                <label class="wide">Destination<input name="community_link_url" type="url" placeholder="Discord invite or community URL"></label>
               </div>
             </section>
 
@@ -696,6 +676,14 @@
               <input name="custom_links" type="hidden" value="[]">
             </section>
           </div>
+          <input name="discord_link_visible" type="hidden" value="true">
+          <input name="discord_link_title" type="hidden">
+          <input name="discord_link_subtitle" type="hidden">
+          <input name="discord_link_cta_label" type="hidden">
+          <input name="discord_invite_url" type="hidden">
+          <input name="discord_url" type="hidden">
+          <input name="discord_server_id" type="hidden">
+          <input name="community_state" type="hidden" value="open">
         </section>
 
         <section class="panel tab-panel" data-admin-panel="runtime" hidden>
@@ -784,6 +772,11 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="analytics" hidden>
+          <h2>Analytics</h2>
+          <div class="help-panel">Analytics will live here when Creator OS reporting is enabled.</div>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
@@ -1186,6 +1179,7 @@
       syncCustomLinksField();
     }
     function valuesFromForm() {
+      syncCommunityCompatibilityFields();
       const data = new FormData(form);
       return {
         display_name: String(data.get("display_name") || "").trim(),
@@ -1305,6 +1299,7 @@
       if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
       if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
+      syncCommunityCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
@@ -1318,6 +1313,21 @@
       updateRuntimeUi();
       updateOverview(settings.updated_at);
       updatePreviewFrame(false);
+    }
+    function syncCommunityCompatibilityFields() {
+      if (!form) return;
+      const visible = boolField("community_link_visible", true);
+      const title = form.elements.community_link_title ? String(form.elements.community_link_title.value || "").trim() : "Community";
+      const subtitle = form.elements.community_link_subtitle ? String(form.elements.community_link_subtitle.value || "").trim() : "Discord";
+      const cta = form.elements.community_link_cta_label ? String(form.elements.community_link_cta_label.value || "").trim() : "Join";
+      const url = form.elements.community_link_url ? String(form.elements.community_link_url.value || "").trim() : "";
+      if (form.elements.discord_link_visible) form.elements.discord_link_visible.value = visible ? "true" : "false";
+      if (form.elements.discord_link_title) form.elements.discord_link_title.value = title || "Community";
+      if (form.elements.discord_link_subtitle) form.elements.discord_link_subtitle.value = subtitle || "Discord";
+      if (form.elements.discord_link_cta_label) form.elements.discord_link_cta_label.value = cta || "Join";
+      if (form.elements.discord_invite_url) form.elements.discord_invite_url.value = url;
+      if (form.elements.discord_url) form.elements.discord_url.value = url;
+      if (form.elements.community_state) form.elements.community_state.value = visible ? "open" : "hidden";
     }
     function normalizeBattleResult(value) {
       const result = String(value || "").toLowerCase();

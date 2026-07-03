@@ -1520,13 +1520,12 @@
       return settings[key] === undefined ? fallbackValue : settings[key] === true;
     }
 
-    function discordEnabled(settings) {
-      return featureOn(settings, "discord_link_visible", true) && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
+    function communityEnabled(settings) {
+      return featureOn(settings, "community_link_visible", true) && Boolean(safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url));
     }
 
     function renderButtons(settings) {
       const actions = [
-        { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
@@ -1576,7 +1575,7 @@
         faq: featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
         poll: poll ? ["Poll", poll] : null,
         announcement: ["Announcement", announcement || "No announcement yet."],
-        community: !featureOn(settings, "community_link_visible", true) || !discordEnabled(settings) || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
+        community: !communityEnabled(settings) || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
         newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
         countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
       }[block];
@@ -1614,7 +1613,7 @@
     function renderCommunity(settings) {
       removeElement("communityCard");
       const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
-      if (!featureOn(settings, "community_link_visible", true) || !discordEnabled(settings) || !communityUrl) return;
+      if (!communityEnabled(settings) || !communityUrl) return;
       const card = document.createElement("section");
       card.className = "community-card";
       card.id = "communityCard";
@@ -1739,8 +1738,12 @@
         ["Instagram", "Open Instagram", "https://www.instagram.com/direct/inbox/"],
         ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent("Mina Mosya") + "&body=" + encodedText]
       ];
-      if (discordEnabled(settings)) {
-        shareItems.splice(4, 0, ["Discord", "Open Mina's community", safeUrl(settings.discord_invite_url || settings.discord_url)]);
+      if (communityEnabled(settings)) {
+        shareItems.splice(4, 0, [
+          textSetting(settings, "community_link_title", "Community"),
+          textSetting(settings, "community_link_subtitle", "Open Mina's community"),
+          safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url)
+        ]);
       }
       if (featureOn(settings, "music_link_visible", false) && externalUrl(settings.music_url)) {
         shareItems.push(["Music", textSetting(settings, "music_link_subtitle", "Mina's current sound"), externalUrl(settings.music_url)]);
