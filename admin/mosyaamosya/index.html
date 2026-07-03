@@ -400,34 +400,42 @@
       bottom: calc(16px + env(safe-area-inset-bottom));
       z-index: 20;
       width: min(360px, calc(100vw - 28px));
+      min-height: 48px;
+      overflow: hidden;
       transform: translateX(-50%);
       box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2);
     }
     .sticky-save[hidden] { display: none !important; }
     .save-button-content {
-      min-width: 118px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      min-width: 0;
       white-space: nowrap;
     }
     .save-button-label {
-      display: inline-block;
-      min-width: 74px;
-      text-align: left;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      display: block;
+      width: 100%;
+      max-width: calc(100% - 92px);
+      text-align: center;
       opacity: 1;
-      transform: translateY(0);
+      transform: translate(-50%, -50%);
       transition: opacity .16s ease, transform .16s ease;
     }
-    .save-button-label.is-fading { opacity: 0; transform: translateY(3px); }
+    .save-button-label.is-fading { opacity: 0; transform: translate(-50%, calc(-50% + 3px)); }
     .save-spinner,
     .save-check {
+      position: absolute;
+      left: 18px;
+      top: 50%;
       width: 15px;
       height: 15px;
-      flex: 0 0 15px;
       opacity: 0;
-      transform: scale(.82);
+      transform: translateY(-50%) scale(.82);
       transition: opacity .16s ease, transform .16s ease;
     }
     .save-spinner {
@@ -445,15 +453,18 @@
     }
     .sticky-save[data-save-state="saving"] .save-spinner {
       opacity: 1;
-      transform: scale(1);
+      transform: translateY(-50%) scale(1);
       animation: saveSpin .82s linear infinite;
     }
-    .sticky-save[data-save-state="saved"] .save-check { opacity: 1; transform: scale(1); }
+    .sticky-save[data-save-state="saved"] .save-check { opacity: 0; transform: translateY(-50%) scale(.82); }
     .sticky-save[data-save-state="failed"] {
       background: linear-gradient(135deg, #fecdd3, #fb7185);
       color: #2a080d;
     }
-    @keyframes saveSpin { to { transform: rotate(360deg); } }
+    @keyframes saveSpin {
+      from { transform: translateY(-50%) rotate(0deg) scale(1); }
+      to { transform: translateY(-50%) rotate(360deg) scale(1); }
+    }
     @media (prefers-reduced-motion: reduce) {
       .save-button-label,
       .save-spinner,
@@ -1042,8 +1053,8 @@
       const textByState = {
         idle: "Save page",
         saving: "Saving...",
-        saved: "Saved",
-        failed: "Save failed"
+        saved: "Saved ✓",
+        failed: "Error"
       };
       const text = textByState[state] || textByState.idle;
       window.clearTimeout(saveResetTimer);
