@@ -460,6 +460,18 @@
       border-radius: 999px;
       padding: 6px;
     }
+    .runtime-pinned {
+      display: none;
+      border: 1px solid var(--glass-line);
+      border-radius: 24px;
+      padding: 15px;
+      background: rgba(255,255,255,.055);
+      color: rgba(255,245,247,.78);
+      box-shadow: inset 0 1px rgba(255,255,255,.12);
+    }
+    .runtime-pinned.is-visible { display: grid; gap: 4px; }
+    .runtime-pinned strong { color: var(--text); font-size: 14px; }
+    .runtime-pinned span { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .newsletter-start, .newsletter-thanks {
       width: 100%;
       min-height: 46px;
@@ -537,21 +549,22 @@
       line-height: 1.7;
       text-align: center;
     }
-    .footer-nav button {
+    .footer-nav a {
       border: 0;
       padding: 0;
       background: transparent;
       color: rgba(255,245,247,.58);
       cursor: pointer;
       font: inherit;
+      text-decoration: none;
       transition: color .18s ease, opacity .18s ease;
     }
-    .footer-nav button:hover,
-    .footer-nav button:focus-visible {
+    .footer-nav a:hover,
+    .footer-nav a:focus-visible {
       color: rgba(255,245,247,.86);
       outline: none;
     }
-    .footer-nav button:active { opacity: .72; }
+    .footer-nav a:active { opacity: .72; }
     .sheet-copy {
       display: grid;
       gap: 12px;
@@ -575,6 +588,25 @@
     .sheet-list li {
       border-top: 1px solid rgba(255,245,247,.1);
       padding-top: 8px;
+    }
+    .passport-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .passport-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid rgba(255,245,247,.1);
+      padding-top: 10px;
+      color: rgba(255,245,247,.72);
+      font-size: 13px;
+    }
+    .passport-row strong {
+      color: rgba(255,245,247,.92);
+      font-size: 13px;
+      text-align: right;
     }
     .sheet {
       position: fixed;
@@ -822,6 +854,8 @@
       </div>
     </section>
 
+    <section class="runtime-pinned" id="runtimePinned" aria-live="polite"></section>
+
     <section class="community-card" id="communityCard">
       <div>
         <h2>Community</h2>
@@ -842,13 +876,14 @@
     </section>
 
     <nav class="footer-nav" aria-label="Creator OS links">
-      <button type="button" data-open-sheet="privacySheet">Privacy</button>
+      <a href="#privacy" data-open-sheet="privacySheet">Privacy</a>
       <span aria-hidden="true">•</span>
-      <button type="button" data-open-sheet="passportSheet">Creator Passport</button>
+      <a href="#report" data-open-sheet="reportSheet">Report</a>
       <span aria-hidden="true">•</span>
-      <button type="button" data-open-sheet="exploreSheet">Explore</button>
+      <a href="#creator-passport" data-open-sheet="passportSheet">Creator Passport</a>
+      <a href="#explore" data-open-sheet="exploreSheet">Explore</a>
       <span aria-hidden="true">•</span>
-      <button type="button" data-open-sheet="aboutCreatorOsSheet">About Creator OS</button>
+      <a href="#about-creator-os" data-open-sheet="aboutCreatorOsSheet">About Creator OS</a>
     </nav>
 
     <div class="doneovernight-creator-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
@@ -908,6 +943,20 @@
     </div>
   </section>
 
+  <section class="sheet" id="reportSheet" aria-label="Report Creator" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="reportTitle">Report Creator</strong><span>Help keep Creator OS safe</span></div>
+        <button class="icon-button" type="button" data-close-sheet="reportSheet" aria-label="Close report">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>Reports are reviewed by DONEOVERNIGHT. Include the creator URL and a short description of the issue.</p>
+        <p><a href="mailto:support@doneovernight.com?subject=Report%20Creator%20OS%20page%20-%20Mina%20Mosya">support@doneovernight.com</a></p>
+      </div>
+    </div>
+  </section>
+
   <section class="sheet" id="passportSheet" aria-label="Creator Passport" aria-hidden="true">
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="passportTitle">
       <div class="sheet-handle"></div>
@@ -915,10 +964,13 @@
         <div class="sheet-title"><strong id="passportTitle">Creator Passport</strong><span>Mina Mosya on Creator OS</span></div>
         <button class="icon-button" type="button" data-close-sheet="passportSheet" aria-label="Close Creator Passport">&times;</button>
       </div>
-      <div class="sheet-copy">
-        <p><strong>DNA:</strong> Streamer</p>
-        <p><strong>Location:</strong> Chicago</p>
-        <p><strong>Runtime:</strong> Live hub, community, support, newsletter, and manual battle controls.</p>
+      <div class="passport-grid">
+        <div class="passport-row"><span>Mina Mosya</span><strong>Joined Creator OS</strong></div>
+        <div class="passport-row"><span>Joined</span><strong>July 2026</strong></div>
+        <div class="passport-row"><span>Creator DNA</span><strong>Streamer · Influencer</strong></div>
+        <div class="passport-row"><span>Timezone</span><strong>Chicago</strong></div>
+        <div class="passport-row"><span>Verified Creator</span><strong>Future</strong></div>
+        <div class="passport-row"><span>Powered by</span><strong>DONEOVERNIGHT Creator OS</strong></div>
       </div>
     </div>
   </section>
@@ -984,7 +1036,13 @@
       seasonal_effects_enabled: true,
       holiday_effects_enabled: true,
       redirect_mina_enabled: true,
-      creator_dna: "streamer"
+      creator_dna: "streamer",
+      pinned_block: "",
+      community_state: "open",
+      quick_announcement: "",
+      faq_visible: true,
+      discord_visible: true,
+      creator_passport_visible: true
     };
     const params = new URLSearchParams(window.location.search);
     const forceExperience = params.get("experience") === "1";
@@ -1406,6 +1464,31 @@
       });
     }
 
+    function renderPinnedBlock(settings) {
+      const pinned = $("runtimePinned");
+      if (!pinned) return;
+      const block = String(settings.pinned_block || "").toLowerCase();
+      const announcement = String(settings.quick_announcement || "").trim();
+      const content = {
+        prepare: ["Prepare for Battle", "Get your TikTok Coins before the battle begins."],
+        faq: ["FAQ", "Frequently asked questions are coming soon."],
+        poll: ["Poll", "A live poll can be pinned here during the stream."],
+        announcement: ["Announcement", announcement || "No announcement yet."],
+        community: ["Community", "Join Mina's Discord for stream updates and community drops."],
+        newsletter: ["Newsletter", "Subscribe to the mailing list for Mina updates."],
+        countdown: ["Countdown", settings.next_live_datetime ? countdownText(nextLiveDate(settings)) : "Next stream soon."]
+      }[block];
+      const shouldShow = content && (block !== "announcement" || announcement);
+      pinned.classList.toggle("is-visible", Boolean(shouldShow));
+      pinned.replaceChildren();
+      if (!shouldShow) return;
+      const title = document.createElement("strong");
+      const copy = document.createElement("span");
+      title.textContent = content[0];
+      copy.textContent = content[1];
+      pinned.append(title, copy);
+    }
+
     function setSheetOpen(id, open) {
       const sheet = $(id);
       sheet.classList.toggle("is-open", open);
@@ -1531,7 +1614,10 @@
       button.addEventListener("click", () => setSheetOpen(button.dataset.closeSheet, false));
     });
     document.querySelectorAll("[data-open-sheet]").forEach((button) => {
-      button.addEventListener("click", () => setSheetOpen(button.dataset.openSheet, true));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        setSheetOpen(button.dataset.openSheet, true);
+      });
     });
     document.querySelectorAll(".sheet").forEach((sheet) => {
       sheet.addEventListener("click", (event) => {
@@ -1640,6 +1726,9 @@
         countdown.classList.remove("is-visible");
       }
       const discordUrl = safeUrl(settings.discord_invite_url || settings.discord_url);
+      $("communityCard").hidden = settings.discord_visible === false || settings.community_state === "hidden";
+      const passportLink = document.querySelector('[data-open-sheet="passportSheet"]');
+      if (passportLink) passportLink.hidden = settings.creator_passport_visible === false;
       const community = $("communityCta");
       if (discordUrl) {
         community.href = discordUrl;
@@ -1649,6 +1738,7 @@
         community.setAttribute("aria-disabled", "true");
       }
       renderButtons(settings);
+      renderPinnedBlock(settings);
       setupNewsletter();
       setupExplore();
       setupShare(settings);

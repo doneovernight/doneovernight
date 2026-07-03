@@ -61,7 +61,15 @@ const PHASE_2_CREATOR_FIELDS = [
   "battle_updated_at",
   "battle_undo_snapshot"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS).join(",");
+const PHASE_3_CREATOR_FIELDS = [
+  "pinned_block",
+  "community_state",
+  "quick_announcement",
+  "faq_visible",
+  "discord_visible",
+  "creator_passport_visible"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
@@ -109,6 +117,12 @@ const DEFAULT_MINA_SETTINGS = {
   holiday_effects_enabled: true,
   discord_invite_url: "https://discord.gg/GGE7WsUZR",
   discord_server_id: "",
+  pinned_block: "",
+  community_state: "open",
+  quick_announcement: "",
+  faq_visible: true,
+  discord_visible: true,
+  creator_passport_visible: true,
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
@@ -409,6 +423,18 @@ function normalizeBattleResult(value) {
   return allowed.has(result) ? result : "";
 }
 
+function normalizePinnedBlock(value) {
+  const allowed = new Set(["", "prepare", "faq", "poll", "announcement", "community", "newsletter", "countdown"]);
+  const block = clean(value).toLowerCase();
+  return allowed.has(block) ? block : "";
+}
+
+function normalizeCommunityState(value) {
+  const allowed = new Set(["open", "preview", "hidden"]);
+  const state = clean(value).toLowerCase();
+  return allowed.has(state) ? state : "open";
+}
+
 function normalizeDateTime(value) {
   const input = clean(value);
   if (!input) return "";
@@ -542,6 +568,12 @@ function normalizeCreator(row = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(row.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(row.battle_updated_at),
     battle_undo_snapshot: clean(row.battle_undo_snapshot),
+    pinned_block: normalizePinnedBlock(row.pinned_block),
+    community_state: normalizeCommunityState(row.community_state),
+    quick_announcement: clean(row.quick_announcement),
+    faq_visible: bool(row.faq_visible, true),
+    discord_visible: bool(row.discord_visible, true),
+    creator_passport_visible: bool(row.creator_passport_visible, true),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -580,20 +612,28 @@ async function fetchCreatorFromAnalyticsBridge() {
 }
 
 async function fetchCreator(slug = "mosyaamosya") {
+  let tableResult = null;
   try {
     const creator = await fetchCreatorFromTable(slug);
-    if (creator) return { creator, source: "database" };
+    if (creator) tableResult = { creator, source: "database" };
   } catch (error) {
     // The dedicated creators table may not exist until the SQL file is applied.
   }
 
   try {
     const creator = await fetchCreatorFromAnalyticsBridge();
-    if (creator) return { creator, source: "analytics_bridge" };
+    if (creator) {
+      const tableTime = tableResult && Date.parse(tableResult.creator.updated_at || "");
+      const bridgeTime = Date.parse(creator.updated_at || "");
+      if (!tableResult || (Number.isFinite(bridgeTime) && (!Number.isFinite(tableTime) || bridgeTime >= tableTime))) {
+        return { creator, source: "analytics_bridge" };
+      }
+    }
   } catch (error) {
     // If the bridge table is unavailable, fall through to the seeded defaults.
   }
 
+  if (tableResult) return tableResult;
   return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
 }
 
@@ -636,6 +676,12 @@ function creatorPayload(input = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(input.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(input.battle_updated_at),
     battle_undo_snapshot: clean(input.battle_undo_snapshot),
+    pinned_block: normalizePinnedBlock(input.pinned_block),
+    community_state: normalizeCommunityState(input.community_state),
+    quick_announcement: clean(input.quick_announcement),
+    faq_visible: bool(input.faq_visible, true),
+    discord_visible: bool(input.discord_visible, true),
+    creator_passport_visible: bool(input.creator_passport_visible, true),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),

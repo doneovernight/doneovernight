@@ -41,6 +41,37 @@
     h1 { margin: 0; font-size: clamp(34px, 5vw, 66px); line-height: .9; letter-spacing: 0; }
     .muted { color: var(--muted); }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .admin-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 12;
+      display: flex;
+      gap: 8px;
+      margin: 0 0 16px;
+      padding: 8px;
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 18px;
+      background: rgba(9,5,4,.72);
+      backdrop-filter: blur(18px) saturate(1.12);
+      overflow-x: auto;
+    }
+    .admin-tab {
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      color: rgba(255,245,247,.62);
+      padding: 0 14px;
+      font-weight: 950;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .admin-tab[aria-selected="true"] {
+      border-color: rgba(255,211,223,.18);
+      background: rgba(255,245,247,.09);
+      color: var(--text);
+      box-shadow: inset 0 1px rgba(255,255,255,.12);
+    }
     .button {
       min-height: 42px;
       border: 1px solid var(--line);
@@ -68,6 +99,7 @@
     .gate-card { width: min(430px, 100%); padding: 22px; }
     .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; }
     .stack { display: grid; gap: 16px; }
+    .tab-panel[hidden] { display: none !important; }
     .panel { padding: 20px; }
     .panel h2 { margin: 0 0 14px; font-size: 18px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -129,6 +161,46 @@
     .battle-controls .button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.12); }
     .battle-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: rgba(255,245,247,.72); font-size: 12px; }
     .battle-summary span { border: 1px solid rgba(255,211,223,.14); border-radius: 999px; padding: 7px 9px; background: rgba(255,255,255,.04); }
+    .overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .stat-card { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.045); }
+    .stat-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-card strong { display: block; margin-top: 7px; font-size: 18px; }
+    .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .runtime-board { display: grid; gap: 14px; }
+    .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; }
+    .runtime-section h3 { margin: 0; font-size: 15px; }
+    .runtime-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .runtime-actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; }
+    .runtime-actions .button.primary { font-size: 16px; }
+    .runtime-field {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(0,0,0,.16);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .segment {
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.045);
+      color: rgba(255,245,247,.72);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .segment[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(255,211,223,.12);
+    }
+    .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .sticky-save { position: sticky; bottom: 12px; z-index: 5; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
@@ -147,6 +219,7 @@
       .topbar { margin-bottom: 12px; }
       .stack { gap: 12px; }
       .fields { grid-template-columns: 1fr; }
+      .overview-grid, .runtime-actions, .runtime-actions.two, .segmented { grid-template-columns: 1fr; }
       .theme-grid, .future { grid-template-columns: repeat(2, 1fr); }
       .dna-grid { grid-template-columns: 1fr; }
       .span-2 { grid-column: auto; }
@@ -175,14 +248,40 @@
       </div>
       <div class="actions">
         <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
+        <a class="button" href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">Open Public Page</a>
         <button class="button danger" id="logoutButton" type="button">Logout</button>
         <button class="button primary" id="saveTop" type="button">Save page</button>
       </div>
     </header>
 
+    <nav class="admin-tabs" aria-label="Creator admin sections">
+      <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
+    </nav>
+
     <section class="grid">
       <form class="stack" id="settingsForm">
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="overview">
+          <h2>Overview</h2>
+          <div class="overview-grid">
+            <div class="stat-card"><span>Live Status</span><strong id="overviewLiveStatus">Checking</strong></div>
+            <div class="stat-card"><span>Battle</span><strong id="overviewBattleStatus">Inactive</strong></div>
+            <div class="stat-card"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
+            <div class="stat-card"><span>Last Save</span><strong id="overviewLastSave">Not yet</strong></div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="quick-actions">
+            <button class="button primary" type="button" data-runtime-action="start-live">Start Live</button>
+            <button class="button" type="button" data-runtime-action="end-live">End Live</button>
+            <button class="button" type="button" data-admin-jump="runtime">Open Runtime</button>
+            <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
+            <a class="button" href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">Open Public Page</a>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Profile</h2>
           <div class="fields">
             <label>Display name<input name="display_name" required></label>
@@ -213,66 +312,115 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Links</h2>
           <div class="fields">
             <label>TikTok URL<input name="tiktok_url" type="url"></label>
             <label>Discord URL<input name="discord_url" type="url"></label>
             <label>Discord server invite URL<input name="discord_invite_url" type="url"></label>
             <label>Discord server ID<input name="discord_server_id"></label>
-            <label>Support Stream URL<input name="tiktok_coins_url" type="url"></label>
+            <label>Coins URL<input name="tiktok_coins_url" type="url"></label>
             <label>Business email<input name="business_email" type="email"></label>
-            <label class="span-2">Live URL<input name="live_url" type="url"></label>
+            <label>Newsletter title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
+            <label>Newsletter copy<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
+            <div class="span-2 switch-row">
+              <div><strong>Newsletter</strong><span>Show the mailing list subscribe interaction.</span></div>
+              <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
             <div class="span-2 help-panel">
               Discord counter placeholder: enable the Discord server widget in Server Settings, then add the server ID here. API/widget member counts are intentionally not implemented yet.
             </div>
           </div>
         </section>
 
-        <section class="panel">
-          <h2>Live</h2>
-          <div class="fields">
-            <label>TikTok username<input name="tiktok_live_username" placeholder="mosyaamosya"></label>
-            <div class="switch-row">
-              <div><strong>Auto live detection</strong><span>Checks TikTok server-side with cached polling.</span></div>
-              <label class="switch" aria-label="Auto live detection"><input name="auto_live_detection_enabled" type="checkbox"><span class="track"></span></label>
+        <section class="panel tab-panel" data-admin-panel="runtime" hidden>
+          <h2>Live Runtime</h2>
+          <div class="runtime-board">
+            <div class="runtime-section">
+              <h3>Live</h3>
+              <div class="runtime-actions two">
+                <button class="button primary" type="button" data-runtime-action="start-live">Start Live</button>
+                <button class="button danger" type="button" data-runtime-action="end-live">End Live</button>
+              </div>
+              <input name="live_url" type="hidden">
+              <input name="live_button_text" type="hidden">
+              <input name="next_live_datetime" type="hidden">
+              <input name="tiktok_live_username" type="hidden">
+              <input name="auto_live_detection_enabled" type="hidden" value="true">
+              <input name="live_status" type="hidden" value="false">
+              <input name="manual_live_fallback_enabled" type="hidden" value="true">
+              <input name="battle_mode_enabled" type="hidden" value="false">
             </div>
-            <div class="span-2 switch-row">
-              <div><strong>Manual live status</strong><span>Used as fallback if TikTok blocks the checker.</span></div>
-              <label class="switch" aria-label="Manual live status"><input name="live_status" type="checkbox"><span class="track"></span></label>
+
+            <div class="runtime-section">
+              <h3>Battle</h3>
+              <div class="runtime-actions">
+                <button class="button primary" type="button" data-battle-action="start">Battle Mode ON</button>
+                <button class="button" type="button" data-battle-action="end">Battle Mode OFF</button>
+                <button class="button" type="button" data-battle-action="undo">Undo Last Result</button>
+                <button class="button" type="button" data-battle-action="won">Won</button>
+                <button class="button" type="button" data-battle-action="lost">Lost</button>
+                <button class="button" type="button" data-battle-action="tie">Tie</button>
+              </div>
+              <div class="runtime-field">
+                <label>Opponent Name<input name="battle_opponent" placeholder="Opponent name"></label>
+              </div>
+              <label>Current win streak<input name="battle_win_streak" type="number" min="0" step="1" inputmode="numeric"></label>
+              <label>Last result<input name="battle_result" readonly placeholder="None"></label>
+              <input name="battle_updated_at" type="hidden">
+              <input name="battle_undo_snapshot" type="hidden">
+              <div class="battle-summary" id="battleSummary"></div>
             </div>
-            <div class="span-2 switch-row">
-              <div><strong>Manual fallback live</strong><span>Immediately marks Mina live when auto-check fails.</span></div>
-              <label class="switch" aria-label="Manual fallback live"><input name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
+
+            <div class="runtime-section">
+              <h3>Statistics</h3>
+              <div class="runtime-actions two">
+                <button class="button" type="button" data-runtime-action="reset-streak">Reset Win Streak</button>
+                <button class="button" type="button" data-runtime-action="refresh-runtime">Refresh Runtime</button>
+              </div>
             </div>
-            <div class="span-2 switch-row">
-              <div><strong>Manual Battle Mode</strong><span>Fallback battle state when TikTok metadata is unavailable.</span></div>
-              <label class="switch" aria-label="Manual Battle Mode"><input name="battle_mode_enabled" type="checkbox"><span class="track"></span></label>
+
+            <div class="runtime-section">
+              <h3>Pinned Block</h3>
+              <div class="segmented" id="pinnedBlockControls">
+                <button class="segment" type="button" data-pinned-block="prepare">Prepare for Battle</button>
+                <button class="segment" type="button" data-pinned-block="faq">FAQ</button>
+                <button class="segment" type="button" data-pinned-block="poll">Poll</button>
+                <button class="segment" type="button" data-pinned-block="announcement">Announcement</button>
+                <button class="segment" type="button" data-pinned-block="community">Community</button>
+                <button class="segment" type="button" data-pinned-block="newsletter">Newsletter</button>
+                <button class="segment" type="button" data-pinned-block="countdown">Countdown</button>
+              </div>
+              <input name="pinned_block" type="hidden">
+              <div class="runtime-note">Pinned blocks are saved immediately and prepared for public page modules.</div>
             </div>
-            <label class="span-2">Battle opponent<input name="battle_opponent" placeholder="Optional"></label>
-            <label>Current win streak<input name="battle_win_streak" type="number" min="0" step="1" inputmode="numeric"></label>
-            <label>Last result<input name="battle_result" readonly placeholder="None"></label>
-            <input name="battle_updated_at" type="hidden">
-            <input name="battle_undo_snapshot" type="hidden">
-            <div class="span-2 battle-controls" aria-label="Battle controls">
-              <button class="button primary" type="button" data-battle-action="start">Start Battle</button>
-              <button class="button" type="button" data-battle-action="end">End Battle</button>
-              <button class="button" type="button" data-battle-action="won">Won</button>
-              <button class="button" type="button" data-battle-action="lost">Lost</button>
-              <button class="button" type="button" data-battle-action="tie">Tie</button>
-              <button class="button" type="button" data-battle-action="undo">Undo last result</button>
+
+            <div class="runtime-section">
+              <h3>Community</h3>
+              <div class="runtime-actions">
+                <button class="button" type="button" data-community-state="open">Open</button>
+                <button class="button" type="button" data-community-state="preview">Preview</button>
+                <button class="button" type="button" data-community-state="hidden">Hidden</button>
+              </div>
+              <input name="community_state" type="hidden">
             </div>
-            <div class="span-2 battle-summary" id="battleSummary"></div>
-            <label class="span-2">Live button text<input name="live_button_text"></label>
-            <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
-            <label>Timezone<input name="timezone" placeholder="America/Chicago"></label>
-            <div class="span-2 help-panel" id="liveRuntimeStatus">
-              Last checked: not yet. Status: unknown. Source: unknown.
+
+            <div class="runtime-section">
+              <h3>Announcements</h3>
+              <label>Quick announcement field<textarea name="quick_announcement" placeholder="Short update for the public page"></textarea></label>
+              <button class="button primary" type="button" data-runtime-action="push-announcement">Push to public page</button>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Runtime status</h3>
+              <div class="help-panel" id="liveRuntimeStatus">
+                Last checked: not yet. Status: unknown. Source: unknown.
+              </div>
             </div>
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Welcome intro</h2>
           <div class="switch-row">
             <div><strong>Welcome Intro Enabled</strong><span>Shows the first-visit cinematic intro.</span></div>
@@ -280,7 +428,7 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Music</h2>
           <div class="fields">
             <div class="span-2 switch-row">
@@ -296,14 +444,14 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Creator DNA</h2>
           <div class="dna-grid" id="dnaGrid"></div>
           <div style="height:12px"></div>
           <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Theme Engine</h2>
           <div class="muted" style="margin-bottom:12px;">Preview Theme updates the admin and preview instantly. Save only when it feels right.</div>
           <div class="theme-grid" id="themeGrid"></div>
@@ -311,9 +459,10 @@
           <label>Background Gradient<textarea name="background_gradient"></textarea></label>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Ambient mode</h2>
           <div class="fields">
+            <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
             <div class="span-2 switch-row">
               <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to Mina's local time.</span></div>
               <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
@@ -329,7 +478,25 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Privacy</h2>
+          <div class="fields">
+            <div class="switch-row">
+              <div><strong>FAQ visibility</strong><span>Prepare FAQ visibility for future public blocks.</span></div>
+              <label class="switch" aria-label="FAQ visibility"><input name="faq_visible" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="switch-row">
+              <div><strong>Discord visibility</strong><span>Show or hide the public community block.</span></div>
+              <label class="switch" aria-label="Discord visibility"><input name="discord_visible" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="switch-row span-2">
+              <div><strong>Creator Passport</strong><span>Show Creator Passport in the footer navigation.</span></div>
+              <label class="switch" aria-label="Creator Passport visibility"><input name="creator_passport_visible" type="checkbox"><span class="track"></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Settings</h2>
           <div class="fields">
             <label>Current password<input name="current_password" type="password" autocomplete="current-password"></label>
@@ -349,7 +516,7 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Redirect</h2>
           <div class="switch-row">
             <div><strong>Redirect /mina</strong><span>Production routing redirects /mina to /mosyaamosya.</span></div>
@@ -357,7 +524,12 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel tab-panel" data-admin-panel="analytics" hidden>
+          <h2>Analytics</h2>
+          <div class="help-panel">Future placeholder. Creator OS analytics will live here when the runtime worker and tracking layer are ready.</div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Future placeholders</h2>
           <div class="future">
             <span>Ask Mina</span>
@@ -367,7 +539,7 @@
           </div>
         </section>
 
-        <button class="button primary sticky-save" type="submit">Save page</button>
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings" type="submit">Save page</button>
         <div class="status" id="saveStatus"></div>
       </form>
 
@@ -455,6 +627,21 @@
       if (!Number.isFinite(number)) return 0.35;
       return Math.max(0, Math.min(1, number));
     }
+    function boolField(name, fallback = false) {
+      const element = form.elements[name];
+      if (!element) return fallback;
+      if (element.type === "checkbox") return element.checked;
+      return String(element.value || "").toLowerCase() === "true";
+    }
+    function setBoolField(name, value) {
+      const element = form.elements[name];
+      if (!element) return;
+      if (element.type === "checkbox") {
+        element.checked = Boolean(value);
+      } else {
+        element.value = Boolean(value) ? "true" : "false";
+      }
+    }
     function valuesFromForm() {
       const data = new FormData(form);
       return {
@@ -470,51 +657,64 @@
         tiktok_coins_url: String(data.get("tiktok_coins_url") || "").trim(),
         business_email: String(data.get("business_email") || "").trim(),
         live_url: String(data.get("live_url") || "").trim(),
-        live_status: form.elements.live_status.checked,
+        live_status: boolField("live_status"),
         live_button_text: String(data.get("live_button_text") || "").trim() || "Join Live",
         tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || "mosyaamosya",
-        auto_live_detection_enabled: form.elements.auto_live_detection_enabled.checked,
-        manual_live_fallback_enabled: form.elements.manual_live_fallback_enabled.checked,
-        battle_mode_enabled: form.elements.battle_mode_enabled.checked,
+        auto_live_detection_enabled: boolField("auto_live_detection_enabled", true),
+        manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
+        battle_mode_enabled: boolField("battle_mode_enabled"),
         battle_opponent: String(data.get("battle_opponent") || "").trim(),
         battle_result: String(data.get("battle_result") || "").trim(),
         battle_win_streak: Math.max(0, Math.floor(Number(data.get("battle_win_streak")) || 0)),
         battle_updated_at: String(data.get("battle_updated_at") || "").trim(),
         battle_undo_snapshot: String(data.get("battle_undo_snapshot") || "").trim(),
+        pinned_block: String(data.get("pinned_block") || "").trim(),
+        community_state: String(data.get("community_state") || "open").trim(),
+        quick_announcement: String(data.get("quick_announcement") || "").trim(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
-        welcome_intro_enabled: form.elements.welcome_intro_enabled.checked,
-        music_enabled: form.elements.music_enabled.checked,
+        welcome_intro_enabled: boolField("welcome_intro_enabled", true),
+        music_enabled: boolField("music_enabled"),
         music_url: String(data.get("music_url") || "").trim(),
         music_volume: clampVolume(data.get("music_volume")),
-        music_loop: form.elements.music_loop.checked,
+        music_loop: boolField("music_loop", true),
         theme_preset: activeTheme,
         creator_dna: activeDna,
         background_gradient: String(data.get("background_gradient") || "").trim(),
-        ambient_mode_enabled: form.elements.ambient_mode_enabled.checked,
+        ambient_mode_enabled: boolField("ambient_mode_enabled", true),
         timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
-        seasonal_effects_enabled: form.elements.seasonal_effects_enabled.checked,
-        holiday_effects_enabled: form.elements.holiday_effects_enabled.checked,
+        seasonal_effects_enabled: boolField("seasonal_effects_enabled", true),
+        holiday_effects_enabled: boolField("holiday_effects_enabled", true),
         discord_invite_url: String(data.get("discord_invite_url") || "").trim(),
         discord_server_id: String(data.get("discord_server_id") || "").trim(),
-        redirect_mina_enabled: form.elements.redirect_mina_enabled.checked
+        subscribe_popup_enabled: boolField("subscribe_popup_enabled", true),
+        subscribe_popup_title: String(data.get("subscribe_popup_title") || "").trim(),
+        subscribe_popup_copy: String(data.get("subscribe_popup_copy") || "").trim(),
+        faq_visible: boolField("faq_visible", true),
+        discord_visible: boolField("discord_visible", true),
+        creator_passport_visible: boolField("creator_passport_visible", true),
+        redirect_mina_enabled: boolField("redirect_mina_enabled", true)
       };
     }
     function fillForm(settings) {
       Object.entries(settings || {}).forEach(([key, value]) => {
         const element = form.elements[key];
         if (!element || element.type === "checkbox") return;
-        element.value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
+        element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
-        if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled"].forEach((key) => {
+        if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
-      if (settings.auto_live_detection_enabled === undefined && form.elements.auto_live_detection_enabled) form.elements.auto_live_detection_enabled.checked = true;
-      if (settings.manual_live_fallback_enabled === undefined && form.elements.manual_live_fallback_enabled) form.elements.manual_live_fallback_enabled.checked = true;
-      if (settings.music_loop === undefined && form.elements.music_loop) form.elements.music_loop.checked = true;
-      if (settings.ambient_mode_enabled === undefined && form.elements.ambient_mode_enabled) form.elements.ambient_mode_enabled.checked = true;
-      if (settings.seasonal_effects_enabled === undefined && form.elements.seasonal_effects_enabled) form.elements.seasonal_effects_enabled.checked = true;
-      if (settings.holiday_effects_enabled === undefined && form.elements.holiday_effects_enabled) form.elements.holiday_effects_enabled.checked = true;
-      if (settings.redirect_mina_enabled === undefined && form.elements.redirect_mina_enabled) form.elements.redirect_mina_enabled.checked = true;
+      if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
+      if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
+      if (settings.music_loop === undefined) setBoolField("music_loop", true);
+      if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
+      if (settings.seasonal_effects_enabled === undefined) setBoolField("seasonal_effects_enabled", true);
+      if (settings.holiday_effects_enabled === undefined) setBoolField("holiday_effects_enabled", true);
+      if (settings.subscribe_popup_enabled === undefined) setBoolField("subscribe_popup_enabled", true);
+      if (settings.faq_visible === undefined) setBoolField("faq_visible", true);
+      if (settings.discord_visible === undefined) setBoolField("discord_visible", true);
+      if (settings.creator_passport_visible === undefined) setBoolField("creator_passport_visible", true);
+      if (settings.redirect_mina_enabled === undefined) setBoolField("redirect_mina_enabled", true);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
@@ -523,6 +723,8 @@
       renderDna();
       applyAdminTheme(activeTheme);
       updateBattleSummary();
+      updateRuntimeUi();
+      updateOverview(settings.updated_at);
       updatePreviewFrame(false);
     }
     function normalizeBattleResult(value) {
@@ -531,9 +733,9 @@
     }
     function battleSnapshot() {
       return {
-        battle_mode_enabled: Boolean(form.elements.battle_mode_enabled.checked),
-        live_status: Boolean(form.elements.live_status.checked),
-        manual_live_fallback_enabled: Boolean(form.elements.manual_live_fallback_enabled.checked),
+        battle_mode_enabled: boolField("battle_mode_enabled"),
+        live_status: boolField("live_status"),
+        manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
         battle_opponent: String(form.elements.battle_opponent.value || "").trim(),
         battle_result: normalizeBattleResult(form.elements.battle_result.value),
         battle_win_streak: Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)),
@@ -541,14 +743,15 @@
       };
     }
     function writeBattleSnapshot(snapshot) {
-      form.elements.battle_mode_enabled.checked = Boolean(snapshot.battle_mode_enabled);
-      form.elements.live_status.checked = Boolean(snapshot.live_status);
-      form.elements.manual_live_fallback_enabled.checked = snapshot.manual_live_fallback_enabled !== false;
+      setBoolField("battle_mode_enabled", Boolean(snapshot.battle_mode_enabled));
+      setBoolField("live_status", Boolean(snapshot.live_status));
+      setBoolField("manual_live_fallback_enabled", snapshot.manual_live_fallback_enabled !== false);
       form.elements.battle_opponent.value = snapshot.battle_opponent || "";
       form.elements.battle_result.value = normalizeBattleResult(snapshot.battle_result);
       form.elements.battle_win_streak.value = Math.max(0, Math.floor(Number(snapshot.battle_win_streak) || 0));
       form.elements.battle_updated_at.value = snapshot.battle_updated_at || "";
       updateBattleSummary();
+      updateRuntimeUi();
     }
     function saveUndoSnapshot(snapshot) {
       form.elements.battle_undo_snapshot.value = JSON.stringify(snapshot);
@@ -577,6 +780,26 @@
           (action === "tie" && snapshot.battle_result === "tie");
         button.setAttribute("aria-pressed", pressed ? "true" : "false");
       });
+      updateOverview();
+    }
+    function updateOverview(updatedAt) {
+      const snapshot = battleSnapshot();
+      if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = boolField("live_status") || boolField("manual_live_fallback_enabled", true) ? "Live" : "Offline";
+      if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = snapshot.battle_mode_enabled ? "Active" : "Inactive";
+      if ($("overviewWinStreak")) $("overviewWinStreak").textContent = String(snapshot.battle_win_streak || 0);
+      if ($("overviewLastSave")) {
+        const date = updatedAt ? new Date(updatedAt) : null;
+        $("overviewLastSave").textContent = date && Number.isFinite(date.getTime()) ? date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Not yet";
+      }
+    }
+    function updateRuntimeUi() {
+      document.querySelectorAll("[data-pinned-block]").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.pinnedBlock === String(form.elements.pinned_block.value || ""));
+      });
+      document.querySelectorAll("[data-community-state]").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.communityState === String(form.elements.community_state.value || "open"));
+      });
+      updateOverview();
     }
     async function applyBattleAction(action) {
       const previous = battleSnapshot();
@@ -616,6 +839,55 @@
       writeBattleSnapshot(next);
       await saveSettings();
       setStatus("Battle control saved.");
+    }
+    async function applyRuntimeAction(action) {
+      if (action === "start-live") {
+        setBoolField("live_status", true);
+        setBoolField("manual_live_fallback_enabled", true);
+      } else if (action === "end-live") {
+        setBoolField("live_status", false);
+        setBoolField("manual_live_fallback_enabled", false);
+        setBoolField("battle_mode_enabled", false);
+      } else if (action === "reset-streak") {
+        form.elements.battle_win_streak.value = 0;
+        form.elements.battle_result.value = "";
+        form.elements.battle_updated_at.value = new Date().toISOString();
+      } else if (action === "refresh-runtime") {
+        await loadLiveRuntime();
+        setStatus("Runtime refreshed.");
+        return;
+      } else if (action === "push-announcement") {
+        form.elements.pinned_block.value = "announcement";
+      }
+      updateBattleSummary();
+      updateRuntimeUi();
+      await saveSettings();
+      setStatus("Runtime updated.");
+    }
+    async function setPinnedBlock(value) {
+      form.elements.pinned_block.value = value;
+      updateRuntimeUi();
+      await saveSettings();
+      setStatus("Pinned block updated.");
+    }
+    async function setCommunityState(value) {
+      form.elements.community_state.value = value;
+      setBoolField("discord_visible", value !== "hidden");
+      updateRuntimeUi();
+      await saveSettings();
+      setStatus("Community updated.");
+    }
+    function setAdminTab(name) {
+      const active = name || "overview";
+      document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.adminTab === active ? "true" : "false");
+      });
+      document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
+        panel.hidden = panel.dataset.adminPanel !== active;
+      });
+      const saveVisible = active === "settings";
+      $("saveTop").hidden = !saveVisible;
+      if (active === "runtime") loadLiveRuntime();
     }
     function applyAdminTheme(theme) {
       const vars = themeVars[theme] || themeVars.mina;
@@ -711,6 +983,7 @@
       fillForm(data.creator);
       updatePreviewFrame();
       loadLiveRuntime();
+      updateOverview(data.creator && data.creator.updated_at);
       setStatus("Saved Mina Mosya page.");
     }
     async function loadLiveRuntime() {
@@ -733,6 +1006,9 @@
           "Runtime error: " + error,
           "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", battleWinStreak=" + Boolean(capabilities.battleWinStreak) + ", gifts=" + Boolean(capabilities.gifts)
         ].join(". ") + ".";
+        if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? "Live" : "Offline";
+        if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = data.battleActive ? "Active" : "Inactive";
+        if ($("overviewWinStreak")) $("overviewWinStreak").textContent = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? String(data.battleWinStreak) : String(Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)));
       } catch (error) {
         status.textContent = "Last checked: error. Status: unknown. Source: error.";
       }
@@ -811,6 +1087,27 @@
     $("saveTop").addEventListener("click", async () => {
       try { await saveSettings(); } catch (error) { setStatus(error.message || "Save failed", true); }
     });
+    document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+      button.addEventListener("click", () => setAdminTab(button.dataset.adminTab));
+    });
+    document.querySelectorAll("[data-admin-jump]").forEach((button) => {
+      button.addEventListener("click", () => setAdminTab(button.dataset.adminJump));
+    });
+    document.querySelectorAll("[data-runtime-action]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await applyRuntimeAction(button.dataset.runtimeAction); } catch (error) { setStatus(error.message || "Runtime update failed", true); }
+      });
+    });
+    document.querySelectorAll("[data-pinned-block]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await setPinnedBlock(button.dataset.pinnedBlock); } catch (error) { setStatus(error.message || "Pinned block update failed", true); }
+      });
+    });
+    document.querySelectorAll("[data-community-state]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await setCommunityState(button.dataset.communityState); } catch (error) { setStatus(error.message || "Community update failed", true); }
+      });
+    });
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(sessionFlag);
       sessionStorage.removeItem(sessionKey);
@@ -822,6 +1119,11 @@
     ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);
       if (form.elements[key]) form.elements[key].addEventListener("change", updateBattleSummary);
+    });
+    ["battle_opponent"].forEach((key) => {
+      if (form.elements[key]) form.elements[key].addEventListener("change", async () => {
+        try { await saveSettings(); } catch (error) { setStatus(error.message || "Runtime update failed", true); }
+      });
     });
     document.querySelectorAll("[data-battle-action]").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -837,6 +1139,7 @@
     renderThemes();
     renderDna();
     applyAdminTheme(activeTheme);
+    setAdminTab("overview");
     $("previewFrame").addEventListener("load", sendPreviewTheme);
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
       loadSettings().catch(() => {
