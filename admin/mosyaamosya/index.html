@@ -630,6 +630,50 @@
     .runtime-actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
     .runtime-actions .button.primary { font-size: 16px; }
+    .runtime-status-panel {
+      border: 1px solid rgba(255,211,223,.16);
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.032));
+      display: grid;
+      gap: 12px;
+    }
+    .runtime-current {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .runtime-current span {
+      color: rgba(255,245,247,.52);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .runtime-current strong { font-size: 24px; letter-spacing: 0; }
+    .runtime-status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .runtime-status-grid div {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(0,0,0,.13);
+      display: grid;
+      gap: 4px;
+    }
+    .runtime-status-grid span {
+      color: rgba(255,245,247,.46);
+      font-size: 9px;
+      font-weight: 950;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .runtime-status-grid strong { font-size: 13px; overflow-wrap: anywhere; }
     .runtime-field {
       border: 1px solid var(--line);
       border-radius: 16px;
@@ -803,7 +847,7 @@
       .fields { grid-template-columns: 1fr; }
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
-      .overview-grid, .connection-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
+      .overview-grid, .connection-grid, .runtime-status-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
       .media-health-grid, .media-storage-grid, .media-spec-grid { grid-template-columns: 1fr; }
       .media-asset-head { flex-direction: column; }
       .media-health-pill { align-self: flex-start; }
@@ -1182,12 +1226,20 @@
           <div class="section-note">What is happening right now?</div>
           <div style="height:12px"></div>
           <div class="runtime-board">
+            <div class="runtime-status-panel" aria-live="polite">
+              <div class="runtime-current">
+                <div><span>Current Status</span><strong id="runtimeCurrentStatus">⚪ Offline</strong></div>
+                <button class="button primary" id="liveToggleButton" type="button" data-runtime-action="toggle-live">Start Live</button>
+              </div>
+              <div class="runtime-status-grid">
+                <div><span>Source</span><strong id="runtimeSourceLabel">Unknown</strong></div>
+                <div><span>Last checked</span><strong id="runtimeLastChecked">Not yet</strong></div>
+                <div><span>Battle</span><strong id="runtimeBattleLabel">Off</strong></div>
+                <div><span>Pinned block</span><strong id="runtimePinnedLabel">None</strong></div>
+              </div>
+            </div>
             <div class="runtime-section">
               <h3>Live</h3>
-              <div class="runtime-actions two">
-                <button class="button primary" type="button" data-runtime-action="start-live">Start Live</button>
-                <button class="button danger" type="button" data-runtime-action="end-live">End Live</button>
-              </div>
               <input name="live_url" type="hidden">
               <input name="live_button_text" type="hidden">
               <input name="tiktok_live_username" type="hidden">
@@ -1530,6 +1582,7 @@
     let unlockResetTimer = 0;
     let pendingSaveScroll = null;
     let latestConnections = [];
+    let latestLiveRuntimeState = null;
     let runtimeAutosaveTimer = 0;
     const mediaState = {
       avatar: {},
@@ -2698,10 +2751,52 @@
         $("overviewLastSave").textContent = date && Number.isFinite(date.getTime()) ? date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Not yet";
       }
     }
+    function runtimeSourceLabel(source) {
+      const value = String(source || "").toLowerCase();
+      if (value === "runtime" || value === "provider" || value === "confirmed") return "Runtime";
+      if (value === "manual-fallback" || boolField("manual_live_fallback_enabled")) return "Manual";
+      return "Unknown";
+    }
+    function formatRuntimeDate(value) {
+      if (!value) return "Not yet";
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Not yet";
+    }
+    function pinnedBlockLabel(value) {
+      const labels = {
+        "": "None",
+        prepare: "Prepare for Battle",
+        faq: "Frequently Asked on Stream",
+        poll: "Poll",
+        announcement: "Announcement",
+        community: "Community",
+        newsletter: "Newsletter",
+        countdown: "Countdown"
+      };
+      return labels[String(value || "").toLowerCase()] || "None";
+    }
+    function updateRuntimeStatusPanel() {
+      const liveNow = latestLiveRuntimeState && typeof latestLiveRuntimeState.isLive === "boolean"
+        ? latestLiveRuntimeState.isLive
+        : boolField("live_status");
+      if ($("runtimeCurrentStatus")) $("runtimeCurrentStatus").textContent = liveNow ? "🟢 Live now" : "⚪ Offline";
+      if ($("runtimeSourceLabel")) $("runtimeSourceLabel").textContent = runtimeSourceLabel(latestLiveRuntimeState && latestLiveRuntimeState.source);
+      if ($("runtimeLastChecked")) $("runtimeLastChecked").textContent = formatRuntimeDate(latestLiveRuntimeState && latestLiveRuntimeState.checkedAt);
+      if ($("runtimeBattleLabel")) $("runtimeBattleLabel").textContent = boolField("battle_mode_enabled") ? "On" : "Off";
+      if ($("runtimePinnedLabel")) $("runtimePinnedLabel").textContent = pinnedBlockLabel(form.elements.pinned_block && form.elements.pinned_block.value);
+      const button = $("liveToggleButton");
+      if (button) {
+        button.textContent = liveNow ? "End Live" : "Start Live";
+        button.dataset.runtimeAction = liveNow ? "end-live" : "start-live";
+        button.classList.add("primary");
+        button.classList.remove("danger");
+      }
+    }
     function updateRuntimeUi() {
       document.querySelectorAll("[data-pinned-block]").forEach((button) => {
         button.setAttribute("aria-pressed", button.dataset.pinnedBlock === String(form.elements.pinned_block.value || ""));
       });
+      updateRuntimeStatusPanel();
       updateOverview();
     }
     async function applyBattleAction(action) {
@@ -2751,6 +2846,11 @@
         current_win_streak: values.battle_win_streak
       });
       fillForm(data.creator);
+      latestLiveRuntimeState = {
+        isLive: Boolean(data.creator && data.creator.live_status),
+        source: data.creator && data.creator.manual_live_fallback_enabled ? "manual-fallback" : "unknown",
+        checkedAt: data.creator && data.creator.updated_at
+      };
       refreshPreviewLiveRuntime();
       loadLiveRuntime();
       updateOverview(data.creator && data.creator.updated_at);
@@ -2771,6 +2871,7 @@
       if (action === "start-live") {
         setBoolField("live_status", true);
         setBoolField("manual_live_fallback_enabled", true);
+        latestLiveRuntimeState = { isLive: true, source: "manual-fallback", checkedAt: new Date().toISOString() };
         const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
         if (form.elements.live_url && !String(form.elements.live_url.value || "").trim()) {
           form.elements.live_url.value = "https://www.tiktok.com/@" + username + "/live";
@@ -2791,6 +2892,7 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
+          latestLiveRuntimeState = { isLive: true, source: "manual-fallback", checkedAt: data.creator && data.creator.updated_at };
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -2803,6 +2905,7 @@
         setBoolField("live_status", false);
         setBoolField("manual_live_fallback_enabled", false);
         setBoolField("battle_mode_enabled", false);
+        latestLiveRuntimeState = { isLive: false, source: "manual-fallback", checkedAt: new Date().toISOString() };
         updateBattleSummary();
         updateRuntimeUi();
         try {
@@ -2816,6 +2919,7 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
+          latestLiveRuntimeState = { isLive: false, source: "manual-fallback", checkedAt: data.creator && data.creator.updated_at };
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -3106,6 +3210,7 @@
       try {
         const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } });
         const data = await response.json();
+        latestLiveRuntimeState = data;
         const capabilities = data.capabilities || {};
         const source = data.source || "unknown";
         const confidence = data.confidence || (data.confirmed ? "confirmed" : "unknown");
@@ -3139,8 +3244,11 @@
         if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? (data.confirmed ? "Live" : "Manual live") : "Offline";
         if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = data.battleActive ? "Active" : "Inactive";
         if ($("overviewWinStreak")) $("overviewWinStreak").textContent = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? String(data.battleWinStreak) : String(Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)));
+        updateRuntimeStatusPanel();
       } catch (error) {
+        latestLiveRuntimeState = { isLive: boolField("live_status"), source: boolField("manual_live_fallback_enabled") ? "manual-fallback" : "unknown", checkedAt: "" };
         status.textContent = "Last checked: error. Status: unknown. Source: error.";
+        updateRuntimeStatusPanel();
       }
     }
     function readFileData(file) {
@@ -3638,9 +3746,15 @@
       if (form.elements[key]) form.elements[key].addEventListener("input", syncPollOptionsField);
     });
     $("manualLiveModeControl").addEventListener("change", async () => {
-      updateOverview();
+      if (!$("manualLiveModeControl").checked) setBoolField("live_status", false);
+      latestLiveRuntimeState = {
+        isLive: boolField("live_status"),
+        source: boolField("manual_live_fallback_enabled") ? "manual-fallback" : "unknown",
+        checkedAt: new Date().toISOString()
+      };
+      updateRuntimeUi();
       try {
-        await saveSettings();
+        await saveRuntimeState("Manual live mode updated.");
         await loadLiveRuntime();
         setStatus("Manual live mode updated.");
       } catch (error) {

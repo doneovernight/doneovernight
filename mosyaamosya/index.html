@@ -1589,7 +1589,7 @@
       const value = settings.next_live_datetime;
       if (!value) return null;
       const date = new Date(value);
-      return Number.isFinite(date.getTime()) ? date : null;
+      return Number.isFinite(date.getTime()) && date.getTime() > Date.now() ? date : null;
     }
     function countdownText(date) {
       const ms = date.getTime() - Date.now();
@@ -2223,7 +2223,8 @@
     }
 
     function communityEnabled(settings) {
-      return featureOn(settings, "community_link_visible", true) && Boolean(communityUrl(settings));
+      const state = String(settings.community_state || "open").toLowerCase();
+      return featureOn(settings, "community_link_visible", true) && state !== "hidden";
     }
 
     function discordEnabled(settings) {
@@ -2302,7 +2303,7 @@
           event: "prepare_click"
         } : null,
         announcement: announcement ? { title: "Announcement", copy: announcement } : null,
-        countdown: nextDate ? { title: "Countdown", copy: countdownText(nextDate) } : null
+        countdown: nextDate && nextDate.getTime() > Date.now() ? { title: "Countdown", copy: countdownText(nextDate) } : null
       }[block];
       const shouldShow = content && (block !== "announcement" || announcement);
       if (!shouldShow) return;
@@ -2356,18 +2357,28 @@
     function renderCommunity(settings) {
       removeElement("communityCard");
       const activeCommunityUrl = communityUrl(settings);
-      if (!communityEnabled(settings) || !activeCommunityUrl) return;
+      const state = String(settings.community_state || "open").toLowerCase();
+      if (!communityEnabled(settings)) return;
       const card = document.createElement("section");
       card.className = "community-card";
       card.id = "communityCard";
-      card.innerHTML =
-        '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>' +
-        escapeHtml(textSetting(settings, "community_link_subtitle", "Join Mina\\'s Discord for stream updates and community drops.")) +
-        '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(activeCommunityUrl) + '" target="_blank" rel="noreferrer">' +
-        escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
-      card.querySelector("#communityCta").dataset.analyticsEvent = "community_click";
-      card.querySelector("#communityCta").dataset.analyticsBlockTitle = textSetting(settings, "community_link_title", "Community");
-      card.querySelector("#communityCta").dataset.analyticsDestination = activeCommunityUrl;
+      if (state === "preview" || !activeCommunityUrl) {
+        card.innerHTML =
+          '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>Community opening soon.</p></div>';
+      } else {
+        card.innerHTML =
+          '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>' +
+          escapeHtml(textSetting(settings, "community_link_subtitle", "Join Mina\\'s Discord for stream updates and community drops.")) +
+          '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(activeCommunityUrl) + '" target="_blank" rel="noreferrer">' +
+          escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
+        card.querySelector("#communityCta").dataset.analyticsEvent = "community_click";
+        card.querySelector("#communityCta").dataset.analyticsBlockTitle = textSetting(settings, "community_link_title", "Community");
+        card.querySelector("#communityCta").dataset.analyticsDestination = activeCommunityUrl;
+      }
+      if (String(settings.pinned_block || "").toLowerCase() === "community") {
+        insertRuntimeTop(card);
+        return;
+      }
       const grid = $("buttonGrid");
       const shell = document.querySelector(".shell");
       if (shell) shell.insertBefore(card, grid || $("footerNav"));
@@ -2827,7 +2838,10 @@
               countdown.textContent = "Checking live status...";
               refreshLiveRuntime(settings);
             } else {
-              countdown.textContent = "Live soon";
+              countdown.textContent = "";
+              countdown.classList.remove("is-visible");
+              const pinned = $("runtimePinned");
+              if (pinned && String(currentSettings.pinned_block || "").toLowerCase() === "countdown") pinned.remove();
             }
             if (countdownTimer) {
               clearInterval(countdownTimer);
@@ -2864,7 +2878,7 @@
       }
     }
 
-    fetch("/api/creator-settings?slug=mosyaamosya")
+    fetch("/api/creator-settings?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } })
       .then((response) => response.json())
       .then((data) => render({ ...fallback, ...(data.creator || {}) }))
       .catch(() => render(fallback));
