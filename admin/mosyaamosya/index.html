@@ -531,6 +531,7 @@
     <nav class="admin-tabs" aria-label="Creator admin sections">
       <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience">Experience</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
@@ -540,6 +541,8 @@
       <form class="stack" id="settingsForm" novalidate>
         <section class="panel tab-panel" data-admin-panel="overview">
           <h2>Overview</h2>
+          <div class="section-note">How is my page performing?</div>
+          <div style="height:12px"></div>
           <div class="overview-grid">
             <div class="stat-card"><span>Live Status</span><strong id="overviewLiveStatus">Checking</strong></div>
             <div class="stat-card"><span>Battle</span><strong id="overviewBattleStatus">Inactive</strong></div>
@@ -550,6 +553,8 @@
 
         <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Profile</h2>
+          <div class="section-note">Who am I?</div>
+          <div style="height:12px"></div>
           <div class="fields">
             <label>Display name<input name="display_name" required></label>
             <label>Username / slug<input name="username" required></label>
@@ -559,7 +564,7 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Media</h2>
+          <h2>Profile Image</h2>
           <div class="fields">
             <label class="span-2">Profile Image URL<input name="avatar_url" type="url" placeholder="Paste asset URL if upload is unavailable"></label>
             <div class="span-2 media-control">
@@ -571,6 +576,14 @@
                 <button class="button" id="uploadAvatar" type="button">Upload image</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Hero</h2>
+          <div class="section-note">How does my page feel?</div>
+          <div style="height:12px"></div>
+          <div class="fields">
             <label class="span-2">Hero Video URL<input name="hero_video_url" type="url" placeholder="Paste vertical video asset URL"></label>
             <div class="span-2 media-control">
               <strong>Upload/change hero video</strong>
@@ -586,7 +599,7 @@
 
         <section class="panel tab-panel" data-admin-panel="links" hidden>
           <h2>Links</h2>
-          <div class="section-note">Manage every public block here. Turning a block off removes it from the public page and related visitor surfaces.</div>
+          <div class="section-note">Where do I send people? Turning a block off removes it from the public page and related visitor surfaces.</div>
           <div style="height:12px"></div>
           <div class="links-section-head">Core links<span>Public blocks</span></div>
           <div class="link-list">
@@ -718,6 +731,8 @@
 
         <section class="panel tab-panel" data-admin-panel="runtime" hidden>
           <h2>Live Runtime</h2>
+          <div class="section-note">What is happening right now?</div>
+          <div style="height:12px"></div>
           <div class="runtime-board">
             <div class="runtime-section">
               <h3>Live</h3>
@@ -806,10 +821,12 @@
 
         <section class="panel tab-panel" data-admin-panel="analytics" hidden>
           <h2>Analytics</h2>
+          <div class="section-note">What happened?</div>
+          <div style="height:12px"></div>
           <div class="help-panel">Analytics will live here when Creator OS reporting is enabled.</div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
           <h2>Welcome intro</h2>
           <div class="switch-row">
             <div><strong>Welcome Intro Enabled</strong><span>Shows the first-visit cinematic intro.</span></div>
@@ -817,7 +834,7 @@
           </div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
           <h2>Intro Audio</h2>
           <div class="fields">
             <div class="span-2 switch-row">
@@ -848,7 +865,7 @@
           <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
           <h2>Theme Engine</h2>
           <div class="muted" style="margin-bottom:12px;">Preview Theme updates the admin and preview instantly. Save only when it feels right.</div>
           <div class="theme-grid" id="themeGrid"></div>
@@ -856,7 +873,7 @@
           <label>Background Gradient<textarea name="background_gradient"></textarea></label>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
           <h2>Ambient mode</h2>
           <div class="fields">
             <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
@@ -914,7 +931,7 @@
           </div>
         </section>
 
-        <button class="button primary sticky-save tab-panel" data-admin-panel="settings links" data-save-state="idle" id="saveFloating" type="button" aria-live="polite">
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings experience links" data-save-state="idle" id="saveFloating" type="button" aria-live="polite">
           <span class="save-button-content">
             <span class="save-spinner" aria-hidden="true"></span>
             <span class="save-check" aria-hidden="true">✓</span>
