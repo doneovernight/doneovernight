@@ -36,6 +36,8 @@ create index if not exists creator_live_runtime_updated_at_idx
 
 alter table public.creator_live_runtime enable row level security;
 
+grant select, insert, update, delete on public.creator_live_runtime to service_role;
+
 do $$
 begin
   if not exists (

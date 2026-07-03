@@ -70,6 +70,8 @@ create index if not exists creator_live_runtime_updated_at_idx
 
 alter table public.creator_live_runtime enable row level security;
 
+grant select, insert, update, delete on public.creator_live_runtime to service_role;
+
 do $$
 begin
   if not exists (
@@ -105,14 +107,14 @@ SSH into the server:
 ssh root@YOUR_HETZNER_SERVER_IP
 ```
 
-Install Node.js 20, Git, and PM2:
+Install Node.js 22, Git, and PM2:
 
 ```bash
 apt update
 apt install -y ca-certificates curl gnupg git
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
 apt update
 apt install -y nodejs
 npm install -g pm2
