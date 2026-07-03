@@ -152,8 +152,9 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-left: auto;
     }
-    .status-pill, .mini-pill {
+    .mini-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -170,6 +171,27 @@
       position: relative;
       overflow: hidden;
     }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 42px;
+      min-width: 0;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 999px;
+      padding: 0 12px;
+      background: rgba(15,8,7,.38);
+      color: rgba(255,245,247,.76);
+      backdrop-filter: blur(16px) saturate(1.12);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      line-height: 1;
+      box-shadow: inset 0 1px rgba(255,255,255,.1), 0 8px 22px rgba(0,0,0,.12);
+      position: relative;
+      overflow: hidden;
+    }
     .status-pill::before, .mini-pill::before {
       content: "";
       position: absolute;
@@ -179,20 +201,27 @@
       opacity: .55;
     }
     .share-trigger {
-      width: 38px;
-      height: 38px;
-      min-width: 38px;
-      min-height: 38px;
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      border-color: rgba(255,245,247,.14);
       padding: 0;
       justify-content: center;
+      gap: 0;
+      background: rgba(15,8,7,.38);
       color: var(--pink);
+      backdrop-filter: blur(16px) saturate(1.12);
+      box-shadow: inset 0 1px rgba(255,255,255,.1), 0 8px 22px rgba(0,0,0,.12);
       cursor: pointer;
     }
+    .share-trigger::before { inset: 1px 10px auto; opacity: .42; }
     .share-trigger svg {
-      width: 17px;
-      height: 17px;
+      width: 16px;
+      height: 16px;
       position: relative;
       z-index: 1;
+      stroke-width: 1.9;
     }
     a.mini-pill { cursor: pointer; }
     a.mini-pill:focus-visible {
@@ -200,15 +229,15 @@
       outline-offset: 3px;
     }
     .live-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       border-radius: 999px;
       background: #1f1715;
-      box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 0 0 5px rgba(255,255,255,.05);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 0 0 4px rgba(255,255,255,.035);
     }
     .is-live .live-dot {
       background: #55f19b;
-      box-shadow: 0 0 0 1px rgba(255,255,255,.3), 0 0 0 5px rgba(85,241,155,.15), 0 0 28px rgba(85,241,155,.58);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 0 0 4px rgba(85,241,155,.11), 0 0 14px rgba(85,241,155,.36);
     }
     .sound-button {
       position: fixed;
@@ -1024,7 +1053,7 @@
     function applyLiveState(liveState, settings) {
       const isLive = Boolean(liveState && liveState.isLive);
       document.body.classList.toggle("is-live", isLive);
-      $("statusPill").querySelector("span:last-child").textContent = isLive ? "LIVE NOW" : "Offline";
+      $("statusPill").querySelector("span:last-child").textContent = isLive ? "Live" : "Offline";
       setText("liveTitle", isLive ? "🟢 LIVE NOW" : "⚫ Offline");
       if (isLive && Number.isFinite(Number(liveState.viewerCount))) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
