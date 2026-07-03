@@ -27,6 +27,11 @@ let heartbeatTimer = null;
 let stopped = false;
 let activeBattleId = "";
 
+function log(message, details = {}) {
+  const suffix = Object.keys(details).length ? " " + JSON.stringify(details) : "";
+  console.log(new Date().toISOString() + " " + message + suffix);
+}
+
 function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -299,17 +304,20 @@ function attachHandlers(nextConnection) {
   nextConnection.on(ControlEvent.CONNECTED, async (connectedState) => {
     reconnectAttempt = 0;
     setLive(connectedState || {});
+    log("connected", { roomId: state.roomId, hasRoomInfo: Boolean(connectedState && connectedState.roomInfo) });
     await safeWrite("connected");
   });
 
   nextConnection.on(ControlEvent.DISCONNECTED, async () => {
     markStale("RUNTIME_DISCONNECTED");
+    log("disconnected");
     await safeWrite("disconnected");
     scheduleReconnect();
   });
 
   nextConnection.on(WebcastEvent.STREAM_END, async () => {
     setOffline(null);
+    log("stream_end");
     await safeWrite("streamEnd");
     scheduleReconnect();
   });
@@ -379,10 +387,19 @@ function scheduleHeartbeat() {
   }, config.heartbeatSeconds * 1000);
 }
 
-function scheduleReconnect() {
+function reconnectDelayForError(error) {
+  const message = clean(error && (error.code || error.message || String(error))).toLowerCase();
+  if (message.includes("rate_limit") || message.includes("rate limited") || message.includes("too many connections")) {
+    return 120_000;
+  }
+  return null;
+}
+
+function scheduleReconnect(delayOverride = null) {
   if (stopped) return;
-  const delay = Math.min(config.reconnectMaxMs, config.reconnectMinMs * Math.pow(2, reconnectAttempt));
+  const delay = delayOverride || Math.min(config.reconnectMaxMs, config.reconnectMinMs * Math.pow(2, reconnectAttempt));
   reconnectAttempt += 1;
+  log("reconnect_scheduled", { delayMs: delay, attempt: reconnectAttempt });
   setTimeout(connect, delay);
 }
 
@@ -403,17 +420,20 @@ async function connect() {
   try {
     const connectedState = await connection.connect();
     setLive(connectedState || {});
+    log("connect_resolved", { roomId: state.roomId });
     await safeWrite("connect");
   } catch (error) {
     const offlineCode = error && (error.name === "UserOfflineError" || error.code === "USER_OFFLINE");
     if (offlineCode) {
       setOffline(null);
+      log("offline");
       await safeWrite("offline");
     } else {
       markStale(error && (error.code || error.message) || "RUNTIME_CONNECT_FAILED");
+      log("connect_error", { message: state.error });
       await safeWrite("connectError");
     }
-    scheduleReconnect();
+    scheduleReconnect(reconnectDelayForError(error));
   }
 }
 
@@ -421,6 +441,7 @@ async function shutdown() {
   stopped = true;
   clearInterval(heartbeatTimer);
   markStale("RUNTIME_SHUTDOWN");
+  log("shutdown");
   await safeWrite("shutdown");
   if (connection && connection.isConnected) await connection.disconnect();
   process.exit(0);
