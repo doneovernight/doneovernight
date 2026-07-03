@@ -2,6 +2,26 @@
 
 This document captures the production lifecycle rules that must stay consistent across Ask, Admin, Review, Email, Payments, Workspace, Dispatch, and future Operator OS work.
 
+## Creator OS Deployment Safety
+
+Creator OS deploy target is `doneovernight` only. Never deploy Creator OS to `doneovernight-pay`.
+
+Before any Creator OS production deploy, verify `.vercel/project.json` contains:
+
+```json
+{
+  "projectName": "doneovernight",
+  "projectId": "prj_dj9WlUTfSq6OgVZDCE5uCTEQ9mV5",
+  "orgId": "team_poT2RkL0qD1tRiGKXsAOcBr3"
+}
+```
+
+If the linked project is anything else, stop before deploying and relink explicitly:
+
+```sh
+vercel link --yes --project doneovernight --scope doneovernights-projects
+```
+
 ## Client Language
 
 Client-facing language should use:
