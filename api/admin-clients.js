@@ -65,6 +65,7 @@ const PHASE_3_CREATOR_FIELDS = [
   "pinned_block",
   "community_state",
   "quick_announcement",
+  "quick_poll",
   "faq_visible",
   "discord_visible",
   "creator_passport_visible"
@@ -91,10 +92,18 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "music_link_subtitle",
   "music_link_cta_label",
   "newsletter_cta_label",
+  "newsletter_destination",
+  "faq_link_visible",
+  "faq_link_title",
+  "faq_link_subtitle",
+  "faq_link_cta_label",
+  "faq_link_url",
   "community_link_visible",
   "community_link_title",
   "community_link_subtitle",
-  "community_link_cta_label"
+  "community_link_cta_label",
+  "community_link_url",
+  "custom_links"
 ];
 const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_enabled",
@@ -159,6 +168,7 @@ const DEFAULT_MINA_SETTINGS = {
   pinned_block: "",
   community_state: "open",
   quick_announcement: "",
+  quick_poll: "",
   faq_visible: true,
   discord_visible: true,
   creator_passport_visible: true,
@@ -183,10 +193,18 @@ const DEFAULT_MINA_SETTINGS = {
   music_link_subtitle: "Mina's stream soundtrack",
   music_link_cta_label: "Open",
   newsletter_cta_label: "Subscribe to the Mailing List",
+  newsletter_destination: "",
+  faq_link_visible: false,
+  faq_link_title: "FAQ",
+  faq_link_subtitle: "Questions and answers",
+  faq_link_cta_label: "Open",
+  faq_link_url: "",
   community_link_visible: true,
   community_link_title: "Community",
   community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
   community_link_cta_label: "Join Discord",
+  community_link_url: "https://discord.gg/GGE7WsUZR",
+  custom_links: [],
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
@@ -499,6 +517,26 @@ function normalizeCommunityState(value) {
   return allowed.has(state) ? state : "open";
 }
 
+function normalizeCustomLinks(value) {
+  let links = value;
+  if (typeof links === "string") {
+    try {
+      links = JSON.parse(links);
+    } catch (error) {
+      links = [];
+    }
+  }
+  if (!Array.isArray(links)) return [];
+  return links.slice(0, 12).map((link, index) => ({
+    id: clean(link && link.id) || "custom-" + (index + 1),
+    visible: bool(link && link.visible, true),
+    title: clean(link && link.title) || "New link",
+    subtitle: clean(link && link.subtitle),
+    cta_label: clean(link && (link.cta_label || link.cta)) || "Open",
+    url: clean(link && (link.url || link.destination))
+  }));
+}
+
 function normalizeDateTime(value) {
   const input = clean(value);
   if (!input) return "";
@@ -663,6 +701,7 @@ function normalizeCreator(row = {}) {
     pinned_block: normalizePinnedBlock(row.pinned_block),
     community_state: normalizeCommunityState(row.community_state),
     quick_announcement: clean(row.quick_announcement),
+    quick_poll: clean(row.quick_poll),
     faq_visible: bool(row.faq_visible, true),
     discord_visible: bool(row.discord_visible, true),
     creator_passport_visible: bool(row.creator_passport_visible, true),
@@ -687,10 +726,18 @@ function normalizeCreator(row = {}) {
     music_link_subtitle: clean(row.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
     music_link_cta_label: clean(row.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
     newsletter_cta_label: clean(row.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    newsletter_destination: clean(row.newsletter_destination),
+    faq_link_visible: bool(row.faq_link_visible, false),
+    faq_link_title: clean(row.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
+    faq_link_subtitle: clean(row.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
+    faq_link_cta_label: clean(row.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_url: clean(row.faq_link_url),
     community_link_visible: bool(row.community_link_visible, true),
     community_link_title: clean(row.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
     community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(row.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
+    community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    custom_links: normalizeCustomLinks(row.custom_links),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -801,6 +848,7 @@ function creatorPayload(input = {}) {
     pinned_block: normalizePinnedBlock(input.pinned_block),
     community_state: normalizeCommunityState(input.community_state),
     quick_announcement: clean(input.quick_announcement),
+    quick_poll: clean(input.quick_poll),
     faq_visible: bool(input.faq_visible, true),
     discord_visible: bool(input.discord_visible, true),
     creator_passport_visible: bool(input.creator_passport_visible, true),
@@ -825,10 +873,18 @@ function creatorPayload(input = {}) {
     music_link_subtitle: clean(input.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
     music_link_cta_label: clean(input.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
     newsletter_cta_label: clean(input.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    newsletter_destination: clean(input.newsletter_destination),
+    faq_link_visible: bool(input.faq_link_visible, false),
+    faq_link_title: clean(input.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
+    faq_link_subtitle: clean(input.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
+    faq_link_cta_label: clean(input.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_url: clean(input.faq_link_url),
     community_link_visible: bool(input.community_link_visible, true),
     community_link_title: clean(input.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
     community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(input.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
+    community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    custom_links: normalizeCustomLinks(input.custom_links),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),

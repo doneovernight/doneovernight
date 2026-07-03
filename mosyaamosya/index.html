@@ -881,7 +881,6 @@
       <a href="#report" data-open-sheet="reportSheet">Report</a>
       <span aria-hidden="true">•</span>
       <a href="#creator-passport" data-open-sheet="passportSheet">Creator Passport</a>
-      <a href="#explore" data-open-sheet="exploreSheet">Explore</a>
       <span aria-hidden="true">•</span>
       <a href="#about-creator-os" data-open-sheet="aboutCreatorOsSheet">About Creator OS</a>
     </nav>
@@ -911,17 +910,6 @@
         <div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div>
       </div>
       <div class="share-grid" id="shareGrid"></div>
-    </div>
-  </section>
-
-  <section class="sheet" id="exploreSheet" aria-label="Explore Creator OS" aria-hidden="true">
-    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="exploreTitle">
-      <div class="sheet-handle"></div>
-      <div class="sheet-head">
-        <div class="sheet-title"><strong id="exploreTitle">Explore Creator OS</strong><span>Discovery architecture preview</span></div>
-        <button class="icon-button" type="button" data-close-sheet="exploreSheet" aria-label="Close explore">&times;</button>
-      </div>
-      <div class="explore-grid" id="exploreGrid"></div>
     </div>
   </section>
 
@@ -969,7 +957,6 @@
         <div class="passport-row"><span>Joined</span><strong>July 2026</strong></div>
         <div class="passport-row"><span>Creator DNA</span><strong>Streamer · Influencer</strong></div>
         <div class="passport-row"><span>Timezone</span><strong>Chicago</strong></div>
-        <div class="passport-row"><span>Verified Creator</span><strong>Future</strong></div>
         <div class="passport-row"><span>Powered by</span><strong>DONEOVERNIGHT Creator OS</strong></div>
       </div>
     </div>
@@ -983,7 +970,7 @@
         <button class="icon-button" type="button" data-close-sheet="aboutCreatorOsSheet" aria-label="Close About Creator OS">&times;</button>
       </div>
       <div class="sheet-copy">
-        <p>Creator OS is a premium operating layer for creators: profile, live runtime, community, support, newsletter, and future discovery.</p>
+        <p>Creator OS is a premium operating layer for creators: profile, live runtime, community, support, and newsletter.</p>
         <p>The creator stays first. The system appears only when a visitor asks for it.</p>
       </div>
     </div>
@@ -1045,6 +1032,7 @@
       pinned_block: "",
       community_state: "open",
       quick_announcement: "",
+      quick_poll: "",
       faq_visible: true,
       discord_visible: true,
       creator_passport_visible: true,
@@ -1069,10 +1057,18 @@
       music_link_subtitle: "Mina's stream soundtrack",
       music_link_cta_label: "Open",
       newsletter_cta_label: "Subscribe to the Mailing List",
+      newsletter_destination: "",
+      faq_link_visible: false,
+      faq_link_title: "FAQ",
+      faq_link_subtitle: "Questions and answers",
+      faq_link_cta_label: "Open",
+      faq_link_url: "",
       community_link_visible: true,
       community_link_title: "Community",
       community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
-      community_link_cta_label: "Join Discord"
+      community_link_cta_label: "Join Discord",
+      community_link_url: "https://discord.gg/GGE7WsUZR",
+      custom_links: []
     };
     const params = new URLSearchParams(window.location.search);
     const forceExperience = params.get("experience") === "1";
@@ -1196,7 +1192,7 @@
     }
     function musicLinkInfo(settings) {
       const url = externalUrl(settings.music_url);
-      if (!settings.music_enabled || !url) return { url: "", enabled: false };
+      if (settings.music_link_visible !== true || !url) return { url: "", enabled: false };
       return { url, enabled: true };
     }
     function setIntroAudioSource(settings, url) {
@@ -1549,22 +1545,61 @@
       return value || fallbackText;
     }
 
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function normalizeCustomLinks(value) {
+      if (!Array.isArray(value)) return [];
+      return value.slice(0, 12).map((link, index) => ({
+        id: String(link && link.id || "custom-" + index),
+        visible: !(link && link.visible === false),
+        title: String(link && link.title || "New link").trim() || "New link",
+        sub: String(link && link.subtitle || "").trim(),
+        label: String(link && (link.cta_label || link.cta) || "Open").trim() || "Open",
+        url: safeUrl(link && (link.url || link.destination))
+      })).filter((link) => link.visible && link.url);
+    }
+
+    function removeElement(id) {
+      const element = $(id);
+      if (element) element.remove();
+    }
+
+    function discordEnabled(settings) {
+      return settings.discord_link_visible !== false && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
+    }
+
     function renderButtons(settings) {
-      const discordState = settings.discord_visible === false ? "hidden" : String(settings.community_state || "open");
-      const discordOpen = discordState === "open";
       const actions = [
-        { key: "discord", visible: settings.discord_link_visible !== false && discordOpen, title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
+        { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: settings.tiktok_link_visible !== false, title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "support", visible: settings.battle_link_visible !== false, title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
         { key: "business", visible: settings.business_link_visible !== false, title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
-        { key: "music", visible: settings.music_link_visible === true && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
-      ].filter((action) => action.visible);
+        { key: "music", visible: settings.music_link_visible === true && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound },
+        { key: "faq", visible: settings.faq_link_visible === true && Boolean(safeUrl(settings.faq_link_url)), title: textSetting(settings, "faq_link_title", "FAQ"), sub: textSetting(settings, "faq_link_subtitle", "Questions and answers"), field: "faq_link_url", label: textSetting(settings, "faq_link_cta_label", "Open"), icon: icons.mail }
+      ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
+        key: "custom",
+        visible: true,
+        title: link.title,
+        sub: link.sub,
+        url: link.url,
+        label: link.label,
+        icon: icons.heart
+      })));
       const grid = $("buttonGrid");
       grid.innerHTML = "";
       actions.forEach((action) => {
-        const url = actionUrl(action, settings);
+        const url = action.url || actionUrl(action, settings);
+        if (!url) return;
         const item = document.createElement(url ? "a" : "div");
-        item.className = "link-button content-block" + (url ? "" : " is-disabled");
+        item.className = "link-button content-block";
         item.dataset.blockType = action.key === "discord" ? "discord" : "link";
         if (url) {
           item.href = url;
@@ -1573,8 +1608,8 @@
         }
         item.innerHTML =
           '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
-          action.title + '</strong><span>' + action.sub + '</span></span></span><span class="button-action">' +
-          action.label + '</span>';
+          escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
+          escapeHtml(action.label) + '</span>';
         grid.appendChild(item);
       });
     }
@@ -1584,14 +1619,17 @@
       if (!pinned) return;
       const block = String(settings.pinned_block || "").toLowerCase();
       const announcement = String(settings.quick_announcement || "").trim();
+      const poll = String(settings.quick_poll || "").trim();
+      const nextDate = nextLiveDate(settings);
+      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
       const content = {
-        prepare: ["Prepare for Battle", "Get your TikTok Coins before the battle begins."],
-        faq: ["FAQ", "Frequently asked questions are coming soon."],
-        poll: ["Poll", "A live poll can be pinned here during the stream."],
+        prepare: settings.battle_link_visible === false ? null : [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")],
+        faq: settings.faq_link_visible === true && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
+        poll: poll ? ["Poll", poll] : null,
         announcement: ["Announcement", announcement || "No announcement yet."],
-        community: ["Community", "Join Mina's Discord for stream updates and community drops."],
-        newsletter: ["Newsletter", "Subscribe to the mailing list for Mina updates."],
-        countdown: ["Countdown", settings.next_live_datetime ? countdownText(nextLiveDate(settings)) : "Next stream soon."]
+        community: settings.community_link_visible === false || !communityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
+        newsletter: settings.subscribe_popup_enabled === false ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
+        countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
       }[block];
       const shouldShow = content && (block !== "announcement" || announcement);
       pinned.classList.toggle("is-visible", Boolean(shouldShow));
@@ -1616,6 +1654,7 @@
       const form = $("newsletterForm");
       const input = $("newsletterEmail");
       const button = $("newsletterSubmit");
+      if (!block || !start || !form || !input || !button) return;
       if (form.dataset.ready === "true") return;
       form.dataset.ready = "true";
       start.addEventListener("click", () => {
@@ -1645,12 +1684,16 @@
       const block = $("newsletterBlock");
       const start = $("newsletterStart");
       if (!block || !start) return;
-      block.hidden = settings.subscribe_popup_enabled === false;
+      if (settings.subscribe_popup_enabled === false) {
+        block.remove();
+        return;
+      }
       start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
     }
 
     function setupExplore() {
       const grid = $("exploreGrid");
+      if (!grid) return;
       grid.innerHTML = "";
       discoveryArchitecture.forEach(([title, copy]) => {
         const item = document.createElement("div");
@@ -1681,9 +1724,11 @@
         ["WhatsApp", "Send to a chat", "https://wa.me/?text=" + encodedText],
         ["Messages", "Open SMS", "sms:?&body=" + encodedText],
         ["Instagram", "Open Instagram", "https://www.instagram.com/direct/inbox/"],
-        ["Discord", "Open Mina's community", safeUrl(settings.discord_invite_url || settings.discord_url) || "https://discord.com/channels/@me"],
         ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent("Mina Mosya") + "&body=" + encodedText]
       ];
+      if (discordEnabled(settings)) {
+        shareItems.splice(4, 0, ["Discord", "Open Mina's community", safeUrl(settings.discord_invite_url || settings.discord_url)]);
+      }
       if (navigator.share) {
         shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
           event.preventDefault();
@@ -1852,29 +1897,34 @@
         countdown.textContent = "";
         countdown.classList.remove("is-visible");
       }
-      const discordUrl = safeUrl(settings.discord_invite_url || settings.discord_url);
-      const discordState = settings.discord_visible === false ? "hidden" : String(settings.community_state || "open");
+      const communityUrl = safeUrl(settings.community_link_url || settings.discord_invite_url || settings.discord_url);
       const communityCard = $("communityCard");
-      communityCard.hidden = settings.community_link_visible === false || discordState === "hidden";
+      if (communityCard && (settings.community_link_visible === false || !communityUrl)) {
+        communityCard.remove();
+      }
       const passportLink = document.querySelector('[data-open-sheet="passportSheet"]');
-      if (passportLink) passportLink.hidden = settings.creator_passport_visible === false;
+      if (settings.creator_passport_visible === false) {
+        if (passportLink) {
+          const previousSeparator = passportLink.previousElementSibling;
+          const nextSeparator = passportLink.nextElementSibling;
+          if (previousSeparator && previousSeparator.getAttribute("aria-hidden") === "true") previousSeparator.remove();
+          else if (nextSeparator && nextSeparator.getAttribute("aria-hidden") === "true") nextSeparator.remove();
+          passportLink.remove();
+        }
+        removeElement("passportSheet");
+      }
       const community = $("communityCta");
-      communityCard.querySelector("h2").textContent = textSetting(settings, "community_link_title", "Community");
-      communityCard.querySelector("p").textContent = discordState === "preview" ? "Community opening soon" : textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.");
-      community.hidden = discordState === "preview";
-      community.textContent = textSetting(settings, "community_link_cta_label", "Join Discord");
-      if (discordState === "open" && discordUrl) {
-        community.href = discordUrl;
+      if (communityCard && communityCard.isConnected && community) {
+        communityCard.querySelector("h2").textContent = textSetting(settings, "community_link_title", "Community");
+        communityCard.querySelector("p").textContent = textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.");
+        community.textContent = textSetting(settings, "community_link_cta_label", "Join Discord");
+        community.href = communityUrl;
         community.removeAttribute("aria-disabled");
-      } else {
-        community.href = "#";
-        community.setAttribute("aria-disabled", "true");
       }
       renderButtons(settings);
       renderNewsletter(settings);
       renderPinnedBlock(settings);
       setupNewsletter();
-      setupExplore();
       setupShare(settings);
       setupLiveRuntime(settings);
       setupMusic(settings);

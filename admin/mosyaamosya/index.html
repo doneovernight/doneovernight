@@ -179,6 +179,23 @@
     .link-card-title span { color: var(--muted); font-size: 12px; }
     .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .link-card-fields .wide { grid-column: 1 / -1; }
+    .link-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .advanced-box {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.14);
+    }
+    .advanced-box summary {
+      cursor: pointer;
+      color: rgba(255,245,247,.72);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .advanced-box .fields { margin-top: 10px; }
+    .section-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .section-split { display: grid; gap: 12px; }
+    .add-link-row { display: flex; justify-content: center; }
     .battle-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
     .battle-controls .button { min-height: 38px; padding: 0 10px; border-radius: 11px; font-size: 12px; }
     .battle-controls .button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.12); }
@@ -293,8 +310,6 @@
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
     iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
-    .future { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .future span { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; color: rgba(255,245,247,.45); font-size: 12px; font-weight: 850; text-align: center; }
     @media (max-width: 900px) {
       .topbar { flex-direction: column; }
       .actions { justify-content: flex-start; }
@@ -310,7 +325,7 @@
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
       .overview-grid, .runtime-actions, .runtime-actions.two, .segmented { grid-template-columns: 1fr; }
-      .theme-grid, .future { grid-template-columns: repeat(2, 1fr); }
+      .theme-grid { grid-template-columns: repeat(2, 1fr); }
       .dna-grid { grid-template-columns: 1fr; }
       .span-2 { grid-column: auto; }
     }
@@ -345,7 +360,6 @@
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
     </nav>
 
     <section class="grid">
@@ -358,14 +372,6 @@
             <div class="stat-card"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
             <div class="stat-card"><span>Last Save</span><strong id="overviewLastSave">Not yet</strong></div>
           </div>
-          <div style="height:14px"></div>
-          <div class="quick-actions">
-            <button class="button primary" type="button" data-runtime-action="start-live">Start Live</button>
-            <button class="button" type="button" data-runtime-action="end-live">End Live</button>
-            <button class="button" type="button" data-admin-jump="runtime">Open Runtime</button>
-            <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
-            <a class="button" href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">Open Public Page</a>
-          </div>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
@@ -376,6 +382,12 @@
             <label class="span-2">Bio<textarea name="bio"></textarea></label>
             <label>Location<input name="location"></label>
             <label>Slug override<input name="slug"></label>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Media</h2>
+          <div class="fields">
             <label class="span-2">Profile Image URL<input name="avatar_url" type="url" placeholder="Paste asset URL if upload is unavailable"></label>
             <div class="span-2 media-control">
               <strong>Upload/change profile image</strong>
@@ -401,21 +413,27 @@
 
         <section class="panel tab-panel" data-admin-panel="links" hidden>
           <h2>Links</h2>
+          <div class="section-note">Manage every public block here. Turning a block off removes it from the public page and related visitor surfaces.</div>
+          <div style="height:12px"></div>
           <div class="link-list">
             <section class="link-card">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Discord</strong><span>Public Discord link block.</span></div>
+                <div class="link-card-title"><strong>Discord</strong><span>Direct Discord block.</span></div>
                 <label class="switch" aria-label="Discord link visible"><input name="discord_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
               <div class="link-card-fields">
-                <label>State<select name="community_state"><option value="hidden">Hidden</option><option value="preview">Preview</option><option value="open">Open</option></select></label>
-                <label>CTA label<input name="discord_link_cta_label"></label>
                 <label>Title<input name="discord_link_title"></label>
                 <label>Subtitle<input name="discord_link_subtitle"></label>
+                <label>CTA<input name="discord_link_cta_label"></label>
                 <label class="wide">Discord invite URL<input name="discord_invite_url" type="url"></label>
-                <label>Discord URL fallback<input name="discord_url" type="url"></label>
-                <label>Discord server ID<input name="discord_server_id"></label>
               </div>
+              <details class="advanced-box">
+                <summary>Advanced</summary>
+                <div class="fields">
+                  <label>Discord fallback URL<input name="discord_url" type="url"></label>
+                  <label>Discord server ID<input name="discord_server_id"></label>
+                </div>
+              </details>
             </section>
 
             <section class="link-card">
@@ -425,7 +443,7 @@
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="tiktok_link_title"></label>
-                <label>CTA label<input name="tiktok_link_cta_label"></label>
+                <label>CTA<input name="tiktok_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="tiktok_link_subtitle"></label>
                 <label class="wide">TikTok URL<input name="tiktok_url" type="url"></label>
               </div>
@@ -438,7 +456,7 @@
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="battle_link_title"></label>
-                <label>CTA label<input name="battle_link_cta_label"></label>
+                <label>CTA<input name="battle_link_cta_label"></label>
                 <label class="wide">Description<input name="battle_link_subtitle"></label>
                 <label class="wide">TikTok Coins URL<input name="tiktok_coins_url" type="url"></label>
               </div>
@@ -451,22 +469,9 @@
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="business_link_title"></label>
-                <label>CTA label<input name="business_link_cta_label"></label>
+                <label>CTA<input name="business_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="business_link_subtitle"></label>
                 <label class="wide">Business email<input name="business_email" type="email"></label>
-              </div>
-            </section>
-
-            <section class="link-card">
-              <div class="link-card-head">
-                <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
-                <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
-              </div>
-              <div class="link-card-fields">
-                <label>Title<input name="music_link_title"></label>
-                <label>CTA label<input name="music_link_cta_label"></label>
-                <label class="wide">Subtitle<input name="music_link_subtitle"></label>
-                <div class="wide help-panel">Music Link URL is managed in Settings. Streaming services open externally and are not used for in-page playback.</div>
               </div>
             </section>
 
@@ -477,8 +482,35 @@
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
-                <label>CTA label<input name="newsletter_cta_label"></label>
-                <label class="wide">Description<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
+                <label>CTA<input name="newsletter_cta_label"></label>
+                <label class="wide">Subtitle<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
+                <label class="wide">Destination<input name="newsletter_destination" placeholder="In-page email signup"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
+                <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="music_link_title"></label>
+                <label>CTA<input name="music_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="music_link_subtitle"></label>
+                <label class="wide">Destination<input name="music_url" type="url" placeholder="Apple Music, Spotify, YouTube Music, or TikTok Sound"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>FAQ</strong><span>Optional FAQ destination.</span></div>
+                <label class="switch" aria-label="FAQ visible"><input name="faq_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="faq_link_title"></label>
+                <label>CTA<input name="faq_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="faq_link_subtitle"></label>
+                <label class="wide">Destination<input name="faq_link_url" type="url"></label>
               </div>
             </section>
 
@@ -489,23 +521,20 @@
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="community_link_title"></label>
-                <label>CTA label<input name="community_link_cta_label"></label>
-                <label class="wide">Description<input name="community_link_subtitle"></label>
-                <div class="wide help-panel">Uses the Discord state above: Hidden removes it, Preview shows “Community opening soon” with no join button, Open shows the saved CTA.</div>
+                <label>CTA<input name="community_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="community_link_subtitle"></label>
+                <label class="wide">Destination<input name="community_link_url" type="url"></label>
               </div>
             </section>
 
-            <section class="link-card" aria-disabled="true">
+            <section class="link-card">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Future custom links</strong><span>Prepared for creator-defined blocks later.</span></div>
-                <label class="switch" aria-label="Future custom links unavailable"><input type="checkbox" disabled><span class="track"></span></label>
+                <div class="link-card-title"><strong>Custom Links</strong><span>Creator-defined blocks.</span></div>
+                <button class="button" id="addCustomLink" type="button">Add Link</button>
               </div>
-              <div class="help-panel">Custom link rows will support icons, ordering, and reusable block types in a later Creator OS phase.</div>
+              <div class="link-list" id="customLinksList"></div>
+              <input name="custom_links" type="hidden" value="[]">
             </section>
-
-            <div class="help-panel">
-              Discord counter placeholder: enable the Discord server widget in Server Settings, then add the server ID here. API/widget member counts are intentionally not implemented yet.
-            </div>
           </div>
         </section>
 
@@ -520,7 +549,6 @@
               </div>
               <input name="live_url" type="hidden">
               <input name="live_button_text" type="hidden">
-              <input name="next_live_datetime" type="hidden">
               <input name="tiktok_live_username" type="hidden">
               <input name="auto_live_detection_enabled" type="hidden" value="true">
               <input name="live_status" type="hidden" value="false">
@@ -572,19 +600,21 @@
             </div>
 
             <div class="runtime-section">
-              <h3>Community</h3>
-              <div class="runtime-actions">
-                <button class="button" type="button" data-community-state="open">Open</button>
-                <button class="button" type="button" data-community-state="preview">Preview</button>
-                <button class="button" type="button" data-community-state="hidden">Hidden</button>
-              </div>
-              <input name="community_state" type="hidden">
+              <h3>Countdown</h3>
+              <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
+              <button class="button" type="button" data-pinned-block="countdown">Pin Countdown</button>
             </div>
 
             <div class="runtime-section">
               <h3>Announcements</h3>
               <label>Quick announcement field<textarea name="quick_announcement" placeholder="Short update for the public page"></textarea></label>
               <button class="button primary" type="button" data-runtime-action="push-announcement">Push to public page</button>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Poll</h3>
+              <label>Quick poll field<textarea name="quick_poll" placeholder="Question for viewers"></textarea></label>
+              <button class="button" type="button" data-pinned-block="poll">Pin Poll</button>
             </div>
 
             <div class="runtime-section">
@@ -629,18 +659,6 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Music Link</h2>
-          <div class="fields">
-            <div class="span-2 switch-row">
-              <div><strong>Music Link Enabled</strong><span>Shows the floating music button when a valid external link exists.</span></div>
-              <label class="switch" aria-label="Music link enabled"><input name="music_enabled" type="checkbox"><span class="track"></span></label>
-            </div>
-            <label class="span-2">Music Link URL<input name="music_url" type="url" placeholder="Apple Music, Spotify, YouTube Music, or TikTok Sound"></label>
-            <div class="span-2 help-panel">Streaming services cannot be played directly inside Creator OS.</div>
-          </div>
-        </section>
-
-        <section class="panel tab-panel" data-admin-panel="settings">
           <h2>Creator DNA</h2>
           <div class="dna-grid" id="dnaGrid"></div>
           <div style="height:12px"></div>
@@ -675,25 +693,7 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Privacy</h2>
-          <div class="fields">
-            <div class="switch-row">
-              <div><strong>FAQ visibility</strong><span>Prepare FAQ visibility for future public blocks.</span></div>
-              <label class="switch" aria-label="FAQ visibility"><input name="faq_visible" type="checkbox"><span class="track"></span></label>
-            </div>
-            <div class="switch-row">
-              <div><strong>Discord visibility</strong><span>Show or hide Discord-driven public blocks.</span></div>
-              <label class="switch" aria-label="Discord visibility"><input name="discord_visible" type="checkbox"><span class="track"></span></label>
-            </div>
-            <div class="switch-row span-2">
-              <div><strong>Creator Passport</strong><span>Show Creator Passport in the footer navigation.</span></div>
-              <label class="switch" aria-label="Creator Passport visibility"><input name="creator_passport_visible" type="checkbox"><span class="track"></span></label>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Settings</h2>
+          <h2>Password</h2>
           <div class="fields">
             <label>Current password<input name="current_password" type="password" autocomplete="current-password"></label>
             <label>New password<input name="new_password" type="password" autocomplete="new-password"></label>
@@ -703,35 +703,31 @@
               <button class="button" id="savePassword" type="button">Save password</button>
             </div>
             <div class="span-2 status" id="passwordStatus"></div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Creator Passport</h2>
+          <div class="fields">
+            <div class="switch-row span-2">
+              <div><strong>Creator Passport</strong><span>Show Creator Passport in the footer navigation.</span></div>
+              <label class="switch" aria-label="Creator Passport visibility"><input name="creator_passport_visible" type="checkbox"><span class="track"></span></label>
+            </div>
             <div class="span-2 help-panel">
               <strong>Quick Access</strong><br>
               Add to Home Screen for a faster creator dashboard feel.<br>
               Preview icon: DONEOVERNIGHT wordmark. Mina can choose an icon theme; changing it later may require reinstalling.
             </div>
             <a class="button span-2" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Open Quick Access</a>
-          </div>
-        </section>
-
-        <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Redirect</h2>
-          <div class="switch-row">
-            <div><strong>Redirect /mina</strong><span>Production routing redirects /mina to /mosyaamosya.</span></div>
-            <label class="switch" aria-label="Redirect Mina"><input name="redirect_mina_enabled" type="checkbox"><span class="track"></span></label>
-          </div>
-        </section>
-
-        <section class="panel tab-panel" data-admin-panel="analytics" hidden>
-          <h2>Analytics</h2>
-          <div class="help-panel">Future placeholder. Creator OS analytics will live here when the runtime worker and tracking layer are ready.</div>
-        </section>
-
-        <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Future placeholders</h2>
-          <div class="future">
-            <span>Ask Mina</span>
-            <span>Live Detection</span>
-            <span>Analytics</span>
-            <span>Stream Analyzer</span>
+            <details class="advanced-box span-2">
+              <summary>Advanced</summary>
+              <div class="fields">
+                <div class="switch-row span-2">
+                  <div><strong>Redirect /mina</strong><span>Production routing redirects /mina to /mosyaamosya.</span></div>
+                  <label class="switch" aria-label="Redirect Mina"><input name="redirect_mina_enabled" type="checkbox"><span class="track"></span></label>
+                </div>
+              </div>
+            </details>
           </div>
         </section>
 
@@ -886,6 +882,10 @@
         if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
         if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
       }
+      for (const element of document.querySelectorAll("[data-custom-url]")) {
+        const value = String(element.value || "").trim();
+        if (value && !isAcceptableUrl(value)) return "Enter a valid URL for custom link.";
+      }
       return "";
     }
     function setLoginStatus(message, isError) {
@@ -937,6 +937,69 @@
         element.value = Boolean(value) ? "true" : "false";
       }
     }
+    function customLinkId() {
+      return "custom-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+    }
+    function readCustomLinks() {
+      const rows = Array.from(document.querySelectorAll("[data-custom-link-row]"));
+      return rows.map((row) => ({
+        id: row.dataset.customLinkId || customLinkId(),
+        visible: Boolean(row.querySelector("[data-custom-visible]") && row.querySelector("[data-custom-visible]").checked),
+        title: String(row.querySelector("[data-custom-title]")?.value || "").trim() || "New link",
+        subtitle: String(row.querySelector("[data-custom-subtitle]")?.value || "").trim(),
+        cta_label: String(row.querySelector("[data-custom-cta]")?.value || "").trim() || "Open",
+        url: String(row.querySelector("[data-custom-url]")?.value || "").trim()
+      }));
+    }
+    function syncCustomLinksField() {
+      const field = form.elements.custom_links;
+      if (field) field.value = JSON.stringify(readCustomLinks());
+    }
+    function createCustomLinkRow(link = {}) {
+      const row = document.createElement("section");
+      row.className = "link-card";
+      row.dataset.customLinkRow = "true";
+      row.dataset.customLinkId = link.id || customLinkId();
+      row.innerHTML = [
+        '<div class="link-card-head">',
+          '<div class="link-card-title"><strong>Custom Link</strong><span>Creator-defined public block.</span></div>',
+          '<label class="switch" aria-label="Custom link visible"><input data-custom-visible type="checkbox"><span class="track"></span></label>',
+        '</div>',
+        '<div class="link-card-fields">',
+          '<label>Title<input data-custom-title></label>',
+          '<label>CTA<input data-custom-cta></label>',
+          '<label class="wide">Subtitle<input data-custom-subtitle></label>',
+          '<label class="wide">Destination<input data-custom-url type="url"></label>',
+        '</div>',
+        '<div class="link-card-actions"><button class="button danger" data-remove-custom-link type="button">Delete</button></div>'
+      ].join("");
+      row.querySelector("[data-custom-visible]").checked = link.visible !== false;
+      row.querySelector("[data-custom-title]").value = link.title || "New link";
+      row.querySelector("[data-custom-subtitle]").value = link.subtitle || "";
+      row.querySelector("[data-custom-cta]").value = link.cta_label || link.cta || "Open";
+      row.querySelector("[data-custom-url]").value = link.url || link.destination || "";
+      row.addEventListener("input", syncCustomLinksField);
+      row.addEventListener("change", syncCustomLinksField);
+      row.querySelector("[data-remove-custom-link]").addEventListener("click", () => {
+        row.remove();
+        syncCustomLinksField();
+      });
+      return row;
+    }
+    function writeCustomLinks(links = []) {
+      const list = $("customLinksList");
+      if (!list) return;
+      list.replaceChildren();
+      const normalized = Array.isArray(links) ? links : [];
+      normalized.forEach((link) => list.appendChild(createCustomLinkRow(link)));
+      syncCustomLinksField();
+    }
+    function addCustomLink() {
+      const list = $("customLinksList");
+      if (!list) return;
+      list.appendChild(createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" }));
+      syncCustomLinksField();
+    }
     function valuesFromForm() {
       const data = new FormData(form);
       return {
@@ -966,6 +1029,7 @@
         pinned_block: String(data.get("pinned_block") || "").trim(),
         community_state: String(data.get("community_state") || "open").trim(),
         quick_announcement: String(data.get("quick_announcement") || "").trim(),
+        quick_poll: String(data.get("quick_poll") || "").trim(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         discord_link_visible: boolField("discord_link_visible", true),
         discord_link_title: String(data.get("discord_link_title") || "").trim(),
@@ -988,17 +1052,25 @@
         music_link_subtitle: String(data.get("music_link_subtitle") || "").trim(),
         music_link_cta_label: String(data.get("music_link_cta_label") || "").trim(),
         newsletter_cta_label: String(data.get("newsletter_cta_label") || "").trim(),
+        newsletter_destination: String(data.get("newsletter_destination") || "").trim(),
+        faq_link_visible: boolField("faq_link_visible"),
+        faq_link_title: String(data.get("faq_link_title") || "").trim(),
+        faq_link_subtitle: String(data.get("faq_link_subtitle") || "").trim(),
+        faq_link_cta_label: String(data.get("faq_link_cta_label") || "").trim(),
+        faq_link_url: String(data.get("faq_link_url") || "").trim(),
         community_link_visible: boolField("community_link_visible", true),
         community_link_title: String(data.get("community_link_title") || "").trim(),
         community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
         community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
+        community_link_url: String(data.get("community_link_url") || "").trim(),
+        custom_links: readCustomLinks(),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
         intro_audio_enabled: boolField("intro_audio_enabled"),
         intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
         intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
         intro_audio_fade_out_duration: clampDuration(data.get("intro_audio_fade_out_duration"), 2, 0, 10),
         intro_audio_stop_after: clampDuration(data.get("intro_audio_stop_after"), 4, 1, 30),
-        music_enabled: boolField("music_enabled"),
+        music_enabled: boolField("music_link_visible"),
         music_url: String(data.get("music_url") || "").trim(),
         music_volume: clampVolume(data.get("music_volume")),
         music_loop: boolField("music_loop", true),
@@ -1014,8 +1086,8 @@
         subscribe_popup_enabled: boolField("subscribe_popup_enabled", true),
         subscribe_popup_title: String(data.get("subscribe_popup_title") || "").trim(),
         subscribe_popup_copy: String(data.get("subscribe_popup_copy") || "").trim(),
-        faq_visible: boolField("faq_visible", true),
-        discord_visible: boolField("discord_visible", true),
+        faq_visible: boolField("faq_link_visible"),
+        discord_visible: boolField("discord_link_visible", true),
         creator_passport_visible: boolField("creator_passport_visible", true),
         redirect_mina_enabled: boolField("redirect_mina_enabled", true)
       };
@@ -1026,7 +1098,7 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "community_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
@@ -1037,8 +1109,6 @@
       if (settings.seasonal_effects_enabled === undefined) setBoolField("seasonal_effects_enabled", true);
       if (settings.holiday_effects_enabled === undefined) setBoolField("holiday_effects_enabled", true);
       if (settings.subscribe_popup_enabled === undefined) setBoolField("subscribe_popup_enabled", true);
-      if (settings.faq_visible === undefined) setBoolField("faq_visible", true);
-      if (settings.discord_visible === undefined) setBoolField("discord_visible", true);
       if (settings.creator_passport_visible === undefined) setBoolField("creator_passport_visible", true);
       if (settings.redirect_mina_enabled === undefined) setBoolField("redirect_mina_enabled", true);
       if (settings.discord_link_visible === undefined) setBoolField("discord_link_visible", true);
@@ -1046,7 +1116,9 @@
       if (settings.battle_link_visible === undefined) setBoolField("battle_link_visible", true);
       if (settings.business_link_visible === undefined) setBoolField("business_link_visible", true);
       if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
+      if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
       if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
+      writeCustomLinks(settings.custom_links || []);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
@@ -1129,9 +1201,6 @@
       document.querySelectorAll("[data-pinned-block]").forEach((button) => {
         button.setAttribute("aria-pressed", button.dataset.pinnedBlock === String(form.elements.pinned_block.value || ""));
       });
-      document.querySelectorAll("[data-community-state]").forEach((button) => {
-        button.setAttribute("aria-pressed", button.dataset.communityState === String(form.elements.community_state.value || "open"));
-      });
       updateOverview();
     }
     async function applyBattleAction(action) {
@@ -1202,13 +1271,6 @@
       updateRuntimeUi();
       await saveSettings();
       setStatus("Pinned block updated.");
-    }
-    async function setCommunityState(value) {
-      form.elements.community_state.value = value;
-      setBoolField("discord_visible", value !== "hidden");
-      updateRuntimeUi();
-      await saveSettings();
-      setStatus("Community updated.");
     }
     function setAdminTab(name) {
       const active = name || "overview";
@@ -1329,7 +1391,7 @@
         updatePreviewFrame();
         loadLiveRuntime();
         updateOverview(data.creator && data.creator.updated_at);
-        setSaveButtonState("saved", { resetAfter: 800 });
+        setSaveButtonState("saved", { resetAfter: 700 });
         restoreScrollPosition(scrollPosition);
       } catch (error) {
         setStatus("");
@@ -1478,11 +1540,6 @@
         try { await setPinnedBlock(button.dataset.pinnedBlock); } catch (error) { setStatus(error.message || "Pinned block update failed", true); }
       });
     });
-    document.querySelectorAll("[data-community-state]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        try { await setCommunityState(button.dataset.communityState); } catch (error) { setStatus(error.message || "Community update failed", true); }
-      });
-    });
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(sessionFlag);
       sessionStorage.removeItem(sessionKey);
@@ -1491,6 +1548,7 @@
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
+    $("addCustomLink").addEventListener("click", addCustomLink);
     $("savePassword").addEventListener("click", savePassword);
     ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);
