@@ -710,18 +710,28 @@
       transform: rotate(45deg);
     }
     .faq-answer {
-      display: none;
+      display: grid;
+      grid-template-rows: 0fr;
       margin: 0;
-      padding: 0 12px 13px;
       color: var(--muted);
       font-size: 13px;
       font-weight: 750;
       line-height: 1.55;
       white-space: pre-line;
       overflow-wrap: anywhere;
+      opacity: 0;
+      transition: grid-template-rows .24s ease, opacity .18s ease, padding-bottom .24s ease;
+      padding: 0 12px;
     }
     .faq-item.is-open .faq-answer {
-      display: block;
+      grid-template-rows: 1fr;
+      opacity: 1;
+      padding-bottom: 13px;
+    }
+    .faq-answer p {
+      min-height: 0;
+      overflow: hidden;
+      margin: 0;
     }
     .gap-spinner {
       width: 16px;
@@ -1060,6 +1070,9 @@
       .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .faq-card::before {
         transform: none !important;
       }
+      .faq-answer {
+        transition: none !important;
+      }
       .prepare-discount-sticker {
         animation: none !important;
       }
@@ -1353,7 +1366,7 @@
       gallery: { implemented: false },
       schedule: { implemented: false },
       shop: { implemented: false },
-      faq: { implemented: false },
+      faq: { implemented: true, future: ["Suggested questions", "Question views", "Accordion opens", "Most viewed question"] },
       quote: { implemented: false },
       location: { implemented: false },
       youtube: { implemented: false },
@@ -2106,7 +2119,7 @@
         row.innerHTML =
           '<button class="faq-question" type="button" aria-expanded="false" aria-controls="' + answerId + '">' +
           '<span>' + escapeHtml(item.question) + '</span></button>' +
-          '<p class="faq-answer" id="' + answerId + '">' + escapeHtml(item.answer) + '</p>';
+          '<div class="faq-answer" id="' + answerId + '"><p>' + escapeHtml(item.answer) + '</p></div>';
         const button = row.querySelector(".faq-question");
         button.addEventListener("click", () => {
           const shouldOpen = !row.classList.contains("is-open");
@@ -2117,6 +2130,14 @@
           });
           row.classList.toggle("is-open", shouldOpen);
           button.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+          if (shouldOpen) {
+            trackCreatorEvent("faq_open", {
+              block_key: "faq",
+              block_title: item.question,
+              faq_id: item.id,
+              faq_order: index + 1
+            });
+          }
         });
         list.appendChild(row);
       });

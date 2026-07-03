@@ -1648,6 +1648,7 @@ function normalizeAnalyticsEventName(value) {
     "business_click",
     "music_click",
     "faq_click",
+    "faq_open",
     "custom_click",
     "share_open",
     "share_item_click",
@@ -1689,7 +1690,11 @@ async function trackCreatorAnalyticsEvent(req, input = {}) {
         event_name: eventName,
         block_key: clean(input.block_key || input.blockKey || metadata.block_key || metadata.blockKey).slice(0, 80),
         block_title: clean(input.block_title || input.blockTitle || metadata.block_title || metadata.blockTitle).slice(0, 160),
-        destination: clean(input.destination || metadata.destination).slice(0, 500)
+        destination: clean(input.destination || metadata.destination).slice(0, 500),
+        faq_id: clean(input.faq_id || input.faqId || metadata.faq_id || metadata.faqId).slice(0, 120),
+        faq_order: Number.isFinite(Number(input.faq_order || input.faqOrder || metadata.faq_order || metadata.faqOrder))
+          ? Number(input.faq_order || input.faqOrder || metadata.faq_order || metadata.faqOrder)
+          : null
       }
     },
     context: "Creator analytics event"
@@ -1717,6 +1722,7 @@ function analyticsLabel(eventName, blockTitle = "") {
     business_click: "Business",
     music_click: "Music",
     faq_click: "FAQ",
+    faq_open: "FAQ opened",
     custom_click: blockTitle || "Custom link",
     share_open: "Share",
     share_item_click: "Share item",

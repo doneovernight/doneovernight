@@ -328,6 +328,10 @@
       display: grid;
       gap: 12px;
     }
+    .link-card.is-dragging {
+      opacity: .62;
+      transform: scale(.995);
+    }
     .link-card-head {
       display: flex;
       align-items: center;
@@ -340,6 +344,26 @@
     .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .link-card-fields .wide { grid-column: 1 / -1; }
     .faq-builder-head { padding-top: 2px; }
+    .faq-card-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .faq-drag-handle {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.055);
+      color: rgba(255,245,247,.58);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      flex: 0 0 auto;
+    }
+    .faq-drag-handle:active { cursor: grabbing; }
     .faq-answer { min-height: 88px; }
     .link-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .link-card-actions .button { min-height: 36px; padding: 0 11px; font-size: 12px; }
@@ -956,7 +980,7 @@
               </div>
               <div class="link-card-head faq-builder-head">
                 <div class="link-card-title"><strong>FAQ items</strong><span>Only visible items with a question and answer appear publicly.</span></div>
-                <button class="button" id="addFaqItem" type="button">Add FAQ item</button>
+                <button class="button" id="addFaqItem" type="button">+ Add Question</button>
               </div>
               <div class="link-list" id="faqItemsList"></div>
               <input name="faq_items" type="hidden" value="[]">
@@ -1948,6 +1972,22 @@
       const field = form.elements.faq_items;
       if (field) field.value = JSON.stringify(readFaqItems());
     }
+    function faqRowSnapshot(row) {
+      return {
+        visible: Boolean(row.querySelector("[data-faq-visible]") && row.querySelector("[data-faq-visible]").checked),
+        question: String(row.querySelector("[data-faq-question]")?.value || "").trim(),
+        answer: String(row.querySelector("[data-faq-answer]")?.value || "").trim()
+      };
+    }
+    function moveDraggingFaqRow(targetRow, clientY) {
+      const list = $("faqItemsList");
+      const dragging = list && list.querySelector("[data-faq-item-row].is-dragging");
+      if (!list || !dragging || !targetRow || dragging === targetRow) return;
+      const box = targetRow.getBoundingClientRect();
+      const insertBeforeTarget = clientY < box.top + box.height / 2;
+      list.insertBefore(dragging, insertBeforeTarget ? targetRow : targetRow.nextElementSibling);
+      syncFaqItemsField();
+    }
     function createFaqItemRow(item = {}) {
       const row = document.createElement("section");
       row.className = "link-card";
@@ -1955,7 +1995,10 @@
       row.dataset.faqItemId = item.id || faqItemId();
       row.innerHTML = [
         '<div class="link-card-head">',
-          '<div class="link-card-title"><strong>FAQ item</strong><span>Visible questions appear in the public accordion.</span></div>',
+          '<div class="faq-card-heading">',
+            '<button class="faq-drag-handle" data-faq-drag-handle draggable="true" type="button" aria-label="Drag question to reorder">&#9776;</button>',
+            '<div class="link-card-title"><strong>FAQ item</strong><span>Drag to reorder. Visible questions appear publicly.</span></div>',
+          '</div>',
           '<label class="switch" aria-label="FAQ item visible"><input data-faq-visible type="checkbox"><span class="track"></span></label>',
         '</div>',
         '<div class="link-card-fields">',
@@ -1963,6 +2006,7 @@
           '<label class="wide">Answer<textarea class="faq-answer" data-faq-answer placeholder="Short answer Mina can send viewers to."></textarea></label>',
         '</div>',
         '<div class="link-card-actions">',
+          '<button class="button" data-duplicate-faq-item type="button">Duplicate</button>',
           '<button class="button danger" data-remove-faq-item type="button">Delete</button>',
         '</div>'
       ].join("");
@@ -1971,6 +2015,30 @@
       row.querySelector("[data-faq-answer]").value = item.answer || "";
       row.addEventListener("input", syncFaqItemsField);
       row.addEventListener("change", syncFaqItemsField);
+      row.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        moveDraggingFaqRow(row, event.clientY);
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        row.classList.remove("is-dragging");
+        syncFaqItemsField();
+      });
+      const handle = row.querySelector("[data-faq-drag-handle]");
+      handle.addEventListener("dragstart", (event) => {
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.faqItemId);
+      });
+      handle.addEventListener("dragend", () => {
+        row.classList.remove("is-dragging");
+        syncFaqItemsField();
+      });
+      row.querySelector("[data-duplicate-faq-item]").addEventListener("click", () => {
+        const duplicate = createFaqItemRow({ ...faqRowSnapshot(row), id: faqItemId() });
+        row.after(duplicate);
+        syncFaqItemsField();
+      });
       row.querySelector("[data-remove-faq-item]").addEventListener("click", () => {
         row.remove();
         syncFaqItemsField();
