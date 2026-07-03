@@ -329,6 +329,7 @@
       content: "";
       position: absolute;
       inset: 0;
+      border-radius: inherit;
       pointer-events: none;
       background:
         linear-gradient(120deg, rgba(255,255,255,.18), transparent 34%),
@@ -428,28 +429,28 @@
       opacity: .52;
       pointer-events: none;
     }
-    .link-button.has-battle-discount {
+    .prepare-card-shell {
+      position: relative;
       overflow: visible;
+      background: transparent;
+      border: 0;
+      min-width: 0;
     }
-    .link-button.has-battle-discount::after {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      z-index: 3;
-      border: 1px solid var(--glass-line);
+    .prepare-card-shell .prepare-card {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
       border-radius: 24px;
-      pointer-events: none;
+      background-clip: padding-box;
     }
-    .link-button.has-battle-discount > :not(.battle-discount-sticker) {
-      z-index: 4;
-    }
-    .battle-discount-sticker {
+    .prepare-discount-sticker {
       position: absolute;
       top: -14px;
-      left: -12px;
-      z-index: 2;
-      width: clamp(44px, 12vw, 50px);
+      left: -10px;
+      z-index: 5;
+      width: 46px;
       height: auto;
+      background: transparent;
       pointer-events: none;
       transform: rotate(-10deg) scale(1);
       transform-origin: center;
@@ -993,7 +994,7 @@
       .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
         transform: none !important;
       }
-      .battle-discount-sticker {
+      .prepare-discount-sticker {
         animation: none !important;
       }
     }
@@ -1992,9 +1993,8 @@
         if (!url) return;
         renderedActions += 1;
         const item = document.createElement(url ? "a" : "div");
-        item.className = "link-button content-block";
         const showBattleDiscount = action.key === "support" && Boolean(url);
-        if (showBattleDiscount) item.classList.add("has-battle-discount");
+        item.className = showBattleDiscount ? "link-button content-block prepare-card" : "link-button content-block";
         item.dataset.blockType = action.key === "discord" ? "discord" : "link";
         if (url) {
           item.href = url;
@@ -2006,11 +2006,18 @@
           item.dataset.analyticsDestination = url;
         }
         item.innerHTML =
-          (showBattleDiscount ? '<img class="battle-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">' : "") +
           '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
           escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
           escapeHtml(action.label) + '</span>';
-        grid.appendChild(item);
+        if (showBattleDiscount) {
+          const shell = document.createElement("div");
+          shell.className = "prepare-card-shell";
+          shell.innerHTML = '<img class="prepare-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">';
+          shell.appendChild(item);
+          grid.appendChild(shell);
+        } else {
+          grid.appendChild(item);
+        }
       });
       if (!renderedActions) grid.remove();
     }
