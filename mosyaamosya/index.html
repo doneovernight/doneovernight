@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
@@ -55,6 +55,7 @@
     html { background: var(--deep); }
     body {
       min-height: 100vh;
+      min-height: 100dvh;
       margin: 0;
       background:
         radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem),
@@ -93,8 +94,9 @@
       z-index: 1;
       width: min(100%, 520px);
       min-height: 100vh;
+      min-height: 100dvh;
       margin: 0 auto;
-      padding: 14px 14px 0;
+      padding: 0 14px 0;
       display: grid;
       gap: 16px;
       transition: opacity .35s ease;
@@ -102,10 +104,15 @@
     .intro-pending .shell { opacity: 0; }
     .hero {
       position: relative;
+      width: 100vw;
       min-height: 76vh;
+      min-height: calc(76svh + env(safe-area-inset-top));
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
       overflow: hidden;
       border: 1px solid rgba(255,211,223,.18);
-      border-radius: 34px;
+      border-width: 0 0 1px;
+      border-radius: 0 0 34px 34px;
       background: linear-gradient(160deg, #26100c, #080504);
       box-shadow: 0 22px 74px rgba(5,2,1,.38), inset 0 1px rgba(255,255,255,.2);
       isolation: isolate;
@@ -146,7 +153,7 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      padding: 16px;
+      padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
     }
     .hero-actions {
       display: flex;
@@ -776,7 +783,9 @@
       z-index: 50;
       display: grid;
       place-items: center;
-      padding: 28px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: calc(28px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));
       background: #080504;
       opacity: 0;
       pointer-events: none;
@@ -853,7 +862,15 @@
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
-      .hero { min-height: 760px; border-radius: 42px; }
+      .hero {
+        width: auto;
+        min-height: 760px;
+        margin-left: 0;
+        margin-right: 0;
+        border-width: 1px;
+        border-radius: 42px;
+      }
+      .hero-top { padding: 16px; }
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
       .button-grid { grid-template-columns: repeat(2, 1fr); }
       .link-button { min-height: 70px; }
