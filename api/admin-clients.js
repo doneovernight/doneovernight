@@ -1,6 +1,11 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
+const crypto = require("node:crypto");
+const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const MAX_JSON_BYTES = 16_000_000;
+const MAX_MEDIA_BYTES = 10_000_000;
+const CREATOR_MEDIA_BUCKET = process.env.CREATOR_MEDIA_BUCKET || "creator-media";
 const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
@@ -38,7 +43,12 @@ const AMBIENT_CREATOR_FIELDS = [
   "seasonal_effects_enabled",
   "holiday_effects_enabled"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS).join(",");
+const PHASE_1_4_CREATOR_FIELDS = [
+  "next_live_datetime",
+  "discord_invite_url",
+  "discord_server_id"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
@@ -59,6 +69,7 @@ const DEFAULT_MINA_SETTINGS = {
   live_url: "",
   live_status: false,
   live_button_text: "Join Live",
+  next_live_datetime: "",
   theme_preset: "mina",
   subscribe_popup_enabled: false,
   subscribe_popup_title: "",
@@ -73,6 +84,8 @@ const DEFAULT_MINA_SETTINGS = {
   timezone: "America/Chicago",
   seasonal_effects_enabled: true,
   holiday_effects_enabled: true,
+  discord_invite_url: "https://discord.gg/GGE7WsUZR",
+  discord_server_id: "",
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
@@ -93,6 +106,66 @@ function bool(value, fallback = false) {
   if (value === "true") return true;
   if (value === "false") return false;
   return fallback;
+}
+
+function timingSafeEqualText(left, right) {
+  const a = Buffer.from(String(left || ""));
+  const b = Buffer.from(String(right || ""));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+function sessionSecret() {
+  return process.env.CREATOR_OS_SESSION_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.MINA_CREATOR_PASSWORD_HASH ||
+    process.env.MINA_CREATOR_PASSWORD ||
+    "";
+}
+
+function signText(value) {
+  return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url");
+}
+
+function createCreatorSession(role = "creator") {
+  const payload = {
+    sub: "mosyaamosya",
+    role,
+    exp: Date.now() + CREATOR_SESSION_TTL_MS,
+    nonce: crypto.randomBytes(12).toString("base64url")
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return encoded + "." + signText(encoded);
+}
+
+function verifyCreatorSession(token) {
+  const value = clean(token);
+  if (!value || !sessionSecret()) return null;
+  const [encoded, signature] = value.split(".");
+  if (!encoded || !signature || !timingSafeEqualText(signature, signText(encoded))) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    if (payload.sub !== "mosyaamosya" || Number(payload.exp) < Date.now()) return null;
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("base64url");
+  const iterations = 120000;
+  const digest = crypto.pbkdf2Sync(String(password), salt, iterations, 32, "sha256").toString("base64url");
+  return "pbkdf2_sha256$" + iterations + "$" + salt + "$" + digest;
+}
+
+function verifyPassword(password, storedHash) {
+  const hash = clean(storedHash);
+  if (!password || !hash) return false;
+  const [scheme, iterations, salt, digest] = hash.split("$");
+  if (scheme !== "pbkdf2_sha256" || !iterations || !salt || !digest) return false;
+  const candidate = crypto.pbkdf2Sync(String(password), salt, Number(iterations), 32, "sha256").toString("base64url");
+  return timingSafeEqualText(candidate, digest);
 }
 
 function getQuery(req) {
@@ -122,7 +195,7 @@ function parseBody(req) {
     let body = "";
     req.on("data", (chunk) => {
       body += chunk.toString();
-      if (body.length > 80_000) {
+      if (body.length > MAX_JSON_BYTES) {
         reject(new Error("Payload too large"));
         req.destroy();
       }
@@ -196,6 +269,89 @@ async function fetchClients() {
   return supabaseFetch("portal_requests?select=*&order=created_at.desc", { context: "Admin clients" });
 }
 
+async function fetchCreatorPasswordHashFromTable() {
+  const rows = await supabaseFetch("creator_auth?creator_id=eq." + MINA_CREATOR_ID + "&select=password_hash,updated_at&limit=1", {
+    context: "Creator auth"
+  });
+  return Array.isArray(rows) && rows[0] ? clean(rows[0].password_hash) : "";
+}
+
+async function fetchCreatorPasswordHashFromBridge() {
+  const rows = await supabaseFetch(
+    "analytics_events?event_type=eq.creator_auth_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
+    { context: "Creator auth bridge" }
+  );
+  const metadata = Array.isArray(rows) && rows[0] && rows[0].metadata ? rows[0].metadata : {};
+  return clean(metadata.password_hash);
+}
+
+async function fetchCreatorPasswordHash() {
+  try {
+    const hash = await fetchCreatorPasswordHashFromTable();
+    if (hash) return hash;
+  } catch (error) {}
+
+  try {
+    const hash = await fetchCreatorPasswordHashFromBridge();
+    if (hash) return hash;
+  } catch (error) {}
+
+  return clean(process.env.MINA_CREATOR_PASSWORD_HASH || process.env.CREATOR_OS_MINA_PASSWORD_HASH);
+}
+
+async function saveCreatorPasswordHashToTable(passwordHash) {
+  await supabaseFetch("creator_auth?on_conflict=creator_id", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates",
+    body: [{
+      creator_id: MINA_CREATOR_ID,
+      password_hash: passwordHash,
+      updated_at: new Date().toISOString()
+    }],
+    context: "Creator auth"
+  });
+}
+
+async function saveCreatorPasswordHashToBridge(passwordHash) {
+  await supabaseFetch("analytics_events", {
+    method: "POST",
+    body: {
+      event_type: "creator_auth_mosyaamosya",
+      source: "creator_os_admin",
+      route: "/mosyaamosya",
+      metadata: { password_hash: passwordHash }
+    },
+    context: "Creator auth bridge"
+  });
+}
+
+async function saveCreatorPasswordHash(passwordHash) {
+  try {
+    await saveCreatorPasswordHashToTable(passwordHash);
+  } catch (error) {
+    await saveCreatorPasswordHashToBridge(passwordHash);
+  }
+}
+
+async function verifyCreatorPassword(password) {
+  const value = clean(password);
+  if (!value) return false;
+  const storedHash = await fetchCreatorPasswordHash();
+  if (storedHash) return verifyPassword(value, storedHash);
+  const envPassword = clean(process.env.MINA_CREATOR_PASSWORD || process.env.CREATOR_OS_MINA_PASSWORD);
+  return envPassword ? timingSafeEqualText(value, envPassword) : false;
+}
+
+async function verifyCreatorAccess(input = {}) {
+  const session = verifyCreatorSession(input.creator_session || input.creatorSession);
+  if (session) return { authorized: true, role: session.role || "creator" };
+
+  const password = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
+  if (await verifyCreatorPassword(password)) return { authorized: true, role: "creator" };
+  if (await verifyAdminKey(password)) return { authorized: true, role: "master" };
+  return { authorized: false, role: "" };
+}
+
 function normalizeSlug(value) {
   const slug = clean(value || DEFAULT_MINA_SETTINGS.slug)
     .toLowerCase()
@@ -210,9 +366,96 @@ function normalizeTheme(value) {
   return allowed.has(preset) ? preset : DEFAULT_MINA_SETTINGS.theme_preset;
 }
 
+function normalizeDateTime(value) {
+  const input = clean(value);
+  if (!input) return "";
+  const parsed = new Date(input);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : "";
+}
+
 function number(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function mediaExtension(mimeType, fallbackName = "") {
+  const fromName = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  const named = fromName ? fromName[1] : "";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  if (mimeType === "video/mp4") return "mp4";
+  if (mimeType === "video/webm") return "webm";
+  if (mimeType === "video/quicktime") return "mov";
+  return named || "bin";
+}
+
+function parseDataUrl(value) {
+  const match = clean(value).match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) return null;
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], "base64")
+  };
+}
+
+async function uploadCreatorMedia(input = {}) {
+  const kind = clean(input.kind);
+  const file = input.file || {};
+  const parsed = parseDataUrl(file.data || file.dataUrl);
+  if (!parsed) {
+    const error = new Error("Paste an asset URL or choose a valid media file.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA";
+    throw error;
+  }
+  const isImage = parsed.mimeType.startsWith("image/");
+  const isVideo = parsed.mimeType.startsWith("video/");
+  if (kind === "profile" && !isImage) {
+    const error = new Error("Profile media must be an image file.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
+  if (kind === "hero" && !isVideo) {
+    const error = new Error("Hero media must be a vertical video file.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
+  if (parsed.buffer.length > MAX_MEDIA_BYTES) {
+    const error = new Error("Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
+    error.statusCode = 413;
+    error.code = "MEDIA_TOO_LARGE";
+    throw error;
+  }
+
+  const { url, serviceRoleKey } = getSupabaseConfig("Creator media upload");
+  const ext = mediaExtension(parsed.mimeType, file.name);
+  const path = "mosyaamosya/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
+  const response = await fetch(url + "/storage/v1/object/" + CREATOR_MEDIA_BUCKET + "/" + path, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: "Bearer " + serviceRoleKey,
+      "Content-Type": parsed.mimeType,
+      "x-upsert": "true"
+    },
+    body: parsed.buffer
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    const error = new Error("Media upload is not configured. Paste an asset URL instead.");
+    error.statusCode = response.status || 503;
+    error.code = "MEDIA_UPLOAD_FAILED";
+    error.details = text;
+    throw error;
+  }
+  return {
+    kind,
+    url: url + "/storage/v1/object/public/" + CREATOR_MEDIA_BUCKET + "/" + path
+  };
 }
 
 function normalizeCreator(row = {}) {
@@ -247,10 +490,13 @@ function normalizeCreator(row = {}) {
     live_url: clean(row.live_url),
     live_status: bool(row.live_status, false),
     live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
+    next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(row.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
-    subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy
+    subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
+    discord_invite_url: clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    discord_server_id: clean(row.discord_server_id)
   };
 }
 
@@ -328,10 +574,13 @@ function creatorPayload(input = {}) {
     live_url: clean(input.live_url),
     live_status: bool(input.live_status, false),
     live_button_text: clean(input.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
+    next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(input.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
     subscribe_popup_copy: clean(input.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
+    discord_invite_url: clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    discord_server_id: clean(input.discord_server_id),
     updated_at: new Date().toISOString()
   };
 }
@@ -395,10 +644,29 @@ async function handleCreatorSettings(req, res) {
   }
 
   const input = await parseBody(req);
-  const adminKey = clean(input.admin_key || input.adminKey);
-  const authorized = await verifyAdminKey(adminKey);
-  if (!authorized) {
-    return send(res, 401, { success: false, error: "Admin access denied" });
+  if (input.action === "login") {
+    const credential = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
+    const creatorOk = await verifyCreatorPassword(credential);
+    const masterOk = creatorOk ? false : await verifyAdminKey(credential);
+    if (!creatorOk && !masterOk) {
+      return send(res, 401, { success: false, error: "Creator access denied" });
+    }
+    const result = await fetchCreator(input.slug || "mosyaamosya").catch(() => ({
+      creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+      source: "fallback"
+    }));
+    return send(res, 200, {
+      success: true,
+      creator: result.creator,
+      source: result.source,
+      role: masterOk ? "master" : "creator",
+      creator_session: createCreatorSession(masterOk ? "master" : "creator")
+    });
+  }
+
+  const access = await verifyCreatorAccess(input);
+  if (!access.authorized) {
+    return send(res, 401, { success: false, error: "Creator access denied" });
   }
 
   if (input.action === "load") {
@@ -413,6 +681,32 @@ async function handleCreatorSettings(req, res) {
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
     }
+  }
+
+  if (input.action === "change_password") {
+    const currentPassword = clean(input.current_password || input.currentPassword);
+    const newPassword = clean(input.new_password || input.newPassword);
+    const confirmPassword = clean(input.confirm_password || input.confirmPassword);
+    if (newPassword.length < 10) {
+      return send(res, 400, { success: false, error: "New password must be at least 10 characters." });
+    }
+    if (newPassword !== confirmPassword) {
+      return send(res, 400, { success: false, error: "New passwords do not match." });
+    }
+    if (access.role !== "master" && !(await verifyCreatorPassword(currentPassword))) {
+      return send(res, 401, { success: false, error: "Current password is incorrect." });
+    }
+    await saveCreatorPasswordHash(hashPassword(newPassword));
+    return send(res, 200, {
+      success: true,
+      message: "Creator password updated.",
+      creator_session: createCreatorSession("creator")
+    });
+  }
+
+  if (input.action === "upload_media") {
+    const media = await uploadCreatorMedia(input);
+    return send(res, 200, { success: true, media });
   }
 
   const result = await saveCreator(input.creator || input);
@@ -433,7 +727,7 @@ module.exports = async function handler(req, res) {
       }
       return send(res, error.statusCode || 500, {
         success: false,
-        error: "Could not save creator settings",
+        error: error.message || "Could not save creator settings",
         code: error.code || "CREATOR_SETTINGS_FAILED"
       });
     }

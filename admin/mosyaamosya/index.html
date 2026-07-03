@@ -31,7 +31,7 @@
     }
     button, input, textarea { font: inherit; }
     a { color: inherit; }
-    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 48px; }
+    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 48px; }
     .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
     .brand { display: grid; gap: 6px; }
     .eyebrow { color: var(--accent); font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
@@ -54,7 +54,7 @@
     }
     .button.primary { border: 0; background: linear-gradient(135deg, var(--accent), #ff9fbd); color: #24100e; box-shadow: 0 16px 42px rgba(255,159,189,.22); }
     .button.danger { color: #fecdd3; border-color: rgba(251,113,133,.36); }
-    .gate { min-height: 70vh; display: grid; place-items: center; }
+    .gate { min-height: 100svh; display: grid; place-items: start center; padding: 28px 14px; }
     .gate-card, .panel {
       border: 1px solid var(--line);
       border-radius: 18px;
@@ -109,6 +109,13 @@
     .chocolate { background: linear-gradient(135deg, #8b5f4a, #24100e); }
     .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; }
     .status.error { color: #fecdd3; }
+    .status.success { color: #bbf7d0; }
+    .media-control { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.04); }
+    .media-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
+    .media-preview.video { width: 120px; }
+    .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
+    .sticky-save { position: sticky; bottom: 12px; z-index: 5; box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2); }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
     iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
@@ -118,9 +125,13 @@
       .topbar { flex-direction: column; }
       .actions { justify-content: flex-start; }
       .grid { grid-template-columns: 1fr; }
-      .preview { position: static; }
+      .preview { display: none; }
     }
     @media (max-width: 620px) {
+      .shell { width: min(100% - 18px, 1180px); padding-top: 12px; }
+      .panel { padding: 14px; border-radius: 16px; }
+      .topbar { margin-bottom: 12px; }
+      .stack { gap: 12px; }
       .fields { grid-template-columns: 1fr; }
       .theme-grid, .future { grid-template-columns: repeat(2, 1fr); }
       .span-2 { grid-column: auto; }
@@ -130,10 +141,10 @@
 <body>
   <div class="gate" id="gate">
     <form class="gate-card" id="loginForm">
-      <div class="eyebrow">Admin auth</div>
+      <div class="eyebrow">Creator access</div>
       <h1 style="font-size:38px;margin:8px 0 10px;">Mina Creator OS</h1>
-      <p class="muted">Use the existing DONEOVERNIGHT admin key to unlock this page.</p>
-      <label>Admin key<input id="adminKey" type="password" autocomplete="current-password" required></label>
+      <p class="muted">Use Mina's creator password. DONEOVERNIGHT master admin access remains available as fallback.</p>
+      <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
       <div style="height:12px"></div>
       <button class="button primary" type="submit">Unlock Mina</button>
       <div class="status" id="loginStatus"></div>
@@ -164,8 +175,26 @@
             <label class="span-2">Bio<textarea name="bio"></textarea></label>
             <label>Location<input name="location"></label>
             <label>Slug override<input name="slug"></label>
-            <label class="span-2">Profile Image URL<input name="avatar_url" type="url"></label>
-            <label class="span-2">Hero Video URL<input name="hero_video_url" type="url"></label>
+            <label class="span-2">Profile Image URL<input name="avatar_url" type="url" placeholder="Paste asset URL if upload is unavailable"></label>
+            <div class="span-2 media-control">
+              <strong>Upload/change profile image</strong>
+              <span class="muted">Accepts image files. Paste an asset URL above if storage upload is unavailable.</span>
+              <div class="media-row">
+                <img class="media-preview" id="avatarPreview" alt="Profile image preview">
+                <input id="avatarFile" type="file" accept="image/*">
+                <button class="button" id="uploadAvatar" type="button">Upload image</button>
+              </div>
+            </div>
+            <label class="span-2">Hero Video URL<input name="hero_video_url" type="url" placeholder="Paste vertical video asset URL"></label>
+            <div class="span-2 media-control">
+              <strong>Upload/change hero video</strong>
+              <span class="muted">Vertical video recommended. Keep it short, roughly 7-10 seconds, muted/loop friendly.</span>
+              <div class="media-row">
+                <video class="media-preview video" id="heroPreview" muted loop playsinline controls></video>
+                <input id="heroFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
+                <button class="button" id="uploadHero" type="button">Upload video</button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -174,9 +203,14 @@
           <div class="fields">
             <label>TikTok URL<input name="tiktok_url" type="url"></label>
             <label>Discord URL<input name="discord_url" type="url"></label>
+            <label>Discord server invite URL<input name="discord_invite_url" type="url"></label>
+            <label>Discord server ID<input name="discord_server_id"></label>
             <label>Support Stream URL<input name="tiktok_coins_url" type="url"></label>
             <label>Business email<input name="business_email" type="email"></label>
             <label class="span-2">Live URL<input name="live_url" type="url"></label>
+            <div class="span-2 help-panel">
+              Discord counter placeholder: enable the Discord server widget in Server Settings, then add the server ID here. API/widget member counts are intentionally not implemented yet.
+            </div>
           </div>
         </section>
 
@@ -188,6 +222,8 @@
               <label class="switch" aria-label="Manual live status"><input name="live_status" type="checkbox"><span class="track"></span></label>
             </div>
             <label class="span-2">Live button text<input name="live_button_text"></label>
+            <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
+            <label>Timezone<input name="timezone" placeholder="America/Chicago"></label>
           </div>
         </section>
 
@@ -229,7 +265,6 @@
               <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to Mina's local time.</span></div>
               <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
             <div class="span-2 switch-row">
               <div><strong>Seasonal effects enabled</strong><span>Subtle seasonal lighting and gradient shifts.</span></div>
               <label class="switch" aria-label="Seasonal effects enabled"><input name="seasonal_effects_enabled" type="checkbox"><span class="track"></span></label>
@@ -238,6 +273,20 @@
               <div><strong>Holiday effects enabled</strong><span>Premium holiday atmosphere without gimmicks.</span></div>
               <label class="switch" aria-label="Holiday effects enabled"><input name="holiday_effects_enabled" type="checkbox"><span class="track"></span></label>
             </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Settings</h2>
+          <div class="fields">
+            <label>Current password<input name="current_password" type="password" autocomplete="current-password"></label>
+            <label>New password<input name="new_password" type="password" autocomplete="new-password"></label>
+            <label>Confirm new password<input name="confirm_password" type="password" autocomplete="new-password"></label>
+            <div class="switch-row">
+              <div><strong>Password auth</strong><span>Stored hashed server-side when storage is available.</span></div>
+              <button class="button" id="savePassword" type="button">Save password</button>
+            </div>
+            <div class="span-2 status" id="passwordStatus"></div>
           </div>
         </section>
 
@@ -259,7 +308,7 @@
           </div>
         </section>
 
-        <button class="button primary" type="submit">Save page</button>
+        <button class="button primary sticky-save" type="submit">Save page</button>
         <div class="status" id="saveStatus"></div>
       </form>
 
@@ -274,27 +323,43 @@
   </main>
 
   <script>
-    const sessionFlag = "doneovernight_admin";
-    const sessionKey = "doneovernight_admin_key";
+    const sessionFlag = "doneovernight_creator_mosyaamosya";
+    const sessionKey = "doneovernight_creator_mosyaamosya_session";
     const themes = [["mina", "Mina Premium"], ["rose", "Baby Pink"], ["chocolate", "Warm Brown"]];
     let activeTheme = "mina";
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
 
-    function setStatus(message, isError) {
-      const status = $("saveStatus");
+    function setStatus(message, isError, targetId = "saveStatus") {
+      const status = $(targetId);
       status.textContent = message || "";
       status.classList.toggle("error", Boolean(isError));
+      status.classList.toggle("success", Boolean(message) && !isError);
     }
     function setLoginStatus(message, isError) {
       const status = $("loginStatus");
       status.textContent = message || "";
       status.classList.toggle("error", Boolean(isError));
     }
-    function adminKey() { return sessionStorage.getItem(sessionKey) || ""; }
-    function openApp() { $("gate").hidden = true; $("app").hidden = false; }
-    function closeApp() { $("gate").hidden = false; $("app").hidden = true; }
+    function creatorSession() { return sessionStorage.getItem(sessionKey) || ""; }
+    function openApp() {
+      const gate = $("gate");
+      if (gate) gate.remove();
+      $("app").hidden = false;
+      window.scrollTo(0, 0);
+    }
+    function closeApp() { window.location.reload(); }
     function normalizeSlug(value) { return String(value || "mosyaamosya").toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya"; }
+    function normalizeDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date.toISOString() : "";
+    }
+    function inputDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 16) : "";
+    }
     function clampVolume(value) {
       const number = Number(value);
       if (!Number.isFinite(number)) return 0.35;
@@ -317,6 +382,7 @@
         live_url: String(data.get("live_url") || "").trim(),
         live_status: form.elements.live_status.checked,
         live_button_text: String(data.get("live_button_text") || "").trim() || "Join Live",
+        next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         welcome_intro_enabled: form.elements.welcome_intro_enabled.checked,
         music_enabled: form.elements.music_enabled.checked,
         music_url: String(data.get("music_url") || "").trim(),
@@ -328,13 +394,15 @@
         timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
         seasonal_effects_enabled: form.elements.seasonal_effects_enabled.checked,
         holiday_effects_enabled: form.elements.holiday_effects_enabled.checked,
+        discord_invite_url: String(data.get("discord_invite_url") || "").trim(),
+        discord_server_id: String(data.get("discord_server_id") || "").trim(),
         redirect_mina_enabled: form.elements.redirect_mina_enabled.checked
       };
     }
     function fillForm(settings) {
       Object.entries(settings || {}).forEach(([key, value]) => {
         if (!form.elements[key] || typeof form.elements[key].checked === "boolean") return;
-        form.elements[key].value = value || "";
+        form.elements[key].value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
       });
       ["live_status", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
         if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
@@ -345,6 +413,8 @@
       if (settings.holiday_effects_enabled === undefined && form.elements.holiday_effects_enabled) form.elements.holiday_effects_enabled.checked = true;
       if (settings.redirect_mina_enabled === undefined && form.elements.redirect_mina_enabled) form.elements.redirect_mina_enabled.checked = true;
       activeTheme = settings.theme_preset || "mina";
+      $("avatarPreview").src = settings.avatar_url || "";
+      $("heroPreview").src = settings.hero_video_url || "";
       renderThemes();
     }
     function renderThemes() {
@@ -373,29 +443,91 @@
       if (!response.ok || data.success !== true) throw new Error(data.error || "Creator settings request failed");
       return data;
     }
-    async function loadSettings(key) {
+    async function login(password) {
+      setLoginStatus("Checking creator access...");
+      const data = await api({ action: "login", creator_password: password, slug: "mosyaamosya" });
+      sessionStorage.setItem(sessionFlag, "true");
+      sessionStorage.setItem(sessionKey, data.creator_session || "");
+      fillForm(data.creator);
+      openApp();
+      setStatus("Loaded Mina Mosya settings.");
+    }
+    async function loadSettings() {
       setStatus("Loading Mina settings...");
-      const data = await api({ action: "load", admin_key: key, slug: "mosyaamosya" });
+      const data = await api({ action: "load", creator_session: creatorSession(), slug: "mosyaamosya" });
       fillForm(data.creator);
       openApp();
       setStatus("Loaded Mina Mosya settings.");
     }
     async function saveSettings() {
       setStatus("Saving Mina...");
-      const data = await api({ admin_key: adminKey(), creator: valuesFromForm() });
+      const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
       fillForm(data.creator);
       $("previewFrame").src = "https://doneovernight.com/mosyaamosya?refresh=" + Date.now();
       setStatus("Saved Mina Mosya page.");
     }
+    function readFileData(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Could not read media file"));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function uploadMedia(kind) {
+      const input = kind === "profile" ? $("avatarFile") : $("heroFile");
+      const file = input.files && input.files[0];
+      if (!file) {
+        setStatus("Choose a file first, or paste an asset URL.", true);
+        return;
+      }
+      const field = kind === "profile" ? "avatar_url" : "hero_video_url";
+      const preview = kind === "profile" ? $("avatarPreview") : $("heroPreview");
+      preview.src = URL.createObjectURL(file);
+      setStatus("Uploading media...");
+      try {
+        const data = await api({
+          action: "upload_media",
+          creator_session: creatorSession(),
+          kind,
+          file: {
+            name: file.name,
+            type: file.type,
+            data: await readFileData(file)
+          }
+        });
+        form.elements[field].value = data.media.url;
+        preview.src = data.media.url;
+        setStatus("Media uploaded. Save page to publish it.");
+      } catch (error) {
+        setStatus((error.message || "Upload unavailable") + " Paste a hosted asset URL instead.", true);
+      }
+    }
+    async function savePassword() {
+      setStatus("Saving password...", false, "passwordStatus");
+      try {
+        const data = await api({
+          action: "change_password",
+          creator_session: creatorSession(),
+          current_password: form.elements.current_password.value,
+          new_password: form.elements.new_password.value,
+          confirm_password: form.elements.confirm_password.value
+        });
+        if (data.creator_session) sessionStorage.setItem(sessionKey, data.creator_session);
+        form.elements.current_password.value = "";
+        form.elements.new_password.value = "";
+        form.elements.confirm_password.value = "";
+        setStatus("Password saved.", false, "passwordStatus");
+      } catch (error) {
+        setStatus(error.message || "Password save failed", true, "passwordStatus");
+      }
+    }
     $("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const key = $("adminKey").value.trim();
-      if (!key) return;
-      setLoginStatus("Checking admin key...");
+      const password = $("creatorPassword").value.trim();
+      if (!password) return;
       try {
-        await loadSettings(key);
-        sessionStorage.setItem(sessionFlag, "true");
-        sessionStorage.setItem(sessionKey, key);
+        await login(password);
         setLoginStatus("");
       } catch (error) {
         setLoginStatus(error.message || "Admin access denied", true);
@@ -413,9 +545,12 @@
       sessionStorage.removeItem(sessionKey);
       closeApp();
     });
+    $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
+    $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
+    $("savePassword").addEventListener("click", savePassword);
     renderThemes();
-    if (sessionStorage.getItem(sessionFlag) === "true" && adminKey()) {
-      loadSettings(adminKey()).catch(() => {
+    if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
+      loadSettings().catch(() => {
         sessionStorage.removeItem(sessionFlag);
         sessionStorage.removeItem(sessionKey);
         closeApp();

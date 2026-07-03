@@ -248,6 +248,17 @@
     }
     .live-copy strong { display: block; font-size: 13px; letter-spacing: .04em; }
     .live-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .countdown {
+      display: none;
+      border: 1px solid rgba(255,211,223,.14);
+      border-radius: 16px;
+      padding: 10px 12px;
+      color: rgba(255,245,247,.76);
+      background: rgba(255,211,223,.06);
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .countdown.is-visible { display: block; }
     .primary {
       min-height: 54px;
       border: 0;
@@ -311,6 +322,27 @@
       color: rgba(255,245,247,.84);
       font-size: 12px;
       font-weight: 900;
+    }
+    .community-card {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(255,245,247,.12), rgba(255,245,247,.05));
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 20px 62px var(--ambient-card-shadow);
+      backdrop-filter: blur(22px);
+    }
+    .community-card h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .community-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
     }
     .future {
       display: grid;
@@ -442,8 +474,17 @@
             </div>
           </div>
           <a class="primary" id="primaryCta" href="#" aria-disabled="true">Join Live</a>
+          <div class="countdown" id="countdown"></div>
         </section>
       </div>
+    </section>
+
+    <section class="community-card" id="communityCard">
+      <div>
+        <h2>Community</h2>
+        <p>Join Mina's Discord for stream updates and community drops.</p>
+      </div>
+      <a class="primary" id="communityCta" href="https://discord.gg/GGE7WsUZR" target="_blank" rel="noreferrer">Join Discord</a>
     </section>
 
     <section class="button-grid" id="buttonGrid" aria-label="Mina links"></section>
@@ -491,11 +532,14 @@
       hero_video_url: "/assets/mosyaamosya/intro.mp4",
       tiktok_url: "https://www.tiktok.com/@mosyaamosya",
       discord_url: "https://discord.gg/GGE7WsUZR",
+      discord_invite_url: "https://discord.gg/GGE7WsUZR",
+      discord_server_id: "",
       tiktok_coins_url: "https://www.tiktok.com/coin",
       business_email: "mina@doneovernight.com",
       live_url: "",
       live_status: false,
       live_button_text: "Join Live",
+      next_live_datetime: "",
       theme_preset: "mina",
       background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
       welcome_intro_enabled: true,
@@ -521,6 +565,7 @@
     const $ = (id) => document.getElementById(id);
     const introKey = "creator_intro_mosyaamosya_v1";
     const musicKey = "creator_music_mosyaamosya_enabled";
+    let countdownTimer = null;
 
     function safeUrl(value) {
       if (!value) return "";
@@ -534,6 +579,23 @@
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
+    function nextLiveDate(settings) {
+      const value = settings.next_live_datetime;
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date : null;
+    }
+    function countdownText(date) {
+      const ms = date.getTime() - Date.now();
+      if (ms <= 0) return "Starting soon";
+      const minutes = Math.ceil(ms / 60000);
+      const days = Math.floor(minutes / 1440);
+      const hours = Math.floor((minutes % 1440) / 60);
+      const mins = minutes % 60;
+      if (days > 0) return "Next stream in " + days + "d " + hours + "h";
+      if (hours > 0) return "Next stream in " + hours + "h " + mins + "m";
+      return "Next stream in " + mins + "m";
+    }
 
     function creatorTimeParts(timezone) {
       const safeTimezone = timezone || fallback.timezone;
@@ -678,12 +740,13 @@
 
     function actionUrl(action, settings) {
       if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
+      if (action.key === "discord") return safeUrl(settings.discord_invite_url || settings.discord_url);
       return safeUrl(settings[action.field]);
     }
 
     function renderButtons(settings) {
       const actions = [
-        { key: "discord", title: "Discord", sub: "Community", field: "discord_url", label: "Join", icon: icons.discord },
+        { key: "discord", title: "Discord", sub: "Community", field: "discord_invite_url", label: "Join", icon: icons.discord },
         { key: "tiktok", title: "TikTok", sub: "@mosyaamosya", field: "tiktok_url", label: "Watch", icon: icons.tiktok },
         { key: "support", title: "Support Stream", sub: "TikTok coins", field: "tiktok_coins_url", label: "Support", icon: icons.heart },
         { key: "business", title: "Business", sub: settings.business_email || "Booking and collabs", field: "business_email", label: "Email", icon: icons.mail }
@@ -772,17 +835,49 @@
       setText("liveCopy", settings.live_status ? "Join the stream" : "See you at the next stream.");
       const cta = $("primaryCta");
       const liveUrl = safeUrl(settings.live_url);
-      if (settings.live_status && liveUrl) {
+      if (settings.live_status) {
         cta.textContent = settings.live_button_text || "Join Live";
-        cta.href = liveUrl;
-        cta.target = "_blank";
-        cta.rel = "noreferrer";
-        cta.removeAttribute("aria-disabled");
+        if (liveUrl) {
+          cta.href = liveUrl;
+          cta.target = "_blank";
+          cta.rel = "noreferrer";
+          cta.removeAttribute("aria-disabled");
+        } else {
+          cta.href = "#";
+          cta.setAttribute("aria-disabled", "true");
+          cta.removeAttribute("target");
+        }
       } else {
-        cta.textContent = "Join Live";
+        cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
         cta.href = "#";
         cta.setAttribute("aria-disabled", "true");
         cta.removeAttribute("target");
+      }
+      const nextDate = nextLiveDate(settings);
+      const countdown = $("countdown");
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      if (!settings.live_status && nextDate) {
+        const renderCountdown = () => {
+          countdown.textContent = countdownText(nextDate) + " · " + (settings.timezone || fallback.timezone);
+        };
+        renderCountdown();
+        countdownTimer = setInterval(renderCountdown, 60000);
+        countdown.classList.add("is-visible");
+      } else {
+        countdown.textContent = "";
+        countdown.classList.remove("is-visible");
+      }
+      const discordUrl = safeUrl(settings.discord_invite_url || settings.discord_url);
+      const community = $("communityCta");
+      if (discordUrl) {
+        community.href = discordUrl;
+        community.removeAttribute("aria-disabled");
+      } else {
+        community.href = "#";
+        community.setAttribute("aria-disabled", "true");
       }
       renderButtons(settings);
       setupMusic(settings);
