@@ -450,6 +450,18 @@
       border-radius: 24px;
       background-clip: padding-box;
     }
+    .prepare-card-shell.is-battle-active .prepare-card {
+      animation: battleCardPulse 2.6s ease-in-out infinite;
+      border-color: rgba(255, 159, 189, .28);
+    }
+    @keyframes battleCardPulse {
+      0%, 80%, 100% {
+        box-shadow: 0 18px 44px var(--ambient-secondary-glow), inset 0 1px rgba(255,255,255,.18);
+      }
+      42% {
+        box-shadow: 0 20px 52px rgba(255, 72, 118, .2), inset 0 1px rgba(255,255,255,.22);
+      }
+    }
     .prepare-discount-sticker {
       position: absolute;
       top: -14px;
@@ -1087,6 +1099,9 @@
       .prepare-discount-sticker {
         animation: none !important;
       }
+      .prepare-card-shell.is-battle-active .prepare-card {
+        animation: none !important;
+      }
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
@@ -1390,6 +1405,7 @@
     let creatorSettingsInFlight = false;
     let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
+    let latestPublicLiveState = null;
     let pageViewTracked = false;
     const blockRegistry = {
       link: { implemented: true },
@@ -1640,6 +1656,11 @@
     }
 
     function applyLiveState(liveState, settings) {
+      latestPublicLiveState = liveState || null;
+      const refreshRuntimeBlocks = () => {
+        renderButtons(settings);
+        renderPinnedBlock(settings);
+      };
       const source = String(liveState && liveState.source || "");
       const loadingStatus = source === "loading";
       const confirmed = liveState && (liveState.confirmed === true || confirmedLiveSource(source));
@@ -1649,6 +1670,7 @@
       const manualOffline = !confirmed && source === "manual-fallback" && liveState.manualMode !== true && !isLive;
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
       const hasBattleMode = liveState && liveState.battleActive === true && featureOn(settings, "battle_link_visible", true);
+      const battleCopy = battleSupportCopy(settings);
       const displayLive = (confirmed && isLive) || (explicitRuntime && isLive) || manualLive || hasBattleMode;
       const confirmedOffline = (confirmed || explicitRuntime || manualOffline) && !isLive && !hasBattleMode;
       const unknownStatus = !loadingStatus && !displayLive && !confirmedOffline;
@@ -1660,7 +1682,7 @@
       $("statusPill").querySelector("span:last-child").textContent = loadingStatus ? "Checking" : (displayLive ? "Live" : (unknownStatus ? "Unknown" : "Offline"));
       setText("liveTitle", loadingStatus ? "Checking live status" : (hasBattleMode ? "Battle in Progress" : (displayLive ? "LIVE NOW" : (unknownStatus ? "Live status unavailable" : "Offline"))));
       if (hasBattleMode) {
-        setText("liveCopy", "Prepare for Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
+        setText("liveCopy", battleCopy.sub + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
@@ -1681,18 +1703,20 @@
         cta.setAttribute("aria-disabled", "true");
         cta.removeAttribute("target");
         cta.removeAttribute("rel");
+        refreshRuntimeBlocks();
         return;
       }
       if (displayLive) {
         const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
-        cta.textContent = hasBattleMode ? textSetting(settings, "battle_link_cta_label", "Prepare") : (settings.live_button_text || "Join Live");
+        cta.textContent = hasBattleMode ? battleCopy.label : (settings.live_button_text || "Join Live");
         cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
         cta.dataset.analyticsEvent = hasBattleMode ? "prepare_click" : "join_live_click";
-        cta.dataset.analyticsBlockTitle = hasBattleMode ? "Prepare for Battle" : "Join Live";
+        cta.dataset.analyticsBlockTitle = hasBattleMode ? battleCopy.title : "Join Live";
         cta.classList.toggle("battle-attention", hasBattleMode);
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
+        refreshRuntimeBlocks();
         return;
       }
       cta.classList.remove("battle-attention");
@@ -1706,6 +1730,7 @@
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
+        refreshRuntimeBlocks();
         return;
       }
       cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
@@ -1716,6 +1741,7 @@
       cta.removeAttribute("target");
       cta.removeAttribute("rel");
       cta.classList.remove("battle-attention");
+      refreshRuntimeBlocks();
     }
 
     function runtimeSettingsChanged(next = {}, current = {}) {
@@ -2250,11 +2276,28 @@
       return featureOn(settings, "discord_link_visible", true) && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
     }
 
+    function battleModeActive(settings, liveState = latestPublicLiveState) {
+      return featureOn(settings, "battle_link_visible", true) &&
+        Boolean(safeUrl(settings.tiktok_coins_url)) &&
+        (Boolean(liveState && liveState.battleActive === true) || settings.battle_mode_enabled === true);
+    }
+
+    function battleSupportCopy(settings) {
+      const active = battleModeActive(settings);
+      return {
+        active,
+        title: active ? "Battle in Progress" : textSetting(settings, "battle_link_title", "Prepare for Battle"),
+        sub: active ? "Recharge before the battle ends." : textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."),
+        label: active ? "Recharge" : textSetting(settings, "battle_link_cta_label", "Prepare")
+      };
+    }
+
     function renderButtons(settings) {
+      const battleCopy = battleSupportCopy(settings);
       const actions = [
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
-        { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
+        { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
         { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
@@ -2293,7 +2336,7 @@
           escapeHtml(action.label) + '</span>';
         if (showBattleDiscount) {
           const shell = document.createElement("div");
-          shell.className = "prepare-card-shell";
+          shell.className = action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell";
           shell.innerHTML = '<img class="prepare-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">';
           shell.appendChild(item);
           grid.appendChild(shell);
@@ -2313,11 +2356,12 @@
       const nextDate = nextLiveDate(settings);
       const activeCommunityUrl = communityUrl(settings);
       const battleUrl = safeUrl(settings.tiktok_coins_url);
+      const battleCopy = battleSupportCopy(settings);
       const content = {
         prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? {
-          title: textSetting(settings, "battle_link_title", "Prepare for Battle"),
-          copy: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."),
-          label: textSetting(settings, "battle_link_cta_label", "Prepare"),
+          title: battleCopy.title,
+          copy: battleCopy.sub,
+          label: battleCopy.label,
           url: battleUrl,
           event: "prepare_click"
         } : null,
