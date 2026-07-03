@@ -18,10 +18,7 @@ const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/m4a",
   "audio/x-m4a",
   "audio/aac",
-  "audio/aacp",
-  "audio/wav",
-  "audio/wave",
-  "audio/x-wav"
+  "audio/aacp"
 ]);
 const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "binary/octet-stream"]);
 const BASE_CREATOR_FIELDS = [
@@ -299,7 +296,7 @@ function isDirectIntroAudioUrl(value) {
   try {
     const parsed = new URL(raw, "https://doneovernight.com");
     return (parsed.protocol === "http:" || parsed.protocol === "https:") &&
-      /\.(mp3|m4a|aac|wav)$/i.test(parsed.pathname);
+      /\.(mp3|m4a|aac)$/i.test(parsed.pathname);
   } catch (error) {
     return false;
   }
@@ -722,7 +719,6 @@ function mediaExtension(mimeType, fallbackName = "") {
   if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3"].includes(mimeType)) return "mp3";
   if (["audio/aac", "audio/aacp"].includes(mimeType)) return "aac";
   if (["audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mimeType)) return named === "aac" ? "aac" : "m4a";
-  if (["audio/wav", "audio/wave", "audio/x-wav"].includes(mimeType)) return "wav";
   return named || "bin";
 }
 
@@ -731,19 +727,18 @@ function isIntroAudioFile(mimeType, fallbackName = "") {
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
   return (AUDIO_UPLOAD_MIME_TYPES.has(normalized) || GENERIC_UPLOAD_MIME_TYPES.has(normalized)) &&
-    ["mp3", "m4a", "aac", "wav"].includes(named);
+    ["mp3", "m4a", "aac"].includes(named);
 }
 
 function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
-  if (!["mp3", "m4a", "aac", "wav"].includes(named)) return "";
+  if (!["mp3", "m4a", "aac"].includes(named)) return "";
   if (normalized && !AUDIO_UPLOAD_MIME_TYPES.has(normalized) && !GENERIC_UPLOAD_MIME_TYPES.has(normalized)) return "";
   if (named === "mp3") return "audio/mpeg";
   if (named === "m4a") return "audio/mp4";
   if (named === "aac") return "audio/aac";
-  if (named === "wav") return "audio/wav";
   return "";
 }
 
@@ -783,7 +778,7 @@ async function uploadCreatorMedia(input = {}) {
     throw error;
   }
   if (kind === "intro-audio" && !isIntroAudio) {
-    const error = new Error("Intro audio must be an .mp3, .m4a, .aac, or prepared .wav file.");
+    const error = new Error("Intro audio must be an .mp3, .m4a, or .aac file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;

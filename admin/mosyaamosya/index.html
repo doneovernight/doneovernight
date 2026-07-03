@@ -1242,7 +1242,7 @@
       if (!value) return "";
       try {
         const url = new URL(value, window.location.origin);
-        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac|wav)$/i.test(url.pathname)) return url.href;
+        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac)$/i.test(url.pathname)) return url.href;
       } catch {}
       return "";
     }
@@ -1270,6 +1270,20 @@
     const INTRO_AUDIO_MAX_CLIP_SECONDS = 15;
     const INTRO_AUDIO_DEFAULT_CLIP_SECONDS = 10;
     const INTRO_AUDIO_TARGET_SAMPLE_RATE = 44100;
+    const MP3_BITRATES = {
+      "1-1": [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448],
+      "1-2": [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+      "1-3": [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+      "2-1": [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+      "2-2": [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+      "2-3": [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+    };
+    const MP3_SAMPLE_RATES = {
+      1: [44100, 48000, 32000],
+      2: [22050, 24000, 16000],
+      2.5: [11025, 12000, 8000]
+    };
+    const AAC_SAMPLE_RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
 
     function introAudioClipControls() {
       const startInput = $("introAudioStartTime");
@@ -1319,60 +1333,174 @@
       const rendered = await offline.startRendering();
       return { buffer: rendered, duration };
     }
-    function wavBlobFromAudioBuffer(audioBuffer) {
-      const samples = audioBuffer.getChannelData(0);
-      const buffer = new ArrayBuffer(44 + samples.length * 2);
-      const view = new DataView(buffer);
-      const writeString = (offset, value) => {
-        for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
-      };
-      writeString(0, "RIFF");
-      view.setUint32(4, 36 + samples.length * 2, true);
-      writeString(8, "WAVE");
-      writeString(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, audioBuffer.sampleRate, true);
-      view.setUint32(28, audioBuffer.sampleRate * 2, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeString(36, "data");
-      view.setUint32(40, samples.length * 2, true);
-      let offset = 44;
-      for (let index = 0; index < samples.length; index += 1, offset += 2) {
-        const sample = Math.max(-1, Math.min(1, samples[index]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-      }
-      return new Blob([buffer], { type: "audio/wav" });
+    function introAudioKind(file) {
+      const name = String(file && file.name || "").toLowerCase();
+      const mime = String(file && file.type || "").toLowerCase();
+      if (/\.mp3$/i.test(name) || ["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3"].includes(mime)) return "mp3";
+      if (/\.aac$/i.test(name) || ["audio/aac", "audio/aacp"].includes(mime)) return "aac";
+      if (/\.m4a$/i.test(name) || ["audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mime)) return "m4a";
+      return "";
     }
-    function introAudioClipName(file) {
+    function introAudioClipName(file, extension) {
       const base = String(file && file.name || "creator-signature")
         .replace(/\.[^.]+$/, "")
         .replace(/[^a-z0-9._-]+/gi, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 56) || "creator-signature";
-      return base + "-intro-clip.wav";
+      return base + "-intro-clip." + extension;
+    }
+    function parseId3v2Size(bytes) {
+      if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return 0;
+      const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14) | ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
+      return 10 + size + ((bytes[5] & 0x10) ? 10 : 0);
+    }
+    function parseMp3Frame(bytes, offset) {
+      if (offset + 4 > bytes.length || bytes[offset] !== 0xff || (bytes[offset + 1] & 0xe0) !== 0xe0) return null;
+      const versionBits = (bytes[offset + 1] >> 3) & 0x03;
+      const layerBits = (bytes[offset + 1] >> 1) & 0x03;
+      const bitrateIndex = (bytes[offset + 2] >> 4) & 0x0f;
+      const sampleRateIndex = (bytes[offset + 2] >> 2) & 0x03;
+      const padding = (bytes[offset + 2] >> 1) & 0x01;
+      if (versionBits === 1 || layerBits === 0 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) return null;
+      const version = versionBits === 3 ? 1 : versionBits === 2 ? 2 : 2.5;
+      const layer = 4 - layerBits;
+      const bitrateKey = (version === 1 ? "1" : "2") + "-" + layer;
+      const bitrate = MP3_BITRATES[bitrateKey] && MP3_BITRATES[bitrateKey][bitrateIndex];
+      const sampleRate = MP3_SAMPLE_RATES[version] && MP3_SAMPLE_RATES[version][sampleRateIndex];
+      if (!bitrate || !sampleRate) return null;
+      const samples = layer === 1 ? 384 : layer === 3 && version !== 1 ? 576 : 1152;
+      const length = layer === 1
+        ? Math.floor(((12 * bitrate * 1000) / sampleRate + padding) * 4)
+        : Math.floor((((layer === 3 && version !== 1) ? 72 : 144) * bitrate * 1000) / sampleRate + padding);
+      if (!length || offset + length > bytes.length) return null;
+      return { offset, length, duration: samples / sampleRate };
+    }
+    function parseMp3Frames(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const frames = [];
+      let offset = parseId3v2Size(bytes);
+      let time = 0;
+      while (offset + 4 < bytes.length) {
+        const frame = parseMp3Frame(bytes, offset);
+        if (!frame) {
+          offset += 1;
+          continue;
+        }
+        frames.push({ ...frame, start: time, end: time + frame.duration });
+        time += frame.duration;
+        offset += frame.length;
+      }
+      if (!frames.length) throw new Error("This MP3 could not be prepared. Try a different MP3 file.");
+      return { bytes, frames, duration: time };
+    }
+    function parseAacFrames(arrayBuffer) {
+      const bytes = new Uint8Array(arrayBuffer);
+      const frames = [];
+      let offset = 0;
+      let time = 0;
+      while (offset + 7 < bytes.length) {
+        if (bytes[offset] !== 0xff || (bytes[offset + 1] & 0xf0) !== 0xf0) {
+          offset += 1;
+          continue;
+        }
+        const sampleRate = AAC_SAMPLE_RATES[(bytes[offset + 2] >> 2) & 0x0f];
+        const length = ((bytes[offset + 3] & 0x03) << 11) | (bytes[offset + 4] << 3) | ((bytes[offset + 5] & 0xe0) >> 5);
+        if (!sampleRate || length < 7 || offset + length > bytes.length) {
+          offset += 1;
+          continue;
+        }
+        const duration = 1024 / sampleRate;
+        frames.push({ offset, length, start: time, end: time + duration });
+        time += duration;
+        offset += length;
+      }
+      if (!frames.length) throw new Error("This AAC file could not be prepared. Try an MP3 file or a shorter direct file.");
+      return { bytes, frames, duration: time };
+    }
+    function sliceCompressedFrames(parsed, start, length, file, type, extension) {
+      const startTime = Math.max(0, start);
+      const endTime = Math.min(parsed.duration, startTime + Math.min(length, INTRO_AUDIO_MAX_CLIP_SECONDS));
+      if (endTime - startTime < 0.5) throw new Error("Start time is past the usable part of the audio. Choose an earlier start time.");
+      const frames = parsed.frames.filter((frame) => frame.end > startTime && frame.start < endTime);
+      if (!frames.length) throw new Error("No playable audio frames were found in that clip range.");
+      const startByte = frames[0].offset;
+      const endByte = frames[frames.length - 1].offset + frames[frames.length - 1].length;
+      const blob = new Blob([parsed.bytes.slice(startByte, endByte)], { type });
+      if (blob.size > INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        throw new Error("The prepared intro clip is still too large. Choose a shorter clip length under 15 seconds.");
+      }
+      return {
+        file: new File([blob], introAudioClipName(file, extension), { type }),
+        duration: frames[frames.length - 1].end - frames[0].start
+      };
+    }
+    function mediaRecorderMimeType() {
+      if (!window.MediaRecorder || typeof window.MediaRecorder.isTypeSupported !== "function") return "";
+      return ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/aac"].find((type) => window.MediaRecorder.isTypeSupported(type)) || "";
+    }
+    async function recordM4aClip(sourceBuffer, start, length, file) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const mimeType = mediaRecorderMimeType();
+      if (!AudioContextClass || !mimeType) {
+        throw new Error("This browser cannot create a compressed M4A intro clip. Try uploading an MP3, or choose an M4A file under 15 seconds.");
+      }
+      const available = Math.max(0, sourceBuffer.duration - start);
+      const duration = Math.min(length, INTRO_AUDIO_MAX_CLIP_SECONDS, available);
+      if (duration < 0.5) throw new Error("Start time is past the usable part of the audio. Choose an earlier start time.");
+      const context = new AudioContextClass();
+      const destination = context.createMediaStreamDestination();
+      const source = context.createBufferSource();
+      const chunks = [];
+      source.buffer = sourceBuffer;
+      source.connect(destination);
+      const recorder = new MediaRecorder(destination.stream, { mimeType });
+      const blob = await new Promise((resolve, reject) => {
+        recorder.ondataavailable = (event) => { if (event.data && event.data.size) chunks.push(event.data); };
+        recorder.onerror = () => reject(new Error("This browser could not encode the Creator Signature clip."));
+        recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType.split(";")[0] }));
+        recorder.start();
+        source.start(0, start, duration);
+        window.setTimeout(() => {
+          try {
+            source.stop();
+          } catch {}
+          if (recorder.state !== "inactive") recorder.stop();
+        }, Math.ceil(duration * 1000) + 120);
+      });
+      if (typeof context.close === "function") context.close().catch(() => {});
+      if (blob.size > INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        throw new Error("The prepared intro clip is still too large. Choose a shorter clip length under 15 seconds.");
+      }
+      const extension = mimeType.includes("aac") ? "aac" : "m4a";
+      return { file: new File([blob], introAudioClipName(file, extension), { type: blob.type }), duration };
     }
     async function prepareIntroAudioUpload(file) {
       const error = validateIntroAudioFile(file);
       if (error) throw new Error(error);
-      const sourceBuffer = await decodeAudioArrayBuffer(await file.arrayBuffer());
-      if (sourceBuffer.duration <= INTRO_AUDIO_MAX_CLIP_SECONDS && file.size <= INTRO_AUDIO_MAX_UPLOAD_BYTES) {
-        return { file, message: "", previewUrl: URL.createObjectURL(file), duration: sourceBuffer.duration, clipped: false };
+      const kind = introAudioKind(file);
+      const arrayBuffer = await file.arrayBuffer();
+      let compressed = null;
+      if (kind === "mp3") compressed = parseMp3Frames(arrayBuffer);
+      if (kind === "aac") compressed = parseAacFrames(arrayBuffer);
+      const sourceBuffer = compressed ? null : await decodeAudioArrayBuffer(arrayBuffer);
+      const sourceDuration = compressed ? compressed.duration : sourceBuffer.duration;
+      if (sourceDuration <= INTRO_AUDIO_MAX_CLIP_SECONDS && file.size <= INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        return { file, message: "", previewUrl: URL.createObjectURL(file), duration: sourceDuration, clipped: false };
       }
       const { start, length } = introAudioClipControls();
       setIntroAudioStatus("Creating a short intro clip before upload...", false);
-      const clip = await renderIntroAudioClip(sourceBuffer, start, length);
-      const blob = wavBlobFromAudioBuffer(clip.buffer);
-      if (blob.size > INTRO_AUDIO_MAX_UPLOAD_BYTES) {
-        throw new Error("The prepared intro clip is still too large. Choose a shorter clip length under 15 seconds.");
+      let clip;
+      if (kind === "mp3") {
+        clip = sliceCompressedFrames(compressed, start, length, file, "audio/mpeg", "mp3");
+      } else if (kind === "aac") {
+        clip = sliceCompressedFrames(compressed, start, length, file, "audio/aac", "aac");
+      } else {
+        clip = await recordM4aClip(sourceBuffer, start, length, file);
       }
-      const clippedFile = new File([blob], introAudioClipName(file), { type: "audio/wav" });
-      const message = sourceBuffer.duration > INTRO_AUDIO_MAX_CLIP_SECONDS
+      const message = sourceDuration > INTRO_AUDIO_MAX_CLIP_SECONDS
         ? "We created a short intro clip from the beginning of your song."
         : "We prepared a short upload-safe creator signature.";
-      return { file: clippedFile, message, previewUrl: URL.createObjectURL(clippedFile), duration: clip.duration, clipped: true };
+      return { file: clip.file, message, previewUrl: URL.createObjectURL(clip.file), duration: clip.duration, clipped: true };
     }
     function audioPreviewErrorMessage(audio) {
       const error = audio && audio.error;
