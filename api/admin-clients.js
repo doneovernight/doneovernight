@@ -932,6 +932,7 @@ async function saveCreatorToTable(payload) {
       body: [legacyPayload],
       context: "Creator settings"
     });
+    await saveCreatorToAnalyticsBridge(payload).catch(() => null);
   }
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
   return { creator: normalizeCreator({ ...payload, ...row }), source: "database" };
