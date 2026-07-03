@@ -1380,11 +1380,15 @@
     };
     const $ = (id) => document.getElementById(id);
     const introKey = "creator_intro_mosyaamosya_v1";
+    const liveRuntimePollMs = 2500;
     let countdownTimer = null;
     let countdownZeroChecked = false;
     let liveRuntimeTimer = null;
     let liveVisibilityHandler = null;
     let liveMessageHandler = null;
+    let liveRuntimeInFlight = false;
+    let creatorSettingsInFlight = false;
+    let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
     let pageViewTracked = false;
     const blockRegistry = {
@@ -1731,9 +1735,14 @@
       return keys.some((key) => JSON.stringify(next[key] ?? "") !== JSON.stringify(current[key] ?? ""));
     }
 
-    async function refreshCreatorSettingsIfNeeded(settings) {
+    async function refreshCreatorSettingsIfNeeded(settings, force = false) {
+      const now = Date.now();
+      if (creatorSettingsInFlight) return;
+      if (!force && now - lastCreatorSettingsRefreshAt < liveRuntimePollMs - 100) return;
+      creatorSettingsInFlight = true;
+      lastCreatorSettingsRefreshAt = now;
       try {
-        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(settings.slug || "mosyaamosya"), {
+        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(settings.slug || "mosyaamosya") + "&runtime_poll=" + now, {
           cache: "no-store",
           headers: { Accept: "application/json" }
         });
@@ -1743,19 +1752,24 @@
         if (runtimeSettingsChanged(nextSettings, currentSettings)) {
           render(nextSettings);
         }
-      } catch (error) {}
+      } catch (error) {
+      } finally {
+        creatorSettingsInFlight = false;
+      }
     }
 
-    async function refreshLiveRuntime(settings) {
+    async function refreshLiveRuntime(settings, options = {}) {
+      if (liveRuntimeInFlight) return;
+      liveRuntimeInFlight = true;
       try {
-        const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "mosyaamosya"), {
+        const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "mosyaamosya") + "&runtime_poll=" + Date.now(), {
           cache: "no-store",
           headers: { Accept: "application/json" }
         });
         if (!response.ok) throw new Error("Live runtime unavailable");
         const liveState = await response.json();
         applyLiveState(liveState, settings);
-        refreshCreatorSettingsIfNeeded(settings);
+        await refreshCreatorSettingsIfNeeded(settings, options.forceSettings === true);
       } catch (error) {
         applyLiveState({
           isLive: false,
@@ -1768,7 +1782,9 @@
           error: "LIVE_RUNTIME_UNAVAILABLE",
           capabilities: {}
         }, settings);
-        refreshCreatorSettingsIfNeeded(settings);
+        await refreshCreatorSettingsIfNeeded(settings, options.forceSettings === true);
+      } finally {
+        liveRuntimeInFlight = false;
       }
     }
 
@@ -1776,14 +1792,16 @@
       if (liveRuntimeTimer) clearInterval(liveRuntimeTimer);
       if (liveVisibilityHandler) document.removeEventListener("visibilitychange", liveVisibilityHandler);
       if (liveMessageHandler) window.removeEventListener("message", liveMessageHandler);
-      refreshLiveRuntime(settings);
-      liveRuntimeTimer = window.setInterval(() => refreshLiveRuntime(settings), 45000);
+      refreshLiveRuntime(settings, { forceSettings: true });
+      liveRuntimeTimer = window.setInterval(() => {
+        if (!document.hidden) refreshLiveRuntime(currentSettings);
+      }, liveRuntimePollMs);
       liveVisibilityHandler = () => {
-        if (document.visibilityState === "visible") refreshLiveRuntime(settings);
+        if (document.visibilityState === "visible") refreshLiveRuntime(currentSettings, { forceSettings: true });
       };
       document.addEventListener("visibilitychange", liveVisibilityHandler);
       liveMessageHandler = (event) => {
-        if (event.data && event.data.type === "creator-live-refresh") refreshLiveRuntime(settings);
+        if (event.data && event.data.type === "creator-live-refresh") refreshLiveRuntime(currentSettings, { forceSettings: true });
       };
       window.addEventListener("message", liveMessageHandler);
     }
