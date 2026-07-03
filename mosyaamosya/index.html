@@ -102,18 +102,21 @@
       transition: opacity .35s ease;
     }
     .intro-pending .shell { opacity: 0; }
-    .hero-bleed-video {
+    .shell::before {
+      content: "";
       position: absolute;
       left: 50%;
       top: 0;
       z-index: -1;
       width: 100vw;
-      height: calc(76px + env(safe-area-inset-top));
-      object-fit: cover;
+      height: calc(92px + env(safe-area-inset-top));
       pointer-events: none;
-      filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
-      opacity: calc(var(--ambient-video-opacity) + .04);
       transform: translateX(-50%) translateZ(0);
+      background:
+        radial-gradient(circle at 24% 18%, rgba(255,211,223,.18), transparent 34px),
+        radial-gradient(circle at 88% 4%, rgba(139,95,74,.18), transparent 88px),
+        linear-gradient(180deg, #120807 0%, #1b0c09 46%, rgba(22,11,9,.64) 74%, rgba(8,5,4,0) 100%);
+      opacity: .98;
     }
     .hero {
       position: relative;
@@ -941,7 +944,6 @@
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
-      .hero-bleed-video { display: none; }
       .hero { min-height: 760px; border-radius: 42px; }
       .hero-top { padding: 16px; }
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
@@ -953,7 +955,6 @@
 </head>
 <body class="theme-mina">
   <main class="shell">
-    <video class="hero-bleed-video" id="heroBleedVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg" aria-hidden="true"></video>
     <section class="hero" id="hero">
       <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
       <div class="hero-top">
@@ -2347,7 +2348,6 @@
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       const heroVideoUrl = heroVideo(settings);
       $("heroVideo").src = heroVideoUrl;
-      $("heroBleedVideo").src = heroVideoUrl;
       applyLiveState({
         isLive: false,
         liveUrl: fallbackLiveUrl(settings),
