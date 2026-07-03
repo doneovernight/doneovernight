@@ -182,6 +182,7 @@
     .media-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
     .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
     .media-preview.video { width: 120px; }
+    .media-row audio { width: min(100%, 320px); }
     .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
     .link-list { display: grid; gap: 10px; }
     .link-card {
@@ -427,14 +428,14 @@
 
             <section class="link-card">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Music</strong><span>Optional public music block and floating control.</span></div>
+                <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
                 <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
               <div class="link-card-fields">
                 <label>Title<input name="music_link_title"></label>
                 <label>CTA label<input name="music_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="music_link_subtitle"></label>
-                <label class="wide">Music URL<input name="music_url" type="url"></label>
+                <div class="wide help-panel">Music Link URL is managed in Settings. Streaming services open externally and are not used for in-page playback.</div>
               </div>
             </section>
 
@@ -573,18 +574,38 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Music</h2>
+          <h2>Intro Audio</h2>
           <div class="fields">
             <div class="span-2 switch-row">
-              <div><strong>Music Enabled</strong><span>Shows the floating sound button.</span></div>
-              <label class="switch" aria-label="Music enabled"><input name="music_enabled" type="checkbox"><span class="track"></span></label>
+              <div><strong>Intro Audio Enabled</strong><span>Short welcome sound that plays when visitors enter.</span></div>
+              <label class="switch" aria-label="Intro audio enabled"><input name="intro_audio_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <div class="span-2 help-panel">Music URL is managed in Links. Direct .mp3/.m4a files can play in-page. Apple Music/Spotify links open externally.</div>
-            <label>Volume<input name="music_volume" type="number" min="0" max="1" step="0.05"></label>
-            <div class="switch-row">
-              <div><strong>Loop</strong><span>Repeat the music track.</span></div>
-              <label class="switch" aria-label="Music loop"><input name="music_loop" type="checkbox"><span class="track"></span></label>
+            <label class="span-2">Intro Audio URL<input name="intro_audio_url" type="url" placeholder="Paste .mp3, .m4a, or .aac asset URL"></label>
+            <div class="span-2 media-control">
+              <strong>Upload Intro Audio</strong>
+              <span class="muted">Supported: .mp3, .m4a, .aac. Maximum size: 10 MB. Recommended length: 5-10 seconds.</span>
+              <div class="media-row">
+                <audio id="introAudioPreview" controls preload="none"></audio>
+                <input id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
+                <button class="button" id="uploadIntroAudio" type="button">Upload audio</button>
+              </div>
             </div>
+            <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
+            <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
+            <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
+            <div class="span-2 help-panel">This sound plays only when visitors enter your page. Use a short signature intro.</div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Music Link</h2>
+          <div class="fields">
+            <div class="span-2 switch-row">
+              <div><strong>Music Link Enabled</strong><span>Shows the floating music button when a valid external link exists.</span></div>
+              <label class="switch" aria-label="Music link enabled"><input name="music_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <label class="span-2">Music Link URL<input name="music_url" type="url" placeholder="Apple Music, Spotify, YouTube Music, or TikTok Sound"></label>
+            <div class="span-2 help-panel">Streaming services cannot be played directly inside Creator OS.</div>
           </div>
         </section>
 
@@ -789,6 +810,15 @@
         return false;
       }
     }
+    function isExternalUrl(value) {
+      if (!value) return true;
+      try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    }
     function validateSettingsForm() {
       const elements = Array.from(form.elements).filter((element) => {
         return element.name && !element.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
@@ -796,6 +826,7 @@
       for (const element of elements) {
         const value = String(element.value || "").trim();
         if (element.required && !value) return fieldName(element) + " is required.";
+        if (value && element.name === "music_url" && !isExternalUrl(value)) return "Enter a valid external music link.";
         if (value && element.type === "url" && !isAcceptableUrl(value)) return "Enter a valid URL for " + fieldName(element) + ".";
         if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
         if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
@@ -830,6 +861,11 @@
       const number = Number(value);
       if (!Number.isFinite(number)) return 0.35;
       return Math.max(0, Math.min(1, number));
+    }
+    function clampDuration(value, fallback, min = 0, max = 30) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.max(min, Math.min(max, number));
     }
     function boolField(name, fallback = false) {
       const element = form.elements[name];
@@ -902,6 +938,11 @@
         community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
         community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
+        intro_audio_enabled: boolField("intro_audio_enabled"),
+        intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
+        intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
+        intro_audio_fade_out_duration: clampDuration(data.get("intro_audio_fade_out_duration"), 2, 0, 10),
+        intro_audio_stop_after: clampDuration(data.get("intro_audio_stop_after"), 4, 1, 30),
         music_enabled: boolField("music_enabled"),
         music_url: String(data.get("music_url") || "").trim(),
         music_volume: clampVolume(data.get("music_volume")),
@@ -930,12 +971,13 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "community_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "community_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
+      if (settings.intro_audio_enabled === undefined) setBoolField("intro_audio_enabled", false);
       if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
       if (settings.seasonal_effects_enabled === undefined) setBoolField("seasonal_effects_enabled", true);
       if (settings.holiday_effects_enabled === undefined) setBoolField("holiday_effects_enabled", true);
@@ -954,6 +996,7 @@
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
+      $("introAudioPreview").src = settings.intro_audio_url || "";
       renderThemes();
       renderDna();
       applyAdminTheme(activeTheme);
@@ -1287,14 +1330,26 @@
       });
     }
     async function uploadMedia(kind) {
-      const input = kind === "profile" ? $("avatarFile") : $("heroFile");
+      const input = kind === "profile" ? $("avatarFile") : kind === "intro-audio" ? $("introAudioFile") : $("heroFile");
       const file = input.files && input.files[0];
       if (!file) {
         setStatus("Choose a file first, or paste an asset URL.", true);
         return;
       }
-      const field = kind === "profile" ? "avatar_url" : "hero_video_url";
-      const preview = kind === "profile" ? $("avatarPreview") : $("heroPreview");
+      if (kind === "intro-audio") {
+        const audioNameOk = /\.(mp3|m4a|aac)$/i.test(file.name || "");
+        const audioTypeOk = ["audio/mpeg", "audio/mp4", "audio/aac", "audio/x-m4a"].includes(file.type);
+        if (!audioNameOk && !audioTypeOk) {
+          setStatus("Intro audio must be an .mp3, .m4a, or .aac file.", true);
+          return;
+        }
+        if (file.size > 10_000_000) {
+          setStatus("Intro audio is too large. Use a file under 10 MB.", true);
+          return;
+        }
+      }
+      const field = kind === "profile" ? "avatar_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
+      const preview = kind === "profile" ? $("avatarPreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
       preview.src = URL.createObjectURL(file);
       setStatus("Uploading media...");
       try {
@@ -1389,6 +1444,7 @@
     });
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
+    $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
     $("savePassword").addEventListener("click", savePassword);
     ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);

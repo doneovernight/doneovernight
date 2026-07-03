@@ -897,7 +897,7 @@
 
   <button class="sound-button" id="soundButton" type="button" aria-label="Toggle music" hidden></button>
   <div class="preview-badge" id="previewBadge" hidden>Preview Mode</div>
-  <audio id="music" preload="none"></audio>
+  <audio id="introAudio" preload="none"></audio>
 
   <section class="sheet" id="shareSheet" aria-label="Share Mina Mosya" aria-hidden="true">
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
@@ -1031,6 +1031,11 @@
       music_url: "",
       music_volume: 0.35,
       music_loop: true,
+      intro_audio_enabled: false,
+      intro_audio_url: "",
+      intro_audio_volume: 0.35,
+      intro_audio_fade_out_duration: 2,
+      intro_audio_stop_after: 4,
       ambient_mode_enabled: true,
       timezone: "America/Chicago",
       seasonal_effects_enabled: true,
@@ -1127,7 +1132,6 @@
     };
     const $ = (id) => document.getElementById(id);
     const introKey = "creator_intro_mosyaamosya_v1";
-    const musicKey = "creator_music_mosyaamosya_enabled";
     let countdownTimer = null;
     let liveRuntimeTimer = null;
     let currentSettings = { ...fallback };
@@ -1167,50 +1171,69 @@
       } catch (error) {}
       return "";
     }
+    function externalUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value);
+        if (url.protocol === "http:" || url.protocol === "https:") return url.href;
+      } catch (error) {}
+      return "";
+    }
     function setText(id, value) { $(id).textContent = value || ""; }
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
-    function musicUrlInfo(settings) {
-      const url = safeUrl(settings.music_url);
-      if (!settings.music_enabled || !url) return { url: "", mode: "none" };
+    function introAudioInfo(settings) {
+      const url = safeUrl(settings.intro_audio_url);
+      if (!settings.intro_audio_enabled || !url) return { url: "", enabled: false };
       try {
         const parsed = new URL(url);
-        const directAudio = /\.(mp3|m4a|aac|wav|ogg|oga|opus|webm)$/i.test(parsed.pathname);
-        return { url, mode: directAudio ? "audio" : "external" };
+        const directAudio = /\.(mp3|m4a|aac)$/i.test(parsed.pathname);
+        return { url: directAudio ? url : "", enabled: directAudio };
       } catch (error) {
-        return { url: "", mode: "none" };
+        return { url: "", enabled: false };
       }
     }
-    function setAudioSource(settings, url) {
-      const audio = $("music");
-      if (audio.src !== url) audio.src = url;
-      audio.volume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
-      audio.loop = settings.music_loop !== false;
+    function musicLinkInfo(settings) {
+      const url = externalUrl(settings.music_url);
+      if (!settings.music_enabled || !url) return { url: "", enabled: false };
+      return { url, enabled: true };
     }
-    async function playDirectMusic(settings) {
-      const info = musicUrlInfo(settings);
-      if (info.mode !== "audio") return false;
-      const audio = $("music");
+    function setIntroAudioSource(settings, url) {
+      const audio = $("introAudio");
+      if (audio.src !== url) audio.src = url;
+      audio.volume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
+      audio.loop = false;
+    }
+    async function playIntroAudio(settings, scheduleStop = false) {
+      const info = introAudioInfo(settings);
+      if (!info.enabled) return false;
+      const audio = $("introAudio");
       const button = $("soundButton");
-      setAudioSource(settings, info.url);
+      const volume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
+      setIntroAudioSource(settings, info.url);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = volume;
+      audio.loop = false;
       try {
         await audio.play();
-        localStorage.setItem(musicKey, "on");
         if (button) button.innerHTML = icons.sound;
+        if (scheduleStop) scheduleIntroAudioStop(settings);
         return true;
       } catch (error) {
-        if (button) button.title = "Music could not play. Tap again to retry.";
+        if (button) button.title = "Intro audio could not play. Tap again to retry.";
         return false;
       }
     }
-    function fadeOutDirectMusic(settings) {
-      const audio = $("music");
+    function fadeOutIntroAudio(settings) {
+      const audio = $("introAudio");
       if (!audio || audio.paused) return;
-      const targetVolume = Math.max(0, Math.min(1, Number(settings.music_volume) || 0.35));
+      const targetVolume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
       const startVolume = audio.volume || targetVolume;
       let step = 0;
-      const steps = 14;
+      const duration = Math.max(0, Math.min(10, Number(settings.intro_audio_fade_out_duration) || 2));
+      const steps = duration > 0 ? Math.max(1, Math.round(duration * 20)) : 1;
       const timer = window.setInterval(() => {
         step += 1;
         audio.volume = Math.max(0, startVolume * (1 - step / steps));
@@ -1219,11 +1242,16 @@
           audio.pause();
           audio.currentTime = 0;
           audio.volume = targetVolume;
-          localStorage.setItem(musicKey, "off");
           const button = $("soundButton");
           if (button) button.innerHTML = icons.muted;
         }
-      }, 45);
+      }, duration > 0 ? Math.max(30, (duration * 1000) / steps) : 30);
+    }
+    function scheduleIntroAudioStop(settings) {
+      const fadeDuration = Math.max(0, Math.min(10, Number(settings.intro_audio_fade_out_duration) || 2));
+      const stopAfter = Math.max(1, Math.min(30, Number(settings.intro_audio_stop_after) || 4));
+      const fadeStart = Math.max(0, stopAfter - fadeDuration) * 1000;
+      window.setTimeout(() => fadeOutIntroAudio(settings), fadeStart);
     }
     function previewSettings(settings) {
       const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
@@ -1512,7 +1540,7 @@
     function actionUrl(action, settings) {
       if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
       if (action.key === "discord") return safeUrl(settings.discord_invite_url || settings.discord_url);
-      if (action.key === "music") return safeUrl(settings.music_url);
+      if (action.key === "music") return externalUrl(settings.music_url);
       return safeUrl(settings[action.field]);
     }
 
@@ -1529,7 +1557,7 @@
         { key: "tiktok", visible: settings.tiktok_link_visible !== false, title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "support", visible: settings.battle_link_visible !== false, title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
         { key: "business", visible: settings.business_link_visible !== false, title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
-        { key: "music", visible: settings.music_link_visible === true && Boolean(settings.music_url), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's stream soundtrack"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
+        { key: "music", visible: settings.music_link_visible === true && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible);
       const grid = $("buttonGrid");
       grid.innerHTML = "";
@@ -1737,41 +1765,34 @@
 
     function setupMusic(settings) {
       const button = $("soundButton");
-      const audio = $("music");
-      const info = musicUrlInfo(settings);
+      const audio = $("introAudio");
+      const introInfo = introAudioInfo(settings);
+      const musicInfo = musicLinkInfo(settings);
       button.onclick = null;
       button.removeAttribute("data-mode");
-      if (info.mode === "none") {
+      if (!introInfo.enabled && !musicInfo.enabled) {
         button.hidden = true;
         audio.pause();
         audio.removeAttribute("src");
         return;
       }
       button.hidden = false;
-      if (info.mode === "external") {
-        audio.pause();
-        audio.removeAttribute("src");
-        button.dataset.mode = "external";
-        button.innerHTML = icons.sound;
-        button.title = "Open music";
-        button.setAttribute("aria-label", "Open music");
-        button.onclick = () => window.open(info.url, "_blank", "noopener,noreferrer");
+      audio.loop = false;
+      button.innerHTML = icons.sound;
+      if (introInfo.enabled) {
+        setIntroAudioSource(settings, introInfo.url);
+        button.dataset.mode = musicInfo.enabled ? "intro-audio-with-music-link" : "intro-audio";
+        button.title = musicInfo.enabled ? "Play intro audio. Music link opens externally in a future secondary action." : "Play intro audio";
+        button.setAttribute("aria-label", "Play intro audio");
+        button.onclick = async () => { await playIntroAudio(settings, true); };
         return;
       }
-      setAudioSource(settings, info.url);
-      button.dataset.mode = "audio";
-      button.title = "Toggle music";
-      button.setAttribute("aria-label", "Toggle music");
-      button.innerHTML = !audio.paused && localStorage.getItem(musicKey) === "on" ? icons.sound : icons.muted;
-      button.onclick = async () => {
-        if (audio.paused) {
-          await playDirectMusic(settings);
-        } else {
-          audio.pause();
-          localStorage.setItem(musicKey, "off");
-          button.innerHTML = icons.muted;
-        }
-      };
+      audio.pause();
+      audio.removeAttribute("src");
+      button.dataset.mode = "external";
+      button.title = "Open music link";
+      button.setAttribute("aria-label", "Open music link");
+      button.onclick = () => window.open(musicInfo.url, "_blank", "noopener,noreferrer");
     }
 
     function setupIntro(settings) {
@@ -1785,9 +1806,7 @@
       video.src = heroVideo(settings);
       intro.hidden = false;
       const dismiss = () => {
-        playDirectMusic(settings).then((played) => {
-          if (played) window.setTimeout(() => fadeOutDirectMusic(settings), 520);
-        });
+        playIntroAudio(settings, true);
         if (!forceExperience) localStorage.setItem(introKey, "done");
         intro.classList.add("is-done");
         revealPage();

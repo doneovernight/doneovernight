@@ -96,7 +96,14 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "community_link_subtitle",
   "community_link_cta_label"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS).join(",");
+const INTRO_AUDIO_CREATOR_FIELDS = [
+  "intro_audio_enabled",
+  "intro_audio_url",
+  "intro_audio_volume",
+  "intro_audio_fade_out_duration",
+  "intro_audio_stop_after"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
@@ -136,6 +143,11 @@ const DEFAULT_MINA_SETTINGS = {
   music_url: "",
   music_volume: 0.35,
   music_loop: true,
+  intro_audio_enabled: false,
+  intro_audio_url: "",
+  intro_audio_volume: 0.35,
+  intro_audio_fade_out_duration: 2,
+  intro_audio_stop_after: 4,
   welcome_intro_enabled: true,
   background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
   ambient_mode_enabled: true,
@@ -509,7 +521,17 @@ function mediaExtension(mimeType, fallbackName = "") {
   if (mimeType === "video/mp4") return "mp4";
   if (mimeType === "video/webm") return "webm";
   if (mimeType === "video/quicktime") return "mov";
+  if (mimeType === "audio/mpeg") return "mp3";
+  if (mimeType === "audio/aac") return "aac";
+  if (mimeType === "audio/mp4" || mimeType === "audio/x-m4a") return named === "aac" ? "aac" : "m4a";
   return named || "bin";
+}
+
+function isIntroAudioFile(mimeType, fallbackName = "") {
+  const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  const named = ext ? ext[1] : "";
+  return ["audio/mpeg", "audio/mp4", "audio/aac", "audio/x-m4a"].includes(mimeType) ||
+    ["mp3", "m4a", "aac"].includes(named);
 }
 
 function parseDataUrl(value) {
@@ -533,6 +555,7 @@ async function uploadCreatorMedia(input = {}) {
   }
   const isImage = parsed.mimeType.startsWith("image/");
   const isVideo = parsed.mimeType.startsWith("video/");
+  const isIntroAudio = isIntroAudioFile(parsed.mimeType, file.name);
   if (kind === "profile" && !isImage) {
     const error = new Error("Profile media must be an image file.");
     error.statusCode = 400;
@@ -545,8 +568,20 @@ async function uploadCreatorMedia(input = {}) {
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
+  if (kind === "intro-audio" && !isIntroAudio) {
+    const error = new Error("Intro audio must be an .mp3, .m4a, or .aac file.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
+  if (!["profile", "hero", "intro-audio"].includes(kind)) {
+    const error = new Error("Unsupported media upload type.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_KIND";
+    throw error;
+  }
   if (parsed.buffer.length > MAX_MEDIA_BYTES) {
-    const error = new Error("Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
+    const error = new Error(kind === "intro-audio" ? "Intro audio is too large. Use an .mp3, .m4a, or .aac file under 10 MB." : "Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
     error.statusCode = 413;
     error.code = "MEDIA_TOO_LARGE";
     throw error;
@@ -596,6 +631,11 @@ function normalizeCreator(row = {}) {
     music_url: clean(row.music_url),
     music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
     music_loop: bool(row.music_loop, true),
+    intro_audio_enabled: bool(row.intro_audio_enabled, false),
+    intro_audio_url: clean(row.intro_audio_url),
+    intro_audio_volume: Math.max(0, Math.min(1, number(row.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
+    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(row.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
+    intro_audio_stop_after: Math.max(1, Math.min(30, number(row.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
     background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
@@ -729,6 +769,11 @@ function creatorPayload(input = {}) {
     music_url: clean(input.music_url),
     music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
     music_loop: bool(input.music_loop, true),
+    intro_audio_enabled: bool(input.intro_audio_enabled, false),
+    intro_audio_url: clean(input.intro_audio_url),
+    intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
+    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
+    intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
     background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
