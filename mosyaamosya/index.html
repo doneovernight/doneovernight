@@ -10,7 +10,8 @@
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <script>
     try {
-      if (localStorage.getItem("creator_intro_mosyaamosya_v1") !== "done") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("experience") === "1" || localStorage.getItem("creator_intro_mosyaamosya_v1") !== "done") {
         document.documentElement.classList.add("intro-pending");
       }
     } catch (error) {
@@ -368,6 +369,23 @@
       font-weight: 800;
     }
     .foot img { width: 118px; opacity: .5; filter: saturate(.75); }
+    .preview-badge {
+      position: fixed;
+      top: calc(12px + env(safe-area-inset-top));
+      left: 50%;
+      z-index: 60;
+      transform: translateX(-50%);
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(8,5,4,.62);
+      color: rgba(255,245,247,.74);
+      font-size: 11px;
+      font-weight: 900;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 14px 40px rgba(0,0,0,.22);
+    }
+    .preview-badge[hidden] { display: none; }
     .intro {
       position: fixed;
       inset: 0;
@@ -506,6 +524,7 @@
   </main>
 
   <button class="sound-button" id="soundButton" type="button" aria-label="Toggle music" hidden></button>
+  <div class="preview-badge" id="previewBadge" hidden>Preview Mode</div>
   <audio id="music" preload="none"></audio>
 
   <section class="intro" id="intro" aria-label="Welcome intro">
@@ -551,7 +570,55 @@
       timezone: "America/Chicago",
       seasonal_effects_enabled: true,
       holiday_effects_enabled: true,
-      redirect_mina_enabled: true
+      redirect_mina_enabled: true,
+      creator_dna: "streamer"
+    };
+    const params = new URLSearchParams(window.location.search);
+    const forceExperience = params.get("experience") === "1";
+    const previewMode = params.get("preview") === "1";
+    const themePresets = {
+      mina: {
+        pink: "#ffd3df",
+        pinkStrong: "#ff9fbd",
+        brown: "#8b5f4a",
+        background: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)"
+      },
+      rose: {
+        pink: "#fecdd3",
+        pinkStrong: "#fb7185",
+        brown: "#f0abfc",
+        background: "radial-gradient(circle at 18% -10%, rgba(251,113,133,.2), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(240,171,252,.16), transparent 28rem), linear-gradient(155deg, #080504 0%, #1b090d 46%, #050403 100%)"
+      },
+      chocolate: {
+        pink: "#f2c6a8",
+        pinkStrong: "#c98b65",
+        brown: "#8b5f4a",
+        background: "radial-gradient(circle at 18% -10%, rgba(242,198,168,.18), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.28), transparent 28rem), linear-gradient(155deg, #070403 0%, #1d0f0b 48%, #050403 100%)"
+      },
+      onyx: {
+        pink: "#f5f1ea",
+        pinkStrong: "#9ca3af",
+        brown: "#6b7280",
+        background: "radial-gradient(circle at 18% -10%, rgba(245,241,234,.12), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(107,114,128,.18), transparent 28rem), linear-gradient(155deg, #030405 0%, #0d0e11 46%, #020202 100%)"
+      },
+      violet: {
+        pink: "#c4b5fd",
+        pinkStrong: "#8b5cf6",
+        brown: "#7c3aed",
+        background: "radial-gradient(circle at 18% -10%, rgba(196,181,253,.19), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(124,58,237,.2), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b25 46%, #050403 100%)"
+      },
+      neon: {
+        pink: "#67e8f9",
+        pinkStrong: "#fb7185",
+        brown: "#38bdf8",
+        background: "radial-gradient(circle at 18% -10%, rgba(103,232,249,.16), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(251,113,133,.16), transparent 28rem), linear-gradient(155deg, #030608 0%, #0f172a 46%, #030405 100%)"
+      },
+      founder: {
+        pink: "#e9c48a",
+        pinkStrong: "#c89b3c",
+        brown: "#111827",
+        background: "radial-gradient(circle at 18% -10%, rgba(233,196,138,.17), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(17,24,39,.28), transparent 28rem), linear-gradient(155deg, #040403 0%, #101010 46%, #020202 100%)"
+      }
     };
     const icons = {
       live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9a8 8 0 0 1 16 0"/><path d="M7 12a5 5 0 0 1 10 0"/><circle cx="12" cy="17" r="2"/></svg>',
@@ -579,6 +646,36 @@
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
+    function previewSettings(settings) {
+      const allowedDna = new Set(["artist", "streamer", "influencer", "podcaster", "founder", "gamer"]);
+      const theme = params.get("preview_theme");
+      const dna = params.get("creator_dna");
+      return {
+        ...settings,
+        theme_preset: themePresets[theme] ? theme : settings.theme_preset,
+        creator_dna: allowedDna.has(dna) ? dna : settings.creator_dna
+      };
+    }
+    function hexToRgba(hex, alpha) {
+      const value = String(hex || "").replace("#", "");
+      if (value.length !== 6) return "rgba(255,159,189," + alpha + ")";
+      const red = parseInt(value.slice(0, 2), 16);
+      const green = parseInt(value.slice(2, 4), 16);
+      const blue = parseInt(value.slice(4, 6), 16);
+      return "rgba(" + red + "," + green + "," + blue + "," + alpha + ")";
+    }
+    function applyTheme(settings) {
+      const theme = themePresets[settings.theme_preset] || themePresets.mina;
+      const customBackground = settings.background_gradient && settings.background_gradient !== fallback.background_gradient && !params.get("preview_theme");
+      document.documentElement.style.setProperty("--pink", theme.pink);
+      document.documentElement.style.setProperty("--pink-strong", theme.pinkStrong);
+      document.documentElement.style.setProperty("--brown", theme.brown);
+      document.documentElement.style.setProperty("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .3));
+      document.body.className = document.body.className.replace(/\btheme-[a-z0-9-]+\b/g, "").trim();
+      document.body.classList.add("theme-" + (settings.theme_preset || "mina"));
+      document.body.dataset.creatorDna = settings.creator_dna || "streamer";
+      document.body.style.background = customBackground ? settings.background_gradient : theme.background;
+    }
     function nextLiveDate(settings) {
       const value = settings.next_live_datetime;
       if (!value) return null;
@@ -671,6 +768,7 @@
       const season = creatorSeason(parts.month);
       const holiday = settings.holiday_effects_enabled === false ? "" : creatorHoliday(parts.month, parts.day);
       const atmosphere = [];
+      const theme = themePresets[settings.theme_preset] || themePresets.mina;
 
       document.body.classList.add("ambient-enabled", isDay ? "ambient-day" : "ambient-night");
       document.body.dataset.creatorTimezone = settings.timezone || fallback.timezone;
@@ -686,7 +784,7 @@
         setAmbientVar("--ambient-hero-saturate", ".99");
         setAmbientVar("--ambient-video-opacity", ".86");
         setAmbientVar("--ambient-card-shadow", "rgba(0,0,0,.22)");
-        setAmbientVar("--ambient-primary-glow", "rgba(255,159,189,.38)");
+        setAmbientVar("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .38));
       } else {
         atmosphere.push(
           "radial-gradient(circle at 50% -8%, rgba(92,66,96,.18), transparent 34rem)",
@@ -697,7 +795,7 @@
         setAmbientVar("--ambient-hero-saturate", ".9");
         setAmbientVar("--ambient-video-opacity", ".78");
         setAmbientVar("--ambient-card-shadow", "rgba(0,0,0,.34)");
-        setAmbientVar("--ambient-primary-glow", "rgba(255,159,189,.24)");
+        setAmbientVar("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .24));
       }
 
       if (settings.seasonal_effects_enabled !== false) {
@@ -801,7 +899,7 @@
 
     function setupIntro(settings) {
       const intro = $("intro");
-      if (!settings.welcome_intro_enabled || localStorage.getItem(introKey) === "done") {
+      if (!settings.welcome_intro_enabled || (!forceExperience && localStorage.getItem(introKey) === "done")) {
         intro.hidden = true;
         revealPage();
         return;
@@ -810,7 +908,7 @@
       video.src = heroVideo(settings);
       intro.hidden = false;
       const dismiss = () => {
-        localStorage.setItem(introKey, "done");
+        if (!forceExperience) localStorage.setItem(introKey, "done");
         intro.classList.add("is-done");
         revealPage();
         setTimeout(() => { intro.hidden = true; }, 650);
@@ -820,8 +918,10 @@
     }
 
     function render(settings) {
+      settings = previewSettings(settings);
+      $("previewBadge").hidden = !previewMode;
       document.body.classList.toggle("is-live", Boolean(settings.live_status));
-      if (settings.background_gradient) document.body.style.background = settings.background_gradient;
+      applyTheme(settings);
       applyAmbient(settings);
       setText("displayName", settings.display_name || "Mina Mosya");
       setText("handle", "@" + (settings.username || settings.slug || "mosyaamosya"));

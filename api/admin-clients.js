@@ -48,7 +48,10 @@ const PHASE_1_4_CREATOR_FIELDS = [
   "discord_invite_url",
   "discord_server_id"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS).join(",");
+const PHASE_2_CREATOR_FIELDS = [
+  "creator_dna"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
 const DEFAULT_MINA_SETTINGS = {
@@ -71,6 +74,7 @@ const DEFAULT_MINA_SETTINGS = {
   live_button_text: "Join Live",
   next_live_datetime: "",
   theme_preset: "mina",
+  creator_dna: "streamer",
   subscribe_popup_enabled: false,
   subscribe_popup_title: "",
   subscribe_popup_copy: "",
@@ -361,9 +365,15 @@ function normalizeSlug(value) {
 }
 
 function normalizeTheme(value) {
-  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet"]);
+  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder"]);
   const preset = clean(value || DEFAULT_MINA_SETTINGS.theme_preset).toLowerCase();
   return allowed.has(preset) ? preset : DEFAULT_MINA_SETTINGS.theme_preset;
+}
+
+function normalizeCreatorDna(value) {
+  const allowed = new Set(["artist", "streamer", "influencer", "podcaster", "founder", "gamer"]);
+  const dna = clean(value || DEFAULT_MINA_SETTINGS.creator_dna).toLowerCase();
+  return allowed.has(dna) ? dna : DEFAULT_MINA_SETTINGS.creator_dna;
 }
 
 function normalizeDateTime(value) {
@@ -492,6 +502,7 @@ function normalizeCreator(row = {}) {
     live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
+    creator_dna: normalizeCreatorDna(row.creator_dna),
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(row.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
     subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
@@ -576,6 +587,7 @@ function creatorPayload(input = {}) {
     live_button_text: clean(input.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
+    creator_dna: normalizeCreatorDna(input.creator_dna),
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(input.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
     subscribe_popup_copy: clean(input.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,

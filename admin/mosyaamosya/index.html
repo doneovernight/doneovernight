@@ -16,6 +16,8 @@
       --accent: #ffd3df;
       --accent-2: #8b5f4a;
       --danger: #fb7185;
+      --admin-bg-a: rgba(255,211,223,.18);
+      --admin-bg-b: rgba(139,95,74,.22);
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -24,8 +26,8 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at 10% -8%, rgba(255,211,223,.18), transparent 30rem),
-        radial-gradient(circle at 100% 0%, rgba(139,95,74,.22), transparent 28rem),
+        radial-gradient(circle at 10% -8%, var(--admin-bg-a), transparent 30rem),
+        radial-gradient(circle at 100% 0%, var(--admin-bg-b), transparent 28rem),
         #090504;
       color: var(--text);
     }
@@ -100,13 +102,18 @@
     .track::after { content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 999px; background: #fff5f7; transition: .18s ease; }
     .switch input:checked + .track { background: var(--accent); }
     .switch input:checked + .track::after { transform: translateX(24px); background: #24100e; }
-    .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .theme-grid, .dna-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .theme-option { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.055); color: var(--text); padding: 10px; display: grid; gap: 8px; cursor: pointer; text-align: left; font-weight: 850; }
     .theme-option[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.13); }
     .swatch { height: 34px; border-radius: 10px; }
     .mina { background: linear-gradient(135deg, #ffd3df, #8b5f4a 48%, #160b09); }
     .rose { background: linear-gradient(135deg, #fb7185, #f0abfc); }
     .chocolate { background: linear-gradient(135deg, #8b5f4a, #24100e); }
+    .onyx { background: linear-gradient(135deg, #f5f1ea, #050608); }
+    .violet { background: linear-gradient(135deg, #c4b5fd, #2e1065); }
+    .neon { background: linear-gradient(135deg, #67e8f9, #fb7185); }
+    .founder { background: linear-gradient(135deg, #e9c48a, #111827); }
+    .suggestion { border: 1px solid rgba(255,211,223,.14); border-radius: 14px; padding: 12px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 12px; line-height: 1.5; }
     .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; }
     .status.error { color: #fecdd3; }
     .status.success { color: #bbf7d0; }
@@ -134,6 +141,7 @@
       .stack { gap: 12px; }
       .fields { grid-template-columns: 1fr; }
       .theme-grid, .future { grid-template-columns: repeat(2, 1fr); }
+      .dna-grid { grid-template-columns: 1fr; }
       .span-2 { grid-column: auto; }
     }
   </style>
@@ -159,7 +167,7 @@
         <div class="muted">Public page: <a href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">doneovernight.com/mosyaamosya</a></div>
       </div>
       <div class="actions">
-        <a class="button" href="https://doneovernight.com/mosyaamosya" target="_blank" rel="noreferrer">Open public</a>
+        <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
         <button class="button danger" id="logoutButton" type="button">Logout</button>
         <button class="button primary" id="saveTop" type="button">Save page</button>
       </div>
@@ -252,7 +260,15 @@
         </section>
 
         <section class="panel">
-          <h2>Theme</h2>
+          <h2>Creator DNA</h2>
+          <div class="dna-grid" id="dnaGrid"></div>
+          <div style="height:12px"></div>
+          <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
+        </section>
+
+        <section class="panel">
+          <h2>Theme Engine</h2>
+          <div class="muted" style="margin-bottom:12px;">Preview Theme updates the admin and preview instantly. Save only when it feels right.</div>
           <div class="theme-grid" id="themeGrid"></div>
           <div style="height:12px"></div>
           <label>Background Gradient<textarea name="background_gradient"></textarea></label>
@@ -287,6 +303,13 @@
               <button class="button" id="savePassword" type="button">Save password</button>
             </div>
             <div class="span-2 status" id="passwordStatus"></div>
+            <div class="span-2 help-panel">
+              <strong>Install Creator OS</strong><br>
+              iPhone: open Experience My Page in Safari, tap Share, then Add to Home Screen.<br>
+              Android: open in Chrome, tap the menu, then Add to Home screen.<br>
+              Creator OS uses the DONEOVERNIGHT branded icon. Theme can change the feel; reinstall may be needed after icon-style changes.
+            </div>
+            <a class="button span-2" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Install Creator OS</a>
           </div>
         </section>
 
@@ -315,7 +338,7 @@
       <aside class="preview">
         <section class="panel">
           <h2>Live preview</h2>
-          <div class="muted">Refreshes after save.</div>
+          <div class="muted">Theme and DNA preview instantly. Save to publish.</div>
         </section>
         <div class="phone"><iframe id="previewFrame" src="https://doneovernight.com/mosyaamosya" title="Mina public page preview"></iframe></div>
       </aside>
@@ -325,8 +348,34 @@
   <script>
     const sessionFlag = "doneovernight_creator_mosyaamosya";
     const sessionKey = "doneovernight_creator_mosyaamosya_session";
-    const themes = [["mina", "Mina Premium"], ["rose", "Baby Pink"], ["chocolate", "Warm Brown"]];
+    const themes = [
+      ["mina", "Mina Premium"],
+      ["rose", "Baby Pink"],
+      ["chocolate", "Warm Brown"],
+      ["onyx", "Midnight DON"],
+      ["violet", "Creator Violet"],
+      ["neon", "Neon DON"],
+      ["founder", "Founder DON"]
+    ];
+    const themeVars = {
+      mina: ["#ffd3df", "#8b5f4a", "rgba(255,211,223,.18)", "rgba(139,95,74,.22)"],
+      rose: ["#fecdd3", "#fb7185", "rgba(251,113,133,.18)", "rgba(240,171,252,.16)"],
+      chocolate: ["#f2c6a8", "#8b5f4a", "rgba(139,95,74,.22)", "rgba(58,33,25,.26)"],
+      onyx: ["#f5f1ea", "#6b7280", "rgba(245,241,234,.12)", "rgba(75,85,99,.18)"],
+      violet: ["#c4b5fd", "#7c3aed", "rgba(124,58,237,.18)", "rgba(196,181,253,.14)"],
+      neon: ["#67e8f9", "#fb7185", "rgba(103,232,249,.16)", "rgba(251,113,133,.16)"],
+      founder: ["#e9c48a", "#111827", "rgba(233,196,138,.16)", "rgba(17,24,39,.24)"]
+    };
+    const dnaOptions = [
+      ["artist", "Artist", "Visual-first layout, softer drops, expressive intro prompts."],
+      ["streamer", "Streamer", "Live-first CTA, Discord community, countdown priority."],
+      ["influencer", "Influencer", "Social proof, collabs, and platform links first."],
+      ["podcaster", "Podcaster", "Episode cadence, audio-first prompts, guest CTAs."],
+      ["founder", "Founder", "Business CTA, launches, waitlists, credibility blocks."],
+      ["gamer", "Gamer", "Live status, community, clips, and high-contrast prompts."]
+    ];
     let activeTheme = "mina";
+    let activeDna = "streamer";
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
 
@@ -389,6 +438,7 @@
         music_volume: clampVolume(data.get("music_volume")),
         music_loop: form.elements.music_loop.checked,
         theme_preset: activeTheme,
+        creator_dna: activeDna,
         background_gradient: String(data.get("background_gradient") || "").trim(),
         ambient_mode_enabled: form.elements.ambient_mode_enabled.checked,
         timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
@@ -413,9 +463,28 @@
       if (settings.holiday_effects_enabled === undefined && form.elements.holiday_effects_enabled) form.elements.holiday_effects_enabled.checked = true;
       if (settings.redirect_mina_enabled === undefined && form.elements.redirect_mina_enabled) form.elements.redirect_mina_enabled.checked = true;
       activeTheme = settings.theme_preset || "mina";
+      activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
       renderThemes();
+      renderDna();
+      applyAdminTheme(activeTheme);
+      updatePreviewFrame(false);
+    }
+    function applyAdminTheme(theme) {
+      const vars = themeVars[theme] || themeVars.mina;
+      document.documentElement.style.setProperty("--accent", vars[0]);
+      document.documentElement.style.setProperty("--accent-2", vars[1]);
+      document.documentElement.style.setProperty("--admin-bg-a", vars[2]);
+      document.documentElement.style.setProperty("--admin-bg-b", vars[3]);
+    }
+    function updatePreviewFrame(refresh = true) {
+      const url = new URL("https://doneovernight.com/mosyaamosya");
+      url.searchParams.set("preview", "1");
+      url.searchParams.set("preview_theme", activeTheme);
+      url.searchParams.set("creator_dna", activeDna);
+      if (refresh) url.searchParams.set("refresh", Date.now());
+      $("previewFrame").src = url.href;
     }
     function renderThemes() {
       const grid = $("themeGrid");
@@ -428,7 +497,28 @@
         button.innerHTML = '<span class="swatch ' + value + '"></span><span>' + label + '</span>';
         button.addEventListener("click", () => {
           activeTheme = value;
+          applyAdminTheme(activeTheme);
           renderThemes();
+          updatePreviewFrame();
+        });
+        grid.appendChild(button);
+      });
+    }
+    function renderDna() {
+      const grid = $("dnaGrid");
+      const active = dnaOptions.find(([value]) => value === activeDna) || dnaOptions[1];
+      $("dnaSuggestion").textContent = active[2];
+      grid.innerHTML = "";
+      dnaOptions.forEach(([value, label, description]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "theme-option";
+        button.setAttribute("aria-pressed", value === activeDna ? "true" : "false");
+        button.innerHTML = '<span>' + label + '</span><small class="muted">' + description + '</small>';
+        button.addEventListener("click", () => {
+          activeDna = value;
+          renderDna();
+          updatePreviewFrame();
         });
         grid.appendChild(button);
       });
@@ -463,7 +553,7 @@
       setStatus("Saving Mina...");
       const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
       fillForm(data.creator);
-      $("previewFrame").src = "https://doneovernight.com/mosyaamosya?refresh=" + Date.now();
+      updatePreviewFrame();
       setStatus("Saved Mina Mosya page.");
     }
     function readFileData(file) {
@@ -549,6 +639,8 @@
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("savePassword").addEventListener("click", savePassword);
     renderThemes();
+    renderDna();
+    applyAdminTheme(activeTheme);
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
       loadSettings().catch(() => {
         sessionStorage.removeItem(sessionFlag);
