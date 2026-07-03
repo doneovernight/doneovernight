@@ -1356,6 +1356,23 @@ async function saveCreator(input = {}) {
   }
 }
 
+function runtimeActionEventType(slug = "mosyaamosya") {
+  return "creator_runtime_action_" + normalizeSlug(slug).replace(/[^a-z0-9_]+/g, "_");
+}
+
+async function saveCreatorRuntimeAction(slug, metadata = {}) {
+  await supabaseFetch("analytics_events", {
+    method: "POST",
+    body: {
+      event_type: runtimeActionEventType(slug),
+      source: "creator_os_admin",
+      route: "/" + normalizeSlug(slug),
+      metadata
+    },
+    context: "Creator runtime action"
+  }).catch(() => null);
+}
+
 async function setCreatorLiveMode(input = {}) {
   const slug = normalizeSlug(input.slug || "mosyaamosya");
   const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(DEFAULT_MINA_SETTINGS) }));
@@ -1364,13 +1381,14 @@ async function setCreatorLiveMode(input = {}) {
   const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
   const now = new Date().toISOString();
   const patch = {
-    manual_live_fallback_enabled: isLive,
     live_status: isLive,
     live_url: clean(input.live_url) || clean(current.live_url) || "https://www.tiktok.com/@" + username + "/live",
     updated_at: now
   };
   if (!isLive) {
     patch.battle_mode_enabled = false;
+    const countdownTime = Date.parse(current.next_live_datetime || "");
+    if (Number.isFinite(countdownTime) && countdownTime <= Date.now()) patch.next_live_datetime = "";
   }
   const rows = await supabaseFetch("creators?id=eq." + encodeURIComponent(current.id || MINA_CREATOR_ID) + "&select=" + CREATOR_FIELDS, {
     method: "PATCH",
@@ -1379,6 +1397,15 @@ async function setCreatorLiveMode(input = {}) {
     context: "Creator live mode"
   });
   const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  await saveCreatorRuntimeAction(slug, {
+    action: isLive ? "start_live" : "end_live",
+    live_status: isLive,
+    live_started_at: isLive ? now : "",
+    manual_live_fallback_enabled: current.manual_live_fallback_enabled !== false,
+    battle_mode_enabled: isLive ? bool(current.battle_mode_enabled, false) : false,
+    live_url: patch.live_url,
+    updated_at: now
+  });
   return {
     creator: normalizeCreator({ ...current, ...patch, ...row }),
     source: "database"

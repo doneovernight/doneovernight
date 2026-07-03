@@ -1644,12 +1644,13 @@
       const loadingStatus = source === "loading";
       const confirmed = liveState && (liveState.confirmed === true || confirmedLiveSource(source));
       const isLive = Boolean(liveState && liveState.isLive);
+      const explicitRuntime = source === "admin-runtime";
       const manualLive = !confirmed && source === "manual-fallback" && liveState.manualMode === true && isLive;
       const manualOffline = !confirmed && source === "manual-fallback" && liveState.manualMode !== true && !isLive;
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
       const hasBattleMode = liveState && liveState.battleActive === true && featureOn(settings, "battle_link_visible", true);
-      const displayLive = (confirmed && isLive) || manualLive || hasBattleMode;
-      const confirmedOffline = (confirmed || manualOffline) && !isLive && !hasBattleMode;
+      const displayLive = (confirmed && isLive) || (explicitRuntime && isLive) || manualLive || hasBattleMode;
+      const confirmedOffline = (confirmed || explicitRuntime || manualOffline) && !isLive && !hasBattleMode;
       const unknownStatus = !loadingStatus && !displayLive && !confirmedOffline;
       const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
       const hasRealLikeCount = displayLive && capabilities.likeCount === true && Number.isFinite(Number(liveState.likeCount));

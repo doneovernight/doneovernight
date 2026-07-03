@@ -1232,7 +1232,7 @@
                 <button class="button primary" id="liveToggleButton" type="button" data-runtime-action="toggle-live">Start Live</button>
               </div>
               <div class="runtime-status-grid">
-                <div><span>Source</span><strong id="runtimeSourceLabel">Unknown</strong></div>
+                <div><span>Control Mode</span><strong id="runtimeSourceLabel">Unknown</strong></div>
                 <div><span>Last checked</span><strong id="runtimeLastChecked">Not yet</strong></div>
                 <div><span>Battle</span><strong id="runtimeBattleLabel">Off</strong></div>
                 <div><span>Pinned block</span><strong id="runtimePinnedLabel">None</strong></div>
@@ -1247,7 +1247,7 @@
               <input name="live_status" type="hidden" value="false">
               <input name="battle_mode_enabled" type="hidden" value="false">
               <div class="switch-row">
-                <div><strong>Manual live mode</strong><span>Use only when automatic detection is unavailable.</span></div>
+                <div><strong>Manual live mode</strong><span>Allows saved live state as fallback when automatic detection is unavailable. Start/End Live stays separate.</span></div>
                 <label class="switch" aria-label="Manual live mode"><input id="manualLiveModeControl" name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
               </div>
             </div>
@@ -2754,8 +2754,8 @@
     }
     function runtimeSourceLabel(source) {
       const value = String(source || "").toLowerCase();
-      if (value === "runtime" || value === "provider" || value === "confirmed") return "Runtime";
-      if (value === "manual-fallback" || boolField("manual_live_fallback_enabled")) return "Manual";
+      if (value === "runtime" || value === "provider" || value === "confirmed") return "Automatic";
+      if (value === "admin-runtime" || value === "manual-fallback" || boolField("manual_live_fallback_enabled")) return "Manual override";
       return "Unknown";
     }
     function formatRuntimeDate(value) {
@@ -2806,7 +2806,6 @@
       if (action === "start") {
         next.battle_mode_enabled = true;
         next.live_status = true;
-        next.manual_live_fallback_enabled = true;
         next.battle_result = "";
       } else if (action === "end") {
         next.battle_mode_enabled = false;
@@ -2871,8 +2870,7 @@
     async function applyRuntimeAction(action) {
       if (action === "start-live") {
         setBoolField("live_status", true);
-        setBoolField("manual_live_fallback_enabled", true);
-        latestLiveRuntimeState = { isLive: true, source: "manual-fallback", checkedAt: new Date().toISOString() };
+        latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
         const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
         if (form.elements.live_url && !String(form.elements.live_url.value || "").trim()) {
           form.elements.live_url.value = "https://www.tiktok.com/@" + username + "/live";
@@ -2893,7 +2891,7 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
-          latestLiveRuntimeState = { isLive: true, source: "manual-fallback", checkedAt: data.creator && data.creator.updated_at };
+          latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -2904,9 +2902,8 @@
         return;
       } else if (action === "end-live") {
         setBoolField("live_status", false);
-        setBoolField("manual_live_fallback_enabled", false);
         setBoolField("battle_mode_enabled", false);
-        latestLiveRuntimeState = { isLive: false, source: "manual-fallback", checkedAt: new Date().toISOString() };
+        latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
         updateBattleSummary();
         updateRuntimeUi();
         try {
@@ -2920,7 +2917,7 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
-          latestLiveRuntimeState = { isLive: false, source: "manual-fallback", checkedAt: data.creator && data.creator.updated_at };
+          latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -3693,7 +3690,17 @@
     ["manual_live_fallback_enabled", "poll_enabled"].forEach((name) => {
       const field = form.elements[name];
       if (!field) return;
-      field.addEventListener("change", () => queueRuntimeAutosave(name === "manual_live_fallback_enabled" ? "Manual Live Mode Updated" : "Poll Updated"));
+      field.addEventListener("change", () => {
+        if (name === "manual_live_fallback_enabled") {
+          latestLiveRuntimeState = {
+            isLive: boolField("live_status"),
+            source: boolField("manual_live_fallback_enabled") ? "manual-fallback" : "unknown",
+            checkedAt: new Date().toISOString()
+          };
+          updateRuntimeUi();
+        }
+        queueRuntimeAutosave(name === "manual_live_fallback_enabled" ? "Manual Live Mode Updated" : "Poll Updated");
+      });
     });
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(sessionFlag);
@@ -3760,22 +3767,6 @@
     ["poll_enabled", "poll_question"].forEach((key) => {
       if (form.elements[key]) form.elements[key].addEventListener("change", syncPollOptionsField);
       if (form.elements[key]) form.elements[key].addEventListener("input", syncPollOptionsField);
-    });
-    $("manualLiveModeControl").addEventListener("change", async () => {
-      if (!$("manualLiveModeControl").checked) setBoolField("live_status", false);
-      latestLiveRuntimeState = {
-        isLive: boolField("live_status"),
-        source: boolField("manual_live_fallback_enabled") ? "manual-fallback" : "unknown",
-        checkedAt: new Date().toISOString()
-      };
-      updateRuntimeUi();
-      try {
-        await saveRuntimeState("Manual live mode updated.");
-        await loadLiveRuntime();
-        setStatus("Manual live mode updated.");
-      } catch (error) {
-        setStatus(error.message || "Manual live mode update failed", true);
-      }
     });
     $("savePassword").addEventListener("click", savePassword);
     ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
