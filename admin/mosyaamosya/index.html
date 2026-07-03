@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mina Mosya Creator OS | Admin</title>
+  <title>Mina Mosya</title>
   <meta name="robots" content="noindex">
   <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <style>
     :root {
       --bg: #090504;
@@ -19,8 +23,14 @@
       --admin-bg-a: rgba(255,211,223,.18);
       --admin-bg-b: rgba(139,95,74,.22);
       --glass-panel: linear-gradient(140deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
+      --ink: #f5f1ea;
+      --ink-dim: rgba(245,241,234,.58);
+      --line-main: rgba(245,241,234,.1);
+      --serif: "Instrument Serif", "Times New Roman", serif;
+      --sans: "Manrope", system-ui, sans-serif;
+      --mono: "JetBrains Mono", monospace;
       color-scheme: dark;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--sans);
     }
     * { box-sizing: border-box; }
     body {
@@ -89,7 +99,27 @@
     .button.primary { border: 0; background: linear-gradient(135deg, var(--accent), #ff9fbd); color: #24100e; box-shadow: 0 16px 42px rgba(255,159,189,.22); }
     .button.danger { color: #fecdd3; border-color: rgba(251,113,133,.36); }
     .button[disabled] { opacity: .62; cursor: wait; }
-    .gate { min-height: 100svh; display: grid; place-items: start center; padding: 28px 14px; }
+    .gate {
+      min-height: 100svh;
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: clamp(22px, 5vw, 56px) 18px 0;
+      overflow: hidden;
+      isolation: isolate;
+      transition: opacity .5s ease, transform .5s ease, filter .5s ease;
+    }
+    .gate::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255,211,223,.13), transparent 32rem),
+        radial-gradient(circle at 20% 88%, rgba(139,95,74,.16), transparent 28rem);
+      pointer-events: none;
+      z-index: -2;
+    }
+    .gate.is-exiting { opacity: 0; transform: scale(.992); filter: blur(8px); pointer-events: none; }
     .gate-card, .panel {
       border: 1px solid var(--line);
       border-radius: 22px;
@@ -97,7 +127,110 @@
       box-shadow: 0 18px 56px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.14);
       backdrop-filter: blur(18px) saturate(1.12);
     }
-    .gate-card { width: min(430px, 100%); padding: 22px; }
+    .gate-card {
+      width: min(460px, 100%);
+      padding: clamp(30px, 5vw, 44px);
+      border-radius: 34px;
+      display: grid;
+      gap: 20px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.052)),
+        rgba(18,9,8,.54);
+      box-shadow:
+        0 34px 90px rgba(0,0,0,.36),
+        0 1px 0 rgba(255,255,255,.16) inset,
+        0 -1px 0 rgba(255,255,255,.05) inset;
+      position: relative;
+      z-index: 2;
+    }
+    .gate-card h1 {
+      font-size: clamp(48px, 9vw, 72px);
+      font-weight: 500;
+      line-height: .92;
+      letter-spacing: -.02em;
+    }
+    .gate-card .muted {
+      font-size: 15px;
+      line-height: 1.55;
+      color: rgba(255,245,247,.66);
+    }
+    .gate-card label { font-size: 12px; letter-spacing: .02em; }
+    .gate-card input {
+      min-height: 54px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.2);
+    }
+    .gate-card .button.primary {
+      min-height: 54px;
+      border-radius: 18px;
+      width: 100%;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .gate-card .button.primary:active { transform: scale(.992); }
+    .gate-card .status { min-height: 0; height: 0; overflow: hidden; }
+    .unlock-button-content {
+      min-width: 138px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .unlock-spinner,
+    .unlock-check {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 15px;
+      opacity: 0;
+      transform: scale(.82);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .unlock-spinner {
+      border: 2px solid rgba(36,16,14,.2);
+      border-top-color: rgba(36,16,14,.78);
+      border-radius: 999px;
+    }
+    .unlock-check {
+      display: grid;
+      place-items: center;
+      color: #24100e;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 950;
+    }
+    .gate-card[data-unlock-state="unlocking"] .unlock-spinner {
+      opacity: 1;
+      transform: scale(1);
+      animation: saveSpin .82s linear infinite;
+    }
+    .gate-card[data-unlock-state="welcome"] .unlock-check { opacity: 1; transform: scale(1); }
+    .gate-card[data-unlock-state="failed"] .button.primary {
+      background: linear-gradient(135deg, #fecdd3, #fb7185);
+      color: #2a080d;
+    }
+    .gate-footer {
+      position: absolute;
+      inset: auto 0 0;
+      min-height: 190px;
+      display: grid;
+      place-items: end center;
+      padding: 82px 6vw 34px;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .gate-powered {
+      position: relative;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      color: rgba(245,241,234,.44);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .gate-powered img { width: 112px; opacity: .48; }
     .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; }
     .stack { display: grid; gap: 16px; }
     .tab-panel[hidden] { display: none !important; }
@@ -304,8 +437,12 @@
     @media (prefers-reduced-motion: reduce) {
       .save-button-label,
       .save-spinner,
-      .save-check { transition: none; }
+      .save-check,
+      .unlock-spinner,
+      .unlock-check { transition: none; }
       .sticky-save[data-save-state="saving"] .save-spinner { animation: none; }
+      .gate-card[data-unlock-state="unlocking"] .unlock-spinner { animation: none; }
+      .gate { transition: none; }
     }
     .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
     .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
@@ -318,6 +455,10 @@
     }
     @media (max-width: 620px) {
       .shell { width: min(100% - 18px, 1180px); padding-top: 12px; padding-bottom: 150px; }
+      .gate { padding-inline: 14px; }
+      .gate-card { border-radius: 28px; padding: 28px; }
+      .gate-footer { min-height: 150px; padding-bottom: 24px; }
+      .gate-powered img { width: 98px; }
       .panel { padding: 14px; border-radius: 16px; }
       .topbar { margin-bottom: 12px; }
       .stack { gap: 12px; }
@@ -333,15 +474,27 @@
 </head>
 <body>
   <div class="gate" id="gate">
-    <form class="gate-card" id="loginForm">
-      <div class="eyebrow">Creator access</div>
-      <h1 style="font-size:38px;margin:8px 0 10px;">Mina Creator OS</h1>
-      <p class="muted">Use Mina's creator password. DONEOVERNIGHT master admin access remains available as fallback.</p>
+    <form class="gate-card" id="loginForm" data-unlock-state="idle">
+      <div class="eyebrow">CREATOR ACCESS</div>
+      <h1>Mina Mosya</h1>
+      <p class="muted">Enter your creator password.</p>
       <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
-      <div style="height:12px"></div>
-      <button class="button primary" type="submit">Unlock Mina</button>
-      <div class="status" id="loginStatus"></div>
+      <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
+        <span class="unlock-button-content">
+          <span class="unlock-spinner" aria-hidden="true"></span>
+          <span class="unlock-check" aria-hidden="true">✓</span>
+          <span id="unlockButtonLabel">Unlock</span>
+        </span>
+      </button>
+      <div class="status" id="loginStatus" aria-live="polite"></div>
     </form>
+    <div class="gate-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
+      <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
+      <div class="gate-powered">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </div>
+    </div>
   </div>
 
   <main class="shell" id="app" hidden>
@@ -790,6 +943,7 @@
     let saving = false;
     let saveResetTimer = 0;
     let saveFadeTimer = 0;
+    let unlockResetTimer = 0;
     let pendingSaveScroll = null;
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
@@ -892,6 +1046,30 @@
       const status = $("loginStatus");
       status.textContent = message || "";
       status.classList.toggle("error", Boolean(isError));
+    }
+    function setUnlockButtonState(state, options = {}) {
+      const form = $("loginForm");
+      const button = $("unlockButton");
+      const label = $("unlockButtonLabel");
+      if (!form || !button || !label) return;
+      const textByState = {
+        idle: "Unlock",
+        unlocking: "Unlocking...",
+        welcome: "Welcome back",
+        failed: "Try again"
+      };
+      const text = textByState[state] || textByState.idle;
+      window.clearTimeout(unlockResetTimer);
+      form.dataset.unlockState = state;
+      button.disabled = state === "unlocking" || state === "welcome";
+      button.setAttribute("aria-label", text);
+      label.textContent = text;
+      if (options.resetAfter) {
+        unlockResetTimer = window.setTimeout(() => setUnlockButtonState("idle"), options.resetAfter);
+      }
+    }
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
     function creatorSession() { return sessionStorage.getItem(sessionKey) || ""; }
     function openApp() {
@@ -1355,13 +1533,12 @@
       return data;
     }
     async function login(password) {
-      setLoginStatus("Checking creator access...");
+      setLoginStatus("");
       const data = await api({ action: "login", creator_password: password, slug: "mosyaamosya" });
       sessionStorage.setItem(sessionFlag, "true");
       sessionStorage.setItem(sessionKey, data.creator_session || "");
       fillForm(data.creator);
-      openApp();
-      setStatus("Loaded Mina Mosya settings.");
+      return data;
     }
     async function loadSettings() {
       setStatus("Loading Mina settings...");
@@ -1502,10 +1679,17 @@
       const password = $("creatorPassword").value.trim();
       if (!password) return;
       try {
+        setUnlockButtonState("unlocking");
         await login(password);
-        setLoginStatus("");
+        setUnlockButtonState("welcome");
+        await wait(720);
+        const gate = $("gate");
+        if (gate) gate.classList.add("is-exiting");
+        await wait(420);
+        openApp();
       } catch (error) {
-        setLoginStatus(error.message || "Admin access denied", true);
+        setLoginStatus("");
+        setUnlockButtonState("failed", { resetAfter: 1300 });
       }
     });
     form.addEventListener("submit", async (event) => {
