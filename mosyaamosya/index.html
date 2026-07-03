@@ -44,6 +44,10 @@
       --glass-line: rgba(255,245,247,.18);
       --glass-highlight: rgba(255,255,255,.28);
       --glass-shadow: 0 18px 54px rgba(0,0,0,.24);
+      --glass-x: 18%;
+      --glass-y: 0%;
+      --glass-shift-x: 0px;
+      --glass-shift-y: 0px;
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -175,10 +179,20 @@
       opacity: .55;
     }
     .share-trigger {
+      width: 38px;
+      height: 38px;
       min-width: 38px;
+      min-height: 38px;
+      padding: 0;
       justify-content: center;
       color: var(--pink);
       cursor: pointer;
+    }
+    .share-trigger svg {
+      width: 17px;
+      height: 17px;
+      position: relative;
+      z-index: 1;
     }
     a.mini-pill { cursor: pointer; }
     a.mini-pill:focus-visible {
@@ -271,8 +285,10 @@
       pointer-events: none;
       background:
         linear-gradient(120deg, rgba(255,255,255,.18), transparent 34%),
-        radial-gradient(circle at 18% 0%, rgba(255,255,255,.12), transparent 18rem);
+        radial-gradient(circle at var(--glass-x) var(--glass-y), rgba(255,255,255,.14), transparent 18rem);
       opacity: .62;
+      transform: translate3d(var(--glass-shift-x), var(--glass-shift-y), 0);
+      transition: transform .2s ease, background-position .2s ease;
     }
     .live-card {
       display: grid;
@@ -392,7 +408,14 @@
       font-size: 13px;
       line-height: 1.45;
     }
-    .newsletter-card, .explore-card {
+    .newsletter-card {
+      min-height: 58px;
+      display: grid;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px;
+    }
+    .explore-card {
       display: grid;
       gap: 13px;
       border-radius: 28px;
@@ -405,46 +428,71 @@
       letter-spacing: .12em;
       text-transform: uppercase;
     }
-    .newsletter-card h2, .explore-card h2 {
+    .explore-card h2 {
       margin: 0;
       font-size: 20px;
       letter-spacing: 0;
     }
-    .newsletter-card p, .explore-card p {
+    .explore-card p {
       margin: 0;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
     }
-    .newsletter-form {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 9px;
+    .newsletter-start, .newsletter-thanks {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,245,247,.88);
+      display: flex;
       align-items: center;
-      overflow: hidden;
-      transition: grid-template-columns .28s ease, opacity .28s ease, max-height .28s ease;
-      max-height: 64px;
+      justify-content: center;
+      font-weight: 950;
+      cursor: pointer;
     }
-    .newsletter-form.is-done {
-      grid-template-columns: 1fr;
-      max-height: 34px;
+    .newsletter-thanks {
+      display: none;
+      cursor: default;
+      color: var(--pink);
+    }
+    .newsletter-form {
+      display: none;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+    .newsletter-card.is-editing .newsletter-start,
+    .newsletter-card.is-loading .newsletter-start,
+    .newsletter-card.is-done .newsletter-start {
+      display: none;
+    }
+    .newsletter-card.is-editing .newsletter-form,
+    .newsletter-card.is-loading .newsletter-form {
+      display: grid;
+    }
+    .newsletter-card.is-done .newsletter-thanks {
+      display: flex;
     }
     .newsletter-form input {
       min-width: 0;
-      height: 48px;
-      border: 1px solid rgba(255,245,247,.16);
-      border-radius: 16px;
-      padding: 0 13px;
-      background: rgba(0,0,0,.2);
+      height: 46px;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 999px;
+      padding: 0 15px;
+      background: rgba(0,0,0,.18);
       color: var(--text);
       outline: none;
     }
-    .newsletter-form.is-done input { display: none; }
-    .newsletter-state {
-      min-height: 20px;
-      color: rgba(255,245,247,.62);
-      font-size: 12px;
-      font-weight: 850;
+    .newsletter-form button {
+      min-width: 88px;
+      min-height: 46px;
+      border-radius: 999px;
+    }
+    .newsletter-card.is-loading input {
+      opacity: .52;
     }
     .gap-spinner {
       width: 16px;
@@ -655,6 +703,9 @@
       .hero-video {
         animation: none !important;
       }
+      .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .explore-card::before {
+        transform: none !important;
+      }
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
@@ -674,7 +725,9 @@
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <div class="hero-actions">
           <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
-          <button class="mini-pill share-trigger" id="shareButton" type="button" aria-label="Share Mina Mosya">Share</button>
+          <button class="mini-pill share-trigger" id="shareButton" type="button" aria-label="Share Mina">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2"/><path d="m8.6 13.4 6.8 4.2"/></svg>
+          </button>
         </div>
       </div>
       <div class="hero-content">
@@ -710,14 +763,12 @@
     <section class="button-grid" id="buttonGrid" aria-label="Mina content blocks"></section>
 
     <section class="newsletter-card" id="newsletterBlock" data-block-type="newsletter">
-      <div class="section-kicker">Updates</div>
-      <h2>Know when Mina goes live.</h2>
-      <p>A calm little ping for streams, community drops, and creator notes.</p>
+      <button class="newsletter-start" id="newsletterStart" type="button">Subscribe to the Mailing List</button>
       <form class="newsletter-form" id="newsletterForm">
-        <input id="newsletterEmail" type="email" autocomplete="email" placeholder="Email" aria-label="Email">
-        <button class="primary" id="newsletterSubmit" type="submit">Notify me</button>
+        <input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">
+        <button class="primary" id="newsletterSubmit" type="submit">Submit</button>
       </form>
-      <div class="newsletter-state" id="newsletterState" aria-live="polite"></div>
+      <div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>
     </section>
 
     <section class="explore-card" id="exploreBlock" data-block-type="explore">
@@ -1143,26 +1194,33 @@
     }
 
     function setupNewsletter() {
+      const block = $("newsletterBlock");
+      const start = $("newsletterStart");
       const form = $("newsletterForm");
       const input = $("newsletterEmail");
       const button = $("newsletterSubmit");
-      const state = $("newsletterState");
       if (form.dataset.ready === "true") return;
       form.dataset.ready = "true";
+      start.addEventListener("click", () => {
+        block.classList.add("is-editing");
+        window.setTimeout(() => input.focus(), 80);
+      });
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         if (!input.value.trim()) {
           input.focus();
           return;
         }
+        block.classList.remove("is-editing");
+        block.classList.add("is-loading");
         button.innerHTML = '<span class="gap-spinner" aria-hidden="true"></span>';
-        button.setAttribute("aria-label", "Joining");
-        state.textContent = "";
+        button.setAttribute("aria-label", "Subscribing");
+        input.disabled = true;
+        button.disabled = true;
         window.setTimeout(() => {
-          form.classList.add("is-done");
-          button.textContent = "You're in.";
-          state.textContent = "You're in. Mina can reach you when the next stream is ready.";
-        }, 700);
+          block.classList.remove("is-loading");
+          block.classList.add("is-done");
+        }, 650);
       });
     }
 
@@ -1224,6 +1282,32 @@
       });
       $("shareButton").onclick = () => setSheetOpen("shareSheet", true);
     }
+
+    function setupLivingGlassMotion() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      let frame = 0;
+      const apply = (x, y) => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          const shiftX = ((x - 50) / 50 * 5).toFixed(2) + "px";
+          const shiftY = ((y - 50) / 50 * 4).toFixed(2) + "px";
+          document.documentElement.style.setProperty("--glass-x", x.toFixed(1) + "%");
+          document.documentElement.style.setProperty("--glass-y", y.toFixed(1) + "%");
+          document.documentElement.style.setProperty("--glass-shift-x", shiftX);
+          document.documentElement.style.setProperty("--glass-shift-y", shiftY);
+        });
+      };
+      window.addEventListener("pointermove", (event) => {
+        apply((event.clientX / window.innerWidth) * 100, (event.clientY / window.innerHeight) * 100);
+      }, { passive: true });
+      window.addEventListener("deviceorientation", (event) => {
+        if (typeof event.gamma !== "number" || typeof event.beta !== "number") return;
+        apply(50 + Math.max(-18, Math.min(18, event.gamma)) * .7, 42 + Math.max(-22, Math.min(22, event.beta - 35)) * .45);
+      }, { passive: true });
+    }
+
+    setupLivingGlassMotion();
 
     document.querySelectorAll("[data-close-sheet]").forEach((button) => {
       button.addEventListener("click", () => setSheetOpen(button.dataset.closeSheet, false));
