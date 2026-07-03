@@ -22,10 +22,13 @@ The next deploy should ship these changes together as one production release.
   - Adds a battle-card-only rounded border overlay.
   - Keeps the sticker floating above the card with `pointer-events: none`.
 
-## Not Currently Found In This Branch
+- `330d6ae` Make Mina hero edge to edge
+  - Adds `viewport-fit=cover` for iOS edge-to-edge rendering.
+  - Extends Mina's hero background to pixel `0` on mobile.
+  - Keeps hero controls/content inside safe-area-aware padding.
+  - Applies the same full-viewport safe-area treatment to the welcome intro.
 
-- Edge-to-edge hero fix
-  - No matching committed change found in recent history.
+## Not Currently Found In This Branch
 
 - Countdown layout fix
   - No matching committed change found in recent history.
@@ -35,6 +38,7 @@ The next deploy should ship these changes together as one production release.
 - Creator Admin now reports Intro Audio upload/save failures with a clear reason instead of a generic failed state.
 - Intro Audio upload success now gives creators a clear ready-to-save state.
 - Mina's Prepare for Battle sale sticker no longer breaks the card's premium rounded-corner illusion.
+- Mina's public Creator OS hero now renders edge-to-edge behind mobile browser chrome while keeping controls inside the safe area.
 
 ## Verification Already Completed Locally
 
@@ -48,6 +52,11 @@ The next deploy should ship these changes together as one production release.
   - Mobile Chromium screenshot verified.
   - Mobile WebKit/Safari-like screenshot verified.
   - Card radius remained visually intact.
+
+- Edge-to-edge hero:
+  - Mobile Chromium geometry verified: hero `top: 0`, full viewport width.
+  - Mobile WebKit geometry verified: hero `top: 0`, full viewport width.
+  - Intro overlay verified at `top: 0` with full viewport height.
 
 ## Deployment Note
 
