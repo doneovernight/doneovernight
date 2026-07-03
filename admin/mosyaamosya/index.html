@@ -32,7 +32,7 @@
         #090504;
       color: var(--text);
     }
-    button, input, textarea { font: inherit; }
+    button, input, textarea, select { font: inherit; }
     a { color: inherit; }
     .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 128px; }
     .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
@@ -105,7 +105,7 @@
     .panel h2 { margin: 0 0 14px; font-size: 18px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 850; }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       min-width: 0;
       border: 1px solid var(--line);
@@ -116,7 +116,8 @@
       outline: none;
     }
     textarea { min-height: 110px; resize: vertical; }
-    input:focus, textarea:focus { border-color: rgba(255,211,223,.62); box-shadow: 0 0 0 3px rgba(255,211,223,.1); }
+    select { appearance: none; }
+    input:focus, textarea:focus, select:focus { border-color: rgba(255,211,223,.62); box-shadow: 0 0 0 3px rgba(255,211,223,.1); }
     .span-2 { grid-column: 1 / -1; }
     .switch-row {
       display: flex;
@@ -157,6 +158,26 @@
     .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
     .media-preview.video { width: 120px; }
     .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
+    .link-list { display: grid; gap: 10px; }
+    .link-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,.045);
+      display: grid;
+      gap: 12px;
+    }
+    .link-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .link-card-title { display: grid; gap: 3px; }
+    .link-card-title strong { font-size: 14px; }
+    .link-card-title span { color: var(--muted); font-size: 12px; }
+    .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .link-card-fields .wide { grid-column: 1 / -1; }
     .battle-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
     .battle-controls .button { min-height: 38px; padding: 0 10px; border-radius: 11px; font-size: 12px; }
     .battle-controls .button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.12); }
@@ -220,6 +241,8 @@
       .topbar { margin-bottom: 12px; }
       .stack { gap: 12px; }
       .fields { grid-template-columns: 1fr; }
+      .link-card-fields { grid-template-columns: 1fr; }
+      .link-card-fields .wide { grid-column: auto; }
       .overview-grid, .runtime-actions, .runtime-actions.two, .segmented { grid-template-columns: 1fr; }
       .theme-grid, .future { grid-template-columns: repeat(2, 1fr); }
       .dna-grid { grid-template-columns: 1fr; }
@@ -254,6 +277,7 @@
     <nav class="admin-tabs" aria-label="Creator admin sections">
       <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
     </nav>
@@ -309,22 +333,111 @@
           </div>
         </section>
 
-        <section class="panel tab-panel" data-admin-panel="settings">
+        <section class="panel tab-panel" data-admin-panel="links" hidden>
           <h2>Links</h2>
-          <div class="fields">
-            <label>TikTok URL<input name="tiktok_url" type="url"></label>
-            <label>Discord URL<input name="discord_url" type="url"></label>
-            <label>Discord server invite URL<input name="discord_invite_url" type="url"></label>
-            <label>Discord server ID<input name="discord_server_id"></label>
-            <label>Coins URL<input name="tiktok_coins_url" type="url"></label>
-            <label>Business email<input name="business_email" type="email"></label>
-            <label>Newsletter title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
-            <label>Newsletter copy<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
-            <div class="span-2 switch-row">
-              <div><strong>Newsletter</strong><span>Show the mailing list subscribe interaction.</span></div>
-              <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
-            </div>
-            <div class="span-2 help-panel">
+          <div class="link-list">
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Discord</strong><span>Public Discord link block.</span></div>
+                <label class="switch" aria-label="Discord link visible"><input name="discord_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>State<select name="community_state"><option value="hidden">Hidden</option><option value="preview">Preview</option><option value="open">Open</option></select></label>
+                <label>CTA label<input name="discord_link_cta_label"></label>
+                <label>Title<input name="discord_link_title"></label>
+                <label>Subtitle<input name="discord_link_subtitle"></label>
+                <label class="wide">Discord invite URL<input name="discord_invite_url" type="url"></label>
+                <label>Discord URL fallback<input name="discord_url" type="url"></label>
+                <label>Discord server ID<input name="discord_server_id"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>TikTok</strong><span>Main TikTok profile link.</span></div>
+                <label class="switch" aria-label="TikTok link visible"><input name="tiktok_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="tiktok_link_title"></label>
+                <label>CTA label<input name="tiktok_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="tiktok_link_subtitle"></label>
+                <label class="wide">TikTok URL<input name="tiktok_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Prepare for Battle / TikTok Coins</strong><span>Support block before battles.</span></div>
+                <label class="switch" aria-label="Battle link visible"><input name="battle_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="battle_link_title"></label>
+                <label>CTA label<input name="battle_link_cta_label"></label>
+                <label class="wide">Description<input name="battle_link_subtitle"></label>
+                <label class="wide">TikTok Coins URL<input name="tiktok_coins_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Business Email</strong><span>Booking and collaboration contact.</span></div>
+                <label class="switch" aria-label="Business email visible"><input name="business_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="business_link_title"></label>
+                <label>CTA label<input name="business_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="business_link_subtitle"></label>
+                <label class="wide">Business email<input name="business_email" type="email"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Music</strong><span>Optional public music block and floating control.</span></div>
+                <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="music_link_title"></label>
+                <label>CTA label<input name="music_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="music_link_subtitle"></label>
+                <label class="wide">Music URL<input name="music_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Newsletter</strong><span>Compact mailing list interaction.</span></div>
+                <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
+                <label>CTA label<input name="newsletter_cta_label"></label>
+                <label class="wide">Description<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Community</strong><span>Dedicated community block above links.</span></div>
+                <label class="switch" aria-label="Community block visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="community_link_title"></label>
+                <label>CTA label<input name="community_link_cta_label"></label>
+                <label class="wide">Description<input name="community_link_subtitle"></label>
+                <div class="wide help-panel">Uses the Discord state above: Hidden removes it, Preview shows “Community opening soon” with no join button, Open shows the saved CTA.</div>
+              </div>
+            </section>
+
+            <section class="link-card" aria-disabled="true">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Future custom links</strong><span>Prepared for creator-defined blocks later.</span></div>
+                <label class="switch" aria-label="Future custom links unavailable"><input type="checkbox" disabled><span class="track"></span></label>
+              </div>
+              <div class="help-panel">Custom link rows will support icons, ordering, and reusable block types in a later Creator OS phase.</div>
+            </section>
+
+            <div class="help-panel">
               Discord counter placeholder: enable the Discord server widget in Server Settings, then add the server ID here. API/widget member counts are intentionally not implemented yet.
             </div>
           </div>
@@ -432,8 +545,7 @@
               <div><strong>Music Enabled</strong><span>Shows the floating sound button.</span></div>
               <label class="switch" aria-label="Music enabled"><input name="music_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Music URL<input name="music_url" type="url"></label>
-            <div class="span-2 help-panel">Direct .mp3/.m4a files can play in-page. Apple Music/Spotify links open externally.</div>
+            <div class="span-2 help-panel">Music URL is managed in Links. Direct .mp3/.m4a files can play in-page. Apple Music/Spotify links open externally.</div>
             <label>Volume<input name="music_volume" type="number" min="0" max="1" step="0.05"></label>
             <div class="switch-row">
               <div><strong>Loop</strong><span>Repeat the music track.</span></div>
@@ -484,7 +596,7 @@
               <label class="switch" aria-label="FAQ visibility"><input name="faq_visible" type="checkbox"><span class="track"></span></label>
             </div>
             <div class="switch-row">
-              <div><strong>Discord visibility</strong><span>Show or hide the public community block.</span></div>
+              <div><strong>Discord visibility</strong><span>Show or hide Discord-driven public blocks.</span></div>
               <label class="switch" aria-label="Discord visibility"><input name="discord_visible" type="checkbox"><span class="track"></span></label>
             </div>
             <div class="switch-row span-2">
@@ -537,7 +649,7 @@
           </div>
         </section>
 
-        <button class="button primary sticky-save tab-panel" data-admin-panel="settings" id="saveFloating" type="button">Save page</button>
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings links" id="saveFloating" type="button">Save page</button>
         <div class="status" id="saveStatus"></div>
       </form>
 
@@ -671,6 +783,31 @@
         community_state: String(data.get("community_state") || "open").trim(),
         quick_announcement: String(data.get("quick_announcement") || "").trim(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
+        discord_link_visible: boolField("discord_link_visible", true),
+        discord_link_title: String(data.get("discord_link_title") || "").trim(),
+        discord_link_subtitle: String(data.get("discord_link_subtitle") || "").trim(),
+        discord_link_cta_label: String(data.get("discord_link_cta_label") || "").trim(),
+        tiktok_link_visible: boolField("tiktok_link_visible", true),
+        tiktok_link_title: String(data.get("tiktok_link_title") || "").trim(),
+        tiktok_link_subtitle: String(data.get("tiktok_link_subtitle") || "").trim(),
+        tiktok_link_cta_label: String(data.get("tiktok_link_cta_label") || "").trim(),
+        battle_link_visible: boolField("battle_link_visible", true),
+        battle_link_title: String(data.get("battle_link_title") || "").trim(),
+        battle_link_subtitle: String(data.get("battle_link_subtitle") || "").trim(),
+        battle_link_cta_label: String(data.get("battle_link_cta_label") || "").trim(),
+        business_link_visible: boolField("business_link_visible", true),
+        business_link_title: String(data.get("business_link_title") || "").trim(),
+        business_link_subtitle: String(data.get("business_link_subtitle") || "").trim(),
+        business_link_cta_label: String(data.get("business_link_cta_label") || "").trim(),
+        music_link_visible: boolField("music_link_visible"),
+        music_link_title: String(data.get("music_link_title") || "").trim(),
+        music_link_subtitle: String(data.get("music_link_subtitle") || "").trim(),
+        music_link_cta_label: String(data.get("music_link_cta_label") || "").trim(),
+        newsletter_cta_label: String(data.get("newsletter_cta_label") || "").trim(),
+        community_link_visible: boolField("community_link_visible", true),
+        community_link_title: String(data.get("community_link_title") || "").trim(),
+        community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
+        community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
         music_enabled: boolField("music_enabled"),
         music_url: String(data.get("music_url") || "").trim(),
@@ -700,7 +837,7 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "faq_visible", "discord_visible", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "community_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
@@ -714,6 +851,12 @@
       if (settings.discord_visible === undefined) setBoolField("discord_visible", true);
       if (settings.creator_passport_visible === undefined) setBoolField("creator_passport_visible", true);
       if (settings.redirect_mina_enabled === undefined) setBoolField("redirect_mina_enabled", true);
+      if (settings.discord_link_visible === undefined) setBoolField("discord_link_visible", true);
+      if (settings.tiktok_link_visible === undefined) setBoolField("tiktok_link_visible", true);
+      if (settings.battle_link_visible === undefined) setBoolField("battle_link_visible", true);
+      if (settings.business_link_visible === undefined) setBoolField("business_link_visible", true);
+      if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
+      if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
@@ -882,7 +1025,7 @@
         button.setAttribute("aria-selected", button.dataset.adminTab === active ? "true" : "false");
       });
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
-        panel.hidden = panel.dataset.adminPanel !== active;
+        panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
       });
       if (active === "runtime") loadLiveRuntime();
     }

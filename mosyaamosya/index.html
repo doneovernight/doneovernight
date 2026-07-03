@@ -1042,7 +1042,32 @@
       quick_announcement: "",
       faq_visible: true,
       discord_visible: true,
-      creator_passport_visible: true
+      creator_passport_visible: true,
+      discord_link_visible: true,
+      discord_link_title: "Discord",
+      discord_link_subtitle: "Community",
+      discord_link_cta_label: "Join",
+      tiktok_link_visible: true,
+      tiktok_link_title: "TikTok",
+      tiktok_link_subtitle: "@mosyaamosya",
+      tiktok_link_cta_label: "Watch",
+      battle_link_visible: true,
+      battle_link_title: "Prepare for Battle",
+      battle_link_subtitle: "Get your TikTok Coins before the battle begins.",
+      battle_link_cta_label: "Prepare",
+      business_link_visible: true,
+      business_link_title: "Business",
+      business_link_subtitle: "Booking and collabs",
+      business_link_cta_label: "Email",
+      music_link_visible: false,
+      music_link_title: "Music",
+      music_link_subtitle: "Mina's stream soundtrack",
+      music_link_cta_label: "Open",
+      newsletter_cta_label: "Subscribe to the Mailing List",
+      community_link_visible: true,
+      community_link_title: "Community",
+      community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
+      community_link_cta_label: "Join Discord"
     };
     const params = new URLSearchParams(window.location.search);
     const forceExperience = params.get("experience") === "1";
@@ -1303,7 +1328,7 @@
       const cta = $("primaryCta");
       if (displayLive) {
         const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
-        cta.textContent = hasBattleMode ? "Prepare" : (settings.live_button_text || "Join Live");
+        cta.textContent = hasBattleMode ? textSetting(settings, "battle_link_cta_label", "Prepare") : (settings.live_button_text || "Join Live");
         cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
         cta.target = "_blank";
         cta.rel = "noreferrer";
@@ -1487,16 +1512,25 @@
     function actionUrl(action, settings) {
       if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
       if (action.key === "discord") return safeUrl(settings.discord_invite_url || settings.discord_url);
+      if (action.key === "music") return safeUrl(settings.music_url);
       return safeUrl(settings[action.field]);
     }
 
+    function textSetting(settings, key, fallbackText) {
+      const value = String(settings[key] || "").trim();
+      return value || fallbackText;
+    }
+
     function renderButtons(settings) {
+      const discordState = settings.discord_visible === false ? "hidden" : String(settings.community_state || "open");
+      const discordOpen = discordState === "open";
       const actions = [
-        { key: "discord", title: "Discord", sub: "Community", field: "discord_invite_url", label: "Join", icon: icons.discord },
-        { key: "tiktok", title: "TikTok", sub: "@mosyaamosya", field: "tiktok_url", label: "Watch", icon: icons.tiktok },
-        { key: "support", title: "Prepare for Battle", sub: "Get your TikTok Coins before the battle begins.", field: "tiktok_coins_url", label: "Prepare", icon: icons.heart },
-        { key: "business", title: "Business", sub: settings.business_email || "Booking and collabs", field: "business_email", label: "Email", icon: icons.mail }
-      ];
+        { key: "discord", visible: settings.discord_link_visible !== false && discordOpen, title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
+        { key: "tiktok", visible: settings.tiktok_link_visible !== false, title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
+        { key: "support", visible: settings.battle_link_visible !== false, title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
+        { key: "business", visible: settings.business_link_visible !== false, title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
+        { key: "music", visible: settings.music_link_visible === true && Boolean(settings.music_url), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's stream soundtrack"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
+      ].filter((action) => action.visible);
       const grid = $("buttonGrid");
       grid.innerHTML = "";
       actions.forEach((action) => {
@@ -1577,6 +1611,14 @@
           block.classList.add("is-done");
         }, 650);
       });
+    }
+
+    function renderNewsletter(settings) {
+      const block = $("newsletterBlock");
+      const start = $("newsletterStart");
+      if (!block || !start) return;
+      block.hidden = settings.subscribe_popup_enabled === false;
+      start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
     }
 
     function setupExplore() {
@@ -1792,11 +1834,17 @@
         countdown.classList.remove("is-visible");
       }
       const discordUrl = safeUrl(settings.discord_invite_url || settings.discord_url);
-      $("communityCard").hidden = settings.discord_visible === false || settings.community_state === "hidden";
+      const discordState = settings.discord_visible === false ? "hidden" : String(settings.community_state || "open");
+      const communityCard = $("communityCard");
+      communityCard.hidden = settings.community_link_visible === false || discordState === "hidden";
       const passportLink = document.querySelector('[data-open-sheet="passportSheet"]');
       if (passportLink) passportLink.hidden = settings.creator_passport_visible === false;
       const community = $("communityCta");
-      if (discordUrl) {
+      communityCard.querySelector("h2").textContent = textSetting(settings, "community_link_title", "Community");
+      communityCard.querySelector("p").textContent = discordState === "preview" ? "Community opening soon" : textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.");
+      community.hidden = discordState === "preview";
+      community.textContent = textSetting(settings, "community_link_cta_label", "Join Discord");
+      if (discordState === "open" && discordUrl) {
         community.href = discordUrl;
         community.removeAttribute("aria-disabled");
       } else {
@@ -1804,6 +1852,7 @@
         community.setAttribute("aria-disabled", "true");
       }
       renderButtons(settings);
+      renderNewsletter(settings);
       renderPinnedBlock(settings);
       setupNewsletter();
       setupExplore();
