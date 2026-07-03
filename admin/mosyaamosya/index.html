@@ -3146,8 +3146,14 @@
         return "Uploaded asset";
       }
     }
+    function supportedSignatureAudio(info = {}) {
+      const mime = String(info.mime || "").split(";")[0].trim().toLowerCase();
+      const url = String(info.url || "").toLowerCase();
+      if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3", "audio/aac", "audio/aacp", "audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mime)) return true;
+      return /\.(mp3|m4a|aac)(?:[?#].*)?$/.test(url);
+    }
     function classifyHealth(kind, info = {}) {
-      if (!info.url) return { label: "Not set", className: "empty" };
+      if (!info.url) return { label: kind === "signature" ? "Not configured" : "Not set", className: "empty" };
       if (kind === "hero") {
         if (info.duration && info.duration > 16) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 8_000_000) return { label: "Needs Optimization", className: "warn" };
@@ -3159,8 +3165,9 @@
         return { label: "Optimized", className: "ready" };
       }
       if (kind === "signature") {
-        if (info.duration && info.duration > 15) return { label: "Needs Optimization", className: "warn" };
+        if (!supportedSignatureAudio(info)) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 2_000_000) return { label: "Needs Optimization", className: "warn" };
+        if (info.duration && (info.duration < 5 || info.duration > 15)) return { label: "Needs Optimization", className: "warn" };
         return { label: "Ready", className: "ready" };
       }
       return { label: "Ready", className: "ready" };
@@ -3419,6 +3426,14 @@
         });
         form.elements[field].value = data.media.url;
         if (kind === "intro-audio") {
+          mediaState.signature = {
+            url: data.media.url,
+            size: Number(data.media.size) || uploadFile.size,
+            mime: data.media.contentType || uploadFile.type,
+            duration: preparedIntroAudio && preparedIntroAudio.duration,
+            updated: new Date().toUTCString(),
+            prepared: true
+          };
           const successMessage = (preparedIntroAudio && preparedIntroAudio.message ? preparedIntroAudio.message + "\n" : "") + "✓ Audio uploaded\nPreview available\nReady to save";
           await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage });
           setStatus(successMessage);
