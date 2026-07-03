@@ -96,23 +96,31 @@
       min-height: 100vh;
       min-height: 100dvh;
       margin: 0 auto;
-      padding: 0 14px 0;
+      padding: 14px 14px 0;
       display: grid;
       gap: 16px;
       transition: opacity .35s ease;
     }
     .intro-pending .shell { opacity: 0; }
+    .hero-bleed-video {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      z-index: -1;
+      width: 100vw;
+      height: calc(76px + env(safe-area-inset-top));
+      object-fit: cover;
+      pointer-events: none;
+      filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
+      opacity: calc(var(--ambient-video-opacity) + .04);
+      transform: translateX(-50%) translateZ(0);
+    }
     .hero {
       position: relative;
-      width: 100vw;
       min-height: 76vh;
-      min-height: calc(76svh + env(safe-area-inset-top));
-      margin-left: calc(50% - 50vw);
-      margin-right: calc(50% - 50vw);
       overflow: hidden;
       border: 1px solid rgba(255,211,223,.18);
-      border-width: 0 0 1px;
-      border-radius: 0 0 34px 34px;
+      border-radius: 34px;
       background: linear-gradient(160deg, #26100c, #080504);
       box-shadow: 0 22px 74px rgba(5,2,1,.38), inset 0 1px rgba(255,255,255,.2);
       isolation: isolate;
@@ -153,7 +161,7 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      padding: calc(16px + env(safe-area-inset-top)) 16px 16px;
+      padding: 16px;
     }
     .hero-actions {
       display: flex;
@@ -862,14 +870,8 @@
     }
     @media (min-width: 760px) {
       .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
-      .hero {
-        width: auto;
-        min-height: 760px;
-        margin-left: 0;
-        margin-right: 0;
-        border-width: 1px;
-        border-radius: 42px;
-      }
+      .hero-bleed-video { display: none; }
+      .hero { min-height: 760px; border-radius: 42px; }
       .hero-top { padding: 16px; }
       .hero-content { left: 28px; right: 28px; bottom: 28px; }
       .button-grid { grid-template-columns: repeat(2, 1fr); }
@@ -880,6 +882,7 @@
 </head>
 <body class="theme-mina">
   <main class="shell">
+    <video class="hero-bleed-video" id="heroBleedVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg" aria-hidden="true"></video>
     <section class="hero" id="hero">
       <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
       <div class="hero-top">
@@ -2087,7 +2090,9 @@
       setText("location", settings.location || fallback.location);
       $("avatarImage").src = profileImage(settings);
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
-      $("heroVideo").src = heroVideo(settings);
+      const heroVideoUrl = heroVideo(settings);
+      $("heroVideo").src = heroVideoUrl;
+      $("heroBleedVideo").src = heroVideoUrl;
       applyLiveState({
         isLive: false,
         liveUrl: fallbackLiveUrl(settings),
