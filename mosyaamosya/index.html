@@ -410,6 +410,34 @@
       opacity: .52;
       pointer-events: none;
     }
+    .link-button.has-battle-discount {
+      overflow: visible;
+    }
+    .battle-discount-sticker {
+      position: absolute;
+      top: -21px;
+      left: -24px;
+      z-index: 0;
+      width: clamp(48px, 13vw, 56px);
+      height: auto;
+      pointer-events: none;
+      transform: rotate(-10deg) scale(1);
+      transform-origin: center;
+      filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
+      animation: battleStickerPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes battleStickerPulse {
+      0%, 78%, 100% {
+        transform: rotate(-10deg) scale(1);
+        filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
+      }
+      42% {
+        transform: rotate(-10deg) scale(1.06);
+        filter:
+          drop-shadow(0 0 12px rgba(255, 62, 104, .32))
+          drop-shadow(0 7px 14px rgba(255, 48, 92, .2));
+      }
+    }
     .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .icon-badge {
       width: 38px;
@@ -806,6 +834,9 @@
       }
       .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
         transform: none !important;
+      }
+      .battle-discount-sticker {
+        animation: none !important;
       }
     }
     @media (min-width: 760px) {
@@ -1596,6 +1627,8 @@
         renderedActions += 1;
         const item = document.createElement(url ? "a" : "div");
         item.className = "link-button content-block";
+        const showBattleDiscount = action.key === "support" && Boolean(url);
+        if (showBattleDiscount) item.classList.add("has-battle-discount");
         item.dataset.blockType = action.key === "discord" ? "discord" : "link";
         if (url) {
           item.href = url;
@@ -1603,6 +1636,7 @@
           item.rel = "noreferrer";
         }
         item.innerHTML =
+          (showBattleDiscount ? '<img class="battle-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">' : "") +
           '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
           escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
           escapeHtml(action.label) + '</span>';
