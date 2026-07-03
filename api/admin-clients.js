@@ -53,7 +53,9 @@ const PHASE_2_CREATOR_FIELDS = [
   "creator_dna",
   "tiktok_live_username",
   "auto_live_detection_enabled",
-  "manual_live_fallback_enabled"
+  "manual_live_fallback_enabled",
+  "battle_mode_enabled",
+  "battle_opponent"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
@@ -79,6 +81,8 @@ const DEFAULT_MINA_SETTINGS = {
   tiktok_live_username: "mosyaamosya",
   auto_live_detection_enabled: true,
   manual_live_fallback_enabled: true,
+  battle_mode_enabled: false,
+  battle_opponent: "",
   next_live_datetime: "",
   theme_preset: "mina",
   creator_dna: "streamer",
@@ -518,6 +522,8 @@ function normalizeCreator(row = {}) {
     tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
     auto_live_detection_enabled: bool(row.auto_live_detection_enabled, true),
     manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    battle_mode_enabled: bool(row.battle_mode_enabled, false),
+    battle_opponent: clean(row.battle_opponent),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -606,6 +612,8 @@ function creatorPayload(input = {}) {
     tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
     auto_live_detection_enabled: bool(input.auto_live_detection_enabled, true),
     manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    battle_mode_enabled: bool(input.battle_mode_enabled, false),
+    battle_opponent: clean(input.battle_opponent),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),

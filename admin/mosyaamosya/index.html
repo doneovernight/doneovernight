@@ -240,6 +240,11 @@
               <div><strong>Manual fallback live</strong><span>Immediately marks Mina live when auto-check fails.</span></div>
               <label class="switch" aria-label="Manual fallback live"><input name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
             </div>
+            <div class="span-2 switch-row">
+              <div><strong>Manual Battle Mode</strong><span>Fallback battle state when TikTok metadata is unavailable.</span></div>
+              <label class="switch" aria-label="Manual Battle Mode"><input name="battle_mode_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <label class="span-2">Battle opponent<input name="battle_opponent" placeholder="Optional"></label>
             <label class="span-2">Live button text<input name="live_button_text"></label>
             <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
             <label>Timezone<input name="timezone" placeholder="America/Chicago"></label>
@@ -452,6 +457,8 @@
         tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || "mosyaamosya",
         auto_live_detection_enabled: form.elements.auto_live_detection_enabled.checked,
         manual_live_fallback_enabled: form.elements.manual_live_fallback_enabled.checked,
+        battle_mode_enabled: form.elements.battle_mode_enabled.checked,
+        battle_opponent: String(data.get("battle_opponent") || "").trim(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         welcome_intro_enabled: form.elements.welcome_intro_enabled.checked,
         music_enabled: form.elements.music_enabled.checked,
@@ -475,7 +482,7 @@
         if (!form.elements[key] || typeof form.elements[key].checked === "boolean") return;
         form.elements[key].value = key === "next_live_datetime" ? inputDateTime(value) : value || "";
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "redirect_mina_enabled"].forEach((key) => {
         if (form.elements[key]) form.elements[key].checked = settings[key] !== false && Boolean(settings[key]);
       });
       if (settings.auto_live_detection_enabled === undefined && form.elements.auto_live_detection_enabled) form.elements.auto_live_detection_enabled.checked = true;
@@ -596,7 +603,17 @@
       try {
         const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { headers: { Accept: "application/json" } });
         const data = await response.json();
-        status.textContent = "Last checked: " + (data.checkedAt || "unknown") + ". Status: " + (data.isLive ? "LIVE NOW" : "Offline") + ". Source: " + (data.source || "unknown") + ".";
+        const capabilities = data.capabilities || {};
+        const viewer = capabilities.viewerCount === true && Number.isFinite(Number(data.viewerCount)) ? Number(data.viewerCount).toLocaleString() : "unavailable";
+        const error = data.error ? data.error : "none";
+        status.textContent = [
+          "Last checked: " + (data.checkedAt || "unknown"),
+          "Status: " + (data.isLive ? "LIVE NOW" : "Offline"),
+          "Source: " + (data.source || "unknown"),
+          "Viewer count: " + viewer,
+          "Runtime error: " + error,
+          "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", gifts=" + Boolean(capabilities.gifts)
+        ].join(". ") + ".";
       } catch (error) {
         status.textContent = "Last checked: error. Status: unknown. Source: error.";
       }

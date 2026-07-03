@@ -1052,19 +1052,25 @@
 
     function applyLiveState(liveState, settings) {
       const isLive = Boolean(liveState && liveState.isLive);
+      const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
+      const hasRealViewerCount = isLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
+      const hasBattleMode = isLive && liveState.battleActive === true && capabilities.battleActive === true;
       document.body.classList.toggle("is-live", isLive);
       $("statusPill").querySelector("span:last-child").textContent = isLive ? "Live" : "Offline";
-      setText("liveTitle", isLive ? "🟢 LIVE NOW" : "⚫ Offline");
-      if (isLive && Number.isFinite(Number(liveState.viewerCount))) {
+      setText("liveTitle", hasBattleMode ? "Battle Live" : (isLive ? "🟢 LIVE NOW" : "⚫ Offline"));
+      if (hasBattleMode) {
+        setText("liveCopy", "Prepare for Battle");
+      } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
-        setText("liveCopy", isLive ? "Join the stream" : "See you at the next stream.");
+        setText("liveCopy", isLive ? "" : "See you at the next stream.");
       }
 
       const cta = $("primaryCta");
       if (isLive) {
-        cta.textContent = settings.live_button_text || "Join Live";
-        cta.href = safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
+        const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
+        cta.textContent = hasBattleMode ? "Prepare" : (settings.live_button_text || "Join Live");
+        cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
         cta.target = "_blank";
         cta.rel = "noreferrer";
         cta.removeAttribute("aria-disabled");
