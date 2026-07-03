@@ -1012,7 +1012,7 @@
 <body class="theme-mina">
   <main class="shell">
     <section class="hero" id="hero">
-      <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
+      <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="auto" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
       <div class="hero-top">
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <div class="hero-actions">
@@ -1112,7 +1112,7 @@
   </section>
 
   <section class="intro" id="intro" aria-label="Welcome intro">
-    <video id="introVideo" autoplay muted loop playsinline preload="metadata" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
+    <video id="introVideo" autoplay muted loop playsinline preload="auto" poster="/assets/mosyaamosya/profile-v2.jpg"></video>
     <div class="intro-copy">
       <span>Welcome.</span>
       <span>Meet Mina.</span>
@@ -1322,6 +1322,54 @@
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
     function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
+    const retryableVideos = new Set();
+    let videoRetryBound = false;
+    function prepareMutedLoopVideo(video, src) {
+      if (!video) return;
+      video.autoplay = true;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.controls = false;
+      video.setAttribute("autoplay", "");
+      video.setAttribute("muted", "");
+      video.setAttribute("loop", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("preload", "auto");
+      video.removeAttribute("controls");
+      if (src && video.getAttribute("src") !== src) {
+        video.src = src;
+        video.load();
+      }
+      playMutedLoopVideo(video);
+    }
+    function playMutedLoopVideo(video) {
+      if (!video) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      const attempt = video.play();
+      if (attempt && typeof attempt.catch === "function") {
+        attempt.catch(() => {
+          retryableVideos.add(video);
+          bindVideoAutoplayRetry();
+        });
+      }
+    }
+    function bindVideoAutoplayRetry() {
+      if (videoRetryBound) return;
+      videoRetryBound = true;
+      const retry = () => {
+        retryableVideos.forEach((video) => {
+          retryableVideos.delete(video);
+          playMutedLoopVideo(video);
+        });
+      };
+      window.addEventListener("pointerdown", retry, { once: true, passive: true });
+      window.addEventListener("touchstart", retry, { once: true, passive: true });
+      window.addEventListener("keydown", retry, { once: true });
+    }
     function introAudioInfo(settings) {
       const url = safeUrl(settings.intro_audio_url);
       if (!settings.intro_audio_enabled || !url) return { url: "", enabled: false };
@@ -2489,9 +2537,10 @@
         return;
       }
       const video = $("introVideo");
-      video.src = heroVideo(settings);
       intro.hidden = false;
+      prepareMutedLoopVideo(video, heroVideo(settings));
       const dismiss = () => {
+        if (video) video.muted = true;
         playIntroAudio(settings, true).then((played) => {
           if (!played && introAudioInfo(settings).enabled) document.body.dataset.introAudioState = "waiting-for-user";
         });
@@ -2518,7 +2567,7 @@
       $("avatarImage").src = profileImage(settings);
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       const heroVideoUrl = heroVideo(settings);
-      $("heroVideo").src = heroVideoUrl;
+      prepareMutedLoopVideo($("heroVideo"), heroVideoUrl);
       applyLiveState({
         isLive: false,
         liveUrl: fallbackLiveUrl(settings),
