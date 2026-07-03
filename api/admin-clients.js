@@ -2,6 +2,7 @@ const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
 const crypto = require("node:crypto");
+const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
@@ -747,6 +748,10 @@ async function handleCreatorSettings(req, res) {
 
 module.exports = async function handler(req, res) {
   const query = getQuery(req);
+  if (query.creator_live_status === "1") {
+    return handleCreatorLiveStatus(req, res);
+  }
+
   if (query.creator_settings === "1") {
     try {
       return await handleCreatorSettings(req, res);
