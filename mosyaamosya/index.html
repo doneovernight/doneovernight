@@ -334,6 +334,22 @@
     }
     .live-copy strong { display: block; font-size: 13px; letter-spacing: .04em; }
     .live-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .live-meta {
+      display: none;
+      flex-wrap: wrap;
+      gap: 7px;
+      color: rgba(255,245,247,.68);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .live-meta.is-visible { display: flex; }
+    .live-meta span {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 999px;
+      padding: 7px 9px;
+      background: rgba(255,255,255,.045);
+      box-shadow: inset 0 1px rgba(255,255,255,.08);
+    }
     .countdown {
       display: none;
       border: 1px solid rgba(255,211,223,.14);
@@ -776,6 +792,7 @@
             </div>
           </div>
           <a class="primary" id="primaryCta" href="#" aria-disabled="true">Join Live</a>
+          <div class="live-meta" id="liveMeta" aria-live="polite"></div>
           <div class="countdown" id="countdown"></div>
         </section>
       </div>
@@ -1049,6 +1066,29 @@
       const username = String(settings.tiktok_live_username || settings.username || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
       return safeUrl(settings.live_url) || "https://www.tiktok.com/@" + username + "/live";
     }
+    function compactNumber(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "";
+      try {
+        return new Intl.NumberFormat("en", {
+          notation: number >= 1000 ? "compact" : "standard",
+          maximumFractionDigits: number >= 1000 ? 1 : 0
+        }).format(number);
+      } catch (error) {
+        return number.toLocaleString();
+      }
+    }
+    function setLiveMeta(items) {
+      const meta = $("liveMeta");
+      if (!meta) return;
+      const visibleItems = items.filter(Boolean);
+      meta.classList.toggle("is-visible", visibleItems.length > 0);
+      meta.replaceChildren(...visibleItems.map((item) => {
+        const span = document.createElement("span");
+        span.textContent = item;
+        return span;
+      }));
+    }
 
     function applyLiveState(liveState, settings) {
       const isLive = Boolean(liveState && liveState.isLive);
@@ -1056,20 +1096,27 @@
       const hasBattleMode = liveState.battleActive === true && capabilities.battleActive === true;
       const displayLive = isLive || hasBattleMode;
       const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
+      const hasRealLikeCount = displayLive && capabilities.likeCount === true && Number.isFinite(Number(liveState.likeCount));
+      const hasLiveDuration = displayLive && capabilities.liveDuration === true && typeof liveState.liveDuration === "string" && liveState.liveDuration.trim();
       const hasManualStreak = hasBattleMode && capabilities.battleWinStreak === true && Number.isFinite(Number(liveState.battleWinStreak)) && Number(liveState.battleWinStreak) > 0;
       document.body.classList.toggle("is-live", displayLive);
       $("statusPill").querySelector("span:last-child").textContent = displayLive ? "Live" : "Offline";
-      setText("liveTitle", hasBattleMode ? "Battle Mode" : (displayLive ? "🟢 LIVE NOW" : "⚫ Offline"));
+      setText("liveTitle", hasBattleMode ? "Battle Mode" : (displayLive ? "LIVE NOW" : "Offline"));
       if (hasBattleMode) {
         setText("liveCopy", "Support the Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
-        setText("liveCopy", isLive ? "" : "See you at the next stream.");
+        setText("liveCopy", displayLive ? "" : "See you at the next stream.");
       }
+      setLiveMeta([
+        hasRealViewerCount ? compactNumber(liveState.viewerCount) + " watching" : "",
+        hasRealLikeCount ? compactNumber(liveState.likeCount) + " likes" : "",
+        hasLiveDuration ? "Live for " + liveState.liveDuration.trim() : ""
+      ]);
 
       const cta = $("primaryCta");
-      if (isLive) {
+      if (displayLive) {
         const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
         cta.textContent = hasBattleMode ? "Prepare" : (settings.live_button_text || "Join Live");
         cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
