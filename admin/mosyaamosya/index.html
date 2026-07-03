@@ -2411,10 +2411,59 @@
       if (action === "start-live") {
         setBoolField("live_status", true);
         setBoolField("manual_live_fallback_enabled", true);
+        const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+        if (form.elements.live_url && !String(form.elements.live_url.value || "").trim()) {
+          form.elements.live_url.value = "https://www.tiktok.com/@" + username + "/live";
+        }
+        if (form.elements.live_button_text && !String(form.elements.live_button_text.value || "").trim()) {
+          form.elements.live_button_text.value = "Join Live";
+        }
+        updateBattleSummary();
+        updateRuntimeUi();
+        try {
+          setStatus("Saving live mode...");
+          const data = await api({
+            action: "set_live_mode",
+            creator_session: creatorSession(),
+            slug: "mosyaamosya",
+            live_status: true,
+            live_url: form.elements.live_url.value,
+            tiktok_live_username: form.elements.tiktok_live_username.value
+          });
+          fillForm(data.creator);
+          refreshPreviewLiveRuntime();
+          loadLiveRuntime();
+          updateOverview(data.creator && data.creator.updated_at);
+          setStatus("Live mode on");
+        } catch (error) {
+          setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
+        }
+        return;
       } else if (action === "end-live") {
         setBoolField("live_status", false);
         setBoolField("manual_live_fallback_enabled", false);
         setBoolField("battle_mode_enabled", false);
+        updateBattleSummary();
+        updateRuntimeUi();
+        try {
+          setStatus("Saving live mode...");
+          const data = await api({
+            action: "set_live_mode",
+            creator_session: creatorSession(),
+            slug: "mosyaamosya",
+            live_status: false,
+            live_url: form.elements.live_url.value,
+            tiktok_live_username: form.elements.tiktok_live_username.value
+          });
+          fillForm(data.creator);
+          refreshPreviewLiveRuntime();
+          loadLiveRuntime();
+          updateOverview(data.creator && data.creator.updated_at);
+          setStatus("Live mode off");
+        } catch (error) {
+          setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
+        }
+        return;
       } else if (action === "reset-streak") {
         form.elements.battle_win_streak.value = 0;
         form.elements.battle_result.value = "";
@@ -2474,6 +2523,12 @@
       const frame = $("previewFrame");
       if (frame && frame.contentWindow) {
         frame.contentWindow.postMessage({ type: "creator-theme-preview", theme_preset: activeTheme, creator_dna: activeDna }, "https://doneovernight.com");
+      }
+    }
+    function refreshPreviewLiveRuntime() {
+      const frame = $("previewFrame");
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({ type: "creator-live-refresh" }, "https://doneovernight.com");
       }
     }
     function updatePreviewFrame(refresh = true) {
@@ -2678,7 +2733,7 @@
       const status = $("liveRuntimeStatus");
       if (!status) return;
       try {
-        const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { headers: { Accept: "application/json" } });
+        const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } });
         const data = await response.json();
         const capabilities = data.capabilities || {};
         const source = data.source || "unknown";

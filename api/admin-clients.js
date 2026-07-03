@@ -1245,6 +1245,35 @@ async function saveCreator(input = {}) {
   }
 }
 
+async function setCreatorLiveMode(input = {}) {
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(DEFAULT_MINA_SETTINGS) }));
+  const current = currentResult.creator || normalizeCreator(DEFAULT_MINA_SETTINGS);
+  const isLive = bool(input.live_status ?? input.enabled, false);
+  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
+  const now = new Date().toISOString();
+  const patch = {
+    manual_live_fallback_enabled: isLive,
+    live_status: isLive,
+    live_url: clean(input.live_url) || clean(current.live_url) || "https://www.tiktok.com/@" + username + "/live",
+    updated_at: now
+  };
+  if (!isLive) {
+    patch.battle_mode_enabled = false;
+  }
+  const rows = await supabaseFetch("creators?id=eq." + encodeURIComponent(current.id || MINA_CREATOR_ID) + "&select=" + CREATOR_FIELDS, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: patch,
+    context: "Creator live mode"
+  });
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  return {
+    creator: normalizeCreator({ ...current, ...patch, ...row }),
+    source: "database"
+  };
+}
+
 function connectionStatusLabel(status) {
   if (status === "connected") return "Connected";
   if (status === "needs_attention") return "Needs attention";
@@ -2157,6 +2186,11 @@ async function handleCreatorSettings(req, res) {
   if (input.action === "reset_poll_results") {
     const poll = await resetPollResults(input);
     return send(res, 200, { success: true, poll });
+  }
+
+  if (input.action === "set_live_mode") {
+    const result = await setCreatorLiveMode(input);
+    return send(res, 200, { success: true, creator: result.creator, source: result.source });
   }
 
   const result = await saveCreator(input.creator || input);
