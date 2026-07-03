@@ -314,7 +314,7 @@
       line-height: 1.48;
       text-wrap: pretty;
     }
-    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card {
+    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card, .poll-card {
       position: relative;
       border: 1px solid var(--glass-line);
       background: var(--glass-bg);
@@ -322,7 +322,7 @@
       backdrop-filter: blur(18px) saturate(1.14);
       overflow: hidden;
     }
-    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
+    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before, .poll-card::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -340,7 +340,7 @@
       border-radius: 26px;
       padding: 16px;
     }
-    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > * { position: relative; z-index: 1; }
+    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > *, .poll-card > * { position: relative; z-index: 1; }
     .live-copy {
       display: flex;
       justify-content: space-between;
@@ -581,6 +581,77 @@
     }
     .newsletter-card.is-loading input {
       opacity: .52;
+    }
+    .newsletter-error {
+      display: none;
+      color: rgba(255,211,223,.8);
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1.35;
+      padding: 0 4px;
+    }
+    .newsletter-card.has-error .newsletter-error {
+      display: block;
+    }
+    .poll-card {
+      display: grid;
+      gap: 12px;
+      border-radius: 26px;
+      padding: 16px;
+    }
+    .poll-card h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: 0;
+      line-height: 1.25;
+    }
+    .poll-options {
+      display: grid;
+      gap: 8px;
+    }
+    .poll-option {
+      min-height: 48px;
+      width: 100%;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.055);
+      color: rgba(255,245,247,.86);
+      padding: 0 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      font-weight: 900;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .poll-option[disabled] {
+      cursor: default;
+      opacity: .95;
+    }
+    .poll-option::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--poll-percent, 0%);
+      background: linear-gradient(90deg, rgba(255,211,223,.2), rgba(255,159,189,.1));
+      opacity: 0;
+      transition: width .32s ease, opacity .2s ease;
+    }
+    .poll-card.has-voted .poll-option::before { opacity: 1; }
+    .poll-option span, .poll-option strong { position: relative; z-index: 1; }
+    .poll-option strong { color: var(--pink); font-size: 12px; }
+    .poll-option.is-selected {
+      border-color: rgba(255,211,223,.36);
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 0 0 3px rgba(255,211,223,.08);
+    }
+    .poll-meta {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      min-height: 16px;
     }
     .gap-spinner {
       width: 16px;
@@ -947,7 +1018,8 @@
         <p>This page is designed to keep Mina's creator experience focused and lightweight.</p>
         <ul class="sheet-list">
           <li>Creator links open directly to the services shown.</li>
-          <li>Newsletter interactions are kept minimal and only use the email you enter.</li>
+          <li>Poll votes are stored as aggregate responses with a browser/device dedupe signal.</li>
+          <li>Newsletter interactions store the email you enter and the creator page source for Mina's private admin inbox.</li>
           <li>Live metadata is only shown when confirmed by Creator OS runtime capabilities.</li>
         </ul>
       </div>
@@ -997,6 +1069,7 @@
 
   <script>
     const fallback = {
+      id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",
       username: "mosyaamosya",
       slug: "mosyaamosya",
@@ -1039,6 +1112,9 @@
       community_state: "open",
       quick_announcement: "",
       quick_poll: "",
+      poll_enabled: false,
+      poll_question: "",
+      poll_options: ["Yes", "No"],
       faq_visible: true,
       discord_visible: true,
       creator_passport_visible: true,
@@ -1622,6 +1698,163 @@
       return settings[key] === undefined ? fallbackValue : settings[key] === true;
     }
 
+    async function creatorApi(payload) {
+      const response = await fetch("/api/creator-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) {
+        throw new Error(data.error || "Creator OS request failed.");
+      }
+      return data;
+    }
+
+    function pollStorageId() {
+      const key = "creator_os_visitor_id";
+      let value = "";
+      try {
+        value = localStorage.getItem(key) || "";
+        if (!value) {
+          value = (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+          localStorage.setItem(key, value);
+        }
+      } catch (error) {
+        value = String(Date.now()) + Math.random().toString(16).slice(2);
+      }
+      return value;
+    }
+
+    function pollLocalKey(pollKey) {
+      return "creator_poll_vote_" + (pollKey || "mosyaamosya");
+    }
+
+    function normalizedPollOptions(value) {
+      const options = Array.isArray(value) ? value : ["Yes", "No"];
+      const seen = new Set();
+      const labels = options.map((option) => String(option && (option.label || option.title || option) || "").trim())
+        .filter(Boolean)
+        .filter((label) => {
+          const key = label.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 5);
+      while (labels.length < 2) labels.push(labels.length === 0 ? "Yes" : "No");
+      return labels.map((label, index) => ({
+        id: "option-" + (index + 1) + "-" + Array.from(label).reduce((sum, char) => (sum + char.charCodeAt(0) * 17) % 999999, 0).toString(16),
+        label,
+        votes: 0,
+        percentage: 0
+      }));
+    }
+
+    function stablePollHash(value) {
+      let hash = 2166136261;
+      Array.from(String(value || "")).forEach((char) => {
+        hash ^= char.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+      });
+      return (hash >>> 0).toString(16);
+    }
+
+    function pollKeyFor(settings, question, options) {
+      const labels = options.map((option) => option.label);
+      return "poll-" + stablePollHash([settings.id || fallback.id, question, JSON.stringify(labels)].join("|"));
+    }
+
+    function fallbackPollState(settings) {
+      const question = String(settings.poll_question || settings.quick_poll || "").trim();
+      const options = normalizedPollOptions(settings.poll_options);
+      return {
+        enabled: Boolean(settings.poll_enabled && question && options.length >= 2),
+        question,
+        pollKey: pollKeyFor(settings, question, options),
+        totalVotes: 0,
+        latestResponseAt: null,
+        options
+      };
+    }
+
+    function updatePollCard(card, poll, selectedOptionId) {
+      const voted = Boolean(selectedOptionId);
+      card.classList.toggle("has-voted", voted);
+      const meta = card.querySelector("[data-poll-meta]");
+      const options = Array.isArray(poll.options) ? poll.options : [];
+      card.querySelectorAll("[data-poll-option]").forEach((button) => {
+        const id = button.dataset.pollOption;
+        const option = options.find((item) => item.id === id) || {};
+        const percent = voted ? Math.max(0, Math.min(100, Number(option.percentage) || 0)) : 0;
+        button.style.setProperty("--poll-percent", percent + "%");
+        button.disabled = voted;
+        button.classList.toggle("is-selected", id === selectedOptionId);
+        const result = button.querySelector("strong");
+        if (result) result.textContent = voted ? percent + "%" : "";
+      });
+      if (meta) {
+        meta.textContent = voted
+          ? ((Number(poll.totalVotes) || 0).toLocaleString() + " vote" + (Number(poll.totalVotes) === 1 ? "" : "s"))
+          : "Vote to see results.";
+      }
+    }
+
+    async function refreshPollCard(card, settings, selectedOptionId = "") {
+      try {
+        const data = await creatorApi({ action: "poll_state", slug: settings.slug || "mosyaamosya" });
+        if (data.poll && data.poll.enabled) updatePollCard(card, data.poll, selectedOptionId);
+      } catch (error) {
+        updatePollCard(card, fallbackPollState(settings), selectedOptionId);
+      }
+    }
+
+    function renderPoll(settings) {
+      removeElement("pollCard");
+      if (String(settings.pinned_block || "").toLowerCase() !== "poll" || !settings.poll_enabled) return;
+      const poll = fallbackPollState(settings);
+      if (!poll.enabled) return;
+      const card = document.createElement("section");
+      card.className = "poll-card";
+      card.id = "pollCard";
+      card.dataset.blockType = "poll";
+      card.innerHTML = '<h2>' + escapeHtml(poll.question) + '</h2><div class="poll-options"></div><div class="poll-meta" data-poll-meta>Vote to see results.</div>';
+      const list = card.querySelector(".poll-options");
+      const stored = (() => {
+        try { return localStorage.getItem(pollLocalKey(poll.pollKey)) || ""; } catch (error) { return ""; }
+      })();
+      poll.options.forEach((option) => {
+        const button = document.createElement("button");
+        button.className = "poll-option";
+        button.type = "button";
+        button.dataset.pollOption = option.id;
+        button.innerHTML = '<span>' + escapeHtml(option.label) + '</span><strong></strong>';
+        button.addEventListener("click", async () => {
+          if (button.disabled) return;
+          button.disabled = true;
+          card.querySelector("[data-poll-meta]").innerHTML = '<span class="gap-spinner" aria-hidden="true"></span>';
+          try {
+            const data = await creatorApi({
+              action: "vote_poll",
+              slug: settings.slug || "mosyaamosya",
+              option_id: option.id,
+              option_label: option.label,
+              visitor_id: pollStorageId()
+            });
+            const selected = data.poll && data.poll.selectedOptionId ? data.poll.selectedOptionId : option.id;
+            try { localStorage.setItem(pollLocalKey((data.poll && data.poll.pollKey) || poll.pollKey), selected); } catch (error) {}
+            updatePollCard(card, data.poll || poll, selected);
+          } catch (error) {
+            card.querySelector("[data-poll-meta]").textContent = error.message || "Vote could not be saved.";
+            button.disabled = false;
+          }
+        });
+        list.appendChild(button);
+      });
+      insertBeforeFooter(card);
+      if (stored) refreshPollCard(card, settings, stored);
+    }
+
     function communityUrl(settings) {
       return safeUrl(settings.community_link_url);
     }
@@ -1683,14 +1916,13 @@
       removeElement("runtimePinned");
       const block = String(settings.pinned_block || "").toLowerCase();
       const announcement = String(settings.quick_announcement || "").trim();
-      const poll = String(settings.quick_poll || "").trim();
       const nextDate = nextLiveDate(settings);
       const activeCommunityUrl = communityUrl(settings);
       const battleUrl = safeUrl(settings.tiktok_coins_url);
       const content = {
         prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
         faq: featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
-        poll: poll ? ["Poll", poll] : null,
+        poll: null,
         announcement: ["Announcement", announcement || "No announcement yet."],
         community: !communityEnabled(settings) || !activeCommunityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Mina's Discord for stream updates and community drops.")],
         newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Mina updates.")],
@@ -1750,16 +1982,24 @@
       const form = $("newsletterForm");
       const input = $("newsletterEmail");
       const button = $("newsletterSubmit");
+      const errorText = $("newsletterError");
       if (!block || !start || !form || !input || !button) return;
       if (form.dataset.ready === "true") return;
       form.dataset.ready = "true";
       start.addEventListener("click", () => {
+        block.classList.remove("has-error");
+        if (errorText) errorText.textContent = "";
         block.classList.add("is-editing");
         window.setTimeout(() => input.focus(), 80);
       });
-      form.addEventListener("submit", (event) => {
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!input.value.trim()) {
+        const email = input.value.trim();
+        block.classList.remove("has-error");
+        if (errorText) errorText.textContent = "";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+          if (errorText) errorText.textContent = "Enter a valid email address.";
+          block.classList.add("has-error");
           input.focus();
           return;
         }
@@ -1769,10 +2009,25 @@
         button.setAttribute("aria-label", "Subscribing");
         input.disabled = true;
         button.disabled = true;
-        window.setTimeout(() => {
+        try {
+          await creatorApi({
+            action: "newsletter_signup",
+            slug: currentSettings.slug || "mosyaamosya",
+            email,
+            source_page: location.pathname
+          });
           block.classList.remove("is-loading");
           block.classList.add("is-done");
-        }, 650);
+        } catch (error) {
+          block.classList.remove("is-loading");
+          block.classList.add("is-editing");
+          input.disabled = false;
+          button.disabled = false;
+          button.textContent = "Submit";
+          button.removeAttribute("aria-label");
+          if (errorText) errorText.textContent = error.message || "Could not subscribe.";
+          block.classList.add("has-error");
+        }
       });
     }
 
@@ -1785,10 +2040,10 @@
       block.dataset.blockType = "newsletter";
       block.innerHTML =
         '<button class="newsletter-start" id="newsletterStart" type="button"></button>' +
-        '<form class="newsletter-form" id="newsletterForm">' +
+        '<form class="newsletter-form" id="newsletterForm" novalidate>' +
         '<input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">' +
         '<button class="primary" id="newsletterSubmit" type="submit">Submit</button>' +
-        '</form><div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>';
+        '</form><div class="newsletter-error" id="newsletterError" aria-live="polite"></div><div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>';
       insertBeforeFooter(block);
       const start = $("newsletterStart");
       start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
@@ -2122,6 +2377,7 @@
       }
       renderCommunity(settings);
       renderButtons(settings);
+      renderPoll(settings);
       renderNewsletter(settings);
       renderFooterNav(settings);
       renderPassport(settings);

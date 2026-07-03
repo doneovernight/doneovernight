@@ -83,6 +83,11 @@ const PHASE_3_CREATOR_FIELDS = [
   "discord_visible",
   "creator_passport_visible"
 ];
+const POLL_CREATOR_FIELDS = [
+  "poll_enabled",
+  "poll_question",
+  "poll_options"
+];
 const LINK_BLOCK_CREATOR_FIELDS = [
   "discord_link_visible",
   "discord_link_title",
@@ -126,13 +131,22 @@ const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_fade_out_duration",
   "intro_audio_stop_after"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
   PHASE_2_CREATOR_FIELDS,
   PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible"),
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
+const CREATOR_FIELDS_WITHOUT_POLL = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS,
   INTRO_AUDIO_CREATOR_FIELDS
 ).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
@@ -191,6 +205,9 @@ const DEFAULT_MINA_SETTINGS = {
   community_state: "open",
   quick_announcement: "",
   quick_poll: "",
+  poll_enabled: false,
+  poll_question: "",
+  poll_options: ["Yes", "No"],
   faq_visible: true,
   discord_visible: true,
   creator_passport_visible: true,
@@ -581,6 +598,81 @@ function normalizeCommunityState(value) {
   return allowed.has(state) ? state : "open";
 }
 
+function normalizePollOptions(value) {
+  let options = value;
+  if (typeof options === "string") {
+    try {
+      options = JSON.parse(options);
+    } catch (error) {
+      options = options.split(/\r?\n|,/);
+    }
+  }
+  if (!Array.isArray(options)) options = [];
+  const seen = new Set();
+  const cleaned = options
+    .map((option) => clean(typeof option === "string" ? option : option && (option.label || option.title || option.value)))
+    .filter(Boolean)
+    .filter((option) => {
+      const key = option.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
+  while (cleaned.length < 2) cleaned.push(cleaned.length === 0 ? "Yes" : "No");
+  return cleaned;
+}
+
+function pollOptionId(label, index) {
+  const suffix = Array.from(String(label || "")).reduce((sum, char) => (sum + char.charCodeAt(0) * 17) % 999999, 0).toString(16);
+  return "option-" + (index + 1) + "-" + suffix;
+}
+
+function stablePollHash(value) {
+  let hash = 2166136261;
+  Array.from(String(value || "")).forEach((char) => {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  });
+  return (hash >>> 0).toString(16);
+}
+
+function pollKeyFor(creator = {}, question = "", options = []) {
+  const keyInput = [creator.id || MINA_CREATOR_ID, question, JSON.stringify(options)].join("|");
+  return "poll-" + stablePollHash(keyInput);
+}
+
+function pollDefinition(creator = {}) {
+  const options = normalizePollOptions(creator.poll_options);
+  const question = clean(creator.poll_question || creator.quick_poll);
+  const enabled = bool(creator.poll_enabled, false) && question && options.length >= 2;
+  return {
+    enabled: Boolean(enabled),
+    question,
+    pollKey: pollKeyFor(creator, question, options),
+    options: options.map((label, index) => ({ id: pollOptionId(label, index), label }))
+  };
+}
+
+function hashText(value) {
+  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+}
+
+function visitorHash(req, input = {}, pollKey = "") {
+  const visitorId = clean(input.visitor_id || input.visitorId || input.device_id || input.deviceId);
+  const forwarded = clean(req.headers["x-forwarded-for"]).split(",")[0] || clean(req.socket && req.socket.remoteAddress);
+  const userAgent = clean(req.headers["user-agent"]);
+  return hashText([sessionSecret(), pollKey, visitorId || forwarded, userAgent].join("|"));
+}
+
+function publicCreatorSlug(creator = {}) {
+  return normalizeSlug(creator.slug || creator.username || "mosyaamosya");
+}
+
+function creatorEventSlug(creator = {}) {
+  return publicCreatorSlug(creator).replace(/[^a-z0-9_]+/g, "_");
+}
+
 function normalizeCustomLinks(value) {
   let links = value;
   if (typeof links === "string") {
@@ -814,6 +906,9 @@ function normalizeCreator(row = {}) {
     community_state: normalizeCommunityState(row.community_state),
     quick_announcement: clean(row.quick_announcement),
     quick_poll: clean(row.quick_poll),
+    poll_enabled: bool(row.poll_enabled, false),
+    poll_question: clean(row.poll_question || row.quick_poll),
+    poll_options: normalizePollOptions(row.poll_options),
     faq_visible: bool(row.faq_visible, true),
     discord_visible: bool(row.discord_visible, true),
     creator_passport_visible: bool(row.creator_passport_visible, true),
@@ -875,9 +970,15 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
         context: "Creator settings"
       });
     } catch (legacyError) {
-      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
-        context: "Creator settings"
-      });
+      try {
+        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
+          context: "Creator settings"
+        });
+      } catch (pollError) {
+        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
+          context: "Creator settings"
+        });
+      }
     }
   }
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -976,6 +1077,9 @@ function creatorPayload(input = {}) {
     community_state: normalizeCommunityState(input.community_state),
     quick_announcement: clean(input.quick_announcement),
     quick_poll: clean(input.quick_poll),
+    poll_enabled: bool(input.poll_enabled, false),
+    poll_question: clean(input.poll_question || input.quick_poll),
+    poll_options: normalizePollOptions(input.poll_options),
     faq_visible: bool(input.faq_visible, true),
     discord_visible: bool(input.discord_visible, true),
     creator_passport_visible: bool(input.creator_passport_visible, true),
@@ -1074,6 +1178,357 @@ async function saveCreator(input = {}) {
   }
 }
 
+async function fetchPollVotes(creator, pollKey) {
+  let tableRows = [];
+  try {
+    const rows = await supabaseFetch(
+      "creator_poll_votes?creator_id=eq." + encodeURIComponent(creator.id || MINA_CREATOR_ID) +
+        "&poll_key=eq." + encodeURIComponent(pollKey) +
+      "&select=option_id,option_label,created_at,voter_hash&order=created_at.desc",
+      { context: "Creator poll votes" }
+    );
+    tableRows = Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    tableRows = [];
+  }
+  const bridgeRows = await fetchPollVotesFromBridge(creator, pollKey).catch(() => []);
+  const seen = new Set();
+  return tableRows.concat(bridgeRows)
+    .filter((row) => {
+      const key = clean(row.voter_hash) || clean(row.option_id) + "|" + clean(row.created_at);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
+}
+
+function pollResultsFromRows(definition, rows = []) {
+  const counts = new Map(definition.options.map((option) => [option.id, {
+    id: option.id,
+    label: option.label,
+    votes: 0,
+    percentage: 0
+  }]));
+  rows.forEach((row) => {
+    const id = clean(row.option_id);
+    if (!counts.has(id)) return;
+    counts.get(id).votes += 1;
+  });
+  const totalVotes = Array.from(counts.values()).reduce((sum, item) => sum + item.votes, 0);
+  const options = Array.from(counts.values()).map((item) => ({
+    ...item,
+    percentage: totalVotes ? Math.round((item.votes / totalVotes) * 100) : 0
+  }));
+  const latest = rows[0] && rows[0].created_at ? rows[0].created_at : null;
+  return { totalVotes, options, latestResponseAt: latest };
+}
+
+async function pollStateForCreator(creator) {
+  const definition = pollDefinition(creator);
+  if (!definition.enabled) {
+    return {
+      enabled: false,
+      question: "",
+      pollKey: "",
+      totalVotes: 0,
+      latestResponseAt: null,
+      options: []
+    };
+  }
+  const rows = await fetchPollVotes(creator, definition.pollKey).catch(() => []);
+  return {
+    enabled: true,
+    question: definition.question,
+    pollKey: definition.pollKey,
+    ...pollResultsFromRows(definition, rows)
+  };
+}
+
+async function findPollVote(creator, pollKey, voterHash) {
+  try {
+    const rows = await supabaseFetch(
+      "creator_poll_votes?creator_id=eq." + encodeURIComponent(creator.id || MINA_CREATOR_ID) +
+        "&poll_key=eq." + encodeURIComponent(pollKey) +
+        "&voter_hash=eq." + encodeURIComponent(voterHash) +
+        "&select=option_id,option_label,created_at&limit=1",
+      { context: "Creator poll vote lookup" }
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (error) {
+    const rows = await fetchPollVotesFromBridge(creator, pollKey).catch(() => []);
+    return rows.find((row) => row.voter_hash === voterHash) || null;
+  }
+}
+
+function pollVoteEventType(creator = {}) {
+  return "creator_poll_vote_" + creatorEventSlug(creator);
+}
+
+function pollResetEventType(creator = {}) {
+  return "creator_poll_reset_" + creatorEventSlug(creator);
+}
+
+function newsletterSignupEventType(creator = {}) {
+  return "creator_newsletter_signup_" + creatorEventSlug(creator);
+}
+
+async function fetchAnalyticsEvents(eventType, limit = 1000) {
+  const rows = await supabaseFetch(
+    "analytics_events?event_type=eq." + encodeURIComponent(eventType) +
+      "&select=metadata,created_at&order=created_at.desc&limit=" + encodeURIComponent(String(limit)),
+    { context: "Creator response bridge" }
+  );
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function saveAnalyticsEvent(eventType, metadata = {}) {
+  await supabaseFetch("analytics_events", {
+    method: "POST",
+    body: {
+      event_type: eventType,
+      source: "creator_os_response",
+      route: "/mosyaamosya",
+      metadata
+    },
+    context: "Creator response bridge"
+  });
+}
+
+async function fetchPollVotesFromBridge(creator, pollKey) {
+  const [voteRows, resetRows] = await Promise.all([
+    fetchAnalyticsEvents(pollVoteEventType(creator)),
+    fetchAnalyticsEvents(pollResetEventType(creator), 200)
+  ]);
+  const reset = resetRows.find((row) => row && row.metadata && row.metadata.poll_key === pollKey);
+  const resetTime = reset && reset.created_at ? Date.parse(reset.created_at) : 0;
+  return voteRows
+    .filter((row) => {
+      const metadata = row && row.metadata ? row.metadata : {};
+      const createdTime = row && row.created_at ? Date.parse(row.created_at) : 0;
+      return metadata.poll_key === pollKey && (!resetTime || createdTime > resetTime);
+    })
+    .map((row) => {
+      const metadata = row.metadata || {};
+      return {
+        option_id: clean(metadata.option_id),
+        option_label: clean(metadata.option_label),
+        voter_hash: clean(metadata.voter_hash),
+        created_at: row.created_at || null
+      };
+    });
+}
+
+async function savePollVoteToBridge(req, creator, definition, selected, voterHash) {
+  await saveAnalyticsEvent(pollVoteEventType(creator), {
+    creator_id: creator.id || MINA_CREATOR_ID,
+    creator_slug: publicCreatorSlug(creator),
+    poll_key: definition.pollKey,
+    option_id: selected.id,
+    option_label: selected.label,
+    voter_hash: voterHash,
+    user_agent: clean(req.headers["user-agent"])
+  });
+}
+
+async function submitPollVote(req, input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  const definition = pollDefinition(creator);
+  if (!definition.enabled) {
+    const error = new Error("Poll is not available.");
+    error.statusCode = 400;
+    error.code = "POLL_DISABLED";
+    throw error;
+  }
+  const optionId = clean(input.option_id || input.optionId);
+  const optionLabel = clean(input.option_label || input.optionLabel);
+  const selected = definition.options.find((option) => option.id === optionId) ||
+    definition.options.find((option) => option.label.toLowerCase() === optionLabel.toLowerCase());
+  if (!selected) {
+    const error = new Error("Choose a valid poll answer.");
+    error.statusCode = 400;
+    error.code = "INVALID_POLL_OPTION";
+    throw error;
+  }
+  const hash = visitorHash(req, input, definition.pollKey);
+  const existing = await findPollVote(creator, definition.pollKey, hash).catch(() => null);
+  if (!existing) {
+    try {
+      await supabaseFetch("creator_poll_votes", {
+        method: "POST",
+        body: {
+          creator_id: creator.id || MINA_CREATOR_ID,
+          creator_slug: publicCreatorSlug(creator),
+          poll_key: definition.pollKey,
+          option_id: selected.id,
+          option_label: selected.label,
+          voter_hash: hash,
+          user_agent: clean(req.headers["user-agent"])
+        },
+        context: "Creator poll vote"
+      });
+    } catch (error) {
+      if (error.statusCode === 409) {
+        // Existing soft-dedupe row; return the aggregate state below.
+      } else {
+        await savePollVoteToBridge(req, creator, definition, selected, hash);
+      }
+    }
+  }
+  const saved = existing || await findPollVote(creator, definition.pollKey, hash).catch(() => null);
+  const state = await pollStateForCreator(creator);
+  return {
+    ...state,
+    selectedOptionId: saved && saved.option_id ? saved.option_id : selected.id
+  };
+}
+
+function normalizeEmail(value) {
+  return clean(value).toLowerCase();
+}
+
+function validEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+}
+
+async function submitNewsletterSignup(req, input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  if (!bool(creator.subscribe_popup_enabled, true)) {
+    const error = new Error("Newsletter is not available.");
+    error.statusCode = 400;
+    error.code = "NEWSLETTER_DISABLED";
+    throw error;
+  }
+  const email = normalizeEmail(input.email);
+  if (!validEmail(email)) {
+    const error = new Error("Enter a valid email address.");
+    error.statusCode = 400;
+    error.code = "INVALID_EMAIL";
+    throw error;
+  }
+  try {
+    await supabaseFetch("creator_newsletter_signups", {
+      method: "POST",
+      body: {
+        creator_id: creator.id || MINA_CREATOR_ID,
+        creator_slug: publicCreatorSlug(creator),
+        email,
+        email_hash: hashText(email),
+        source_page: clean(input.source_page || input.sourcePage || "/" + publicCreatorSlug(creator)),
+        user_agent: clean(req.headers["user-agent"])
+      },
+      context: "Creator newsletter signup"
+    });
+  } catch (error) {
+    if (error.statusCode === 409) return { subscribed: true };
+    await saveNewsletterSignupToBridge(req, creator, email, input);
+  }
+  return { subscribed: true };
+}
+
+async function fetchNewsletterSignups(creator) {
+  let tableRows = [];
+  try {
+    const rows = await supabaseFetch(
+      "creator_newsletter_signups?creator_id=eq." + encodeURIComponent(creator.id || MINA_CREATOR_ID) +
+        "&select=email,source_page,created_at&order=created_at.desc&limit=200",
+      { context: "Creator newsletter signups" }
+    );
+    tableRows = Array.isArray(rows) ? rows.map((row) => ({
+      email: clean(row.email),
+      source_page: clean(row.source_page),
+      created_at: row.created_at || null
+    })) : [];
+  } catch (error) {
+    tableRows = [];
+  }
+  const bridgeRows = await fetchNewsletterSignupsFromBridge(creator).catch(() => []);
+  const seen = new Set();
+  return tableRows.concat(bridgeRows)
+    .filter((row) => {
+      const key = normalizeEmail(row.email);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""))
+    .slice(0, 200);
+}
+
+async function saveNewsletterSignupToBridge(req, creator, email, input = {}) {
+  const existing = await fetchAnalyticsEvents(newsletterSignupEventType(creator)).catch(() => []);
+  const emailHash = hashText(email);
+  const duplicate = existing.some((row) => {
+    const metadata = row && row.metadata ? row.metadata : {};
+    return metadata.email_hash === emailHash;
+  });
+  if (duplicate) return;
+  await saveAnalyticsEvent(newsletterSignupEventType(creator), {
+    creator_id: creator.id || MINA_CREATOR_ID,
+    creator_slug: publicCreatorSlug(creator),
+    email,
+    email_hash: emailHash,
+    source_page: clean(input.source_page || input.sourcePage) || "/" + publicCreatorSlug(creator),
+    user_agent: clean(req.headers["user-agent"])
+  });
+}
+
+async function fetchNewsletterSignupsFromBridge(creator) {
+  const rows = await fetchAnalyticsEvents(newsletterSignupEventType(creator), 200);
+  const seen = new Set();
+  return rows
+    .map((row) => {
+      const metadata = row && row.metadata ? row.metadata : {};
+      return {
+        email: clean(metadata.email),
+        email_hash: clean(metadata.email_hash),
+        source_page: clean(metadata.source_page),
+        created_at: row.created_at || null
+      };
+    })
+    .filter((row) => {
+      if (!row.email || seen.has(row.email_hash || row.email)) return false;
+      seen.add(row.email_hash || row.email);
+      return true;
+    })
+    .map(({ email_hash, ...row }) => row);
+}
+
+async function loadCreatorResponses(input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  const poll = await pollStateForCreator(creator);
+  const newsletter = await fetchNewsletterSignups(creator).catch(() => []);
+  return { poll, newsletter };
+}
+
+async function resetPollResults(input = {}) {
+  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const creator = result.creator;
+  const definition = pollDefinition(creator);
+  if (!definition.pollKey) return pollStateForCreator(creator);
+  try {
+    await supabaseFetch(
+      "creator_poll_votes?creator_id=eq." + encodeURIComponent(creator.id || MINA_CREATOR_ID) +
+        "&poll_key=eq." + encodeURIComponent(definition.pollKey),
+      {
+        method: "DELETE",
+        prefer: "return=minimal",
+        context: "Creator poll reset"
+      }
+    );
+  } catch (error) {
+    await saveAnalyticsEvent(pollResetEventType(creator), {
+      creator_id: creator.id || MINA_CREATOR_ID,
+      creator_slug: publicCreatorSlug(creator),
+      poll_key: definition.pollKey
+    });
+  }
+  return pollStateForCreator(creator);
+}
+
 async function handleCreatorSettings(req, res) {
   if (req.method === "GET") {
     try {
@@ -1096,6 +1551,22 @@ async function handleCreatorSettings(req, res) {
   }
 
   const input = await parseBody(req);
+  if (input.action === "poll_state") {
+    const result = await fetchCreator(input.slug || "mosyaamosya");
+    const poll = await pollStateForCreator(result.creator);
+    return send(res, 200, { success: true, poll });
+  }
+
+  if (input.action === "vote_poll") {
+    const poll = await submitPollVote(req, input);
+    return send(res, 200, { success: true, poll });
+  }
+
+  if (input.action === "newsletter_signup") {
+    const newsletter = await submitNewsletterSignup(req, input);
+    return send(res, 200, { success: true, newsletter });
+  }
+
   if (input.action === "login") {
     const credential = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
     const creatorOk = await verifyCreatorPassword(credential);
@@ -1159,6 +1630,16 @@ async function handleCreatorSettings(req, res) {
   if (input.action === "upload_media") {
     const media = await uploadCreatorMedia(input);
     return send(res, 200, { success: true, media });
+  }
+
+  if (input.action === "load_responses") {
+    const responses = await loadCreatorResponses(input);
+    return send(res, 200, { success: true, responses });
+  }
+
+  if (input.action === "reset_poll_results") {
+    const poll = await resetPollResults(input);
+    return send(res, 200, { success: true, poll });
   }
 
   const result = await saveCreator(input.creator || input);

@@ -424,6 +424,29 @@
       background: rgba(255,211,223,.12);
     }
     .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .poll-options { display: grid; gap: 8px; }
+    .poll-option-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .poll-option-row .button { min-height: 42px; width: auto; padding: 0 12px; }
+    .results-grid { display: grid; gap: 10px; }
+    .result-row {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 14px;
+      padding: 11px;
+      background: rgba(255,255,255,.035);
+      display: grid;
+      gap: 7px;
+    }
+    .result-row-head { display: flex; justify-content: space-between; gap: 12px; color: rgba(255,245,247,.86); font-size: 13px; font-weight: 900; }
+    .result-bar { height: 7px; overflow: hidden; border-radius: 999px; background: rgba(255,245,247,.08); }
+    .result-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #ff9fbd); }
+    .inbox-list { display: grid; gap: 8px; max-height: 260px; overflow: auto; }
+    .inbox-row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,245,247,.08); padding: 0 0 8px; color: rgba(255,245,247,.78); font-size: 12px; }
+    .inbox-row strong { color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
     .sticky-save {
       position: fixed;
       left: 50%;
@@ -850,8 +873,18 @@
 
             <div class="runtime-section">
               <h3>Poll</h3>
-              <label>Quick poll field<textarea name="quick_poll" placeholder="Question for viewers"></textarea></label>
-              <button class="button" type="button" data-pinned-block="poll">Pin Poll</button>
+              <div class="switch-row">
+                <div><strong>Poll enabled</strong><span>Shows the poll when it is pinned on the public page.</span></div>
+                <label class="switch" aria-label="Poll enabled"><input name="poll_enabled" type="checkbox"><span class="track"></span></label>
+              </div>
+              <label>Poll question<textarea name="poll_question" placeholder="Question for viewers"></textarea></label>
+              <div class="poll-options" id="pollOptionsList"></div>
+              <input name="poll_options" type="hidden" value='["Yes","No"]'>
+              <div class="runtime-actions two">
+                <button class="button" id="addPollOption" type="button">Add option</button>
+                <button class="button" type="button" data-pinned-block="poll">Pin Poll</button>
+              </div>
+              <button class="button danger" id="resetPollResults" type="button">Clear/reset poll results</button>
             </div>
 
             <div class="runtime-section">
@@ -859,6 +892,18 @@
               <div class="help-panel" id="liveRuntimeStatus">
                 Last checked: not yet. Status: unknown. Source: unknown.
               </div>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Results</h3>
+              <div class="section-note">Poll votes and newsletter signups are visible only in Creator Admin.</div>
+              <div class="results-grid" id="pollResults">Poll results will appear here.</div>
+              <div class="runtime-actions two">
+                <button class="button" id="refreshResponses" type="button">Refresh results</button>
+                <button class="button" id="exportNewsletterCsv" type="button">Export CSV</button>
+              </div>
+              <div class="inbox-list" id="newsletterInbox"></div>
+              <div class="status" id="responseStatus" aria-live="polite"></div>
             </div>
           </div>
         </section>
@@ -1414,8 +1459,144 @@
       list.appendChild(createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" }));
       syncCustomLinksField();
     }
+    function readPollOptions() {
+      const rows = Array.from(document.querySelectorAll("[data-poll-option-row]"));
+      const seen = new Set();
+      const options = rows.map((row) => String(row.querySelector("[data-poll-option-label]")?.value || "").trim())
+        .filter(Boolean)
+        .filter((label) => {
+          const key = label.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 5);
+      while (options.length < 2) options.push(options.length === 0 ? "Yes" : "No");
+      return options;
+    }
+    function syncPollOptionsField() {
+      if (!form.elements.poll_options) return;
+      form.elements.poll_options.value = JSON.stringify(readPollOptions());
+    }
+    function createPollOptionRow(label = "") {
+      const row = document.createElement("div");
+      row.className = "poll-option-row";
+      row.dataset.pollOptionRow = "true";
+      row.innerHTML = '<input data-poll-option-label aria-label="Poll answer option"><button class="button danger" type="button" data-remove-poll-option>Remove</button>';
+      row.querySelector("[data-poll-option-label]").value = label;
+      row.addEventListener("input", syncPollOptionsField);
+      row.querySelector("[data-remove-poll-option]").addEventListener("click", () => {
+        if (document.querySelectorAll("[data-poll-option-row]").length <= 2) {
+          setStatus("Poll needs at least two answers.", true, "responseStatus");
+          return;
+        }
+        row.remove();
+        syncPollOptionsField();
+      });
+      return row;
+    }
+    function writePollOptions(options = []) {
+      const list = $("pollOptionsList");
+      if (!list) return;
+      list.replaceChildren();
+      const normalized = Array.isArray(options) && options.length ? options : ["Yes", "No"];
+      normalized.slice(0, 5).forEach((option) => list.appendChild(createPollOptionRow(option)));
+      while (list.children.length < 2) list.appendChild(createPollOptionRow(list.children.length === 0 ? "Yes" : "No"));
+      syncPollOptionsField();
+    }
+    function addPollOption() {
+      const list = $("pollOptionsList");
+      if (!list) return;
+      if (list.children.length >= 5) {
+        setStatus("Poll supports up to five answers.", true, "responseStatus");
+        return;
+      }
+      list.appendChild(createPollOptionRow("Option " + (list.children.length + 1)));
+      syncPollOptionsField();
+    }
+    function renderPollResults(poll = {}) {
+      const target = $("pollResults");
+      if (!target) return;
+      if (!poll.enabled) {
+        target.innerHTML = '<div class="help-panel">Poll is disabled or not pinned yet.</div>';
+        return;
+      }
+      const total = Number(poll.totalVotes) || 0;
+      const latest = poll.latestResponseAt ? new Date(poll.latestResponseAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No votes yet";
+      target.innerHTML = '<div class="help-panel">Total votes: ' + total.toLocaleString() + '. Latest response: ' + latest + '.</div>';
+      (poll.options || []).forEach((option) => {
+        const row = document.createElement("div");
+        row.className = "result-row";
+        const percent = Math.max(0, Math.min(100, Number(option.percentage) || 0));
+        row.innerHTML =
+          '<div class="result-row-head"><span>' + escapeAdmin(option.label || "Option") + '</span><span>' +
+          (Number(option.votes) || 0).toLocaleString() + ' · ' + percent + '%</span></div>' +
+          '<div class="result-bar" aria-hidden="true"><span style="width:' + percent + '%"></span></div>';
+        target.appendChild(row);
+      });
+    }
+    function renderNewsletterInbox(rows = []) {
+      const target = $("newsletterInbox");
+      if (!target) return;
+      if (!rows.length) {
+        target.innerHTML = '<div class="help-panel">No newsletter signups yet.</div>';
+        return;
+      }
+      target.replaceChildren();
+      rows.forEach((row) => {
+        const item = document.createElement("div");
+        item.className = "inbox-row";
+        const date = row.created_at ? new Date(row.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+        item.innerHTML = '<strong>' + escapeAdmin(row.email || "") + '</strong><span>' + escapeAdmin(date) + '</span>';
+        target.appendChild(item);
+      });
+    }
+    function escapeAdmin(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (match) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[match]));
+    }
+    let latestNewsletterRows = [];
+    async function loadResponses() {
+      const status = $("responseStatus");
+      if (status) setStatus("Loading results...", false, "responseStatus");
+      try {
+        const data = await api({ action: "load_responses", creator_session: creatorSession(), slug: "mosyaamosya" });
+        renderPollResults(data.responses && data.responses.poll);
+        latestNewsletterRows = (data.responses && data.responses.newsletter) || [];
+        renderNewsletterInbox(latestNewsletterRows);
+        if (status) setStatus("Results updated.", false, "responseStatus");
+      } catch (error) {
+        if (status) setStatus(readableMessage(error, "Could not load results."), true, "responseStatus");
+      }
+    }
+    async function resetPollResults() {
+      setStatus("Resetting poll results...", false, "responseStatus");
+      try {
+        const data = await api({ action: "reset_poll_results", creator_session: creatorSession(), slug: "mosyaamosya" });
+        renderPollResults(data.poll);
+        setStatus("Poll results reset.", false, "responseStatus");
+      } catch (error) {
+        setStatus(readableMessage(error, "Could not reset poll results."), true, "responseStatus");
+      }
+    }
+    function exportNewsletterCsv() {
+      const rows = latestNewsletterRows || [];
+      const escapeCsv = (value) => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+      const csv = ["email,created_at,source_page"].concat(rows.map((row) => [
+        escapeCsv(row.email),
+        escapeCsv(row.created_at),
+        escapeCsv(row.source_page)
+      ].join(","))).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "mina-newsletter-signups.csv";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
     function valuesFromForm() {
       syncLinkCompatibilityFields();
+      syncPollOptionsField();
       const data = new FormData(form);
       return {
         display_name: String(data.get("display_name") || "").trim(),
@@ -1445,6 +1626,9 @@
         community_state: String(data.get("community_state") || "open").trim(),
         quick_announcement: String(data.get("quick_announcement") || "").trim(),
         quick_poll: String(data.get("quick_poll") || "").trim(),
+        poll_enabled: boolField("poll_enabled"),
+        poll_question: String(data.get("poll_question") || "").trim(),
+        poll_options: readPollOptions(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
         discord_link_visible: boolField("discord_link_visible", true),
         discord_link_title: String(data.get("discord_link_title") || "").trim(),
@@ -1514,11 +1698,12 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
+      if (settings.poll_enabled === undefined) setBoolField("poll_enabled", false);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
       if (settings.intro_audio_enabled === undefined) setBoolField("intro_audio_enabled", false);
       if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
@@ -1537,6 +1722,7 @@
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
       syncLinkCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);
+      writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
@@ -1693,6 +1879,7 @@
     }
     async function setPinnedBlock(value) {
       form.elements.pinned_block.value = value;
+      if (value === "poll" && form.elements.poll_enabled) setBoolField("poll_enabled", true);
       updateRuntimeUi();
       await saveSettings();
       setStatus("Pinned block updated.");
@@ -1705,7 +1892,10 @@
       document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
         panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
       });
-      if (active === "runtime") loadLiveRuntime();
+      if (active === "runtime") {
+        loadLiveRuntime();
+        loadResponses();
+      }
     }
     function applyAdminTheme(theme) {
       const vars = themeVars[theme] || themeVars.mina;
@@ -1825,6 +2015,7 @@
         fillForm(data.creator);
         updatePreviewFrame();
         loadLiveRuntime();
+        loadResponses();
         updateOverview(data.creator && data.creator.updated_at);
         setSaveButtonState("saved", { resetAfter: 700 });
         restoreScrollPosition(scrollPosition);
@@ -2014,6 +2205,14 @@
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
     $("addCustomLink").addEventListener("click", addCustomLink);
+    $("addPollOption").addEventListener("click", addPollOption);
+    $("refreshResponses").addEventListener("click", loadResponses);
+    $("resetPollResults").addEventListener("click", resetPollResults);
+    $("exportNewsletterCsv").addEventListener("click", exportNewsletterCsv);
+    ["poll_enabled", "poll_question"].forEach((key) => {
+      if (form.elements[key]) form.elements[key].addEventListener("change", syncPollOptionsField);
+      if (form.elements[key]) form.elements[key].addEventListener("input", syncPollOptionsField);
+    });
     $("manualLiveModeControl").addEventListener("change", async () => {
       updateOverview();
       try {
