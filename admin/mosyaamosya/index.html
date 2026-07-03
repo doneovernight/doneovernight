@@ -1591,8 +1591,9 @@
     };
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
+    const adminParams = new URLSearchParams(window.location.search);
     form.noValidate = true;
-    document.body.dataset.devMode = new URLSearchParams(window.location.search).get("dev") === "1" || localStorage.getItem("creator_media_dev_mode") === "1" ? "true" : "false";
+    document.body.dataset.devMode = adminParams.get("dev") === "1" || localStorage.getItem("creator_media_dev_mode") === "1" ? "true" : "false";
 
     function readableMessage(value, fallback = "Something went wrong.") {
       if (!value) return fallback;
@@ -3109,12 +3110,12 @@
         session_cookie: $("tiktokSessionCookie").value.trim()
       };
     }
-    async function saveTikTokConnection(action) {
+    async function startTikTokConnection(action) {
       const button = action === "reconnect_tiktok" ? $("reconnectTikTok") : $("connectTikTok");
       const original = button.textContent;
       button.disabled = true;
-      button.textContent = "Saving...";
-      setStatus("", false, "connectionsStatus");
+      button.textContent = "Connecting...";
+      setStatus("Connecting TikTok...", false, "connectionsStatus");
       try {
         const data = await api({
           action,
@@ -3122,12 +3123,13 @@
           slug: "mosyaamosya",
           connection: tiktokConnectionPayload()
         });
-        $("tiktokSessionCookie").value = "";
-        renderConnections([data.connection]);
-        if (form.elements.tiktok_live_username) form.elements.tiktok_live_username.value = data.connection.username || "mosyaamosya";
-        setStatus(action === "reconnect_tiktok" ? "TikTok reconnected." : "TikTok connected.", false, "connectionsStatus");
+        if (data.configured === false || !data.auth_url) {
+          setStatus(data.message || "TikTok Login is not configured yet.", true, "connectionsStatus");
+          return;
+        }
+        window.location.assign(data.auth_url);
       } catch (error) {
-        setStatus(readableMessage(error, "Could not save TikTok connection."), true, "connectionsStatus");
+        setStatus(readableMessage(error, "Could not start TikTok Login."), true, "connectionsStatus");
       } finally {
         button.disabled = false;
         button.textContent = original;
@@ -3168,7 +3170,21 @@
       const data = await api({ action: "load", creator_session: creatorSession(), slug: "mosyaamosya" });
       fillForm(data.creator);
       openApp();
-      loadConnections();
+      const connectionState = adminParams.get("tiktok_connection");
+      const connectionMessage = adminParams.get("message") || "";
+      if (adminParams.get("tab") === "connections" || connectionState) {
+        setAdminTab("connections");
+        window.setTimeout(() => {
+          if (connectionState === "connected") {
+            setStatus("TikTok connected.", false, "connectionsStatus");
+          } else if (connectionState === "error") {
+            setStatus(connectionMessage || "TikTok connection failed.", true, "connectionsStatus");
+          }
+        }, 300);
+        if (connectionState) window.history.replaceState(null, "", "/mosyaamosya");
+      } else {
+        loadConnections();
+      }
       setStatus("Loaded Mina Mosya settings.");
     }
     async function saveSettings() {
@@ -3733,8 +3749,8 @@
     $("refreshResponses").addEventListener("click", loadResponses);
     $("resetPollResults").addEventListener("click", resetPollResults);
     $("exportNewsletterCsv").addEventListener("click", exportNewsletterCsv);
-    $("connectTikTok").addEventListener("click", () => saveTikTokConnection("connect_tiktok"));
-    $("reconnectTikTok").addEventListener("click", () => saveTikTokConnection("reconnect_tiktok"));
+    $("connectTikTok").addEventListener("click", () => startTikTokConnection("connect_tiktok"));
+    $("reconnectTikTok").addEventListener("click", () => startTikTokConnection("reconnect_tiktok"));
     $("disconnectTikTok").addEventListener("click", disconnectTikTokConnection);
     document.querySelectorAll("[data-analytics-action]").forEach((button) => {
       button.addEventListener("click", async () => {

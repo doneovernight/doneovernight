@@ -24,6 +24,11 @@ const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "bina
 const CREATOR_CONNECTION_PROVIDERS = new Set(["tiktok"]);
 const CREATOR_CONNECTION_STATUSES = new Set(["connected", "not_connected", "needs_attention", "disconnected"]);
 const TIKTOK_SESSION_COOKIE_NAMES = ["sessionid", "sessionid_ss", "sid_tt", "sid_guard"];
+const TIKTOK_OAUTH_AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/";
+const TIKTOK_OAUTH_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
+const TIKTOK_USER_INFO_URL = "https://open.tiktokapis.com/v2/user/info/";
+const TIKTOK_OAUTH_COOKIE = "creator_tiktok_oauth_state";
+const TIKTOK_OAUTH_SCOPE = "user.info.basic,user.info.profile";
 const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
@@ -378,6 +383,63 @@ function parseCookieHeader(value = "") {
     if (key && cookieValue) cookies[key] = cookieValue;
     return cookies;
   }, {});
+}
+
+function clearCookieHeader(name) {
+  return name + "=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+}
+
+function tiktokOAuthConfig() {
+  const redirectUri = clean(process.env.TIKTOK_REDIRECT_URI) || "https://admin.doneovernight.com/mosyaamosya/tiktok/callback";
+  const clientKey = clean(process.env.TIKTOK_CLIENT_KEY);
+  const clientSecret = clean(process.env.TIKTOK_CLIENT_SECRET);
+  return {
+    clientKey,
+    clientSecret,
+    redirectUri,
+    configured: Boolean(clientKey && clientSecret && redirectUri)
+  };
+}
+
+function signCookiePayload(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return encoded + "." + signText(encoded);
+}
+
+function verifySignedCookiePayload(value) {
+  const [encoded, signature] = clean(value).split(".");
+  if (!encoded || !signature || !timingSafeEqualText(signature, signText(encoded))) return null;
+  try {
+    return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+  } catch (error) {
+    return null;
+  }
+}
+
+function setTikTokOAuthCookie(res, payload) {
+  const signed = signCookiePayload(payload);
+  res.setHeader("Set-Cookie", TIKTOK_OAUTH_COOKIE + "=" + signed + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600");
+}
+
+function redirectTikTokCallback(res, status, message = "") {
+  const params = new URLSearchParams({ tab: "connections", tiktok_connection: status });
+  if (message) params.set("message", message);
+  res.statusCode = 302;
+  res.setHeader("Location", "/mosyaamosya?" + params.toString());
+  res.setHeader("Set-Cookie", clearCookieHeader(TIKTOK_OAUTH_COOKIE));
+  res.end("");
+}
+
+function verifyTikTokOAuthState(req, state) {
+  const cookies = parseCookieHeader(req.headers && req.headers.cookie);
+  const payload = verifySignedCookiePayload(cookies[TIKTOK_OAUTH_COOKIE]);
+  if (!payload || clean(payload.state) !== clean(state) || Number(payload.exp) < Date.now()) {
+    const error = new Error("TikTok connection expired. Try connecting again.");
+    error.statusCode = 400;
+    error.code = "TIKTOK_OAUTH_STATE_INVALID";
+    throw error;
+  }
+  return payload;
 }
 
 function inspectTikTokSessionCookie(value = "") {
@@ -1372,9 +1434,9 @@ function connectionStatusLabel(status) {
 function sanitizeConnection(row = {}, runtime = null) {
   const provider = normalizeConnectionProvider(row.provider);
   const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
-  const hasSecret = Boolean(clean(row.access_token_encrypted) || metadata.has_session_cookie);
+  const hasCredential = Boolean(clean(row.access_token_encrypted) || metadata.has_session_cookie || metadata.oauth_connected);
   const runtimeError = runtime && runtime.error ? clean(runtime.error) : "";
-  const status = normalizeConnectionStatus(row.status, hasSecret ? "connected" : "not_connected");
+  const status = normalizeConnectionStatus(row.status, hasCredential ? "connected" : "not_connected");
   const runtimeState = runtime
     ? runtime.confidence === "confirmed"
       ? (runtime.is_live ? "Live confirmed" : "Offline confirmed")
@@ -1400,8 +1462,13 @@ function sanitizeConnection(row = {}, runtime = null) {
     last_error: clean(row.last_error),
     metadata: {
       credential_kind: clean(metadata.credential_kind),
-      has_session_cookie: hasSecret,
+      has_session_cookie: Boolean(metadata.has_session_cookie),
       oauth_connected: Boolean(metadata.oauth_connected),
+      oauth_scopes: clean(metadata.oauth_scopes),
+      avatar_url: clean(metadata.avatar_url || metadata.avatar_large_url),
+      display_name: clean(metadata.display_name),
+      profile_deep_link: clean(metadata.profile_deep_link),
+      is_verified: Boolean(metadata.is_verified),
       runtime_requires_private_signing: metadata.runtime_requires_private_signing !== false,
       beta_session_cookie: Boolean(metadata.beta_session_cookie),
       live_runtime_source: runtime ? clean(runtime.source) : "",
@@ -1560,6 +1627,186 @@ async function disconnectCreatorConnection(input = {}) {
   });
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
   return sanitizeConnection(row, null);
+}
+
+function startTikTokOAuth(input = {}, res) {
+  const config = tiktokOAuthConfig();
+  if (!config.configured) {
+    return {
+      configured: false,
+      message: "TikTok Login is not configured yet."
+    };
+  }
+  const state = crypto.randomBytes(24).toString("base64url");
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  setTikTokOAuthCookie(res, {
+    state,
+    slug,
+    mode: clean(input.action) === "reconnect_tiktok" ? "reconnect" : "connect",
+    exp: Date.now() + 10 * 60 * 1000
+  });
+  const url = new URL(TIKTOK_OAUTH_AUTHORIZE_URL);
+  url.searchParams.set("client_key", config.clientKey);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", TIKTOK_OAUTH_SCOPE);
+  url.searchParams.set("redirect_uri", config.redirectUri);
+  url.searchParams.set("state", state);
+  return {
+    configured: true,
+    auth_url: url.toString(),
+    redirect_uri: config.redirectUri
+  };
+}
+
+async function exchangeTikTokCode(code, config) {
+  const body = new URLSearchParams({
+    client_key: config.clientKey,
+    client_secret: config.clientSecret,
+    code,
+    grant_type: "authorization_code",
+    redirect_uri: config.redirectUri
+  });
+  const response = await fetch(TIKTOK_OAUTH_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Cache-Control": "no-cache"
+    },
+    body
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.error) {
+    const message = clean(data.error_description) || clean(data.error) || response.statusText || "TikTok token exchange failed.";
+    const error = new Error(message);
+    error.statusCode = response.status || 502;
+    error.code = clean(data.error) || "TIKTOK_TOKEN_EXCHANGE_FAILED";
+    throw error;
+  }
+  return data;
+}
+
+async function fetchTikTokUser(accessToken) {
+  const fields = [
+    "open_id",
+    "union_id",
+    "avatar_url",
+    "avatar_url_100",
+    "avatar_large_url",
+    "display_name",
+    "bio_description",
+    "profile_deep_link",
+    "is_verified",
+    "username"
+  ].join(",");
+  const url = TIKTOK_USER_INFO_URL + "?fields=" + encodeURIComponent(fields);
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: "Bearer " + accessToken,
+      Accept: "application/json"
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  const apiError = data && data.error && clean(data.error.code) && clean(data.error.code) !== "ok" ? data.error : null;
+  if (!response.ok || apiError) {
+    const message = readableError(apiError || data, response.statusText || "TikTok user info failed.");
+    const error = new Error(message);
+    error.statusCode = response.status || 502;
+    error.code = apiError && clean(apiError.code) ? clean(apiError.code) : "TIKTOK_USER_INFO_FAILED";
+    throw error;
+  }
+  return data && data.data && data.data.user ? data.data.user : {};
+}
+
+async function saveTikTokOAuthConnection(input = {}) {
+  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const token = input.token || {};
+  const user = input.user || {};
+  const now = new Date().toISOString();
+  const expiresIn = Math.max(0, number(token.expires_in, 0));
+  const refreshExpiresIn = Math.max(0, number(token.refresh_expires_in, 0));
+  const externalId = clean(user.open_id || token.open_id || user.union_id);
+  const username = normalizeUsername(user.username || DEFAULT_MINA_SETTINGS.tiktok_live_username);
+  const secretPayload = {
+    access_token: clean(token.access_token),
+    refresh_token: clean(token.refresh_token),
+    token_type: clean(token.token_type || "Bearer"),
+    scope: clean(token.scope || input.scopes || TIKTOK_OAUTH_SCOPE),
+    open_id: clean(token.open_id || user.open_id),
+    expires_at: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : "",
+    refresh_expires_at: refreshExpiresIn ? new Date(Date.now() + refreshExpiresIn * 1000).toISOString() : ""
+  };
+  const payload = {
+    creator_slug: slug,
+    provider: "tiktok",
+    status: "connected",
+    username,
+    external_id: externalId,
+    access_token_encrypted: encryptConnectionSecret(JSON.stringify(secretPayload)),
+    session_reference: "supabase:creator_connections:tiktok:" + slug,
+    runtime_enabled: true,
+    last_sync_at: now,
+    last_error: "",
+    metadata: {
+      provider_version: "v1",
+      credential_kind: "tiktok_oauth",
+      has_session_cookie: false,
+      beta_session_cookie: false,
+      oauth_connected: true,
+      oauth_scopes: clean(token.scope || input.scopes || TIKTOK_OAUTH_SCOPE),
+      avatar_url: clean(user.avatar_url),
+      avatar_url_100: clean(user.avatar_url_100),
+      avatar_large_url: clean(user.avatar_large_url),
+      display_name: clean(user.display_name),
+      bio_description: clean(user.bio_description),
+      profile_deep_link: clean(user.profile_deep_link),
+      is_verified: Boolean(user.is_verified),
+      runtime_requires_private_signing: true,
+      runtime_gap: "TikTok OAuth identifies the account but does not provide WebCast LIVE runtime access.",
+      updated_by: "tiktok_oauth"
+    },
+    updated_at: now
+  };
+  const rows = await supabaseFetch("creator_connections?on_conflict=creator_slug,provider&select=creator_slug,provider,status,username,external_id,access_token_encrypted,session_reference,runtime_enabled,last_sync_at,last_error,metadata,created_at,updated_at", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=representation",
+    body: [payload],
+    context: "TikTok OAuth connection save"
+  });
+  const runtime = await fetchCreatorRuntimeSnapshot(slug).catch(() => null);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
+  return sanitizeConnection(row, runtime);
+}
+
+async function handleTikTokOAuthCallback(req, res) {
+  try {
+    const query = getQuery(req);
+    if (query.error) {
+      const description = clean(query.error_description) || clean(query.error) || "TikTok connection was cancelled.";
+      return redirectTikTokCallback(res, "error", description);
+    }
+    const code = clean(query.code);
+    const state = clean(query.state);
+    if (!code || !state) {
+      return redirectTikTokCallback(res, "error", "TikTok did not return a complete authorization response.");
+    }
+    const statePayload = verifyTikTokOAuthState(req, state);
+    const config = tiktokOAuthConfig();
+    if (!config.configured) {
+      return redirectTikTokCallback(res, "error", "TikTok Login is not configured yet.");
+    }
+    const token = await exchangeTikTokCode(code, config);
+    const user = await fetchTikTokUser(token.access_token);
+    await saveTikTokOAuthConnection({
+      slug: statePayload.slug || "mosyaamosya",
+      token,
+      user,
+      scopes: clean(query.scopes)
+    });
+    return redirectTikTokCallback(res, "connected");
+  } catch (error) {
+    return redirectTikTokCallback(res, "error", readableError(error, "TikTok connection failed."));
+  }
 }
 
 async function fetchPollVotes(creator, pollKey) {
@@ -2232,12 +2479,8 @@ async function handleCreatorSettings(req, res) {
   }
 
   if (input.action === "connect_tiktok" || input.action === "reconnect_tiktok") {
-    const connection = await saveCreatorConnection({
-      ...input.connection,
-      slug: input.slug || "mosyaamosya",
-      provider: "tiktok"
-    });
-    return send(res, 200, { success: true, connection });
+    const oauth = startTikTokOAuth(input, res);
+    return send(res, 200, { success: true, ...oauth });
   }
 
   if (input.action === "disconnect_tiktok") {
@@ -2308,6 +2551,10 @@ module.exports = async function handler(req, res) {
   const query = getQuery(req);
   if (query.creator_live_status === "1") {
     return handleCreatorLiveStatus(req, res);
+  }
+
+  if (query.creator_tiktok_callback === "1") {
+    return handleTikTokOAuthCallback(req, res);
   }
 
   if (query.creator_settings === "1") {

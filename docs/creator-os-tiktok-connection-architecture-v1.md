@@ -119,13 +119,31 @@ Implemented in v1:
   - `disconnect_tiktok`
 - sanitized admin response with no secrets
 - TikTok Connections tab in Mina admin
+- TikTok Login Kit OAuth redirect and callback at `/mosyaamosya/tiktok/callback`
+- server-side authorization-code exchange
+- TikTok user info fetch for account identity
+- encrypted OAuth token storage in `creator_connections`
 - encrypted internal beta session-cookie storage
 - Hetzner worker reads TikTok connection config from Supabase when available
 - current env-based worker fallback remains intact
 
 Not implemented yet:
 
-- full TikTok OAuth authorization callback
 - token refresh scheduler
 - private signing host
-- creator-facing OAuth connect button that completes a real TikTok app review flow
+
+## TikTok Login Kit Environment
+
+Production requires these Vercel environment variables on the `doneovernight` project:
+
+- `TIKTOK_CLIENT_KEY`
+- `TIKTOK_CLIENT_SECRET`
+- `TIKTOK_REDIRECT_URI`
+
+Use:
+
+`TIKTOK_REDIRECT_URI=https://admin.doneovernight.com/mosyaamosya/tiktok/callback`
+
+If any value is missing, the Creator Admin shows `TikTok Login is not configured yet.` and does not fake a connected state.
+
+The OAuth callback stores tokens only through the server-side API. The browser receives only sanitized connection status.
