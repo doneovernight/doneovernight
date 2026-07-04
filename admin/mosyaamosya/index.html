@@ -1544,9 +1544,9 @@
       <aside class="preview">
         <section class="panel">
           <h2>Live preview</h2>
-          <div class="muted">Theme and DNA preview instantly. Save to publish.</div>
+          <div class="muted">A read-only mirror of the live public page.</div>
         </section>
-        <div class="phone"><iframe id="previewFrame" src="https://doneovernight.com/mosyaamosya" title="Mina public page preview"></iframe></div>
+        <div class="phone"><iframe id="previewFrame" src="https://doneovernight.com/mosyaamosya?preview=1" title="Mina public page preview"></iframe></div>
       </aside>
     </section>
   </main>
@@ -2890,55 +2890,6 @@
       setStatus(successMessage);
       return data;
     }
-    function previewRuntimeSettings() {
-      const values = valuesFromForm();
-      return {
-        live_status: Boolean(values.live_status),
-        manual_live_fallback_enabled: values.manual_live_fallback_enabled !== false,
-        live_url: values.live_url,
-        live_button_text: values.live_button_text,
-        battle_mode_enabled: Boolean(values.battle_mode_enabled),
-        battle_opponent: values.battle_opponent,
-        battle_result: values.battle_result,
-        battle_win_streak: Math.max(0, Math.floor(Number(values.battle_win_streak) || 0)),
-        battle_updated_at: values.battle_updated_at,
-        pinned_block: values.pinned_block,
-        quick_announcement: values.quick_announcement,
-        next_live_datetime: values.next_live_datetime,
-        poll_enabled: Boolean(values.poll_enabled),
-        poll_question: values.poll_question,
-        poll_options: values.poll_options,
-        updated_at: new Date().toISOString()
-      };
-    }
-    function previewRuntimeLiveState() {
-      const settings = previewRuntimeSettings();
-      const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
-      const sourceState = latestLiveRuntimeState && typeof latestLiveRuntimeState === "object" ? latestLiveRuntimeState : {};
-      const capabilities = sourceState.capabilities && typeof sourceState.capabilities === "object" ? sourceState.capabilities : {};
-      const battleActive = Boolean(settings.battle_mode_enabled);
-      const liveNow = Boolean(settings.live_status);
-      return {
-        ...sourceState,
-        isLive: liveNow,
-        source: sourceState.source || "admin-runtime",
-        confidence: sourceState.confidence || "manual",
-        confirmed: sourceState.confirmed === true && liveNow === true,
-        manualMode: settings.manual_live_fallback_enabled,
-        liveUrl: sourceState.liveUrl || settings.live_url || ("https://www.tiktok.com/@" + username + "/live"),
-        checkedAt: sourceState.checkedAt || settings.updated_at,
-        battleActive,
-        battleOpponent: battleActive && settings.battle_opponent ? settings.battle_opponent : null,
-        battleResult: battleActive && settings.battle_result ? settings.battle_result : null,
-        battleWinStreak: battleActive && settings.battle_win_streak > 0 ? settings.battle_win_streak : null,
-        capabilities: {
-          ...capabilities,
-          battleActive,
-          battleWinStreak: Boolean(battleActive && settings.battle_win_streak > 0),
-          battleResult: Boolean(battleActive && settings.battle_result)
-        }
-      };
-    }
     function setLatestRuntimeStateFromCreator(creator, source = "admin-runtime") {
       const username = String((creator && creator.tiktok_live_username) || form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
       const battleActive = Boolean(creator && creator.battle_mode_enabled);
@@ -3098,24 +3049,12 @@
     function previewUrl() {
       const url = new URL("https://doneovernight.com/mosyaamosya");
       url.searchParams.set("preview", "1");
-      url.searchParams.set("preview_theme", activeTheme);
-      url.searchParams.set("creator_dna", activeDna);
       return url;
-    }
-    function sendPreviewTheme() {
-      const frame = $("previewFrame");
-      if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type: "creator-theme-preview", theme_preset: activeTheme, creator_dna: activeDna }, "https://doneovernight.com");
-      }
     }
     function refreshPreviewLiveRuntime() {
       const frame = $("previewFrame");
       if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({
-          type: "creator-live-refresh",
-          settings: previewRuntimeSettings(),
-          liveState: previewRuntimeLiveState()
-        }, "https://doneovernight.com");
+        frame.contentWindow.postMessage({ type: "creator-live-refresh" }, "https://doneovernight.com");
       }
     }
     function updatePreviewFrame(refresh = true) {
@@ -3136,7 +3075,6 @@
           activeTheme = value;
           applyAdminTheme(activeTheme);
           renderThemes();
-          sendPreviewTheme();
         });
         grid.appendChild(button);
       });
@@ -3155,7 +3093,6 @@
         button.addEventListener("click", () => {
           activeDna = value;
           renderDna();
-          sendPreviewTheme();
         });
         grid.appendChild(button);
       });
@@ -3927,7 +3864,6 @@
     renderDna();
     applyAdminTheme(activeTheme);
     setAdminTab("overview");
-    $("previewFrame").addEventListener("load", sendPreviewTheme);
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
       loadSettings().catch(() => {
         sessionStorage.removeItem(sessionFlag);

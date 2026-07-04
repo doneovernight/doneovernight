@@ -1416,7 +1416,6 @@
     let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
     let latestPublicLiveState = null;
-    let adminRuntimePushHoldUntil = 0;
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
     const blockRegistry = {
@@ -1598,14 +1597,7 @@
       window.setTimeout(() => fadeOutIntroAudio(settings), fadeStart);
     }
     function previewSettings(settings) {
-      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
-      const theme = params.get("preview_theme");
-      const dna = params.get("creator_dna");
-      return {
-        ...settings,
-        theme_preset: themePresets[theme] ? theme : settings.theme_preset,
-        creator_dna: allowedDna.has(dna) ? dna : settings.creator_dna
-      };
+      return settings;
     }
     function hexToRgba(hex, alpha) {
       const value = String(hex || "").replace("#", "");
@@ -1617,7 +1609,7 @@
     }
     function applyTheme(settings) {
       const theme = themePresets[settings.theme_preset] || themePresets.mina;
-      const customBackground = settings.background_gradient && settings.background_gradient !== fallback.background_gradient && !params.get("preview_theme");
+      const customBackground = settings.background_gradient && settings.background_gradient !== fallback.background_gradient;
       document.documentElement.style.setProperty("--pink", theme.pink);
       document.documentElement.style.setProperty("--pink-strong", theme.pinkStrong);
       document.documentElement.style.setProperty("--brown", theme.brown);
@@ -1818,11 +1810,9 @@
         });
         if (!response.ok) throw new Error("Live runtime unavailable");
         const liveState = await response.json();
-        if (Date.now() < adminRuntimePushHoldUntil) return;
         applyLiveState(liveState, currentSettings);
         if (options.forceSettings !== true) await refreshCreatorSettingsIfNeeded(currentSettings, false);
       } catch (error) {
-        if (Date.now() < adminRuntimePushHoldUntil) return;
         applyLiveState({
           isLive: false,
           liveUrl: fallbackLiveUrl(settings),
@@ -1854,20 +1844,6 @@
       document.addEventListener("visibilitychange", liveVisibilityHandler);
       liveMessageHandler = (event) => {
         if (!event.data || event.data.type !== "creator-live-refresh") return;
-        if (event.data.settings && typeof event.data.settings === "object") {
-          currentSettings = { ...currentSettings, ...event.data.settings };
-          renderButtons(currentSettings);
-          renderPinnedBlock(currentSettings);
-          renderPoll(currentSettings);
-          renderNewsletter(currentSettings);
-          renderCommunity(currentSettings);
-          renderFaq(currentSettings);
-        }
-        if (event.data.liveState && typeof event.data.liveState === "object") {
-          adminRuntimePushHoldUntil = Date.now() + 5000;
-          applyLiveState(event.data.liveState, currentSettings);
-          return;
-        }
         refreshLiveRuntime(currentSettings, { forceSettings: true });
       };
       window.addEventListener("message", liveMessageHandler);
@@ -2236,6 +2212,13 @@
           if (button.disabled) return;
           button.disabled = true;
           card.querySelector("[data-poll-meta]").innerHTML = '<span class="gap-spinner" aria-hidden="true"></span>';
+          if (previewMode) {
+            window.setTimeout(() => {
+              updatePollCard(card, poll, option.id);
+              card.querySelector("[data-poll-meta]").textContent = "Preview vote only.";
+            }, 240);
+            return;
+          }
           try {
             const data = await creatorApi({
               action: "vote_poll",
@@ -2540,6 +2523,13 @@
         button.setAttribute("aria-label", "Subscribing");
         input.disabled = true;
         button.disabled = true;
+        if (previewMode) {
+          window.setTimeout(() => {
+            block.classList.remove("is-loading");
+            block.classList.add("is-done");
+          }, 260);
+          return;
+        }
         try {
           await creatorApi({
             action: "newsletter_signup",
@@ -2744,21 +2734,6 @@
       sheet.addEventListener("click", (event) => {
         if (event.target === sheet) setSheetOpen(sheet.id, false);
       });
-    });
-
-    window.addEventListener("message", (event) => {
-      if (!String(event.origin || "").endsWith("doneovernight.com")) return;
-      const data = event.data || {};
-      if (data.type !== "creator-theme-preview") return;
-      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
-      currentSettings = {
-        ...currentSettings,
-        theme_preset: themePresets[data.theme_preset] ? data.theme_preset : currentSettings.theme_preset,
-        creator_dna: allowedDna.has(data.creator_dna) ? data.creator_dna : currentSettings.creator_dna
-      };
-      $("previewBadge").hidden = false;
-      applyTheme(currentSettings);
-      applyAmbient(currentSettings);
     });
 
     function setupMusic(settings) {
