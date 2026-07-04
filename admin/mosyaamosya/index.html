@@ -1594,6 +1594,7 @@
     let pendingSaveScroll = null;
     let latestConnections = [];
     let latestLiveRuntimeState = null;
+    let runtimePreviewHoldUntil = 0;
     let runtimeAutosaveTimer = 0;
     const mediaState = {
       avatar: {},
@@ -2804,6 +2805,26 @@
         button.classList.remove("danger");
       }
     }
+    function syncRuntimeFormFromLiveState(liveState = {}) {
+      if (!liveState || typeof liveState !== "object") return;
+      if (Object.prototype.hasOwnProperty.call(liveState, "isLive")) {
+        setBoolField("live_status", Boolean(liveState.isLive));
+      }
+      if (Object.prototype.hasOwnProperty.call(liveState, "battleActive")) {
+        setBoolField("battle_mode_enabled", Boolean(liveState.battleActive));
+      }
+      if (liveState.liveUrl && form.elements.live_url && !String(form.elements.live_url.value || "").trim()) {
+        form.elements.live_url.value = liveState.liveUrl;
+      }
+      if (liveState.battleActive) {
+        if (liveState.battleOpponent && form.elements.battle_opponent) form.elements.battle_opponent.value = liveState.battleOpponent;
+        if (liveState.battleResult && form.elements.battle_result) form.elements.battle_result.value = normalizeBattleResult(liveState.battleResult);
+        if (Number.isFinite(Number(liveState.battleWinStreak)) && form.elements.battle_win_streak) {
+          form.elements.battle_win_streak.value = Math.max(0, Math.floor(Number(liveState.battleWinStreak)));
+        }
+        if (liveState.battleUpdatedAt && form.elements.battle_updated_at) form.elements.battle_updated_at.value = liveState.battleUpdatedAt;
+      }
+    }
     function updateRuntimeUi() {
       document.querySelectorAll("[data-pinned-block]").forEach((button) => {
         button.setAttribute("aria-pressed", button.dataset.pinnedBlock === String(form.elements.pinned_block.value || ""));
@@ -2845,6 +2866,7 @@
       }
       saveUndoSnapshot(previous);
       writeBattleSnapshot(next);
+      runtimePreviewHoldUntil = Date.now() + 5000;
       refreshPreviewLiveRuntime();
       await saveRuntimeState(action === "start" ? "Battle Mode Enabled" : action === "end" ? "Battle Mode Disabled" : "Battle Saved");
     }
@@ -2858,13 +2880,10 @@
         current_win_streak: values.battle_win_streak
       });
       fillForm(data.creator);
-      latestLiveRuntimeState = {
-        isLive: Boolean(data.creator && data.creator.live_status),
-        source: data.creator && data.creator.manual_live_fallback_enabled ? "manual-fallback" : "unknown",
-        checkedAt: data.creator && data.creator.updated_at
-      };
+      setLatestRuntimeStateFromCreator(data.creator, "admin-runtime");
       updateBattleSummary();
       updateRuntimeUi();
+      runtimePreviewHoldUntil = Date.now() + 5000;
       refreshPreviewLiveRuntime();
       loadLiveRuntime();
       updateOverview(data.creator && data.creator.updated_at);
@@ -2895,27 +2914,58 @@
     function previewRuntimeLiveState() {
       const settings = previewRuntimeSettings();
       const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+      const sourceState = latestLiveRuntimeState && typeof latestLiveRuntimeState === "object" ? latestLiveRuntimeState : {};
+      const capabilities = sourceState.capabilities && typeof sourceState.capabilities === "object" ? sourceState.capabilities : {};
+      const battleActive = Boolean(settings.battle_mode_enabled);
+      const liveNow = Boolean(settings.live_status);
       return {
-        isLive: Boolean(settings.live_status),
-        source: "admin-runtime",
-        confidence: "manual",
-        confirmed: false,
+        ...sourceState,
+        isLive: liveNow,
+        source: sourceState.source || "admin-runtime",
+        confidence: sourceState.confidence || "manual",
+        confirmed: sourceState.confirmed === true && liveNow === true,
         manualMode: settings.manual_live_fallback_enabled,
-        liveUrl: settings.live_url || ("https://www.tiktok.com/@" + username + "/live"),
-        checkedAt: settings.updated_at,
-        battleActive: Boolean(settings.battle_mode_enabled),
-        battleOpponent: settings.battle_mode_enabled && settings.battle_opponent ? settings.battle_opponent : null,
-        battleResult: settings.battle_mode_enabled && settings.battle_result ? settings.battle_result : null,
-        battleWinStreak: settings.battle_mode_enabled && settings.battle_win_streak > 0 ? settings.battle_win_streak : null,
+        liveUrl: sourceState.liveUrl || settings.live_url || ("https://www.tiktok.com/@" + username + "/live"),
+        checkedAt: sourceState.checkedAt || settings.updated_at,
+        battleActive,
+        battleOpponent: battleActive && settings.battle_opponent ? settings.battle_opponent : null,
+        battleResult: battleActive && settings.battle_result ? settings.battle_result : null,
+        battleWinStreak: battleActive && settings.battle_win_streak > 0 ? settings.battle_win_streak : null,
+        capabilities: {
+          ...capabilities,
+          battleActive,
+          battleWinStreak: Boolean(battleActive && settings.battle_win_streak > 0),
+          battleResult: Boolean(battleActive && settings.battle_result)
+        }
+      };
+    }
+    function setLatestRuntimeStateFromCreator(creator, source = "admin-runtime") {
+      const username = String((creator && creator.tiktok_live_username) || form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+      const battleActive = Boolean(creator && creator.battle_mode_enabled);
+      latestLiveRuntimeState = {
+        isLive: Boolean(creator && creator.live_status),
+        source,
+        confidence: source === "admin-runtime" ? "manual" : "unknown",
+        confirmed: false,
+        manualMode: creator ? creator.manual_live_fallback_enabled !== false : boolField("manual_live_fallback_enabled", true),
+        liveUrl: (creator && creator.live_url) || form.elements.live_url.value || ("https://www.tiktok.com/@" + username + "/live"),
+        checkedAt: creator && creator.updated_at || new Date().toISOString(),
+        battleActive,
+        battleOpponent: battleActive && creator && creator.battle_opponent ? creator.battle_opponent : null,
+        battleResult: battleActive && creator && creator.battle_result ? creator.battle_result : null,
+        battleWinStreak: battleActive && creator && Number(creator.battle_win_streak) > 0 ? Number(creator.battle_win_streak) : null,
+        battleUpdatedAt: battleActive && creator ? creator.battle_updated_at : null,
         capabilities: {
           viewerCount: false,
           likeCount: false,
           liveDuration: false,
-          battleActive: Boolean(settings.battle_mode_enabled),
-          battleWinStreak: Boolean(settings.battle_mode_enabled && settings.battle_win_streak > 0),
-          battleResult: Boolean(settings.battle_mode_enabled && settings.battle_result)
+          battleActive,
+          battleWinStreak: Boolean(battleActive && creator && Number(creator.battle_win_streak) > 0),
+          battleResult: Boolean(battleActive && creator && creator.battle_result)
         }
       };
+      syncRuntimeFormFromLiveState(latestLiveRuntimeState);
+      return latestLiveRuntimeState;
     }
     function queueRuntimeAutosave(successMessage = "Runtime Updated") {
       window.clearTimeout(runtimeAutosaveTimer);
@@ -2941,6 +2991,7 @@
         }
         updateBattleSummary();
         updateRuntimeUi();
+        runtimePreviewHoldUntil = Date.now() + 5000;
         refreshPreviewLiveRuntime();
         try {
           setStatus("Saving live mode...");
@@ -2953,9 +3004,10 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
-          latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
+          setLatestRuntimeStateFromCreator(data.creator, "admin-runtime");
           updateBattleSummary();
           updateRuntimeUi();
+          runtimePreviewHoldUntil = Date.now() + 5000;
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -2970,6 +3022,7 @@
         latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
         updateBattleSummary();
         updateRuntimeUi();
+        runtimePreviewHoldUntil = Date.now() + 5000;
         refreshPreviewLiveRuntime();
         try {
           setStatus("Saving live mode...");
@@ -2982,9 +3035,10 @@
             tiktok_live_username: form.elements.tiktok_live_username.value
           });
           fillForm(data.creator);
-          latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
+          setLatestRuntimeStateFromCreator(data.creator, "admin-runtime");
           updateBattleSummary();
           updateRuntimeUi();
+          runtimePreviewHoldUntil = Date.now() + 5000;
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -3294,7 +3348,9 @@
       try {
         const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } });
         const data = await response.json();
+        if (Date.now() < runtimePreviewHoldUntil) return;
         latestLiveRuntimeState = data;
+        syncRuntimeFormFromLiveState(data);
         const capabilities = data.capabilities || {};
         const source = data.source || "unknown";
         const confidence = data.confidence || (data.confirmed ? "confirmed" : "unknown");
@@ -3328,11 +3384,15 @@
         if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? (data.confirmed ? "Live" : "Manual live") : "Offline";
         if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = data.battleActive ? "Active" : "Inactive";
         if ($("overviewWinStreak")) $("overviewWinStreak").textContent = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? String(data.battleWinStreak) : String(Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)));
+        updateBattleSummary();
         updateRuntimeStatusPanel();
+        refreshPreviewLiveRuntime();
       } catch (error) {
+        if (Date.now() < runtimePreviewHoldUntil) return;
         latestLiveRuntimeState = { isLive: boolField("live_status"), source: boolField("manual_live_fallback_enabled") ? "manual-fallback" : "unknown", checkedAt: "" };
         status.textContent = "Last checked: error. Status: unknown. Source: error.";
         updateRuntimeStatusPanel();
+        refreshPreviewLiveRuntime();
       }
     }
     function readFileData(file) {
