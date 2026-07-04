@@ -16,14 +16,6 @@ alter table public.creator_auth enable row level security;
 revoke all on public.creator_auth from anon, authenticated;
 grant all on public.creator_auth to service_role;
 
-update public.creators
-set
-  discord_invite_url = coalesce(nullif(discord_invite_url, ''), 'https://discord.gg/GGE7WsUZR'),
-  discord_server_id = coalesce(discord_server_id, ''),
-  updated_at = now()
-where id = '11111111-1111-4111-8111-111111111111'
-   or slug = 'mosyaamosya';
-
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'creator-media',

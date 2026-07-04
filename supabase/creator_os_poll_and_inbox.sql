@@ -3,7 +3,7 @@
 alter table public.creators
   add column if not exists poll_enabled boolean not null default false,
   add column if not exists poll_question text not null default '',
-  add column if not exists poll_options jsonb not null default '["Yes","No"]'::jsonb;
+  add column if not exists poll_options jsonb not null default '[]'::jsonb;
 
 create table if not exists public.creator_poll_votes (
   id uuid primary key default gen_random_uuid(),
