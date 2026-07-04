@@ -3374,7 +3374,8 @@
       window.addEventListener("pointermove", (event) => {
         apply((event.clientX / window.innerWidth) * 100, (event.clientY / window.innerHeight) * 100);
       }, { passive: true });
-      if (window.isSecureContext) {
+      const orientationApi = window.DeviceOrientationEvent;
+      if (window.isSecureContext && orientationApi && typeof orientationApi.requestPermission === "function") {
         window.addEventListener("deviceorientation", (event) => {
           if (typeof event.gamma !== "number" || typeof event.beta !== "number") return;
           apply(50 + Math.max(-18, Math.min(18, event.gamma)) * .7, 42 + Math.max(-22, Math.min(22, event.beta - 35)) * .45);
