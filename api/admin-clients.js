@@ -1463,13 +1463,7 @@ async function setCreatorLiveMode(input = {}) {
     const countdownTime = Date.parse(current.next_live_datetime || "");
     if (Number.isFinite(countdownTime) && countdownTime <= Date.now()) patch.next_live_datetime = "";
   }
-  const rows = await supabaseFetch("creators?id=eq." + encodeURIComponent(current.id || MINA_CREATOR_ID) + "&select=" + CREATOR_FIELDS, {
-    method: "PATCH",
-    prefer: "return=representation",
-    body: patch,
-    context: "Creator live mode"
-  });
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
+  const saved = await saveCreator({ ...current, ...patch });
   await saveCreatorRuntimeAction(slug, {
     action: isLive ? "start_live" : "end_live",
     live_status: isLive,
@@ -1480,8 +1474,8 @@ async function setCreatorLiveMode(input = {}) {
     updated_at: now
   });
   return {
-    creator: normalizeCreator({ ...current, ...patch, ...row }),
-    source: "database"
+    creator: saved.creator,
+    source: saved.source
   };
 }
 
@@ -1512,16 +1506,25 @@ async function setCreatorRuntimeState(input = {}) {
   const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
   if (patch.live_status && !patch.live_url) patch.live_url = "https://www.tiktok.com/@" + username + "/live";
 
-  const rows = await supabaseFetch("creators?id=eq." + encodeURIComponent(current.id || MINA_CREATOR_ID) + "&select=" + CREATOR_FIELDS, {
-    method: "PATCH",
-    prefer: "return=representation",
-    body: patch,
-    context: "Creator runtime state"
+  const saved = await saveCreator({ ...current, ...patch });
+  await saveCreatorRuntimeAction(slug, {
+    action: "set_runtime_state",
+    live_status: patch.live_status,
+    manual_live_fallback_enabled: patch.manual_live_fallback_enabled,
+    battle_mode_enabled: patch.battle_mode_enabled,
+    battle_opponent: patch.battle_opponent,
+    battle_result: patch.battle_result,
+    battle_win_streak: patch.battle_win_streak,
+    pinned_block: patch.pinned_block,
+    quick_announcement: patch.quick_announcement,
+    poll_enabled: patch.poll_enabled,
+    poll_question: patch.poll_question,
+    next_live_datetime: patch.next_live_datetime,
+    updated_at: now
   });
-  const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
   return {
-    creator: normalizeCreator({ ...current, ...patch, ...row }),
-    source: "database"
+    creator: saved.creator,
+    source: saved.source
   };
 }
 
