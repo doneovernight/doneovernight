@@ -18,6 +18,13 @@
     } catch (error) {
       document.documentElement.classList.add("intro-pending");
     }
+    (() => {
+      const ua = navigator.userAgent || "";
+      const params = new URLSearchParams(window.location.search);
+      const isTikTok = params.get("tiktok_in_app") === "1" || /tiktok|musical_ly|bytedance|ttwebview/i.test(ua);
+      window.__creatorTikTokInAppBrowser = isTikTok;
+      if (isTikTok) document.documentElement.classList.add("tiktok-in-app-browser");
+    })();
   </script>
   <style>
     :root {
@@ -49,6 +56,7 @@
       --glass-y: 0%;
       --glass-shift-x: 0px;
       --glass-shift-y: 0px;
+      --creator-poster-image: url("/assets/mosyaamosya/profile-v2.jpg");
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -144,6 +152,11 @@
       pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
+    }
+    .hero-poster {
+      background:
+        linear-gradient(180deg, rgba(5,3,2,.05), rgba(5,3,2,.62)),
+        var(--creator-poster-image) center 20% / cover no-repeat;
     }
     .hero::before {
       content: "";
@@ -1047,7 +1060,8 @@
         linear-gradient(180deg, rgba(58,33,25,.24), rgba(5,3,2,.62));
       pointer-events: none;
     }
-    .intro video {
+    .intro video,
+    .intro-poster {
       position: absolute;
       inset: -2%;
       z-index: 1;
@@ -1060,6 +1074,11 @@
       pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
+    }
+    .intro-poster {
+      background:
+        linear-gradient(180deg, rgba(5,3,2,.04), rgba(5,3,2,.7)),
+        var(--creator-poster-image) center 18% / cover no-repeat;
     }
     .intro::after {
       content: "";
@@ -1141,7 +1160,7 @@
 <body class="theme-mina">
   <main class="shell">
     <section class="hero" id="hero">
-      <video class="hero-video" id="heroVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" aria-hidden="true" tabindex="-1"></video>
+      <div class="hero-video hero-poster" id="heroPoster" aria-hidden="true"></div>
       <div class="hero-top">
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <div class="hero-actions">
@@ -1241,7 +1260,7 @@
   </section>
 
   <section class="intro" id="intro" aria-label="Welcome intro">
-    <video id="introVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" aria-hidden="true" tabindex="-1"></video>
+    <div class="intro-poster" id="introPoster" aria-hidden="true"></div>
     <div class="intro-copy">
       <span>Welcome.</span>
       <span>Meet Mina.</span>
@@ -1269,6 +1288,7 @@
         }
       };
       const startMutedVideos = () => {
+        if (window.__creatorTikTokInAppBrowser) return;
         document.querySelectorAll(decorativeVideoSelector).forEach((video) => {
           video.muted = true;
           video.defaultMuted = true;
@@ -1515,6 +1535,66 @@
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
     const retryableVideos = new Set();
     let videoRetryBound = false;
+    function tiktokInAppBrowser() {
+      return Boolean(window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
+    }
+    function updateDecorativePoster(settings) {
+      const posterUrl = profileImage(settings).replace(/"/g, "%22");
+      document.documentElement.style.setProperty("--creator-poster-image", 'url("' + posterUrl + '")');
+    }
+    function createPoster(id, className, parent) {
+      const poster = document.createElement("div");
+      poster.id = id;
+      poster.className = className;
+      poster.setAttribute("aria-hidden", "true");
+      if (parent) parent.insertBefore(poster, parent.firstChild);
+      return poster;
+    }
+    function ensureDecorativePoster(id, className, parentId) {
+      const existing = $(id);
+      if (existing && existing.tagName !== "VIDEO") return existing;
+      if (existing && existing.tagName === "VIDEO") existing.remove();
+      return createPoster(id, className, $(parentId));
+    }
+    function ensureDecorativeVideo(id, className, posterId, parentId) {
+      if (tiktokInAppBrowser()) {
+        ensureDecorativePoster(posterId, className + " " + posterId.replace("Poster", "-poster").toLowerCase(), parentId);
+        return null;
+      }
+      const existing = $(id);
+      if (existing && existing.tagName === "VIDEO") return existing;
+      const poster = $(posterId);
+      const video = document.createElement("video");
+      video.id = id;
+      video.className = className;
+      video.autoplay = true;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.controls = false;
+      video.disablePictureInPicture = true;
+      video.disableRemotePlayback = true;
+      video.draggable = false;
+      video.setAttribute("autoplay", "");
+      video.setAttribute("muted", "");
+      video.setAttribute("loop", "");
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("preload", "auto");
+      video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+      video.setAttribute("x-webkit-airplay", "deny");
+      video.setAttribute("aria-hidden", "true");
+      video.setAttribute("tabindex", "-1");
+      video.setAttribute("draggable", "false");
+      if (poster) poster.replaceWith(video);
+      else {
+        const parent = $(parentId);
+        if (parent) parent.insertBefore(video, parent.firstChild);
+      }
+      return video;
+    }
     function normalizeMediaUrl(value) {
       if (!value) return "";
       try {
@@ -1524,7 +1604,7 @@
       }
     }
     function prepareMutedLoopVideo(video, src) {
-      if (!video) return;
+      if (!video || tiktokInAppBrowser()) return;
       video.autoplay = true;
       video.muted = true;
       video.defaultMuted = true;
@@ -3178,7 +3258,7 @@
         revealPage();
         return;
       }
-      const video = $("introVideo");
+      const video = ensureDecorativeVideo("introVideo", "", "introPoster", "intro");
       intro.hidden = false;
       prepareMutedLoopVideo(video, heroVideo(settings));
       let dismissed = false;
@@ -3220,6 +3300,7 @@
     function render(settings) {
       settings = previewSettings(settings);
       currentSettings = settings;
+      updateDecorativePoster(settings);
       $("previewBadge").hidden = !previewMode;
       document.body.classList.toggle("is-live", Boolean(settings.live_status));
       applyTheme(settings);
@@ -3231,7 +3312,7 @@
       $("avatarImage").src = profileImage(settings);
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       const heroVideoUrl = heroVideo(settings);
-      prepareMutedLoopVideo($("heroVideo"), heroVideoUrl);
+      prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), heroVideoUrl);
       applyLiveState({
         isLive: false,
         liveUrl: fallbackLiveUrl(settings),
