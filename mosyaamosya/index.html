@@ -25,6 +25,42 @@
       const isTikTok = params.get("tiktok_in_app") === "1" || /tiktok|musical_ly|musically|bytedance|bytedancewebview|ttwebview|aweme|trill/i.test(ua);
       window.__creatorTikTokInAppBrowser = isTikTok;
       window.__creatorVideoKillSwitch = isTikTok;
+      let storedDebugEnabled = false;
+      try { storedDebugEnabled = localStorage.getItem("creator_media_dev_mode") === "1"; } catch (error) {}
+      const debugEnabled = params.get("debug_media") === "1" || params.get("creator_debug") === "1" || storedDebugEnabled;
+      const tiktokGlobals = Object.keys(window).filter((key) => /tiktok|bytedance|ttwebview|aweme|musical/i.test(key)).slice(0, 60);
+      window.__creatorMediaDebugEnabled = debugEnabled;
+      window.__creatorMediaDebug = {
+        enabled: debugEnabled,
+        booted_at: new Date().toISOString(),
+        browser: {
+          userAgent: ua,
+          vendor: navigator.vendor || "",
+          platform: navigator.platform || "",
+          userAgentData: navigator.userAgentData ? {
+            brands: navigator.userAgentData.brands || [],
+            mobile: navigator.userAgentData.mobile,
+            platform: navigator.userAgentData.platform
+          } : null,
+          tiktokGlobals
+        },
+        detection: {
+          regexMatchedTikTok: /tiktok|musical_ly|musically|bytedance|bytedancewebview|ttwebview|aweme|trill/i.test(ua),
+          queryForcedTikTok: params.get("tiktok_in_app") === "1",
+          isTikTokInApp: isTikTok,
+          videoKillSwitch: isTikTok,
+          selectedMediaPath: isTikTok ? "tiktok-static" : "web-video"
+        },
+        events: []
+      };
+      window.__creatorRecordMediaDebug = (event, details = {}) => {
+        if (!window.__creatorMediaDebugEnabled || !window.__creatorMediaDebug) return;
+        window.__creatorMediaDebug.events.push({
+          event,
+          at: new Date().toISOString(),
+          details
+        });
+      };
       if (isTikTok) document.documentElement.classList.add("tiktok-in-app-browser");
     })();
   </script>
@@ -1750,6 +1786,94 @@
       }
       return next;
     }
+    function creatorMediaDebugEnabled() {
+      return Boolean(window.__creatorMediaDebugEnabled && window.__creatorMediaDebug);
+    }
+    function recordMediaDebug(event, details = {}) {
+      if (typeof window.__creatorRecordMediaDebug === "function") {
+        window.__creatorRecordMediaDebug(event, details);
+      }
+    }
+    function creatorMediaDebugQuery() {
+      return creatorMediaDebugEnabled() ? "&creator_media_debug=1" : "";
+    }
+    function mediaResourceSummary() {
+      const videoNodes = Array.from(document.querySelectorAll("video")).map((video) => ({
+        id: video.id || "",
+        className: video.className || "",
+        hasSrc: Boolean(video.getAttribute("src") || video.currentSrc || video.src),
+        srcHasVideoExtension: /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(video.getAttribute("src") || video.currentSrc || video.src || ""),
+        readyState: video.readyState,
+        paused: video.paused,
+        muted: video.muted
+      }));
+      const sourceNodes = Array.from(document.querySelectorAll("source")).map((source) => ({
+        hasSrc: Boolean(source.getAttribute("src")),
+        srcHasVideoExtension: /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(source.getAttribute("src") || "")
+      }));
+      const html = document.documentElement.outerHTML || "";
+      return {
+        videoCount: videoNodes.length,
+        sourceCount: sourceNodes.length,
+        mp4ReferenceCount: (html.match(/\.(?:mp4|mov|m4v|webm)(?:[?#][^"' <)]*)?/gi) || []).length,
+        videoNodes,
+        sourceNodes
+      };
+    }
+    function collectCreatorMediaDebug(settings = {}, serverDebug = null) {
+      const summary = mediaResourceSummary();
+      const debug = window.__creatorMediaDebug || {};
+      return {
+        ...debug,
+        url: window.location.href,
+        documentClasses: Array.from(document.documentElement.classList),
+        detection: {
+          ...(debug.detection || {}),
+          tiktokInAppBrowserRuntime: tiktokInAppBrowser(),
+          helperLooksLikeTikTok: looksLikeTikTokBrowser(),
+          creatorSettingsSurfaceQuery: creatorSettingsSurfaceQuery(),
+          selectedMediaPath: tiktokInAppBrowser() ? "tiktok-static" : "web-video"
+        },
+        settings: {
+          slug: settings.slug || "mosyaamosya",
+          hero_video_url_exists_after_client_sanitize: Boolean(settings.hero_video_url),
+          profile_image_exists: Boolean(settings.avatar_url),
+          welcome_intro_enabled: settings.welcome_intro_enabled !== false
+        },
+        dom: summary,
+        server: serverDebug,
+        collected_at: new Date().toISOString()
+      };
+    }
+    let creatorMediaDebugReported = false;
+    function renderCreatorMediaDebug(settings = {}, serverDebug = null) {
+      if (!creatorMediaDebugEnabled()) return;
+      const debug = collectCreatorMediaDebug(settings, serverDebug);
+      console.info("[Creator OS media debug]", debug);
+      let panel = $("creatorMediaDebugPanel");
+      if (!panel) {
+        panel = document.createElement("pre");
+        panel.id = "creatorMediaDebugPanel";
+        panel.style.cssText = "position:fixed;z-index:99999;left:10px;right:10px;bottom:10px;max-height:42vh;overflow:auto;margin:0;padding:12px;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(8,5,4,.92);color:#fff5f7;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;text-align:left;";
+        document.body.appendChild(panel);
+      }
+      panel.textContent = JSON.stringify(debug, null, 2);
+      if (!creatorMediaDebugReported) {
+        creatorMediaDebugReported = true;
+        fetch("/api/creator-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            action: "creator_media_debug_report",
+            slug: settings.slug || "mosyaamosya",
+            route: location.pathname + location.search,
+            surface: tiktokInAppBrowser() ? "tiktok" : "web",
+            client: debug
+          }),
+          keepalive: true
+        }).catch(() => {});
+      }
+    }
     let videoKillObserver = null;
     function stripVideoResourceAttributes(element) {
       if (!element || typeof element.getAttribute !== "function") return;
@@ -1764,11 +1888,16 @@
     }
     function enforceVideoKillSwitch() {
       if (!tiktokInAppBrowser()) return;
+      const before = mediaResourceSummary();
       retryableVideos.clear();
       document.querySelectorAll("video, source").forEach((element) => element.remove());
       document.querySelectorAll("[src], [poster], [data-src], [data-video-src], [style]").forEach(stripVideoResourceAttributes);
       ensureDecorativePoster("heroPoster", "hero-video hero-poster", "hero");
       ensureDecorativePoster("introPoster", "intro-poster", "intro");
+      recordMediaDebug("video_kill_switch_enforced", {
+        before,
+        after: mediaResourceSummary()
+      });
     }
     function bindVideoKillSwitch() {
       if (!tiktokInAppBrowser() || videoKillObserver) return;
@@ -1808,6 +1937,7 @@
       if (video) {
         retryableVideos.delete(video);
         video.remove();
+        recordMediaDebug("decorative_video_removed", { id, posterId, parentId });
       }
       const poster = ensureDecorativePoster(posterId, posterId === "heroPoster" ? "hero-video hero-poster" : "intro-poster", parentId);
       if (poster) poster.classList.remove("media-poster-hidden");
@@ -1817,6 +1947,7 @@
       if (tiktokInAppBrowser()) {
         bindVideoKillSwitch();
         ensureDecorativePoster(posterId, posterId === "heroPoster" ? "hero-video hero-poster" : "intro-poster", parentId);
+        recordMediaDebug("decorative_video_blocked_by_tiktok_path", { id, posterId, parentId });
         return null;
       }
       const existing = $(id);
@@ -1850,6 +1981,7 @@
       const parent = $(parentId);
       if (poster && poster.parentNode) poster.parentNode.insertBefore(video, poster.nextSibling);
       else if (parent) parent.insertBefore(video, parent.firstChild);
+      recordMediaDebug("decorative_video_created", { id, posterId, parentId });
       return video;
     }
     function normalizeMediaUrl(value) {
@@ -1901,6 +2033,11 @@
         setDecorativePosterHidden(video, false);
         video.src = src;
         video.load();
+        recordMediaDebug("decorative_video_src_assigned", {
+          id: video.id || "",
+          srcHasVideoExtension: /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(src),
+          srcOrigin: (() => { try { return new URL(src, window.location.origin).origin; } catch (error) { return ""; } })()
+        });
       }
       if (video.readyState >= 2) markDecorativeVideoReady(video);
       playMutedLoopVideo(video);
@@ -3768,6 +3905,7 @@
       setupMusic(settings);
       setupTikTokBrowserHelper(settings);
       setupIntro(settings);
+      renderCreatorMediaDebug(settings, settings.__creator_server_media_debug || null);
       if (!pageViewTracked) {
         pageViewTracked = true;
         trackCreatorEvent("page_view", { block_key: "page", block_title: settings.display_name || "Mina Mosya" });
@@ -3775,9 +3913,13 @@
     }
 
     primeDecorativeVideos(fallback);
-    fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
+    fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery() + creatorMediaDebugQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
       .then((response) => response.json())
-      .then((data) => render(sanitizeSettingsForSurface({ ...fallback, ...(data.creator || {}) })))
+      .then((data) => {
+        const settings = sanitizeSettingsForSurface({ ...fallback, ...(data.creator || {}) });
+        if (data.debug) settings.__creator_server_media_debug = data.debug;
+        render(settings);
+      })
       .catch(() => render(sanitizeSettingsForSurface(fallback)));
   </script>
 </body>

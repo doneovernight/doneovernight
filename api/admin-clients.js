@@ -555,6 +555,49 @@ function getQuery(req) {
   };
 }
 
+function headerValue(req, key) {
+  const value = req && req.headers ? req.headers[key.toLowerCase()] : "";
+  return Array.isArray(value) ? value.join(", ") : clean(value);
+}
+
+function creatorMediaDebugServerInfo(req, creator = {}, surface = "web") {
+  return {
+    request: {
+      user_agent: headerValue(req, "user-agent"),
+      sec_ch_ua: headerValue(req, "sec-ch-ua"),
+      sec_ch_ua_mobile: headerValue(req, "sec-ch-ua-mobile"),
+      sec_ch_ua_platform: headerValue(req, "sec-ch-ua-platform"),
+      accept_language: headerValue(req, "accept-language"),
+      host: headerValue(req, "host"),
+      forwarded_host: headerValue(req, "x-forwarded-host"),
+      forwarded_for_present: Boolean(headerValue(req, "x-forwarded-for")),
+      vercel_ip_country: headerValue(req, "x-vercel-ip-country"),
+      vercel_ip_city: headerValue(req, "x-vercel-ip-city")
+    },
+    detection: {
+      surface,
+      hero_video_url_exists_before_surface_sanitize: Boolean(clean(creator && creator.hero_video_url)),
+      hero_video_url_sent_to_client: surface === "tiktok" ? false : Boolean(clean(creator && creator.hero_video_url))
+    },
+    checked_at: new Date().toISOString()
+  };
+}
+
+function safeDebugValue(value, depth = 0) {
+  if (depth > 4) return "[depth-limit]";
+  if (value === null || value === undefined) return value;
+  if (typeof value === "string") return value.slice(0, 1200);
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.slice(0, 40).map((item) => safeDebugValue(item, depth + 1));
+  if (typeof value === "object") {
+    return Object.entries(value).slice(0, 80).reduce((next, [key, item]) => {
+      next[String(key).slice(0, 80)] = safeDebugValue(item, depth + 1);
+      return next;
+    }, {});
+  }
+  return String(value).slice(0, 1200);
+}
+
 function getSupabaseConfig(context = "Admin clients") {
   const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -2617,20 +2660,33 @@ async function handleCreatorSettings(req, res) {
   if (req.method === "GET") {
     try {
       const query = getQuery(req);
+      const surface = creatorSurface(query);
       const result = await fetchCreator(clean(query.slug) || "mosyaamosya");
-      return send(res, 200, {
+      const payload = {
         success: true,
-        creator: sanitizeCreatorForSurface(result.creator, creatorSurface(query)),
+        creator: sanitizeCreatorForSurface(result.creator, surface),
         source: result.source,
-        surface: creatorSurface(query)
-      });
+        surface
+      };
+      if (query.creator_media_debug === "1") {
+        payload.debug = creatorMediaDebugServerInfo(req, result.creator, surface);
+      }
+      return send(res, 200, payload);
     } catch (error) {
-      return send(res, 200, {
+      const query = getQuery(req);
+      const surface = creatorSurface(query);
+      const payload = {
         success: true,
-        creator: sanitizeCreatorForSurface(DEFAULT_MINA_SETTINGS, creatorSurface(getQuery(req))),
+        creator: sanitizeCreatorForSurface(DEFAULT_MINA_SETTINGS, surface),
         source: "fallback",
-        surface: creatorSurface(getQuery(req)),
+        surface,
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
+      };
+      if (query.creator_media_debug === "1") {
+        payload.debug = creatorMediaDebugServerInfo(req, DEFAULT_MINA_SETTINGS, surface);
+      }
+      return send(res, 200, {
+        ...payload
       });
     }
   }
@@ -2660,6 +2716,17 @@ async function handleCreatorSettings(req, res) {
   if (input.action === "track_creator_event") {
     const event = await trackCreatorAnalyticsEvent(req, input);
     return send(res, 200, { success: true, event });
+  }
+
+  if (input.action === "creator_media_debug_report") {
+    await saveAnalyticsEvent("creator_media_debug_mosyaamosya", {
+      creator_slug: clean(input.slug) || "mosyaamosya",
+      route: clean(input.route) || "/mosyaamosya",
+      server: creatorMediaDebugServerInfo(req, {}, creatorSurface(input)),
+      client: safeDebugValue(input.client || input.debug || {}),
+      created_at: new Date().toISOString()
+    }).catch(() => null);
+    return send(res, 200, { success: true });
   }
 
   if (input.action === "login") {
