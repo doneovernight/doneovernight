@@ -453,6 +453,20 @@
       opacity: .62;
       transform: scale(.995);
     }
+    .page-block-drag-handle {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.055);
+      color: rgba(255,245,247,.58);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      flex: 0 0 auto;
+    }
+    .page-block-drag-handle:active { cursor: grabbing; }
     .link-card-head {
       display: flex;
       align-items: center;
@@ -488,6 +502,7 @@
     .faq-answer { min-height: 88px; }
     .link-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .link-card-actions .button { min-height: 36px; padding: 0 11px; font-size: 12px; }
+    .poll-option-row { align-items: center; }
     .advanced-box {
       border: 1px solid rgba(255,211,223,.12);
       border-radius: 14px;
@@ -781,7 +796,7 @@
     .poll-options { display: grid; gap: 8px; width: 100%; max-width: 100%; min-width: 0; }
     .poll-option-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(82px, auto);
+      grid-template-columns: 34px minmax(0, 1fr) minmax(82px, auto);
       gap: 8px;
       align-items: center;
       width: 100%;
@@ -981,9 +996,10 @@
         min-width: 0;
       }
       .poll-option-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 34px minmax(0, 1fr);
       }
       .poll-option-row .button {
+        grid-column: 2;
         justify-self: end;
         width: min(132px, 100%);
       }
@@ -1198,12 +1214,13 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="links" hidden>
-          <h2>Links</h2>
-          <div class="section-note">Where do I send people? Turning a block off removes it from the public page and related visitor surfaces.</div>
+          <h2>Public Page</h2>
+          <div class="section-note">Arrange the blocks visitors see. Turning a block off removes it from the public page and related visitor surfaces.</div>
           <div style="height:12px"></div>
-          <div class="links-section-head">Core links<span>Public blocks</span></div>
-          <div class="link-list">
-            <section class="link-card">
+          <input name="public_page_order" type="hidden" value="[]">
+          <div class="links-section-head">Page blocks<span>Drag to reorder</span></div>
+          <div class="link-list" id="pageBlockBuilder">
+            <section class="link-card" data-page-block-key="discord">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Discord</strong><span>Direct Discord invite link.</span></div>
                 <label class="switch" aria-label="Discord link visible"><input name="discord_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1216,7 +1233,7 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="tiktok">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>TikTok</strong><span>Main TikTok profile link.</span></div>
                 <label class="switch" aria-label="TikTok link visible"><input name="tiktok_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1229,7 +1246,7 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="prepare">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Prepare for Battle / TikTok Coins</strong><span>Support block before battles.</span></div>
                 <label class="switch" aria-label="Battle link visible"><input name="battle_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1242,7 +1259,7 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="business">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Business Email</strong><span>Booking and collaboration contact.</span></div>
                 <label class="switch" aria-label="Business email visible"><input name="business_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1255,7 +1272,7 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="newsletter">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Newsletter</strong><span>Compact mailing list interaction.</span></div>
                 <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
@@ -1268,7 +1285,25 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="announcement">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Announcement</strong><span>Configured in Live Runtime.</span></div>
+              </div>
+            </section>
+
+            <section class="link-card" data-page-block-key="countdown">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Countdown</strong><span>Configured in Live Runtime.</span></div>
+              </div>
+            </section>
+
+            <section class="link-card" data-page-block-key="poll">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Poll</strong><span>Configured in Live Runtime.</span></div>
+              </div>
+            </section>
+
+            <section class="link-card" data-page-block-key="music">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
                 <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1281,7 +1316,7 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="faq">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Frequently Asked on Stream</strong><span>Answers Mina can point viewers to during livestreams.</span></div>
                 <label class="switch" aria-label="FAQ visible"><input name="faq_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1300,7 +1335,7 @@
               <input name="faq_link_url" type="hidden" value="">
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="community">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Community</strong><span>Public community block and visitor destination.</span></div>
                 <label class="switch" aria-label="Community visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1313,23 +1348,16 @@
               </div>
             </section>
 
-            <section class="link-card">
+            <section class="link-card" data-page-block-key="share">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Share</strong><span>Creator share button and share sheet.</span></div>
                 <label class="switch" aria-label="Share visible"><input name="share_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
             </section>
-
-            <div class="links-section-head">Custom links<span>Creator-defined blocks</span></div>
-            <section class="link-card" aria-label="Custom links builder">
-              <div class="link-card-head">
-                <div class="link-card-title"><strong>Custom Links</strong><span>Add, edit, disable, delete, and reorder custom blocks.</span></div>
-                <button class="button" id="addCustomLink" type="button">Add Link</button>
-              </div>
-              <div class="link-list" id="customLinksList"></div>
-              <input name="custom_links" type="hidden" value="[]">
-            </section>
           </div>
+          <div class="links-section-head">Creator-defined blocks<span>Custom Page Blocks</span></div>
+          <button class="button" id="addCustomLink" type="button">Add Link</button>
+          <input name="custom_links" type="hidden" value="[]">
           <input name="discord_url" type="hidden">
           <input name="discord_server_id" type="hidden">
           <input name="community_state" type="hidden" value="open">
@@ -2245,6 +2273,114 @@
         element.value = Boolean(value) ? "true" : "false";
       }
     }
+    const pageBlockRegistry = [
+      { key: "community", label: "Community", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
+      { key: "discord", label: "Discord", version: 1, capabilities: { reorderable: true, configurable: true } },
+      { key: "tiktok", label: "TikTok", version: 1, capabilities: { reorderable: true, configurable: true } },
+      { key: "prepare", label: "Prepare for Battle", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
+      { key: "business", label: "Business", version: 1, capabilities: { reorderable: true, configurable: true } },
+      { key: "music", label: "Music", version: 1, capabilities: { reorderable: true, configurable: true } },
+      { key: "faq", label: "Frequently Asked on Stream", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
+      { key: "poll", label: "Poll", version: 1, capabilities: { reorderable: true, runtimeOverlay: true } },
+      { key: "newsletter", label: "Newsletter", version: 1, capabilities: { reorderable: true, configurable: true } },
+      { key: "announcement", label: "Announcement", version: 1, capabilities: { reorderable: true, runtimeOverlay: true } },
+      { key: "countdown", label: "Countdown", version: 1, capabilities: { reorderable: true, runtimeOverlay: true } },
+      { key: "share", label: "Share", version: 1, capabilities: { reorderable: true, configurable: true } }
+    ];
+    const defaultPageBlockOrder = pageBlockRegistry.map((block) => block.key);
+    function customPageBlockKey(link) {
+      const id = String(link && link.id || "").trim();
+      return id ? "custom:" + id : "";
+    }
+    function normalizePublicPageOrder(value, customLinks = readCustomLinks()) {
+      let order = value;
+      if (typeof order === "string") {
+        try { order = JSON.parse(order); } catch (error) { order = []; }
+      }
+      const customKeys = (Array.isArray(customLinks) ? customLinks : []).map(customPageBlockKey).filter(Boolean);
+      const seen = new Set();
+      const result = [];
+      (Array.isArray(order) ? order : []).forEach((item) => {
+        const key = String(item || "").trim();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        result.push(key);
+      });
+      defaultPageBlockOrder.concat(customKeys).forEach((key) => {
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(key);
+        }
+      });
+      return result;
+    }
+    function readPublicPageOrder() {
+      const list = $("pageBlockBuilder");
+      if (!list) return normalizePublicPageOrder([]);
+      return Array.from(list.querySelectorAll(":scope > [data-page-block-key]"))
+        .map((row) => row.dataset.pageBlockKey)
+        .filter(Boolean);
+    }
+    function syncPublicPageOrderField() {
+      const field = form.elements.public_page_order;
+      if (field) field.value = JSON.stringify(normalizePublicPageOrder(readPublicPageOrder(), readCustomLinks()));
+    }
+    function decoratePageBlockRow(row) {
+      if (!row || row.dataset.pageBlockDecorated === "true") return row;
+      row.dataset.pageBlockDecorated = "true";
+      row.draggable = true;
+      const head = row.querySelector(".link-card-head");
+      if (head && !row.querySelector("[data-page-block-drag-handle]")) {
+        const handle = document.createElement("button");
+        handle.className = "page-block-drag-handle";
+        handle.type = "button";
+        handle.draggable = true;
+        handle.dataset.pageBlockDragHandle = "true";
+        handle.setAttribute("aria-label", "Drag block to reorder");
+        handle.innerHTML = "&#9776;";
+        head.insertBefore(handle, head.firstChild);
+      }
+      row.addEventListener("dragover", (event) => {
+        const list = $("pageBlockBuilder");
+        const dragging = list && list.querySelector("[data-page-block-key].is-dragging");
+        if (!list || !dragging || dragging === row) return;
+        event.preventDefault();
+        const box = row.getBoundingClientRect();
+        list.insertBefore(dragging, event.clientY < box.top + box.height / 2 ? row : row.nextElementSibling);
+        syncPublicPageOrderField();
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        row.classList.remove("is-dragging");
+        syncPublicPageOrderField();
+        setStatus("Page order updated. Save page to publish it.");
+      });
+      row.addEventListener("dragstart", (event) => {
+        if (!event.target.closest("[data-page-block-drag-handle]")) {
+          event.preventDefault();
+          return;
+        }
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.pageBlockKey || "");
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("is-dragging");
+        syncPublicPageOrderField();
+      });
+      return row;
+    }
+    function applyPublicPageOrder(order) {
+      const list = $("pageBlockBuilder");
+      if (!list) return;
+      const normalized = normalizePublicPageOrder(order, readCustomLinks());
+      normalized.forEach((key) => {
+        const row = list.querySelector('[data-page-block-key="' + CSS.escape(key) + '"]');
+        if (row) list.appendChild(row);
+      });
+      Array.from(list.querySelectorAll(":scope > [data-page-block-key]")).forEach(decoratePageBlockRow);
+      syncPublicPageOrderField();
+    }
     function customLinkId() {
       return "custom-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
     }
@@ -2262,25 +2398,17 @@
     function syncCustomLinksField() {
       const field = form.elements.custom_links;
       if (field) field.value = JSON.stringify(readCustomLinks());
-    }
-    function moveCustomLinkRow(row, direction) {
-      const list = $("customLinksList");
-      if (!list || !row) return;
-      if (direction === "up" && row.previousElementSibling) {
-        list.insertBefore(row, row.previousElementSibling);
-      } else if (direction === "down" && row.nextElementSibling) {
-        list.insertBefore(row.nextElementSibling, row);
-      }
-      syncCustomLinksField();
+      syncPublicPageOrderField();
     }
     function createCustomLinkRow(link = {}) {
       const row = document.createElement("section");
       row.className = "link-card";
       row.dataset.customLinkRow = "true";
       row.dataset.customLinkId = link.id || customLinkId();
+      row.dataset.pageBlockKey = customPageBlockKey({ id: row.dataset.customLinkId });
       row.innerHTML = [
         '<div class="link-card-head">',
-          '<div class="link-card-title"><strong>Custom Link</strong><span>Creator-defined public block.</span></div>',
+          '<div class="link-card-title"><strong>Custom Link</strong><span>Creator-defined public Page Block.</span></div>',
           '<label class="switch" aria-label="Custom link visible"><input data-custom-visible type="checkbox"><span class="track"></span></label>',
         '</div>',
         '<div class="link-card-fields">',
@@ -2290,8 +2418,6 @@
           '<label class="wide">Destination<input data-custom-url type="url"></label>',
         '</div>',
         '<div class="link-card-actions">',
-          '<button class="button" data-move-custom-link="up" type="button">Up</button>',
-          '<button class="button" data-move-custom-link="down" type="button">Down</button>',
           '<button class="button danger" data-remove-custom-link type="button">Delete</button>',
         '</div>'
       ].join("");
@@ -2302,27 +2428,25 @@
       row.querySelector("[data-custom-url]").value = link.url || link.destination || "";
       row.addEventListener("input", syncCustomLinksField);
       row.addEventListener("change", syncCustomLinksField);
-      row.querySelectorAll("[data-move-custom-link]").forEach((button) => {
-        button.addEventListener("click", () => moveCustomLinkRow(row, button.dataset.moveCustomLink));
-      });
       row.querySelector("[data-remove-custom-link]").addEventListener("click", () => {
         row.remove();
         syncCustomLinksField();
       });
-      return row;
+      return decoratePageBlockRow(row);
     }
     function writeCustomLinks(links = []) {
-      const list = $("customLinksList");
+      const list = $("pageBlockBuilder");
       if (!list) return;
-      list.replaceChildren();
+      list.querySelectorAll("[data-custom-link-row]").forEach((row) => row.remove());
       const normalized = Array.isArray(links) ? links : [];
       normalized.forEach((link) => list.appendChild(createCustomLinkRow(link)));
       syncCustomLinksField();
     }
     function addCustomLink() {
-      const list = $("customLinksList");
+      const list = $("pageBlockBuilder");
       if (!list) return;
-      list.appendChild(createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" }));
+      const row = createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" });
+      list.appendChild(row);
       syncCustomLinksField();
     }
     function faqItemId() {
@@ -2447,15 +2571,43 @@
       if (!form.elements.poll_options) return;
       form.elements.poll_options.value = JSON.stringify(readPollOptions());
     }
+    function moveDraggingPollOptionRow(targetRow, clientY) {
+      const list = $("pollOptionsList");
+      const dragging = list && list.querySelector("[data-poll-option-row].is-dragging");
+      if (!list || !dragging || !targetRow || dragging === targetRow) return;
+      const box = targetRow.getBoundingClientRect();
+      list.insertBefore(dragging, clientY < box.top + box.height / 2 ? targetRow : targetRow.nextElementSibling);
+      syncPollOptionsField();
+    }
     function createPollOptionRow(label = "") {
       const row = document.createElement("div");
       row.className = "poll-option-row";
       row.dataset.pollOptionRow = "true";
-      row.innerHTML = '<input data-poll-option-label aria-label="Poll answer option"><button class="button danger" type="button" data-remove-poll-option>Remove</button>';
+      row.innerHTML = '<button class="page-block-drag-handle" data-poll-option-drag-handle draggable="true" type="button" aria-label="Drag answer option to reorder">&#9776;</button><input data-poll-option-label aria-label="Poll answer option"><button class="button danger" type="button" data-remove-poll-option>Remove</button>';
       row.querySelector("[data-poll-option-label]").value = label;
       row.addEventListener("input", () => {
         syncPollOptionsField();
         queueRuntimeAutosave("Poll Updated");
+      });
+      row.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        moveDraggingPollOptionRow(row, event.clientY);
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        row.classList.remove("is-dragging");
+        syncPollOptionsField();
+        queueRuntimeAutosave("Poll Updated");
+      });
+      const handle = row.querySelector("[data-poll-option-drag-handle]");
+      handle.addEventListener("dragstart", (event) => {
+        row.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", label || "poll-option");
+      });
+      handle.addEventListener("dragend", () => {
+        row.classList.remove("is-dragging");
+        syncPollOptionsField();
       });
       row.querySelector("[data-remove-poll-option]").addEventListener("click", () => {
         if (document.querySelectorAll("[data-poll-option-row]").length <= 2) {
@@ -2728,6 +2880,7 @@
         community_link_url: String(data.get("community_link_url") || "").trim(),
         share_link_visible: boolField("share_link_visible", true),
         custom_links: readCustomLinks(),
+        public_page_order: normalizePublicPageOrder(readPublicPageOrder(), readCustomLinks()),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
         intro_audio_enabled: boolField("intro_audio_enabled"),
         intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
@@ -2786,6 +2939,7 @@
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
       syncLinkCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);
+      applyPublicPageOrder(settings.public_page_order || []);
       writeFaqItems(settings.faq_items || []);
       writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";

@@ -132,7 +132,8 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "community_link_cta_label",
   "community_link_url",
   "share_link_visible",
-  "custom_links"
+  "custom_links",
+  "public_page_order"
 ];
 const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_enabled",
@@ -142,6 +143,15 @@ const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_stop_after"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_PAGE_ORDER = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "public_page_order"),
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
 const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
@@ -265,6 +275,7 @@ const DEFAULT_MINA_SETTINGS = {
   community_link_url: "https://discord.gg/GGE7WsUZR",
   share_link_visible: true,
   custom_links: [],
+  public_page_order: [],
   redirect_mina_enabled: true,
   updated_at: new Date(0).toISOString()
 };
@@ -832,6 +843,50 @@ function normalizeCustomLinks(value) {
   }));
 }
 
+const DEFAULT_PUBLIC_PAGE_ORDER = [
+  "community",
+  "discord",
+  "tiktok",
+  "prepare",
+  "business",
+  "music",
+  "faq",
+  "poll",
+  "newsletter",
+  "announcement",
+  "countdown",
+  "share"
+];
+
+function normalizePublicPageOrder(value, customLinks = []) {
+  let order = value;
+  if (typeof order === "string") {
+    try {
+      order = JSON.parse(order);
+    } catch (error) {
+      order = [];
+    }
+  }
+  const normalizedCustomLinks = normalizeCustomLinks(customLinks);
+  const customKeys = normalizedCustomLinks.map((link) => "custom:" + link.id);
+  const validPattern = /^(discord|tiktok|prepare|business|music|faq|community|newsletter|announcement|countdown|poll|share|custom:[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]+)$/;
+  const seen = new Set();
+  const result = [];
+  (Array.isArray(order) ? order : []).forEach((item) => {
+    const key = clean(item).slice(0, 80);
+    if (!key || seen.has(key) || !validPattern.test(key)) return;
+    seen.add(key);
+    result.push(key);
+  });
+  DEFAULT_PUBLIC_PAGE_ORDER.concat(customKeys).forEach((key) => {
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(key);
+    }
+  });
+  return result;
+}
+
 function normalizeFaqItems(value) {
   let items = value;
   if (typeof items === "string") {
@@ -1107,6 +1162,7 @@ function normalizeCreator(row = {}) {
     community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
     share_link_visible: bool(row.share_link_visible, true),
     custom_links: normalizeCustomLinks(row.custom_links),
+    public_page_order: normalizePublicPageOrder(row.public_page_order, row.custom_links),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
@@ -1127,23 +1183,29 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
     });
   } catch (error) {
     try {
-      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY + "&limit=1", {
+      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_PAGE_ORDER + "&limit=1", {
         context: "Creator settings"
       });
-    } catch (legacyError) {
+    } catch (pageOrderError) {
       try {
-        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS + "&limit=1", {
+        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY + "&limit=1", {
           context: "Creator settings"
         });
-      } catch (faqError) {
+      } catch (legacyError) {
         try {
-          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
+          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS + "&limit=1", {
             context: "Creator settings"
           });
-        } catch (pollError) {
-          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
-            context: "Creator settings"
-          });
+        } catch (faqError) {
+          try {
+            rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
+              context: "Creator settings"
+            });
+          } catch (pollError) {
+            rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
+              context: "Creator settings"
+            });
+          }
         }
       }
     }
@@ -1285,6 +1347,7 @@ function creatorPayload(input = {}) {
     community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
     share_link_visible: bool(input.share_link_visible, true),
     custom_links: normalizeCustomLinks(input.custom_links),
+    public_page_order: normalizePublicPageOrder(input.public_page_order, input.custom_links),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),
@@ -1307,22 +1370,32 @@ async function saveCreatorToTable(payload) {
       context: "Creator settings"
     });
   } catch (error) {
-    const { share_link_visible, ...legacyVisibilityPayload } = payload;
+    const { public_page_order, ...withoutPageOrderPayload } = payload;
     try {
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_PAGE_ORDER, {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: [withoutPageOrderPayload],
+        context: "Creator settings"
+      });
+    } catch (pageOrderError) {
+      const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
+      try {
       rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
         method: "POST",
         prefer: "resolution=merge-duplicates,return=representation",
         body: [legacyVisibilityPayload],
         context: "Creator settings"
       });
-    } catch (legacyError) {
-      const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
-      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS, {
-        method: "POST",
-        prefer: "resolution=merge-duplicates,return=representation",
-        body: [legacyFaqPayload],
-        context: "Creator settings"
-      });
+      } catch (legacyError) {
+        const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
+        rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS, {
+          method: "POST",
+          prefer: "resolution=merge-duplicates,return=representation",
+          body: [legacyFaqPayload],
+          context: "Creator settings"
+        });
+      }
     }
     await saveCreatorToAnalyticsBridge(payload).catch(() => null);
   }

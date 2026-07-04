@@ -1344,7 +1344,8 @@
       community_link_cta_label: "Join Discord",
       community_link_url: "https://discord.gg/GGE7WsUZR",
       share_link_visible: true,
-      custom_links: []
+      custom_links: [],
+      public_page_order: []
     };
     const params = new URLSearchParams(window.location.search);
     const TIKTOK_BROWSER_HELPER_ENABLED = true;
@@ -1416,6 +1417,8 @@
     let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
     let latestPublicLiveState = null;
+    let activePageEngineHost = null;
+    let pageEngineSignature = "";
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
     const blockRegistry = {
@@ -1672,8 +1675,7 @@
     function applyLiveState(liveState, settings) {
       latestPublicLiveState = liveState || null;
       const refreshRuntimeBlocks = () => {
-        renderButtons(settings);
-        renderPinnedBlock(settings);
+        renderPageEngine(settings);
       };
       const source = String(liveState && liveState.source || "");
       const loadingStatus = source === "loading";
@@ -2025,6 +2027,78 @@
       })).filter((link) => link.visible && link.url);
     }
 
+    const pageBlockRegistry = [];
+    const defaultPageBlockOrder = [
+      "community",
+      "discord",
+      "tiktok",
+      "prepare",
+      "business",
+      "music",
+      "faq",
+      "poll",
+      "newsletter",
+      "announcement",
+      "countdown",
+      "share"
+    ];
+    function registerPageBlock(block) {
+      if (!block || !block.key || pageBlockRegistry.some((item) => item.key === block.key)) return;
+      pageBlockRegistry.push({
+        key: block.key,
+        version: block.version || 1,
+        capabilities: block.capabilities || {},
+        enabled: typeof block.enabled === "function" ? block.enabled : () => true,
+        visible: typeof block.visible === "function" ? block.visible : () => true,
+        configuration: block.configuration || {},
+        renderer: typeof block.renderer === "function" ? block.renderer : () => null,
+        migrate: typeof block.migrate === "function" ? block.migrate : (settings) => settings
+      });
+    }
+    function customPageBlockKey(link) {
+      return "custom:" + String(link && link.id || "").trim();
+    }
+    function normalizePublicPageOrder(value, settings) {
+      let order = value;
+      if (typeof order === "string") {
+        try { order = JSON.parse(order); } catch (error) { order = []; }
+      }
+      const customKeys = normalizeCustomLinks(settings.custom_links).map(customPageBlockKey).filter(Boolean);
+      const registeredKeys = pageBlockRegistry.map((block) => block.key);
+      const seen = new Set();
+      const result = [];
+      (Array.isArray(order) ? order : []).forEach((item) => {
+        const key = String(item || "").trim();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        result.push(key);
+      });
+      defaultPageBlockOrder.concat(registeredKeys, customKeys).forEach((key) => {
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(key);
+        }
+      });
+      return result;
+    }
+
+    function pageBlockForKey(key) {
+      const normalizedKey = String(key || "").trim();
+      if (normalizedKey.startsWith("custom:")) {
+        return {
+          key: normalizedKey,
+          version: 1,
+          capabilities: { link: true, custom: true },
+          enabled: (settings) => normalizeCustomLinks(settings.custom_links).some((link) => customPageBlockKey(link) === normalizedKey),
+          visible: (settings) => normalizeCustomLinks(settings.custom_links).some((link) => customPageBlockKey(link) === normalizedKey),
+          configuration: { source: "custom_links" },
+          renderer: ({ settings }) => createActionBlock(settings, normalizedKey),
+          migrate: (settings) => settings
+        };
+      }
+      return pageBlockRegistry.find((block) => block.key === normalizedKey) || null;
+    }
+
     function normalizeFaqItems(value) {
       if (!Array.isArray(value)) return [];
       return value.slice(0, 20).map((item, index) => ({
@@ -2190,7 +2264,8 @@
 
     function renderPoll(settings) {
       removeElement("pollCard");
-      if (String(settings.pinned_block || "").toLowerCase() !== "poll" || !settings.poll_enabled) return;
+      const pinnedPoll = String(settings.pinned_block || "").toLowerCase() === "poll";
+      if ((!activePageEngineHost && !pinnedPoll) || !settings.poll_enabled) return;
       const poll = fallbackPollState(settings);
       if (!poll.enabled) return;
       const card = document.createElement("section");
@@ -2315,16 +2390,16 @@
       };
     }
 
-    function renderButtons(settings) {
+    function pageActionDefinitions(settings) {
       const battleCopy = battleSupportCopy(settings);
-      const actions = [
+      return [
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
-        { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
+        { key: "prepare", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
         { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
-        key: "custom",
+        key: customPageBlockKey(link),
         visible: true,
         title: link.title,
         sub: link.sub,
@@ -2332,111 +2407,42 @@
         label: link.label,
         icon: icons.heart
       })));
-      const grid = $("buttonGrid");
-      if (!grid) return;
-      const renderableActions = actions.map((action) => ({
-        ...action,
-        resolvedUrl: action.url || actionUrl(action, settings)
-      })).filter((action) => Boolean(action.resolvedUrl));
-      const renderSignature = JSON.stringify(renderableActions.map((action) => ({
-        key: action.key,
-        title: action.title,
-        sub: action.sub,
-        label: action.label,
-        url: action.resolvedUrl,
-        battleActive: Boolean(action.battleActive)
-      })));
-      if (grid.dataset.renderSignature === renderSignature) return;
-      grid.dataset.renderSignature = renderSignature;
-      grid.innerHTML = "";
-      renderableActions.forEach((action) => {
-        const url = action.resolvedUrl;
-        const item = document.createElement(url ? "a" : "div");
-        const showBattleDiscount = action.key === "support" && Boolean(url);
-        item.className = showBattleDiscount ? "link-button content-block prepare-card" : "link-button content-block";
-        item.dataset.blockType = action.key === "discord" ? "discord" : "link";
-        if (url) {
-          item.href = url;
-          item.target = url.startsWith("mailto:") ? "_self" : "_blank";
-          item.rel = "noreferrer";
-          item.dataset.analyticsEvent = action.key === "support" ? "prepare_click" : action.key + "_click";
-          item.dataset.analyticsBlockKey = action.key;
-          item.dataset.analyticsBlockTitle = action.title;
-          item.dataset.analyticsDestination = url;
-        }
-        item.innerHTML =
-          '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
-          escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
-          escapeHtml(action.label) + '</span>';
-        if (showBattleDiscount) {
-          const shell = document.createElement("div");
-          shell.className = action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell";
-          const sticker = document.createElement("img");
-          sticker.className = "prepare-discount-sticker";
-          sticker.src = prepareDiscountStickerSrc;
-          sticker.alt = "";
-          sticker.setAttribute("aria-hidden", "true");
-          sticker.loading = "eager";
-          sticker.decoding = "sync";
-          sticker.fetchPriority = "high";
-          shell.appendChild(sticker);
-          shell.appendChild(item);
-          grid.appendChild(shell);
-        } else {
-          grid.appendChild(item);
-        }
-      });
-      if (!renderableActions.length) grid.remove();
     }
 
-    function renderPinnedBlock(settings) {
-      removeElement("runtimePinned");
-      const block = String(settings.pinned_block || "").toLowerCase();
-      if (!block) return;
-      if (["faq", "poll", "community", "newsletter"].includes(block)) return;
-      const announcement = String(settings.quick_announcement || "").trim();
-      const nextDate = nextLiveDate(settings);
-      const activeCommunityUrl = communityUrl(settings);
-      const battleUrl = safeUrl(settings.tiktok_coins_url);
-      const battleCopy = battleSupportCopy(settings);
-      const content = {
-        prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? {
-          title: battleCopy.title,
-          copy: battleCopy.sub,
-          label: battleCopy.label,
-          url: battleUrl,
-          event: "prepare_click"
-        } : null,
-        announcement: announcement ? { title: "Announcement", copy: announcement } : null,
-        countdown: nextDate && nextDate.getTime() > Date.now() ? { title: "Countdown", copy: countdownText(nextDate) } : null
-      }[block];
-      const shouldShow = content && (block !== "announcement" || announcement);
-      if (!shouldShow) return;
-      const pinned = document.createElement("section");
-      pinned.className = "runtime-pinned is-visible";
-      pinned.id = "runtimePinned";
-      pinned.setAttribute("aria-live", "polite");
-      const title = document.createElement("strong");
-      const copy = document.createElement("span");
-      title.textContent = content.title;
-      copy.textContent = content.copy;
-      pinned.append(title, copy);
-      if (content.url) {
-        const action = document.createElement("a");
-        action.className = "button-action";
-        action.href = content.url;
-        action.target = content.url.startsWith("mailto:") ? "_self" : "_blank";
-        action.rel = "noreferrer";
-        action.textContent = content.label || "Open";
-        action.dataset.analyticsEvent = content.event || block + "_click";
-        action.dataset.analyticsBlockTitle = content.title;
-        action.dataset.analyticsDestination = content.url;
-        pinned.appendChild(action);
-      }
-      const community = $("communityCard");
-      const grid = $("buttonGrid");
-      const shell = document.querySelector(".shell");
-      if (shell) shell.insertBefore(pinned, community || grid || $("footerNav"));
+    function createActionBlock(settings, key) {
+      const action = pageActionDefinitions(settings).find((item) => item.key === key);
+      if (!action) return null;
+      const url = action.url || actionUrl(action, settings);
+      if (!url) return null;
+      const item = document.createElement("a");
+      const showBattleDiscount = action.key === "prepare";
+      item.className = showBattleDiscount ? "link-button content-block prepare-card" : "link-button content-block";
+      item.dataset.blockType = action.key === "discord" ? "discord" : "link";
+      item.href = url;
+      item.target = url.startsWith("mailto:") ? "_self" : "_blank";
+      item.rel = "noreferrer";
+      item.dataset.analyticsEvent = action.key === "prepare" ? "prepare_click" : action.key.replace(/^custom:/, "custom") + "_click";
+      item.dataset.analyticsBlockKey = action.key;
+      item.dataset.analyticsBlockTitle = action.title;
+      item.dataset.analyticsDestination = url;
+      item.innerHTML =
+        '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
+        escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
+        escapeHtml(action.label) + '</span>';
+      if (!showBattleDiscount) return item;
+      const shell = document.createElement("div");
+      shell.className = action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell";
+      const sticker = document.createElement("img");
+      sticker.className = "prepare-discount-sticker";
+      sticker.src = prepareDiscountStickerSrc;
+      sticker.alt = "";
+      sticker.setAttribute("aria-hidden", "true");
+      sticker.loading = "eager";
+      sticker.decoding = "sync";
+      sticker.fetchPriority = "high";
+      shell.appendChild(sticker);
+      shell.appendChild(item);
+      return shell;
     }
 
     function setSheetOpen(id, open) {
@@ -2447,6 +2453,10 @@
     }
 
     function insertBeforeFooter(element) {
+      if (activePageEngineHost && element) {
+        activePageEngineHost.appendChild(element);
+        return;
+      }
       const footerNav = $("footerNav");
       const shell = document.querySelector(".shell");
       if (!element || !shell) return;
@@ -2454,6 +2464,10 @@
     }
 
     function insertRuntimeTop(element) {
+      if (activePageEngineHost && element) {
+        activePageEngineHost.appendChild(element);
+        return;
+      }
       const shell = document.querySelector(".shell");
       if (!element || !shell) return;
       shell.insertBefore(element, $("communityCard") || $("buttonGrid") || $("footerNav") || shell.querySelector(".doneovernight-creator-footer"));
@@ -2484,9 +2498,7 @@
         insertRuntimeTop(card);
         return;
       }
-      const grid = $("buttonGrid");
-      const shell = document.querySelector(".shell");
-      if (shell) shell.insertBefore(card, grid || $("footerNav"));
+      insertBeforeFooter(card);
     }
 
     function setupNewsletter() {
@@ -2680,6 +2692,240 @@
         if (event.target === sheet) setSheetOpen("shareSheet", false);
       });
     }
+
+    function createRuntimeTextBlock(settings, key) {
+      const block = String(key || "").toLowerCase();
+      const announcement = String(settings.quick_announcement || "").trim();
+      const nextDate = nextLiveDate(settings);
+      const content = {
+        announcement: announcement ? { title: "Announcement", copy: announcement } : null,
+        countdown: nextDate && nextDate.getTime() > Date.now() ? { title: "Countdown", copy: countdownText(nextDate) } : null
+      }[block];
+      if (!content) return null;
+      const section = document.createElement("section");
+      section.className = "runtime-pinned is-visible";
+      section.dataset.blockType = block;
+      section.setAttribute("aria-live", "polite");
+      const title = document.createElement("strong");
+      const copy = document.createElement("span");
+      title.textContent = content.title;
+      copy.textContent = content.copy;
+      section.append(title, copy);
+      return section;
+    }
+
+    function ensurePageEngineHost() {
+      let host = $("buttonGrid");
+      if (!host) {
+        host = document.createElement("section");
+        host.className = "button-grid";
+        host.id = "buttonGrid";
+        insertBeforeFooter(host);
+      }
+      host.innerHTML = "";
+      return host;
+    }
+
+    function runtimeOverlayOrder(settings, order) {
+      const pinned = String(settings.pinned_block || "").toLowerCase();
+      if (!pinned) return order;
+      const key = pinned === "support" ? "prepare" : pinned;
+      if (!key || !order.includes(key)) return order;
+      return [key].concat(order.filter((item) => item !== key));
+    }
+
+    function pageEngineRenderSignature(settings, order) {
+      return JSON.stringify({
+        order,
+        live: {
+          battleActive: latestPublicLiveState && latestPublicLiveState.battleActive === true,
+          source: latestPublicLiveState && latestPublicLiveState.source,
+          isLive: latestPublicLiveState && latestPublicLiveState.isLive
+        },
+        fields: {
+          discord_link_visible: settings.discord_link_visible,
+          discord_invite_url: settings.discord_invite_url,
+          tiktok_link_visible: settings.tiktok_link_visible,
+          tiktok_url: settings.tiktok_url,
+          battle_link_visible: settings.battle_link_visible,
+          tiktok_coins_url: settings.tiktok_coins_url,
+          battle_mode_enabled: settings.battle_mode_enabled,
+          business_link_visible: settings.business_link_visible,
+          business_email: settings.business_email,
+          music_link_visible: settings.music_link_visible,
+          music_url: settings.music_url,
+          subscribe_popup_enabled: settings.subscribe_popup_enabled,
+          newsletter_cta_label: settings.newsletter_cta_label,
+          faq_link_visible: settings.faq_link_visible,
+          faq_items: settings.faq_items,
+          community_link_visible: settings.community_link_visible,
+          community_state: settings.community_state,
+          community_link_url: settings.community_link_url,
+          share_link_visible: settings.share_link_visible,
+          poll_enabled: settings.poll_enabled,
+          poll_question: settings.poll_question,
+          poll_options: settings.poll_options,
+          pinned_block: settings.pinned_block,
+          quick_announcement: settings.quick_announcement,
+          next_live_datetime: settings.next_live_datetime,
+          custom_links: settings.custom_links
+        }
+      });
+    }
+
+    function renderPageEngine(settings) {
+      const order = runtimeOverlayOrder(settings, normalizePublicPageOrder(settings.public_page_order, settings));
+      const signature = pageEngineRenderSignature(settings, order);
+      const existingHost = $("buttonGrid");
+      if (existingHost && pageEngineSignature === signature && existingHost.dataset.renderSignature === signature) return;
+      removeElement("runtimePinned");
+      removeElement("communityCard");
+      removeElement("faqCard");
+      removeElement("pollCard");
+      removeElement("newsletterBlock");
+      removeElement("shareButton");
+      removeElement("shareSheet");
+
+      const host = ensurePageEngineHost();
+      host.dataset.renderSignature = signature;
+      pageEngineSignature = signature;
+      activePageEngineHost = host;
+      try {
+        order.forEach((key) => {
+          const block = pageBlockForKey(key);
+          if (!block || block.enabled(settings) === false || block.visible(settings) === false) return;
+          const element = block.renderer({ settings, key, runtime: latestPublicLiveState });
+          if (element) host.appendChild(element);
+        });
+      } finally {
+        activePageEngineHost = null;
+      }
+      host.toggleAttribute("hidden", !host.children.length);
+    }
+
+    registerPageBlock({
+      key: "discord",
+      version: 1,
+      capabilities: { link: true, destination: true },
+      enabled: (settings) => featureOn(settings, "discord_link_visible", true),
+      visible: (settings) => discordEnabled(settings),
+      configuration: { visibilityField: "discord_link_visible", destinationField: "discord_invite_url" },
+      renderer: ({ settings }) => createActionBlock(settings, "discord")
+    });
+    registerPageBlock({
+      key: "tiktok",
+      version: 1,
+      capabilities: { link: true, destination: true },
+      enabled: (settings) => featureOn(settings, "tiktok_link_visible", true),
+      visible: (settings) => Boolean(safeUrl(settings.tiktok_url)),
+      configuration: { visibilityField: "tiktok_link_visible", destinationField: "tiktok_url" },
+      renderer: ({ settings }) => createActionBlock(settings, "tiktok")
+    });
+    registerPageBlock({
+      key: "prepare",
+      version: 1,
+      capabilities: { link: true, runtimeOverlay: true, destination: true },
+      enabled: (settings) => featureOn(settings, "battle_link_visible", true),
+      visible: (settings) => Boolean(safeUrl(settings.tiktok_coins_url)),
+      configuration: { visibilityField: "battle_link_visible", destinationField: "tiktok_coins_url" },
+      renderer: ({ settings }) => createActionBlock(settings, "prepare")
+    });
+    registerPageBlock({
+      key: "business",
+      version: 1,
+      capabilities: { link: true, destination: true },
+      enabled: (settings) => featureOn(settings, "business_link_visible", true),
+      visible: (settings) => Boolean(settings.business_email),
+      configuration: { visibilityField: "business_link_visible", destinationField: "business_email" },
+      renderer: ({ settings }) => createActionBlock(settings, "business")
+    });
+    registerPageBlock({
+      key: "newsletter",
+      version: 1,
+      capabilities: { form: true, analytics: true },
+      enabled: (settings) => featureOn(settings, "subscribe_popup_enabled", true),
+      visible: (settings) => featureOn(settings, "subscribe_popup_enabled", true),
+      configuration: { visibilityField: "subscribe_popup_enabled" },
+      renderer: ({ settings }) => {
+        renderNewsletter(settings);
+        return null;
+      }
+    });
+    registerPageBlock({
+      key: "announcement",
+      version: 1,
+      capabilities: { runtimeOverlay: true },
+      enabled: () => true,
+      visible: (settings) => Boolean(String(settings.quick_announcement || "").trim()),
+      configuration: { runtimeField: "quick_announcement" },
+      renderer: ({ settings }) => createRuntimeTextBlock(settings, "announcement")
+    });
+    registerPageBlock({
+      key: "countdown",
+      version: 1,
+      capabilities: { runtimeOverlay: true, time: true },
+      enabled: () => true,
+      visible: (settings) => Boolean(nextLiveDate(settings)),
+      configuration: { runtimeField: "next_live_datetime" },
+      renderer: ({ settings }) => createRuntimeTextBlock(settings, "countdown")
+    });
+    registerPageBlock({
+      key: "poll",
+      version: 1,
+      capabilities: { form: true, analytics: true, runtimeOverlay: true },
+      enabled: (settings) => Boolean(settings.poll_enabled),
+      visible: (settings) => fallbackPollState(settings).enabled,
+      configuration: { visibilityField: "poll_enabled" },
+      renderer: ({ settings }) => {
+        renderPoll(settings);
+        return null;
+      }
+    });
+    registerPageBlock({
+      key: "music",
+      version: 1,
+      capabilities: { link: true, destination: true },
+      enabled: (settings) => featureOn(settings, "music_link_visible", false),
+      visible: (settings) => Boolean(externalUrl(settings.music_url)),
+      configuration: { visibilityField: "music_link_visible", destinationField: "music_url" },
+      renderer: ({ settings }) => createActionBlock(settings, "music")
+    });
+    registerPageBlock({
+      key: "faq",
+      version: 1,
+      capabilities: { accordion: true, analytics: true },
+      enabled: (settings) => featureOn(settings, "faq_link_visible", false),
+      visible: (settings) => normalizeFaqItems(settings.faq_items).length > 0,
+      configuration: { visibilityField: "faq_link_visible", itemsField: "faq_items" },
+      renderer: ({ settings }) => {
+        renderFaq(settings);
+        return null;
+      }
+    });
+    registerPageBlock({
+      key: "community",
+      version: 1,
+      capabilities: { link: true, previewState: true },
+      enabled: (settings) => featureOn(settings, "community_link_visible", true),
+      visible: (settings) => communityEnabled(settings),
+      configuration: { visibilityField: "community_link_visible", destinationField: "community_link_url" },
+      renderer: ({ settings }) => {
+        renderCommunity(settings);
+        return null;
+      }
+    });
+    registerPageBlock({
+      key: "share",
+      version: 1,
+      capabilities: { sheet: true, nativeShare: true },
+      enabled: (settings) => featureOn(settings, "share_link_visible", true),
+      visible: (settings) => featureOn(settings, "share_link_visible", true),
+      configuration: { visibilityField: "share_link_visible" },
+      renderer: ({ settings }) => {
+        setupShare(settings);
+        return null;
+      }
+    });
 
     function setupLivingGlassMotion() {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2955,16 +3201,10 @@
         countdown.textContent = "";
         countdown.classList.remove("is-visible");
       }
-      renderCommunity(settings);
-      renderButtons(settings);
-      renderFaq(settings);
-      renderPoll(settings);
-      renderNewsletter(settings);
+      renderPageEngine(settings);
       renderFooterNav(settings);
       renderPassport(settings);
-      renderPinnedBlock(settings);
       setupNewsletter();
-      setupShare(settings);
       setupLiveRuntime(settings);
       setupMusic(settings);
       setupTikTokBrowserHelper(settings);
