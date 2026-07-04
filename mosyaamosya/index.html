@@ -1010,33 +1010,50 @@
       min-height: 100vh;
       min-height: 100dvh;
       padding: calc(28px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));
-      background: #080504;
+      background:
+        radial-gradient(circle at 24% -8%, rgba(255,211,223,.24), transparent 28rem),
+        radial-gradient(circle at 86% 8%, rgba(139,95,74,.26), transparent 30rem),
+        linear-gradient(155deg, #080504 0%, #160b09 44%, #050403 100%);
       opacity: 0;
       pointer-events: none;
       transition: opacity .55s ease;
       overflow: hidden;
+      isolation: isolate;
     }
     .intro-pending .intro { opacity: 1; pointer-events: auto; }
     .intro[hidden] { display: none; }
     .intro.is-done { opacity: 0; pointer-events: none; }
+    .intro::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 30% 18%, rgba(255,211,223,.2), transparent 26rem),
+        linear-gradient(180deg, rgba(58,33,25,.24), rgba(5,3,2,.62));
+      pointer-events: none;
+    }
     .intro video {
       position: absolute;
       inset: -2%;
+      z-index: 1;
       width: 104%;
       height: 104%;
       object-fit: cover;
       filter: blur(2px) saturate(.9);
       opacity: .66;
+      background: transparent;
     }
     .intro::after {
       content: "";
       position: absolute;
       inset: 0;
+      z-index: 2;
       background: linear-gradient(180deg, rgba(7,4,3,.32), rgba(7,4,3,.76));
     }
     .intro-copy {
       position: relative;
-      z-index: 1;
+      z-index: 3;
       width: min(100%, 420px);
       display: grid;
       gap: 12px;
@@ -1448,6 +1465,14 @@
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
     const retryableVideos = new Set();
     let videoRetryBound = false;
+    function normalizeMediaUrl(value) {
+      if (!value) return "";
+      try {
+        return new URL(value, window.location.origin).href;
+      } catch (error) {
+        return String(value || "");
+      }
+    }
     function prepareMutedLoopVideo(video, src) {
       if (!video) return;
       video.autoplay = true;
@@ -1463,7 +1488,9 @@
       video.setAttribute("playsinline", "");
       video.setAttribute("preload", "auto");
       video.removeAttribute("controls");
-      if (src && video.getAttribute("src") !== src) {
+      const nextSrc = normalizeMediaUrl(src);
+      const currentSrc = normalizeMediaUrl(video.currentSrc || video.getAttribute("src") || video.src);
+      if (nextSrc && currentSrc !== nextSrc) {
         video.src = src;
         video.load();
       }
