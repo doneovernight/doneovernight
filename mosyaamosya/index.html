@@ -153,7 +153,7 @@
       pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
-      transition: opacity .48s ease;
+      transition: opacity .16s ease;
     }
     .hero-video.is-ready {
       opacity: calc(var(--ambient-video-opacity) + .04);
@@ -164,6 +164,10 @@
         var(--creator-poster-image) center 20% / cover no-repeat;
       opacity: calc(var(--ambient-video-opacity) + .04);
       z-index: -4;
+    }
+    .media-poster-hidden {
+      opacity: 0 !important;
+      transition: none !important;
     }
     .hero::before {
       content: "";
@@ -449,6 +453,9 @@
       gap: 14px;
       transition: transform .18s ease, border-color .18s ease, background .18s ease;
       will-change: transform;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      appearance: none;
     }
     .link-button:hover {
       transform: translateY(-1px);
@@ -456,6 +463,13 @@
       background: linear-gradient(140deg, rgba(255,255,255,.18), rgba(255,255,255,.07));
     }
     .link-button:active { transform: translateY(1px) scale(.993); }
+    .link-button:focus { outline: none; }
+    .link-button:focus-visible {
+      outline: none;
+      border-color: rgba(255,211,223,.34);
+      box-shadow: inset 0 1px rgba(255,255,255,.16), 0 0 0 1px rgba(255,211,223,.1), var(--glass-shadow);
+      background: var(--glass-bg);
+    }
     .link-button.is-disabled {
       opacity: .52;
       pointer-events: none;
@@ -466,6 +480,7 @@
       background: transparent;
       border: 0;
       min-width: 0;
+      -webkit-tap-highlight-color: transparent;
     }
     .prepare-card-shell .prepare-card {
       position: relative;
@@ -473,6 +488,12 @@
       overflow: hidden;
       border-radius: 24px;
       background-clip: padding-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .prepare-card-shell .prepare-card:active,
+    .prepare-card-shell .prepare-card:focus {
+      background: var(--glass-bg);
+      outline: none;
     }
     .prepare-card-shell.is-battle-active .prepare-card {
       animation: battleCardPulse 2.6s ease-in-out infinite;
@@ -1084,7 +1105,7 @@
     }
     .intro video {
       opacity: 0;
-      transition: opacity .48s ease;
+      transition: opacity .16s ease;
     }
     .intro video.is-ready {
       opacity: .66;
@@ -1709,6 +1730,7 @@
       video.setAttribute("aria-hidden", "true");
       video.setAttribute("tabindex", "-1");
       video.setAttribute("draggable", "false");
+      video.dataset.posterId = posterId;
       const parent = $(parentId);
       if (poster && poster.parentNode) poster.parentNode.insertBefore(video, poster.nextSibling);
       else if (parent) parent.insertBefore(video, parent.firstChild);
@@ -1755,17 +1777,33 @@
       const currentSrc = normalizeMediaUrl(video.currentSrc || video.getAttribute("src") || video.src);
       if (nextSrc && currentSrc !== nextSrc) {
         video.classList.remove("is-ready");
+        setDecorativePosterHidden(video, false);
         video.src = src;
         video.load();
       }
-      if (video.readyState >= 2) video.classList.add("is-ready");
+      if (video.readyState >= 2) markDecorativeVideoReady(video);
       playMutedLoopVideo(video);
+    }
+    function setDecorativePosterHidden(video, hidden) {
+      const posterId = video && video.dataset && video.dataset.posterId;
+      const poster = posterId ? $(posterId) : null;
+      if (poster) poster.classList.toggle("media-poster-hidden", Boolean(hidden));
+    }
+    function markDecorativeVideoReady(video) {
+      if (!video) return;
+      setDecorativePosterHidden(video, true);
+      video.classList.add("is-ready");
+    }
+    function markDecorativeVideoUnavailable(video) {
+      if (!video) return;
+      video.classList.remove("is-ready");
+      setDecorativePosterHidden(video, false);
     }
     function bindDecorativeVideoReadiness(video) {
       if (!video || video.dataset.readyBound === "true") return;
       video.dataset.readyBound = "true";
-      const markReady = () => video.classList.add("is-ready");
-      const markUnavailable = () => video.classList.remove("is-ready");
+      const markReady = () => markDecorativeVideoReady(video);
+      const markUnavailable = () => markDecorativeVideoUnavailable(video);
       video.addEventListener("loadeddata", markReady);
       video.addEventListener("canplay", markReady);
       video.addEventListener("playing", markReady);
@@ -3320,7 +3358,7 @@
     function setupTikTokBrowserHelper(settings) {
       removeElement("tiktokBrowserHelper");
       const isMina = String(settings.slug || "mosyaamosya").toLowerCase() === "mosyaamosya";
-      const key = "creator_tiktok_browser_helper_dismissed_" + (settings.slug || "mosyaamosya");
+      const key = "creator_tiktok_video_helper_dismissed_" + (settings.slug || "mosyaamosya");
       let dismissed = false;
       try { dismissed = localStorage.getItem(key) === "true"; } catch (error) {}
       if (!TIKTOK_BROWSER_HELPER_ENABLED || !isMina || dismissed || !looksLikeTikTokBrowser()) return;
