@@ -1562,7 +1562,10 @@ async function fetchCreatorConnections(input = {}) {
       warning: error.statusCode === 404 ? "CREATOR_CONNECTIONS_TABLE_NOT_APPLIED" : (error.code || "CREATOR_CONNECTIONS_UNAVAILABLE")
     };
   }
-  const sanitized = Array.isArray(rows) ? rows.map((row) => sanitizeConnection(row, row.provider === "tiktok" ? runtime : null)) : [];
+  const validRows = Array.isArray(rows)
+    ? rows.filter((row) => row && typeof row === "object")
+    : [];
+  const sanitized = validRows.map((row) => sanitizeConnection(row, row.provider === "tiktok" ? runtime : null));
   if (!sanitized.some((connection) => connection.provider === "tiktok")) sanitized.unshift(defaultTikTokConnection(runtime));
   return { connections: sanitized, runtime };
 }
