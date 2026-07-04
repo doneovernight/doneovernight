@@ -21,8 +21,9 @@
     (() => {
       const ua = navigator.userAgent || "";
       const params = new URLSearchParams(window.location.search);
-      const isTikTok = params.get("tiktok_in_app") === "1" || /tiktok|musical_ly|bytedance|ttwebview/i.test(ua);
+      const isTikTok = params.get("tiktok_in_app") === "1" || /tiktok|musical_ly|musically|bytedance|bytedancewebview|ttwebview|aweme|trill/i.test(ua);
       window.__creatorTikTokInAppBrowser = isTikTok;
+      window.__creatorVideoKillSwitch = isTikTok;
       if (isTikTok) document.documentElement.classList.add("tiktok-in-app-browser");
     })();
   </script>
@@ -1394,6 +1395,7 @@
   </script>
 
   <script>
+    const creatorHeroVideoPath = ["/assets/mosyaamosya/intro", "mp4"].join(".");
     const fallback = {
       id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",
@@ -1402,7 +1404,7 @@
       bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
       location: "Chicago 🇺🇸",
       avatar_url: "/assets/mosyaamosya/profile-v2.jpg",
-      hero_video_url: "/assets/mosyaamosya/intro.mp4",
+      hero_video_url: creatorHeroVideoPath,
       tiktok_url: "https://www.tiktok.com/@mosyaamosya",
       discord_url: "https://discord.gg/GGE7WsUZR",
       discord_invite_url: "https://discord.gg/GGE7WsUZR",
@@ -1601,12 +1603,46 @@
     }
     function setText(id, value) { $(id).textContent = value || ""; }
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
-    function heroVideo(settings) { return safeUrl(settings.hero_video_url || settings.banner_url) || "/assets/mosyaamosya/intro.mp4"; }
+    function heroVideo(settings) {
+      if (tiktokInAppBrowser()) return "";
+      return safeUrl(settings.hero_video_url || settings.banner_url) || creatorHeroVideoPath;
+    }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
     const retryableVideos = new Set();
     let videoRetryBound = false;
     function tiktokInAppBrowser() {
-      return Boolean(window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
+      return Boolean(window.__creatorVideoKillSwitch || window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
+    }
+    let videoKillObserver = null;
+    function stripVideoResourceAttributes(element) {
+      if (!element || typeof element.getAttribute !== "function") return;
+      ["src", "poster", "data-src", "data-video-src"].forEach((attr) => {
+        const value = element.getAttribute(attr);
+        if (value && /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(value)) element.removeAttribute(attr);
+      });
+      const style = element.getAttribute("style");
+      if (style && /\.(mp4|mov|m4v|webm)(?:[?#][^)]*)?\)?/i.test(style)) {
+        element.setAttribute("style", style.replace(/url\((['"]?)[^)]+\.(?:mp4|mov|m4v|webm)(?:[?#][^)]*)?\1\)/gi, "none"));
+      }
+    }
+    function enforceVideoKillSwitch() {
+      if (!tiktokInAppBrowser()) return;
+      retryableVideos.clear();
+      document.querySelectorAll("video, source").forEach((element) => element.remove());
+      document.querySelectorAll("[src], [poster], [data-src], [data-video-src], [style]").forEach(stripVideoResourceAttributes);
+      ensureDecorativePoster("heroPoster", "hero-video hero-poster", "hero");
+      ensureDecorativePoster("introPoster", "intro-poster", "intro");
+    }
+    function bindVideoKillSwitch() {
+      if (!tiktokInAppBrowser() || videoKillObserver) return;
+      enforceVideoKillSwitch();
+      videoKillObserver = new MutationObserver(() => enforceVideoKillSwitch());
+      videoKillObserver.observe(document.documentElement, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["src", "poster", "data-src", "data-video-src", "style"]
+      });
     }
     function updateDecorativePoster(settings) {
       const posterUrl = profileImage(settings).replace(/"/g, "%22");
@@ -1628,7 +1664,8 @@
     }
     function ensureDecorativeVideo(id, className, posterId, parentId) {
       if (tiktokInAppBrowser()) {
-        ensureDecorativePoster(posterId, className + " " + posterId.replace("Poster", "-poster").toLowerCase(), parentId);
+        bindVideoKillSwitch();
+        ensureDecorativePoster(posterId, posterId === "heroPoster" ? "hero-video hero-poster" : "intro-poster", parentId);
         return null;
       }
       const existing = $(id);
@@ -1674,7 +1711,11 @@
       }
     }
     function prepareMutedLoopVideo(video, src) {
-      if (!video || tiktokInAppBrowser()) return;
+      if (tiktokInAppBrowser()) {
+        bindVideoKillSwitch();
+        return;
+      }
+      if (!video) return;
       video.autoplay = true;
       video.muted = true;
       video.defaultMuted = true;
@@ -1706,7 +1747,7 @@
       playMutedLoopVideo(video);
     }
     function playMutedLoopVideo(video) {
-      if (!video) return;
+      if (!video || tiktokInAppBrowser()) return;
       video.muted = true;
       video.defaultMuted = true;
       const attempt = video.play();
