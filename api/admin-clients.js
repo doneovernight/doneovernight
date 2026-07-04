@@ -1238,28 +1238,22 @@ async function fetchCreatorFromAnalyticsBridge() {
 }
 
 async function fetchCreator(slug = "mosyaamosya") {
-  let tableResult = null;
   try {
     const creator = await fetchCreatorFromTable(slug);
-    if (creator) tableResult = { creator, source: "database" };
+    if (creator) return { creator, source: "database" };
   } catch (error) {
     // The dedicated creators table may not exist until the SQL file is applied.
   }
 
+  // Legacy fallback only. analytics_events snapshots must never override the
+  // persistent creators row once it exists, because runtime actions write there.
   try {
     const creator = await fetchCreatorFromAnalyticsBridge();
-    if (creator) {
-      const tableTime = tableResult && Date.parse(tableResult.creator.updated_at || "");
-      const bridgeTime = Date.parse(creator.updated_at || "");
-      if (!tableResult || (Number.isFinite(bridgeTime) && (!Number.isFinite(tableTime) || bridgeTime >= tableTime))) {
-        return { creator, source: "analytics_bridge" };
-      }
-    }
+    if (creator) return { creator, source: "analytics_bridge" };
   } catch (error) {
     // If the bridge table is unavailable, fall through to the seeded defaults.
   }
 
-  if (tableResult) return tableResult;
   return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
 }
 
@@ -1435,11 +1429,7 @@ async function saveCreatorToAnalyticsBridge(payload) {
 
 async function saveCreator(input = {}) {
   const payload = creatorPayload(input);
-  try {
-    return await saveCreatorToTable(payload);
-  } catch (error) {
-    return saveCreatorToAnalyticsBridge(payload);
-  }
+  return saveCreatorToTable(payload);
 }
 
 function runtimeActionEventType(slug = "mosyaamosya") {
