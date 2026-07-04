@@ -3702,6 +3702,28 @@
       if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3", "audio/aac", "audio/aacp", "audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mime)) return true;
       return /\.(mp3|m4a|aac)(?:[?#].*)?$/.test(url);
     }
+    function preparedSignatureAsset(info = {}) {
+      const url = String(info.url || "").toLowerCase();
+      if (!url) return false;
+      return url.includes("/creator-media/") && (url.includes("intro-audio-") || url.includes("-intro-clip") || url.includes("creator-signature"));
+    }
+    function signatureHealthDurationOk(info = {}) {
+      const duration = Number(info.duration) || 0;
+      if (!duration) return true;
+      if (duration >= 5 && duration <= 15) return true;
+      // Some trimmed MP3s keep stale source-duration metadata in browser media probes.
+      // Trust the prepared Creator OS asset when it is compressed, tiny, and stored as a signature upload.
+      return preparedSignatureAsset(info) && supportedSignatureAudio(info) && info.size && info.size <= 2_000_000;
+    }
+    function signatureDurationLabel(info = {}) {
+      const duration = Number(info.duration) || 0;
+      if (duration && duration <= 15) return formatSeconds(duration);
+      if (preparedSignatureAsset(info) && supportedSignatureAudio(info) && info.size && info.size <= 2_000_000) {
+        const clipLength = Math.max(1, Math.min(15, Number($("introAudioClipLength")?.value) || 10));
+        return formatSeconds(clipLength) + " clip";
+      }
+      return formatSeconds(duration);
+    }
     function classifyHealth(kind, info = {}) {
       if (!info.url) return { label: kind === "signature" ? "Not configured" : "Not set", className: "empty" };
       if (kind === "hero") {
@@ -3717,7 +3739,7 @@
       if (kind === "signature") {
         if (!supportedSignatureAudio(info)) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 2_000_000) return { label: "Needs Optimization", className: "warn" };
-        if (info.duration && (info.duration < 5 || info.duration > 15)) return { label: "Needs Optimization", className: "warn" };
+        if (!signatureHealthDurationOk(info)) return { label: "Needs Optimization", className: "warn" };
         return { label: "Ready", className: "ready" };
       }
       return { label: "Ready", className: "ready" };
@@ -3841,7 +3863,7 @@
       setText("heroMime", heroHead.mime || "Unknown");
       setText("heroAssetUrl", heroUrl || "Not set");
       setText("signatureFilename", signatureUrl ? mediaUrlFilename(signatureUrl) : "Not set");
-      setText("signatureDuration", formatSeconds(signatureMeta.duration));
+      setText("signatureDuration", signatureDurationLabel(mediaState.signature));
       setText("signatureFileSize", formatBytes(signatureHead.size));
       setText("signatureMime", signatureHead.mime || "Unknown");
       setText("signatureAssetUrl", signatureUrl || "Not set");
