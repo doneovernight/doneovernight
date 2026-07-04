@@ -28,7 +28,7 @@ const TIKTOK_OAUTH_AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/";
 const TIKTOK_OAUTH_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
 const TIKTOK_USER_INFO_URL = "https://open.tiktokapis.com/v2/user/info/";
 const TIKTOK_OAUTH_COOKIE = "creator_tiktok_oauth_state";
-const TIKTOK_OAUTH_SCOPE = "user.info.basic,user.info.profile";
+const TIKTOK_OAUTH_SCOPE = "user.info.basic";
 const BASE_CREATOR_FIELDS = [
   "id",
   "display_name",
