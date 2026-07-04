@@ -6,6 +6,7 @@
   <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
+  <link rel="preload" as="image" href="/assets/mosyaamosya/tiktok-static-poster.png" fetchpriority="high">
   <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
@@ -57,12 +58,13 @@
       --glass-y: 0%;
       --glass-shift-x: 0px;
       --glass-shift-y: 0px;
-      --creator-poster-image: url("/assets/mosyaamosya/profile-v2.jpg");
+      --creator-static-poster-image: url("/assets/mosyaamosya/tiktok-static-poster.png");
+      --creator-poster-image: var(--creator-static-poster-image);
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     * { box-sizing: border-box; }
-    html { background: var(--deep); }
+    html { background: #120807; }
     body {
       min-height: 100vh;
       min-height: 100dvh;
@@ -73,6 +75,18 @@
         linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%);
       color: var(--text);
       overflow-x: hidden;
+    }
+    .tiktok-in-app-browser body {
+      background-image:
+        linear-gradient(180deg, rgba(8,5,4,.24), rgba(8,5,4,.82)),
+        url("/assets/mosyaamosya/tiktok-static-poster.png"),
+        radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem),
+        radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem),
+        linear-gradient(155deg, #120807 0%, #160b09 42%, #070403 100%);
+      background-position: center, center 14%, center, center, center;
+      background-size: auto, cover, auto, auto, auto;
+      background-repeat: no-repeat;
+      background-attachment: scroll, fixed, scroll, scroll, scroll;
     }
     body::before, body::after {
       content: "";
@@ -1431,6 +1445,7 @@
 
   <script>
     const creatorHeroVideoPath = ["/assets/mosyaamosya/intro", "mp4"].join(".");
+    const staticPosterPath = "/assets/mosyaamosya/tiktok-static-poster.png";
     const fallback = {
       id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",
@@ -1638,6 +1653,10 @@
     }
     function setText(id, value) { $(id).textContent = value || ""; }
     function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
+    function decorativePosterImage(settings) {
+      if (tiktokInAppBrowser()) return staticPosterPath;
+      return safeUrl(settings.tiktok_fallback_image_url || settings.poster_image_url) || staticPosterPath;
+    }
     function heroVideo(settings) {
       if (tiktokInAppBrowser()) return "";
       return safeUrl(settings.hero_video_url || settings.banner_url) || creatorHeroVideoPath;
@@ -1680,7 +1699,7 @@
       });
     }
     function updateDecorativePoster(settings) {
-      const posterUrl = profileImage(settings).replace(/"/g, "%22");
+      const posterUrl = decorativePosterImage(settings).replace(/"/g, "%22");
       document.documentElement.style.setProperty("--creator-poster-image", 'url("' + posterUrl + '")');
     }
     function createPoster(id, className, parent) {
@@ -1949,6 +1968,10 @@
       document.body.className = document.body.className.replace(/\btheme-[a-z0-9-]+\b/g, "").trim();
       document.body.classList.add("theme-" + (settings.theme_preset || "mina"));
       document.body.dataset.creatorDna = settings.creator_dna || "streamer";
+      if (tiktokInAppBrowser()) {
+        document.body.style.removeProperty("background");
+        return;
+      }
       document.body.style.background = customBackground ? settings.background_gradient : theme.background;
     }
     function nextLiveDate(settings) {
