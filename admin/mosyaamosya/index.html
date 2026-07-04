@@ -1191,7 +1191,7 @@
               </div>
               <div class="media-health-grid">
                 <div class="media-health-card"><span>Hero Video</span><strong id="heroHealth">Checking</strong></div>
-                <div class="media-health-card"><span>Profile Image</span><strong id="profileHealth">Checking</strong></div>
+                <div class="media-health-card"><span>Profile Photo</span><strong id="profileHealth">Checking</strong></div>
                 <div class="media-health-card"><span>Creator Signature</span><strong id="signatureHealth">Checking</strong></div>
               </div>
               <div class="media-storage-grid">
@@ -1206,13 +1206,13 @@
 
             <section class="media-asset-card">
               <div class="media-asset-head">
-                <div class="media-asset-title"><strong>Profile Photo</strong><span>Creator OS strips metadata and resizes oversized images before upload.</span></div>
+                <div class="media-asset-title"><strong>Profile Photo</strong><span>Used across Creator OS and as the TikTok fallback. Supports PNG, JPG, JPEG, and animated GIF.</span></div>
                 <span class="media-health-pill" id="avatarHealthPill">Checking</span>
               </div>
               <input name="avatar_url" type="hidden">
               <div class="media-row">
                 <img class="media-preview" id="avatarPreview" alt="Profile image preview">
-                <input class="media-file-input" id="avatarFile" type="file" accept="image/*">
+                <input class="media-file-input" id="avatarFile" type="file" accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif">
               </div>
               <div class="media-spec-grid">
                 <div class="media-spec"><span>Resolution</span><strong id="avatarResolution">Unknown</strong></div>
@@ -1232,13 +1232,13 @@
 
             <section class="media-asset-card">
               <div class="media-asset-head">
-                <div class="media-asset-title"><strong>Hero Video</strong><span>Normal browsers play the full video. TikTok in-app uses a static fallback image to prevent TikTok from opening the video player.</span></div>
+                <div class="media-asset-title"><strong>Hero Video</strong><span>Used on supported browsers. TikTok never loads Hero Video. MP4 only.</span></div>
                 <span class="media-health-pill" id="heroHealthPill">Checking</span>
               </div>
               <input name="hero_video_url" type="hidden">
               <div class="media-row">
                 <video class="media-preview video" id="heroPreview" muted loop playsinline controls></video>
-                <input class="media-file-input" id="heroFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
+                <input class="media-file-input" id="heroFile" type="file" accept=".mp4,video/mp4">
               </div>
               <div class="media-spec-grid">
                 <div class="media-spec"><span>Resolution</span><strong id="heroResolution">Unknown</strong></div>
@@ -3842,17 +3842,60 @@
       }
       return formatSeconds(duration);
     }
+    function mediaFileExtension(file) {
+      const match = String(file?.name || "").toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+      return match ? match[1] : "";
+    }
+    function mediaFileMime(file) {
+      return String(file?.type || "").toLowerCase();
+    }
+    function mediaUrlExtension(value) {
+      try {
+        return new URL(String(value || ""), window.location.origin).pathname.toLowerCase().split(".").pop() || "";
+      } catch (error) {
+        const match = String(value || "").toLowerCase().match(/\.([a-z0-9]{2,5})(?:[?#].*)?$/);
+        return match ? match[1] : "";
+      }
+    }
+    function isProfilePhotoFile(file) {
+      const ext = mediaFileExtension(file);
+      const mime = mediaFileMime(file);
+      return ["png", "jpg", "jpeg", "gif"].includes(ext) &&
+        (!mime || ["image/png", "image/jpeg", "image/gif"].includes(mime));
+    }
+    function isHeroVideoFile(file) {
+      const ext = mediaFileExtension(file);
+      const mime = mediaFileMime(file);
+      return ext === "mp4" && (!mime || mime === "video/mp4");
+    }
+    function validateMediaFile(kind, file) {
+      if (!file) return "";
+      if (kind === "profile" || kind === "avatar") {
+        if (mediaFileMime(file).startsWith("video/") || ["mp4", "mov", "webm", "avi", "m4v"].includes(mediaFileExtension(file))) {
+          return "Profile Photos support images and animated GIFs only.";
+        }
+        return isProfilePhotoFile(file) ? "" : "Profile Photos support images and animated GIFs only.";
+      }
+      if (kind === "hero") return isHeroVideoFile(file) ? "" : "Hero Media supports MP4 only.";
+      return "";
+    }
     function classifyHealth(kind, info = {}) {
-      if (!info.url) return { label: kind === "signature" ? "Not configured" : "Not set", className: "empty" };
+      if (!info.url) return { label: kind === "signature" ? "Not configured" : "Missing", className: "empty" };
       if (kind === "hero") {
+        const mime = String(info.mime || "").toLowerCase();
+        const ext = mediaUrlExtension(info.url);
+        if ((ext && ext !== "mp4") || (!ext && mime && !mime.includes("mp4"))) return { label: "Needs Optimization", className: "warn" };
         if (info.duration && info.duration > 16) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 8_000_000) return { label: "Needs Optimization", className: "warn" };
         if (info.width && info.height && info.width > info.height) return { label: "Needs Optimization", className: "warn" };
-        return { label: "Optimized", className: "ready" };
+        return { label: "Ready", className: "ready" };
       }
       if (kind === "avatar") {
-        if (info.size && info.size > 1_500_000) return { label: "Needs Optimization", className: "warn" };
-        return { label: "Optimized", className: "ready" };
+        const ext = mediaUrlExtension(info.url);
+        const mime = String(info.mime || "").toLowerCase();
+        if (ext === "gif" || mime === "image/gif") return { label: "Animated GIF", className: "ready" };
+        if (["png", "jpg", "jpeg"].includes(ext) || ["image/png", "image/jpeg"].includes(mime)) return { label: "Static Image", className: "ready" };
+        return { label: "Ready", className: "ready" };
       }
       if (kind === "signature") {
         if (!supportedSignatureAudio(info)) return { label: "Needs Optimization", className: "warn" };
@@ -4091,10 +4134,10 @@
       const context = canvas.getContext("2d", { alpha: false });
       if (!context) return { file, message: "" };
       context.drawImage(image, 0, 0, width, height);
-      const type = canvas.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
+      const type = file.type === "image/png" ? "image/png" : "image/jpeg";
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, .88));
       if (!blob || blob.size >= file.size) return { file, message: "" };
-      const extension = type === "image/webp" ? "webp" : "jpg";
+      const extension = type === "image/png" ? "png" : "jpg";
       const name = String(file.name || "profile-photo").replace(/\.[^.]+$/, "") + "-optimized." + extension;
       return {
         file: new File([blob], name, { type }),
@@ -4106,6 +4149,12 @@
       const file = input.files && input.files[0];
       if (!file) {
         setStatus("Choose a file first, or paste an asset URL.", true);
+        return;
+      }
+      const mediaError = validateMediaFile(kind, file);
+      if (mediaError) {
+        setStatus(mediaError, true);
+        input.value = "";
         return;
       }
       if (kind === "intro-audio") {
@@ -4311,6 +4360,12 @@
     $("avatarFile").addEventListener("change", () => {
       const file = selectedFileForKind("avatar");
       if (!file) return;
+      const mediaError = validateMediaFile("profile", file);
+      if (mediaError) {
+        $("avatarFile").value = "";
+        setStatus(mediaError, true);
+        return;
+      }
       $("avatarPreview").src = URL.createObjectURL(file);
       mediaState.avatar = { url: $("avatarPreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
       refreshMediaMetadata();
@@ -4318,6 +4373,12 @@
     $("heroFile").addEventListener("change", () => {
       const file = selectedFileForKind("hero");
       if (!file) return;
+      const mediaError = validateMediaFile("hero", file);
+      if (mediaError) {
+        $("heroFile").value = "";
+        setStatus(mediaError, true);
+        return;
+      }
       $("heroPreview").src = URL.createObjectURL(file);
       mediaState.hero = { url: $("heroPreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
       refreshMediaMetadata();

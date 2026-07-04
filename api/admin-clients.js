@@ -944,6 +944,34 @@ function isIntroAudioFile(mimeType, fallbackName = "") {
     ["mp3", "m4a", "aac"].includes(named);
 }
 
+function mediaNameExtension(fallbackName = "") {
+  const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  return ext ? ext[1] : "";
+}
+
+function isProfilePhotoUpload(mimeType, fallbackName = "") {
+  const named = mediaNameExtension(fallbackName);
+  const normalized = clean(mimeType).toLowerCase();
+  return ["png", "jpg", "jpeg", "gif"].includes(named) &&
+    (!normalized || ["image/png", "image/jpeg", "image/gif"].includes(normalized) || GENERIC_UPLOAD_MIME_TYPES.has(normalized));
+}
+
+function isHeroVideoUpload(mimeType, fallbackName = "") {
+  const named = mediaNameExtension(fallbackName);
+  const normalized = clean(mimeType).toLowerCase();
+  return named === "mp4" && (!normalized || normalized === "video/mp4" || GENERIC_UPLOAD_MIME_TYPES.has(normalized));
+}
+
+function normalizeProfilePhotoMimeType(mimeType, fallbackName = "") {
+  const named = mediaNameExtension(fallbackName);
+  const normalized = clean(mimeType).toLowerCase();
+  if (!["png", "jpg", "jpeg", "gif"].includes(named)) return "";
+  if (normalized && !["image/png", "image/jpeg", "image/gif"].includes(normalized) && !GENERIC_UPLOAD_MIME_TYPES.has(normalized)) return "";
+  if (named === "gif") return "image/gif";
+  if (named === "png") return "image/png";
+  return "image/jpeg";
+}
+
 function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
@@ -978,15 +1006,15 @@ async function uploadCreatorMedia(input = {}) {
   const isImage = parsed.mimeType.startsWith("image/");
   const isVideo = parsed.mimeType.startsWith("video/");
   const isIntroAudio = isIntroAudioFile(parsed.mimeType, file.name);
-  const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : parsed.mimeType;
-  if (kind === "profile" && !isImage) {
-    const error = new Error("Profile media must be an image file.");
+  const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : kind === "profile" ? normalizeProfilePhotoMimeType(parsed.mimeType, file.name) : parsed.mimeType;
+  if (kind === "profile" && (!isImage || !isProfilePhotoUpload(parsed.mimeType, file.name) || !uploadMimeType)) {
+    const error = new Error("Profile Photos support images and animated GIFs only.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
-  if (kind === "hero" && !isVideo) {
-    const error = new Error("Hero media must be a vertical video file.");
+  if (kind === "hero" && (!isVideo || !isHeroVideoUpload(parsed.mimeType, file.name))) {
+    const error = new Error("Hero Media supports MP4 only.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;

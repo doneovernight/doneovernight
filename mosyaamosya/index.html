@@ -6,7 +6,6 @@
   <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
-  <link rel="preload" as="image" href="/assets/mosyaamosya/tiktok-static-poster.png" fetchpriority="high">
   <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
@@ -58,8 +57,8 @@
       --glass-y: 0%;
       --glass-shift-x: 0px;
       --glass-shift-y: 0px;
-      --creator-static-poster-image: url("/assets/mosyaamosya/tiktok-static-poster.png");
-      --creator-poster-image: var(--creator-static-poster-image);
+      --creator-theme-poster: linear-gradient(145deg, rgba(255,211,223,.18), rgba(139,95,74,.18) 45%, rgba(8,5,4,.96));
+      --creator-poster-image: var(--creator-theme-poster);
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -79,14 +78,13 @@
     .tiktok-in-app-browser body {
       background-image:
         linear-gradient(180deg, rgba(8,5,4,.24), rgba(8,5,4,.82)),
-        url("/assets/mosyaamosya/tiktok-static-poster.png"),
         radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem),
         radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem),
         linear-gradient(155deg, #120807 0%, #160b09 42%, #070403 100%);
-      background-position: center, center 14%, center, center, center;
-      background-size: auto, cover, auto, auto, auto;
+      background-position: center, center, center, center;
+      background-size: auto, auto, auto, auto;
       background-repeat: no-repeat;
-      background-attachment: scroll, fixed, scroll, scroll, scroll;
+      background-attachment: scroll, scroll, scroll, scroll;
     }
     body::before, body::after {
       content: "";
@@ -330,15 +328,32 @@
       gap: 12px;
     }
     .avatar {
+      position: relative;
       width: 92px;
       height: 92px;
       overflow: hidden;
       border-radius: 28px;
       border: 1px solid rgba(255,211,223,.34);
-      background: rgba(255,255,255,.12);
+      background:
+        radial-gradient(circle at 34% 24%, rgba(255,211,223,.26), transparent 46%),
+        linear-gradient(145deg, rgba(255,255,255,.13), rgba(139,95,74,.2));
       box-shadow: 0 22px 58px rgba(0,0,0,.42), 0 0 44px rgba(255,159,189,.12);
     }
     .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .avatar.is-placeholder img { display: none; }
+    .avatar.is-placeholder::after {
+      content: "M";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(255,245,247,.84);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 46px;
+      font-style: italic;
+      line-height: 1;
+      text-shadow: 0 16px 34px rgba(0,0,0,.32);
+    }
     h1 {
       max-width: 7ch;
       margin: 0;
@@ -1219,7 +1234,7 @@
       </div>
       <div class="hero-content">
         <div class="identity">
-          <div class="avatar"><img id="avatarImage" src="/assets/mosyaamosya/profile-v2.jpg" alt="Mina Mosya"></div>
+          <div class="avatar is-placeholder"><img id="avatarImage" alt="" hidden></div>
           <div>
             <h1 id="displayName">Mina Mosya</h1>
             <div class="handle" id="handle">@mosyaamosya</div>
@@ -1444,8 +1459,6 @@
   </script>
 
   <script>
-    const creatorHeroVideoPath = ["/assets/mosyaamosya/intro", "mp4"].join(".");
-    const staticPosterPath = "/assets/mosyaamosya/tiktok-static-poster.png";
     const fallback = {
       id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",
@@ -1652,17 +1665,24 @@
       return "";
     }
     function setText(id, value) { $(id).textContent = value || ""; }
-    function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/mosyaamosya/profile-v2.jpg"; }
+    function profileImage(settings) { return safeUrl(settings.avatar_url); }
+    function isMp4Url(value) {
+      const url = safeUrl(value);
+      if (!url) return false;
+      const ext = "mp4";
+      try {
+        return new URL(url, window.location.origin).pathname.toLowerCase().endsWith("." + ext);
+      } catch (error) {
+        return new RegExp("\\." + ext + "(?:[?#].*)?$", "i").test(url);
+      }
+    }
     function decorativePosterImage(settings) {
-      if (tiktokInAppBrowser()) return staticPosterPath;
-      return safeUrl(settings.tiktok_fallback_image_url || settings.poster_image_url) || staticPosterPath;
+      return profileImage(settings);
     }
     function heroVideo(settings) {
       if (tiktokInAppBrowser()) return "";
       const configured = safeUrl(settings.hero_video_url);
-      if (configured) return configured;
-      const banner = safeUrl(settings.banner_url);
-      if (banner) return banner;
+      if (configured && isMp4Url(configured)) return configured;
       return "";
     }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
@@ -1703,8 +1723,12 @@
       });
     }
     function updateDecorativePoster(settings) {
-      const posterUrl = decorativePosterImage(settings).replace(/"/g, "%22");
-      document.documentElement.style.setProperty("--creator-poster-image", 'url("' + posterUrl + '")');
+      const posterUrl = decorativePosterImage(settings);
+      if (posterUrl) {
+        document.documentElement.style.setProperty("--creator-poster-image", 'url("' + posterUrl.replace(/"/g, "%22") + '")');
+      } else {
+        document.documentElement.style.setProperty("--creator-poster-image", "var(--creator-theme-poster)");
+      }
     }
     function createPoster(id, className, parent) {
       const poster = document.createElement("div");
@@ -3014,7 +3038,14 @@
       const pageUrl = "https://doneovernight.com/" + (settings.slug || "mosyaamosya");
       $("shareName").textContent = settings.display_name || "Mina Mosya";
       $("shareHandle").textContent = "@" + (settings.username || settings.slug || "mosyaamosya");
-      $("shareAvatar").src = profileImage(settings);
+      const shareAvatarUrl = profileImage(settings);
+      if (shareAvatarUrl) {
+        $("shareAvatar").hidden = false;
+        $("shareAvatar").src = shareAvatarUrl;
+      } else {
+        $("shareAvatar").hidden = true;
+        $("shareAvatar").removeAttribute("src");
+      }
       const text = "Meet " + (settings.display_name || "Mina Mosya") + " on DONEOVERNIGHT Creator OS";
       const encodedUrl = encodeURIComponent(pageUrl);
       const encodedText = encodeURIComponent(text + " " + pageUrl);
@@ -3567,8 +3598,19 @@
       setText("handle", "@" + (settings.username || settings.slug || "mosyaamosya"));
       setText("bio", settings.bio || fallback.bio);
       setText("location", settings.location || fallback.location);
-      $("avatarImage").src = profileImage(settings);
-      $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
+      const avatarUrl = profileImage(settings);
+      const avatarImage = $("avatarImage");
+      const avatarFrame = avatarImage && avatarImage.closest(".avatar");
+      if (avatarUrl) {
+        avatarImage.hidden = false;
+        avatarImage.src = avatarUrl;
+        avatarImage.alt = (settings.display_name || "Mina Mosya") + " profile photo";
+      } else {
+        avatarImage.hidden = true;
+        avatarImage.removeAttribute("src");
+        avatarImage.alt = "";
+      }
+      if (avatarFrame) avatarFrame.classList.toggle("is-placeholder", !avatarUrl);
       const heroVideoUrl = heroVideo(settings);
       if (heroVideoUrl) {
         prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), heroVideoUrl);
