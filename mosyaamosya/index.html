@@ -147,17 +147,23 @@
       object-fit: cover;
       filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
       transform: scale(1.006);
-      opacity: calc(var(--ambient-video-opacity) + .04);
+      opacity: 0;
       animation: heroBreath 18s ease-in-out infinite;
       z-index: -3;
       pointer-events: none;
       -webkit-user-select: none;
       user-select: none;
+      transition: opacity .48s ease;
+    }
+    .hero-video.is-ready {
+      opacity: calc(var(--ambient-video-opacity) + .04);
     }
     .hero-poster {
       background:
         linear-gradient(180deg, rgba(5,3,2,.05), rgba(5,3,2,.62)),
         var(--creator-poster-image) center 20% / cover no-repeat;
+      opacity: calc(var(--ambient-video-opacity) + .04);
+      z-index: -4;
     }
     .hero::before {
       content: "";
@@ -978,7 +984,7 @@
       position: fixed;
       left: 14px;
       right: 14px;
-      bottom: calc(72px + env(safe-area-inset-bottom));
+      top: calc(12px + env(safe-area-inset-top));
       z-index: 58;
       width: min(492px, calc(100vw - 28px));
       margin: 0 auto;
@@ -1076,10 +1082,18 @@
       -webkit-user-select: none;
       user-select: none;
     }
+    .intro video {
+      opacity: 0;
+      transition: opacity .48s ease;
+    }
+    .intro video.is-ready {
+      opacity: .66;
+    }
     .intro-poster {
       background:
         linear-gradient(180deg, rgba(5,3,2,.04), rgba(5,3,2,.7)),
         var(--creator-poster-image) center 18% / cover no-repeat;
+      opacity: .66;
     }
     .intro::after {
       content: "";
@@ -1695,11 +1709,9 @@
       video.setAttribute("aria-hidden", "true");
       video.setAttribute("tabindex", "-1");
       video.setAttribute("draggable", "false");
-      if (poster) poster.replaceWith(video);
-      else {
-        const parent = $(parentId);
-        if (parent) parent.insertBefore(video, parent.firstChild);
-      }
+      const parent = $(parentId);
+      if (poster && poster.parentNode) poster.parentNode.insertBefore(video, poster.nextSibling);
+      else if (parent) parent.insertBefore(video, parent.firstChild);
       return video;
     }
     function normalizeMediaUrl(value) {
@@ -1716,6 +1728,7 @@
         return;
       }
       if (!video) return;
+      bindDecorativeVideoReadiness(video);
       video.autoplay = true;
       video.muted = true;
       video.defaultMuted = true;
@@ -1741,10 +1754,23 @@
       const nextSrc = normalizeMediaUrl(src);
       const currentSrc = normalizeMediaUrl(video.currentSrc || video.getAttribute("src") || video.src);
       if (nextSrc && currentSrc !== nextSrc) {
+        video.classList.remove("is-ready");
         video.src = src;
         video.load();
       }
+      if (video.readyState >= 2) video.classList.add("is-ready");
       playMutedLoopVideo(video);
+    }
+    function bindDecorativeVideoReadiness(video) {
+      if (!video || video.dataset.readyBound === "true") return;
+      video.dataset.readyBound = "true";
+      const markReady = () => video.classList.add("is-ready");
+      const markUnavailable = () => video.classList.remove("is-ready");
+      video.addEventListener("loadeddata", markReady);
+      video.addEventListener("canplay", markReady);
+      video.addEventListener("playing", markReady);
+      video.addEventListener("error", markUnavailable);
+      if (video.readyState >= 2) markReady();
     }
     function playMutedLoopVideo(video) {
       if (!video || tiktokInAppBrowser()) return;
@@ -1770,6 +1796,27 @@
       window.addEventListener("pointerdown", retry, { once: true, passive: true });
       window.addEventListener("touchstart", retry, { once: true, passive: true });
       window.addEventListener("keydown", retry, { once: true });
+    }
+    function shouldShowWelcomeIntro(settings) {
+      if (!settings.welcome_intro_enabled) return false;
+      if (forceExperience) return true;
+      try {
+        return localStorage.getItem(introKey) !== "done";
+      } catch (error) {
+        return true;
+      }
+    }
+    function primeDecorativeVideos(settings) {
+      if (tiktokInAppBrowser()) {
+        bindVideoKillSwitch();
+        return;
+      }
+      updateDecorativePoster(settings);
+      const source = heroVideo(settings);
+      prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), source);
+      if (shouldShowWelcomeIntro(settings)) {
+        prepareMutedLoopVideo(ensureDecorativeVideo("introVideo", "", "introPoster", "intro"), source);
+      }
     }
     function introAudioInfo(settings) {
       const url = safeUrl(settings.intro_audio_url);
@@ -3267,7 +3314,7 @@
 
     function looksLikeTikTokBrowser() {
       const ua = String(navigator.userAgent || "");
-      return /tiktok|musical_ly|bytedancewebview|bytedance|aweme|trill/i.test(ua);
+      return tiktokInAppBrowser() || /tiktok|musical_ly|musically|bytedancewebview|bytedance|ttwebview|aweme|trill/i.test(ua);
     }
 
     function setupTikTokBrowserHelper(settings) {
@@ -3283,7 +3330,7 @@
       helper.id = "tiktokBrowserHelper";
       helper.setAttribute("aria-label", "Open in browser helper");
       helper.innerHTML =
-        '<p>For the best experience, open this page in your browser.<span>Tap ••• and choose Open in browser.</span></p>' +
+        '<p>Open in browser for the full video experience.<span>Tap ••• and choose Open in browser.</span></p>' +
         '<div class="tiktok-helper-actions">' +
         '<button type="button" data-copy-helper-link>Copy link</button>' +
         '<button type="button" data-dismiss-helper aria-label="Dismiss browser helper">&times;</button>' +
@@ -3364,7 +3411,7 @@
 
     function setupIntro(settings) {
       const intro = $("intro");
-      if (!settings.welcome_intro_enabled || (!forceExperience && localStorage.getItem(introKey) === "done")) {
+      if (!shouldShowWelcomeIntro(settings)) {
         intro.hidden = true;
         revealPage();
         return;
@@ -3483,6 +3530,7 @@
       }
     }
 
+    primeDecorativeVideos(fallback);
     fetch("/api/creator-settings?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } })
       .then((response) => response.json())
       .then((data) => render({ ...fallback, ...(data.creator || {}) }))
