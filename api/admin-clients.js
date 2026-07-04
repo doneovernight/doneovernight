@@ -111,6 +111,14 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "battle_link_title",
   "battle_link_subtitle",
   "battle_link_cta_label",
+  "support_link_visible",
+  "support_link_title",
+  "support_link_subtitle",
+  "support_link_cta_label",
+  "support_link_provider",
+  "support_link_url",
+  "support_sticker_enabled",
+  "support_sticker_animation_enabled",
   "business_link_visible",
   "business_link_title",
   "business_link_subtitle",
@@ -136,6 +144,16 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "custom_links",
   "public_page_order"
 ];
+const SUPPORT_CREATOR_FIELDS = [
+  "support_link_visible",
+  "support_link_title",
+  "support_link_subtitle",
+  "support_link_cta_label",
+  "support_link_provider",
+  "support_link_url",
+  "support_sticker_enabled",
+  "support_sticker_animation_enabled"
+];
 const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_enabled",
   "intro_audio_url",
@@ -144,6 +162,15 @@ const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_stop_after"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_SUPPORT = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => !SUPPORT_CREATOR_FIELDS.includes(field)),
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
 const CREATOR_FIELDS_WITHOUT_PAGE_ORDER = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
@@ -253,6 +280,14 @@ const DEFAULT_MINA_SETTINGS = {
   battle_link_title: "Prepare for Battle",
   battle_link_subtitle: "Get your TikTok Coins before the battle begins.",
   battle_link_cta_label: "Prepare",
+  support_link_visible: false,
+  support_link_title: "Support Me",
+  support_link_subtitle: "Every contribution helps me create more content.",
+  support_link_cta_label: "Support",
+  support_link_provider: "custom",
+  support_link_url: "",
+  support_sticker_enabled: true,
+  support_sticker_animation_enabled: true,
   business_link_visible: true,
   business_link_title: "Business",
   business_link_subtitle: "Booking and collabs",
@@ -738,9 +773,22 @@ function normalizeBattleResult(value) {
 }
 
 function normalizePinnedBlock(value) {
-  const allowed = new Set(["", "prepare", "faq", "poll", "announcement", "community", "newsletter", "countdown"]);
+  const allowed = new Set(["", "prepare", "support", "faq", "poll", "announcement", "community", "newsletter", "countdown"]);
   const block = clean(value).toLowerCase();
   return allowed.has(block) ? block : "";
+}
+
+function normalizeSupportProvider(value) {
+  const provider = clean(value).toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  const aliases = {
+    cashapp: "cash_app",
+    buymeacoffee: "buy_me_a_coffee",
+    buy_me_coffee: "buy_me_a_coffee",
+    kofi: "ko_fi"
+  };
+  const normalized = aliases[provider] || provider;
+  const allowed = new Set(["paypal", "cash_app", "buy_me_a_coffee", "ko_fi", "stripe", "revolut", "wise", "custom"]);
+  return allowed.has(normalized) ? normalized : "custom";
 }
 
 function normalizeCommunityState(value) {
@@ -849,6 +897,7 @@ const DEFAULT_PUBLIC_PAGE_ORDER = [
   "discord",
   "tiktok",
   "prepare",
+  "support",
   "business",
   "music",
   "faq",
@@ -870,7 +919,7 @@ function normalizePublicPageOrder(value, customLinks = []) {
   }
   const normalizedCustomLinks = normalizeCustomLinks(customLinks);
   const customKeys = normalizedCustomLinks.map((link) => "custom:" + link.id);
-  const validPattern = /^(discord|tiktok|prepare|business|music|faq|community|newsletter|announcement|countdown|poll|share|custom:[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]+)$/;
+  const validPattern = /^(discord|tiktok|prepare|support|business|music|faq|community|newsletter|announcement|countdown|poll|share|custom:[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]+)$/;
   const seen = new Set();
   const result = [];
   (Array.isArray(order) ? order : []).forEach((item) => {
@@ -1182,6 +1231,14 @@ function normalizeCreator(row = {}) {
     battle_link_title: clean(row.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
     battle_link_subtitle: clean(row.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
     battle_link_cta_label: clean(row.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    support_link_visible: bool(row.support_link_visible, false),
+    support_link_title: clean(row.support_link_title) || DEFAULT_MINA_SETTINGS.support_link_title,
+    support_link_subtitle: clean(row.support_link_subtitle) || DEFAULT_MINA_SETTINGS.support_link_subtitle,
+    support_link_cta_label: clean(row.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
+    support_link_provider: normalizeSupportProvider(row.support_link_provider),
+    support_link_url: clean(row.support_link_url),
+    support_sticker_enabled: bool(row.support_sticker_enabled, true),
+    support_sticker_animation_enabled: bool(row.support_sticker_animation_enabled, true),
     business_link_visible: bool(row.business_link_visible, true),
     business_link_title: clean(row.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
     business_link_subtitle: clean(row.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
@@ -1220,39 +1277,28 @@ function normalizeCreator(row = {}) {
 async function fetchCreatorFromTable(slug = "mosyaamosya") {
   const safeSlug = encodeURIComponent(normalizeSlug(slug));
   let rows;
-  try {
-    rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS + "&limit=1", {
-      context: "Creator settings"
-    });
-  } catch (error) {
+  const selectAttempts = [
+    CREATOR_FIELDS,
+    CREATOR_FIELDS_WITHOUT_SUPPORT,
+    CREATOR_FIELDS_WITHOUT_PAGE_ORDER,
+    CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY,
+    CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS,
+    CREATOR_FIELDS_WITHOUT_POLL,
+    BASE_CREATOR_SELECT
+  ];
+  let lastError = null;
+  for (const fields of selectAttempts) {
     try {
-      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_PAGE_ORDER + "&limit=1", {
+      rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + fields + "&limit=1", {
         context: "Creator settings"
       });
-    } catch (pageOrderError) {
-      try {
-        rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY + "&limit=1", {
-          context: "Creator settings"
-        });
-      } catch (legacyError) {
-        try {
-          rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS + "&limit=1", {
-            context: "Creator settings"
-          });
-        } catch (faqError) {
-          try {
-            rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + CREATOR_FIELDS_WITHOUT_POLL + "&limit=1", {
-              context: "Creator settings"
-            });
-          } catch (pollError) {
-            rows = await supabaseFetch("creators?slug=eq." + safeSlug + "&select=" + BASE_CREATOR_SELECT + "&limit=1", {
-              context: "Creator settings"
-            });
-          }
-        }
-      }
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
     }
   }
+  if (lastError) throw lastError;
   if (!Array.isArray(rows) || rows.length === 0) return null;
   return normalizeCreator(rows[0]);
 }
@@ -1390,6 +1436,14 @@ function creatorPayload(input = {}) {
     battle_link_title: clean(input.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
     battle_link_subtitle: clean(input.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
     battle_link_cta_label: clean(input.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    support_link_visible: bool(input.support_link_visible, false),
+    support_link_title: clean(input.support_link_title) || DEFAULT_MINA_SETTINGS.support_link_title,
+    support_link_subtitle: clean(input.support_link_subtitle) || DEFAULT_MINA_SETTINGS.support_link_subtitle,
+    support_link_cta_label: clean(input.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
+    support_link_provider: normalizeSupportProvider(input.support_link_provider),
+    support_link_url: clean(input.support_link_url),
+    support_sticker_enabled: bool(input.support_sticker_enabled, true),
+    support_sticker_animation_enabled: bool(input.support_sticker_animation_enabled, true),
     business_link_visible: bool(input.business_link_visible, true),
     business_link_title: clean(input.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
     business_link_subtitle: clean(input.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
@@ -1428,41 +1482,41 @@ function creatorPayload(input = {}) {
 
 async function saveCreatorToTable(payload) {
   let rows;
-  try {
-    rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS, {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=representation",
-      body: [payload],
-      context: "Creator settings"
-    });
-  } catch (error) {
-    const { public_page_order, ...withoutPageOrderPayload } = payload;
+  const withoutSupportPayload = { ...payload };
+  SUPPORT_CREATOR_FIELDS.forEach((field) => {
+    delete withoutSupportPayload[field];
+  });
+  const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
+  const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
+  const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
+  const saveAttempts = [
+    { fields: CREATOR_FIELDS, payload },
+    { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_PAGE_ORDER, payload: withoutPageOrderPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, payload: legacyVisibilityPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS, payload: legacyFaqPayload }
+  ];
+  let lastError = null;
+  let usedFallback = false;
+  for (let index = 0; index < saveAttempts.length; index += 1) {
+    const attempt = saveAttempts[index];
     try {
-      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_PAGE_ORDER, {
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + attempt.fields, {
         method: "POST",
         prefer: "resolution=merge-duplicates,return=representation",
-        body: [withoutPageOrderPayload],
+        body: [attempt.payload],
         context: "Creator settings"
       });
-    } catch (pageOrderError) {
-      const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
-      try {
-      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
-        method: "POST",
-        prefer: "resolution=merge-duplicates,return=representation",
-        body: [legacyVisibilityPayload],
-        context: "Creator settings"
-      });
-      } catch (legacyError) {
-        const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
-        rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS, {
-          method: "POST",
-          prefer: "resolution=merge-duplicates,return=representation",
-          body: [legacyFaqPayload],
-          context: "Creator settings"
-        });
-      }
+      lastError = null;
+      usedFallback = index > 0;
+      break;
+    } catch (error) {
+      lastError = error;
     }
+  }
+  if (lastError) {
+    throw lastError;
+  } else if (usedFallback) {
     await saveCreatorToAnalyticsBridge(payload).catch(() => null);
   }
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;

@@ -7,6 +7,7 @@
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
   <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
+  <link rel="preload" as="image" href="/assets/mosyaamosya/support-money-bag.png" fetchpriority="low">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <script>
@@ -503,7 +504,8 @@
       opacity: .52;
       pointer-events: none;
     }
-    .prepare-card-shell {
+    .prepare-card-shell,
+    .support-card-shell {
       position: relative;
       overflow: visible;
       background: transparent;
@@ -511,7 +513,8 @@
       min-width: 0;
       -webkit-tap-highlight-color: transparent;
     }
-    .prepare-card-shell .prepare-card {
+    .prepare-card-shell .prepare-card,
+    .support-card-shell .support-card {
       position: relative;
       z-index: 1;
       overflow: hidden;
@@ -520,7 +523,9 @@
       -webkit-tap-highlight-color: transparent;
     }
     .prepare-card-shell .prepare-card:active,
-    .prepare-card-shell .prepare-card:focus {
+    .prepare-card-shell .prepare-card:focus,
+    .support-card-shell .support-card:active,
+    .support-card-shell .support-card:focus {
       background: var(--glass-bg);
       outline: none;
     }
@@ -561,6 +566,30 @@
       87% { transform: translate3d(-1px,0,0) rotate(-10.8deg) scale(1); }
       92% { transform: translate3d(1.5px,0,0) rotate(-9.2deg) scale(1); }
       97% { transform: translate3d(-.5px,0,0) rotate(-10.4deg) scale(1); }
+    }
+    .support-money-sticker {
+      position: absolute;
+      top: -18px;
+      left: -14px;
+      z-index: 5;
+      width: 54px;
+      height: auto;
+      background: transparent;
+      pointer-events: none;
+      display: block;
+      filter: drop-shadow(0 10px 18px rgba(248, 190, 58, .18));
+      transform: translate3d(0,0,0) rotate(-7deg) scale(1);
+      transform-origin: center;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .support-money-sticker.is-animated {
+      animation: supportStickerFloat 3.8s ease-in-out infinite;
+      will-change: transform;
+    }
+    @keyframes supportStickerFloat {
+      0%, 100% { transform: translate3d(0,0,0) rotate(-7deg) scale(1); }
+      48% { transform: translate3d(1px,-2px,0) rotate(-5.5deg) scale(1.035); }
     }
     .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .icon-badge {
@@ -1210,7 +1239,8 @@
       .faq-answer {
         transition: none !important;
       }
-      .prepare-discount-sticker {
+      .prepare-discount-sticker,
+      .support-money-sticker {
         animation: none !important;
       }
       .prepare-card-shell.is-battle-active .prepare-card {
@@ -1529,6 +1559,14 @@
       battle_link_title: "Prepare for Battle",
       battle_link_subtitle: "Get your TikTok Coins before the battle begins.",
       battle_link_cta_label: "Prepare",
+      support_link_visible: false,
+      support_link_title: "Support Me",
+      support_link_subtitle: "Every contribution helps me create more content.",
+      support_link_cta_label: "Support",
+      support_link_provider: "custom",
+      support_link_url: "",
+      support_sticker_enabled: true,
+      support_sticker_animation_enabled: true,
       business_link_visible: true,
       business_link_title: "Business",
       business_link_subtitle: "Booking and collabs",
@@ -1628,11 +1666,13 @@
     let pageEngineSignature = "";
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
+    const supportMoneyStickerSrc = "/assets/mosyaamosya/support-money-bag.png";
     const blockRegistry = {
       link: { implemented: true },
       discord: { implemented: true },
       countdown: { implemented: true },
       newsletter: { implemented: true },
+      support: { implemented: true },
       explore: { implemented: true },
       video: { implemented: false },
       image: { implemented: false },
@@ -2465,6 +2505,7 @@
       "discord",
       "tiktok",
       "prepare",
+      "support",
       "business",
       "music",
       "faq",
@@ -2828,6 +2869,7 @@
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "prepare", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
+        { key: "support", visible: featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
         { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
@@ -2841,6 +2883,22 @@
       })));
     }
 
+    function createStickeredActionShell(item, options = {}) {
+      const shell = document.createElement("div");
+      shell.className = options.shellClass || "";
+      const sticker = document.createElement("img");
+      sticker.className = options.stickerClass || "";
+      sticker.src = options.src || "";
+      sticker.alt = "";
+      sticker.setAttribute("aria-hidden", "true");
+      sticker.loading = "eager";
+      sticker.decoding = options.decoding || "async";
+      if (options.fetchPriority) sticker.fetchPriority = options.fetchPriority;
+      shell.appendChild(sticker);
+      shell.appendChild(item);
+      return shell;
+    }
+
     function createActionBlock(settings, key) {
       const action = pageActionDefinitions(settings).find((item) => item.key === key);
       if (!action) return null;
@@ -2848,12 +2906,13 @@
       if (!url) return null;
       const item = document.createElement("a");
       const showBattleDiscount = action.key === "prepare";
-      item.className = showBattleDiscount ? "link-button content-block prepare-card" : "link-button content-block";
+      const showSupportSticker = action.key === "support" && action.supportSticker !== false;
+      item.className = showBattleDiscount ? "link-button content-block prepare-card" : showSupportSticker ? "link-button content-block support-card" : "link-button content-block";
       item.dataset.blockType = action.key === "discord" ? "discord" : "link";
       item.href = url;
       item.target = url.startsWith("mailto:") ? "_self" : "_blank";
       item.rel = "noreferrer";
-      item.dataset.analyticsEvent = action.key === "prepare" ? "prepare_click" : action.key.replace(/^custom:/, "custom") + "_click";
+      item.dataset.analyticsEvent = action.key === "prepare" ? "prepare_click" : action.key === "support" ? "support_click" : action.key.replace(/^custom:/, "custom") + "_click";
       item.dataset.analyticsBlockKey = action.key;
       item.dataset.analyticsBlockTitle = action.title;
       item.dataset.analyticsDestination = url;
@@ -2861,20 +2920,22 @@
         '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
         escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
         escapeHtml(action.label) + '</span>';
-      if (!showBattleDiscount) return item;
-      const shell = document.createElement("div");
-      shell.className = action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell";
-      const sticker = document.createElement("img");
-      sticker.className = "prepare-discount-sticker";
-      sticker.src = prepareDiscountStickerSrc;
-      sticker.alt = "";
-      sticker.setAttribute("aria-hidden", "true");
-      sticker.loading = "eager";
-      sticker.decoding = "sync";
-      sticker.fetchPriority = "high";
-      shell.appendChild(sticker);
-      shell.appendChild(item);
-      return shell;
+      if (!showBattleDiscount && !showSupportSticker) return item;
+      if (showSupportSticker) {
+        return createStickeredActionShell(item, {
+          shellClass: "support-card-shell",
+          stickerClass: action.supportStickerAnimated === false ? "support-money-sticker" : "support-money-sticker is-animated",
+          src: supportMoneyStickerSrc,
+          fetchPriority: "low"
+        });
+      }
+      return createStickeredActionShell(item, {
+        shellClass: action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell",
+        stickerClass: "prepare-discount-sticker",
+        src: prepareDiscountStickerSrc,
+        decoding: "sync",
+        fetchPriority: "high"
+      });
     }
 
     function setSheetOpen(id, open) {
@@ -3168,7 +3229,7 @@
     function runtimeOverlayOrder(settings, order) {
       const pinned = String(settings.pinned_block || "").toLowerCase();
       if (!pinned) return order;
-      const key = pinned === "support" ? "prepare" : pinned;
+      const key = pinned;
       if (!key || !order.includes(key)) return order;
       return [key].concat(order.filter((item) => item !== key));
     }
@@ -3189,6 +3250,14 @@
           battle_link_visible: settings.battle_link_visible,
           tiktok_coins_url: settings.tiktok_coins_url,
           battle_mode_enabled: settings.battle_mode_enabled,
+          support_link_visible: settings.support_link_visible,
+          support_link_title: settings.support_link_title,
+          support_link_subtitle: settings.support_link_subtitle,
+          support_link_cta_label: settings.support_link_cta_label,
+          support_link_provider: settings.support_link_provider,
+          support_link_url: settings.support_link_url,
+          support_sticker_enabled: settings.support_sticker_enabled,
+          support_sticker_animation_enabled: settings.support_sticker_animation_enabled,
           business_link_visible: settings.business_link_visible,
           business_email: settings.business_email,
           music_link_visible: settings.music_link_visible,
@@ -3269,6 +3338,15 @@
       visible: (settings) => Boolean(safeUrl(settings.tiktok_coins_url)),
       configuration: { visibilityField: "battle_link_visible", destinationField: "tiktok_coins_url" },
       renderer: ({ settings }) => createActionBlock(settings, "prepare")
+    });
+    registerPageBlock({
+      key: "support",
+      version: 1,
+      capabilities: { link: true, destination: true, sticker: true },
+      enabled: (settings) => featureOn(settings, "support_link_visible", false),
+      visible: (settings) => Boolean(externalUrl(settings.support_link_url)),
+      configuration: { visibilityField: "support_link_visible", destinationField: "support_link_url" },
+      renderer: ({ settings }) => createActionBlock(settings, "support")
     });
     registerPageBlock({
       key: "business",

@@ -478,6 +478,34 @@
     .link-card-title span { color: var(--muted); font-size: 12px; }
     .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .link-card-fields .wide { grid-column: 1 / -1; }
+    .link-card-fields .toggle-row {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(255,211,223,.1);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.12);
+    }
+    .toggle-row span:first-child {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+    .toggle-row strong {
+      font-size: 12px;
+      color: rgba(255,245,247,.82);
+    }
+    .toggle-row small {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .toggle-row .switch {
+      flex: 0 0 auto;
+    }
     .faq-builder-head { padding-top: 2px; }
     .faq-card-heading {
       display: flex;
@@ -1304,6 +1332,39 @@
                 <label>CTA<input name="battle_link_cta_label"></label>
                 <label class="wide">Description<input name="battle_link_subtitle"></label>
                 <label class="wide">TikTok Coins URL<input name="tiktok_coins_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card" data-page-block-key="support">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Support</strong><span>Premium creator support destination.</span></div>
+                <label class="switch" aria-label="Support visible"><input name="support_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="support_link_title"></label>
+                <label>CTA<input name="support_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="support_link_subtitle"></label>
+                <label>Provider
+                  <select name="support_link_provider">
+                    <option value="paypal">PayPal</option>
+                    <option value="cash_app">Cash App</option>
+                    <option value="buy_me_a_coffee">Buy Me A Coffee</option>
+                    <option value="ko_fi">Ko-fi</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="revolut">Revolut</option>
+                    <option value="wise">Wise</option>
+                    <option value="custom">Custom URL</option>
+                  </select>
+                </label>
+                <label class="wide">Destination URL<input name="support_link_url" type="url" placeholder="https://"></label>
+                <label class="toggle-row wide">
+                  <span><strong>Sticker</strong><small>Show the money bag sticker.</small></span>
+                  <span class="switch"><input name="support_sticker_enabled" type="checkbox"><span class="track"></span></span>
+                </label>
+                <label class="toggle-row wide">
+                  <span><strong>Sticker animation</strong><small>Keep the idle motion subtle.</small></span>
+                  <span class="switch"><input name="support_sticker_animation_enabled" type="checkbox"><span class="track"></span></span>
+                </label>
               </div>
             </section>
 
@@ -2399,6 +2460,7 @@
       { key: "discord", label: "Discord", version: 1, capabilities: { reorderable: true, configurable: true } },
       { key: "tiktok", label: "TikTok", version: 1, capabilities: { reorderable: true, configurable: true } },
       { key: "prepare", label: "Prepare for Battle", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
+      { key: "support", label: "Support Me", version: 1, capabilities: { reorderable: true, configurable: true } },
       { key: "business", label: "Business", version: 1, capabilities: { reorderable: true, configurable: true } },
       { key: "music", label: "Music", version: 1, capabilities: { reorderable: true, configurable: true } },
       { key: "faq", label: "Frequently Asked on Stream", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
@@ -2978,6 +3040,14 @@
         battle_link_title: String(data.get("battle_link_title") || "").trim(),
         battle_link_subtitle: String(data.get("battle_link_subtitle") || "").trim(),
         battle_link_cta_label: String(data.get("battle_link_cta_label") || "").trim(),
+        support_link_visible: boolField("support_link_visible"),
+        support_link_title: String(data.get("support_link_title") || "").trim(),
+        support_link_subtitle: String(data.get("support_link_subtitle") || "").trim(),
+        support_link_cta_label: String(data.get("support_link_cta_label") || "").trim(),
+        support_link_provider: String(data.get("support_link_provider") || "custom").trim(),
+        support_link_url: String(data.get("support_link_url") || "").trim(),
+        support_sticker_enabled: boolField("support_sticker_enabled", true),
+        support_sticker_animation_enabled: boolField("support_sticker_animation_enabled", true),
         business_link_visible: boolField("business_link_visible", true),
         business_link_title: String(data.get("business_link_title") || "").trim(),
         business_link_subtitle: String(data.get("business_link_subtitle") || "").trim(),
@@ -3036,7 +3106,7 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
@@ -3053,6 +3123,9 @@
       if (settings.discord_link_visible === undefined) setBoolField("discord_link_visible", true);
       if (settings.tiktok_link_visible === undefined) setBoolField("tiktok_link_visible", true);
       if (settings.battle_link_visible === undefined) setBoolField("battle_link_visible", true);
+      if (settings.support_link_visible === undefined) setBoolField("support_link_visible", false);
+      if (settings.support_sticker_enabled === undefined) setBoolField("support_sticker_enabled", true);
+      if (settings.support_sticker_animation_enabled === undefined) setBoolField("support_sticker_animation_enabled", true);
       if (settings.business_link_visible === undefined) setBoolField("business_link_visible", true);
       if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
       if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
