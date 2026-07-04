@@ -1300,6 +1300,21 @@ async function fetchCreator(slug = "mosyaamosya") {
   return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
 }
 
+function creatorSurface(input = {}) {
+  const value = clean(input.surface || input.creator_surface || input.creatorSurface).toLowerCase();
+  return value === "tiktok" || value === "tiktok_in_app" ? "tiktok" : "web";
+}
+
+function sanitizeCreatorForSurface(creator = {}, surface = "web") {
+  const safeCreator = normalizeCreator(creator);
+  if (surface !== "tiktok") return safeCreator;
+  return {
+    ...safeCreator,
+    hero_video_url: "",
+    banner_url: ""
+  };
+}
+
 function creatorPayload(input = {}) {
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
@@ -2549,12 +2564,18 @@ async function handleCreatorSettings(req, res) {
     try {
       const query = getQuery(req);
       const result = await fetchCreator(clean(query.slug) || "mosyaamosya");
-      return send(res, 200, { success: true, creator: result.creator, source: result.source });
+      return send(res, 200, {
+        success: true,
+        creator: sanitizeCreatorForSurface(result.creator, creatorSurface(query)),
+        source: result.source,
+        surface: creatorSurface(query)
+      });
     } catch (error) {
       return send(res, 200, {
         success: true,
-        creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+        creator: sanitizeCreatorForSurface(DEFAULT_MINA_SETTINGS, creatorSurface(getQuery(req))),
         source: "fallback",
+        surface: creatorSurface(getQuery(req)),
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
     }

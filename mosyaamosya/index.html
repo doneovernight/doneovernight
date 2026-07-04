@@ -1699,6 +1699,17 @@
     function tiktokInAppBrowser() {
       return Boolean(window.__creatorVideoKillSwitch || window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
     }
+    function creatorSettingsSurfaceQuery() {
+      return tiktokInAppBrowser() ? "&surface=tiktok" : "";
+    }
+    function sanitizeSettingsForSurface(settings) {
+      const next = { ...(settings || {}) };
+      if (tiktokInAppBrowser()) {
+        next.hero_video_url = "";
+        next.banner_url = "";
+      }
+      return next;
+    }
     let videoKillObserver = null;
     function stripVideoResourceAttributes(element) {
       if (!element || typeof element.getAttribute !== "function") return;
@@ -2206,13 +2217,13 @@
       creatorSettingsInFlight = true;
       lastCreatorSettingsRefreshAt = now;
       try {
-        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(settings.slug || "mosyaamosya") + "&runtime_poll=" + now, {
+        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(settings.slug || "mosyaamosya") + creatorSettingsSurfaceQuery() + "&runtime_poll=" + now, {
           cache: "no-store",
           headers: { Accept: "application/json" }
         });
         if (!response.ok) return;
         const data = await response.json();
-        const nextSettings = { ...fallback, ...(data.creator || {}) };
+        const nextSettings = sanitizeSettingsForSurface({ ...fallback, ...(data.creator || {}) });
         if (runtimeSettingsChanged(nextSettings, currentSettings)) {
           render(nextSettings);
         }
@@ -3596,7 +3607,7 @@
     }
 
     function render(settings) {
-      settings = previewSettings(settings);
+      settings = sanitizeSettingsForSurface(previewSettings(settings));
       currentSettings = settings;
       updateDecorativePoster(settings);
       $("previewBadge").hidden = !previewMode;
@@ -3686,10 +3697,10 @@
     }
 
     primeDecorativeVideos(fallback);
-    fetch("/api/creator-settings?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } })
+    fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
       .then((response) => response.json())
-      .then((data) => render({ ...fallback, ...(data.creator || {}) }))
-      .catch(() => render(fallback));
+      .then((data) => render(sanitizeSettingsForSurface({ ...fallback, ...(data.creator || {}) })))
+      .catch(() => render(sanitizeSettingsForSurface(fallback)));
   </script>
 </body>
 </html>
