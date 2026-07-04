@@ -46,13 +46,28 @@
     }
     button, input, textarea, select { font: inherit; }
     a { color: inherit; }
-    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 128px; }
+    .shell { width: min(1240px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 128px; }
     .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
     .brand { display: grid; gap: 6px; }
     .eyebrow { color: var(--accent); font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
     h1 { margin: 0; font-size: clamp(34px, 5vw, 66px); line-height: .9; letter-spacing: 0; }
     .muted { color: var(--muted); }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .developer-toggle {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 12px;
+      background: rgba(255,245,247,.05);
+      color: rgba(255,245,247,.62);
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .developer-toggle input { width: 16px; height: 16px; padding: 0; accent-color: var(--accent); }
     .admin-tabs {
       position: sticky;
       top: 0;
@@ -89,6 +104,21 @@
       background: rgba(255,245,247,.09);
       color: var(--text);
       box-shadow: inset 0 1px rgba(255,255,255,.12);
+    }
+    .admin-tab[data-admin-group="setup"] { box-shadow: inset 0 -1px rgba(255,211,223,.08); }
+    .admin-tab[data-admin-group="live"] { box-shadow: inset 0 -1px rgba(139,95,74,.16); }
+    .admin-tab[data-admin-tab="links"] {
+      margin-left: 10px;
+      position: relative;
+    }
+    .admin-tab[data-admin-tab="links"]::before {
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: 9px;
+      bottom: 9px;
+      width: 1px;
+      background: rgba(255,211,223,.12);
     }
     .button {
       min-height: 42px;
@@ -378,6 +408,11 @@
     .media-actions .button { min-height: 38px; padding: 0 12px; font-size: 12px; }
     .media-dev-row { display: none; }
     body[data-dev-mode="true"] .media-dev-row { display: grid; }
+    body:not([data-dev-mode="true"]) .media-spec-grid,
+    body:not([data-dev-mode="true"]) .media-storage-grid,
+    body:not([data-dev-mode="true"]) .developer-only {
+      display: none !important;
+    }
     .media-file-input {
       width: 100%;
       border: 1px dashed rgba(255,211,223,.18);
@@ -465,6 +500,36 @@
       font-size: 12px;
       font-weight: 900;
     }
+    .panel-disclosure {
+      display: grid;
+      gap: 14px;
+    }
+    .panel-disclosure summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 900;
+    }
+    .panel-disclosure summary::-webkit-details-marker { display: none; }
+    .panel-disclosure summary::after {
+      content: "+";
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(255,211,223,.14);
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: rgba(255,245,247,.58);
+      background: rgba(255,255,255,.04);
+      font-size: 18px;
+      line-height: 1;
+    }
+    .panel-disclosure[open] summary::after { content: "-"; }
     .advanced-box .fields { margin-top: 10px; }
     .section-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .section-split { display: grid; gap: 12px; }
@@ -837,9 +902,46 @@
       .gate-card[data-unlock-state="unlocking"] .unlock-spinner { animation: none; }
       .gate { transition: none; }
     }
-    .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
-    .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
-    iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
+    .preview { position: sticky; top: 18px; display: grid; gap: 12px; align-self: start; justify-items: center; min-width: 0; }
+    .preview .panel { width: 100%; }
+    .phone {
+      width: min(390px, 100%, 36vh);
+      aspect-ratio: 390 / 844;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 38px;
+      padding: 12px;
+      background: #020304;
+      box-shadow: 0 28px 80px rgba(0,0,0,.38);
+      overflow: hidden;
+    }
+    iframe { width: 100%; height: 100%; border: 0; border-radius: 28px; background: #080504; display: block; }
+    @media (min-width: 901px) {
+      .shell {
+        min-height: 100vh;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding-bottom: 18px;
+      }
+      .topbar { flex: 0 0 auto; }
+      .admin-tabs { flex: 0 0 auto; }
+      .grid {
+        flex: 1 1 auto;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+      }
+      .stack,
+      .preview {
+        max-height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+      }
+      .stack { padding-right: 4px; }
+      .preview { top: 0; padding-bottom: 8px; }
+    }
     @media (max-width: 900px) {
       .topbar { flex-direction: column; }
       .actions { justify-content: flex-start; }
@@ -920,19 +1022,20 @@
       </div>
       <div class="actions">
         <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
+        <label class="developer-toggle"><input id="developerModeToggle" type="checkbox"> Developer Mode</label>
         <button class="button danger" id="logoutButton" type="button">Logout</button>
       </div>
     </header>
 
     <nav class="admin-tabs" aria-label="Creator admin sections">
       <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="media">Media</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience">Experience</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="connections">Connections</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings" data-admin-group="setup">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="media" data-admin-group="setup">Media</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience" data-admin-group="setup">Experience</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="connections" data-admin-group="setup">Connections</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links" data-admin-group="live">Links</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime" data-admin-group="live">Live Runtime</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics" data-admin-group="live">Analytics</button>
     </nav>
 
     <section class="grid">
@@ -1335,7 +1438,7 @@
               <button class="button danger" id="resetPollResults" type="button">Clear/reset poll results</button>
             </div>
 
-            <div class="runtime-section">
+            <div class="runtime-section developer-only">
               <h3>Runtime status</h3>
               <div class="help-panel" id="liveRuntimeStatus">
                 Last checked: not yet. Status: unknown. Source: unknown.
@@ -1433,12 +1536,17 @@
               <div class="media-spec media-dev-row"><span>Storage bucket</span><strong>creator-media</strong></div>
               <div class="media-spec media-dev-row"><span>Asset URL</span><strong id="signatureAssetUrl">Hidden</strong></div>
             </div>
-            <label>Start time<input id="introAudioStartTime" type="number" min="0" max="3600" step="0.25" value="0"></label>
-            <label>Clip length<input id="introAudioClipLength" type="number" min="1" max="15" step="0.25" value="10"></label>
-            <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
-            <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
-            <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
-            <div class="span-2 help-panel">Preferred intro length: 8-12 seconds. Videos always loop muted. Creator OS uploads only a short prepared audio clip, never the full song.</div>
+            <details class="advanced-box span-2 developer-only">
+              <summary>Advanced</summary>
+              <div class="fields">
+                <label>Start time<input id="introAudioStartTime" type="number" min="0" max="3600" step="0.25" value="0"></label>
+                <label>Clip length<input id="introAudioClipLength" type="number" min="1" max="15" step="0.25" value="10"></label>
+                <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
+                <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
+                <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
+                <div class="span-2 help-panel">Preferred intro length: 8-12 seconds. Videos always loop muted. Creator OS uploads only a short prepared audio clip, never the full song.</div>
+              </div>
+            </details>
             <div class="span-2 media-actions">
               <button class="button primary" id="uploadIntroAudio" type="button">Replace</button>
               <button class="button" type="button" data-media-preview="signature">Preview</button>
@@ -1459,10 +1567,12 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="settings">
-          <h2>Creator DNA</h2>
-          <div class="dna-grid" id="dnaGrid"></div>
-          <div style="height:12px"></div>
-          <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
+          <details class="panel-disclosure">
+            <summary>Creator DNA</summary>
+            <div class="dna-grid" id="dnaGrid"></div>
+            <div style="height:12px"></div>
+            <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
+          </details>
         </section>
 
         <section class="panel tab-panel" data-admin-panel="experience" hidden>
@@ -3737,6 +3847,15 @@
     document.querySelectorAll("[data-admin-tab]").forEach((button) => {
       button.addEventListener("click", () => setAdminTab(button.dataset.adminTab));
     });
+    if ($("developerModeToggle")) {
+      $("developerModeToggle").checked = document.body.dataset.devMode === "true";
+      $("developerModeToggle").addEventListener("change", () => {
+        const enabled = $("developerModeToggle").checked;
+        document.body.dataset.devMode = enabled ? "true" : "false";
+        if (enabled) localStorage.setItem("creator_media_dev_mode", "1");
+        else localStorage.removeItem("creator_media_dev_mode");
+      });
+    }
     document.querySelectorAll("[data-admin-jump]").forEach((button) => {
       button.addEventListener("click", () => setAdminTab(button.dataset.adminJump));
     });
