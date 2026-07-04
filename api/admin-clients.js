@@ -972,6 +972,16 @@ function normalizeProfilePhotoMimeType(mimeType, fallbackName = "") {
   return "image/jpeg";
 }
 
+function isHeroVideoUrl(value = "") {
+  const input = clean(value);
+  if (!input) return false;
+  try {
+    return new URL(input).pathname.toLowerCase().endsWith(".mp4");
+  } catch (error) {
+    return /\.mp4(?:[?#].*)?$/i.test(input);
+  }
+}
+
 function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
@@ -1113,7 +1123,7 @@ function normalizeCreator(row = {}) {
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
-    hero_video_url: hasHeroVideoUrl ? clean(row.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(row.hero_video_url) ? clean(row.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(row.music_enabled, false),
     music_url: clean(row.music_url),
     music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
@@ -1306,7 +1316,7 @@ function creatorPayload(input = {}) {
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
-    hero_video_url: hasHeroVideoUrl ? clean(input.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(input.hero_video_url) ? clean(input.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(input.music_enabled, false),
     music_url: clean(input.music_url),
     music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
