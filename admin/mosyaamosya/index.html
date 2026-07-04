@@ -3861,12 +3861,12 @@
       const ext = mediaFileExtension(file);
       const mime = mediaFileMime(file);
       return ["png", "jpg", "jpeg", "gif"].includes(ext) &&
-        (!mime || ["image/png", "image/jpeg", "image/gif"].includes(mime));
+        (!mime || mime.startsWith("image/") || mime === "application/octet-stream");
     }
     function isHeroVideoFile(file) {
       const ext = mediaFileExtension(file);
       const mime = mediaFileMime(file);
-      return ext === "mp4" && (!mime || mime === "video/mp4");
+      return ext === "mp4" && (!mime || mime.startsWith("video/") || mime === "application/octet-stream");
     }
     function validateMediaFile(kind, file) {
       if (!file) return "";
@@ -4229,7 +4229,25 @@
             mime: data.media.contentType,
             updated: new Date().toUTCString()
           };
-          setStatus(kind === "profile" ? "Profile photo uploaded. Save page to publish it." : "Hero video uploaded. Save page to publish it.");
+          setStatus(kind === "profile" ? "Profile photo uploaded. Saving..." : "Hero video uploaded. Saving...");
+          saving = true;
+          setSaveButtonState("saving");
+          try {
+            const saved = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
+            fillForm(saved.creator);
+            updatePreviewFrame();
+            loadLiveRuntime();
+            updateOverview(saved.creator && saved.creator.updated_at);
+            setSaveButtonState("saved", { resetAfter: 700 });
+            setStatus(kind === "profile" ? "Profile photo uploaded and saved." : "Hero video uploaded and saved.");
+          } catch (saveError) {
+            setSaveButtonState("failed", { resetAfter: 1500 });
+            const saveMessage = readableMessage(saveError, "Save failed.");
+            setStatus((kind === "profile" ? "Profile photo uploaded, but could not be saved: " : "Hero video uploaded, but could not be saved: ") + saveMessage, true);
+            reportAdminWatchtower("Media", kind === "profile" ? "Save uploaded Profile Photo" : "Save uploaded Hero Video", saveError, "Check saveCreator(), public.creators, and media field persistence.");
+          } finally {
+            saving = false;
+          }
         }
         await refreshMediaMetadata();
       } catch (error) {
