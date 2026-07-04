@@ -141,6 +141,9 @@
       opacity: calc(var(--ambient-video-opacity) + .04);
       animation: heroBreath 18s ease-in-out infinite;
       z-index: -3;
+      pointer-events: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .hero::before {
       content: "";
@@ -1033,7 +1036,7 @@
     }
     .intro-pending .intro { opacity: 1; pointer-events: auto; }
     .intro[hidden] { display: none; }
-    .intro.is-done { opacity: 0; pointer-events: none; }
+    .intro.is-done { opacity: 0; pointer-events: auto; }
     .intro::before {
       content: "";
       position: absolute;
@@ -1054,6 +1057,9 @@
       filter: blur(2px) saturate(.9);
       opacity: .66;
       background: transparent;
+      pointer-events: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .intro::after {
       content: "";
@@ -1135,7 +1141,7 @@
 <body class="theme-mina">
   <main class="shell">
     <section class="hero" id="hero">
-      <video class="hero-video" id="heroVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline preload="auto"></video>
+      <video class="hero-video" id="heroVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" aria-hidden="true" tabindex="-1"></video>
       <div class="hero-top">
         <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
         <div class="hero-actions">
@@ -1235,7 +1241,7 @@
   </section>
 
   <section class="intro" id="intro" aria-label="Welcome intro">
-    <video id="introVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <video id="introVideo" src="/assets/mosyaamosya/intro.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" aria-hidden="true" tabindex="-1"></video>
     <div class="intro-copy">
       <span>Welcome.</span>
       <span>Meet Mina.</span>
@@ -1256,6 +1262,14 @@
           video.loop = true;
           video.playsInline = true;
           video.preload = "auto";
+          video.controls = false;
+          video.disablePictureInPicture = true;
+          video.disableRemotePlayback = true;
+          video.setAttribute("playsinline", "");
+          video.setAttribute("webkit-playsinline", "");
+          video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+          video.setAttribute("aria-hidden", "true");
+          video.setAttribute("tabindex", "-1");
           video.removeAttribute("controls");
           const attempt = video.play();
           if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
@@ -1500,7 +1514,13 @@
       video.setAttribute("muted", "");
       video.setAttribute("loop", "");
       video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
       video.setAttribute("preload", "auto");
+      video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+      video.setAttribute("aria-hidden", "true");
+      video.setAttribute("tabindex", "-1");
+      video.disablePictureInPicture = true;
+      video.disableRemotePlayback = true;
       video.removeAttribute("controls");
       const nextSrc = normalizeMediaUrl(src);
       const currentSrc = normalizeMediaUrl(video.currentSrc || video.getAttribute("src") || video.src);
@@ -3136,7 +3156,17 @@
       const video = $("introVideo");
       intro.hidden = false;
       prepareMutedLoopVideo(video, heroVideo(settings));
-      const dismiss = () => {
+      let dismissed = false;
+      const consumeIntroEvent = (event) => {
+        if (!event) return;
+        if (typeof event.preventDefault === "function" && event.cancelable) event.preventDefault();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+      };
+      const dismiss = (event) => {
+        consumeIntroEvent(event);
+        if (dismissed) return;
+        dismissed = true;
         if (video) video.muted = true;
         playIntroAudio(settings, true).then((played) => {
           if (!played && introAudioInfo(settings).enabled) document.body.dataset.introAudioState = "waiting-for-user";
@@ -3146,7 +3176,10 @@
         revealPage();
         setTimeout(() => { intro.hidden = true; }, 650);
       };
-      intro.addEventListener("click", dismiss, { once: true });
+      const dismissFromPointer = (event) => dismiss(event);
+      intro.addEventListener("pointerdown", dismissFromPointer, { once: true, capture: true });
+      intro.addEventListener("touchstart", dismissFromPointer, { once: true, capture: true, passive: false });
+      intro.addEventListener("click", dismissFromPointer, { once: true, capture: true });
       window.addEventListener("keydown", dismiss, { once: true });
     }
 
