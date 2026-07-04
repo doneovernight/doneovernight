@@ -1255,8 +1255,21 @@
 
   <script>
     (() => {
+      const decorativeVideoSelector = "#introVideo, #heroVideo";
+      const consumeEvent = (event) => {
+        if (!event) return;
+        if (typeof event.preventDefault === "function" && event.cancelable) event.preventDefault();
+        if (typeof event.stopPropagation === "function") event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+      };
+      const suppressDecorativeVideoInteraction = (event) => {
+        const target = event && event.target;
+        if (target && typeof target.matches === "function" && target.matches(decorativeVideoSelector)) {
+          consumeEvent(event);
+        }
+      };
       const startMutedVideos = () => {
-        document.querySelectorAll("#introVideo, #heroVideo").forEach((video) => {
+        document.querySelectorAll(decorativeVideoSelector).forEach((video) => {
           video.muted = true;
           video.defaultMuted = true;
           video.loop = true;
@@ -1265,16 +1278,25 @@
           video.controls = false;
           video.disablePictureInPicture = true;
           video.disableRemotePlayback = true;
+          video.draggable = false;
           video.setAttribute("playsinline", "");
           video.setAttribute("webkit-playsinline", "");
           video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+          video.setAttribute("x-webkit-airplay", "deny");
           video.setAttribute("aria-hidden", "true");
           video.setAttribute("tabindex", "-1");
+          video.setAttribute("draggable", "false");
           video.removeAttribute("controls");
+          video.addEventListener("click", consumeEvent, { capture: true });
+          video.addEventListener("pointerdown", consumeEvent, { capture: true });
+          video.addEventListener("touchstart", consumeEvent, { capture: true, passive: false });
           const attempt = video.play();
           if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
         });
       };
+      ["click", "pointerdown", "touchstart", "touchend"].forEach((type) => {
+        document.addEventListener(type, suppressDecorativeVideoInteraction, { capture: true, passive: false });
+      });
       startMutedVideos();
       document.addEventListener("DOMContentLoaded", startMutedVideos, { once: true });
       window.addEventListener("pointerdown", startMutedVideos, { once: true, passive: true });
@@ -1517,10 +1539,13 @@
       video.setAttribute("webkit-playsinline", "");
       video.setAttribute("preload", "auto");
       video.setAttribute("controlslist", "nodownload noplaybackrate noremoteplayback");
+      video.setAttribute("x-webkit-airplay", "deny");
       video.setAttribute("aria-hidden", "true");
       video.setAttribute("tabindex", "-1");
+      video.setAttribute("draggable", "false");
       video.disablePictureInPicture = true;
       video.disableRemotePlayback = true;
+      video.draggable = false;
       video.removeAttribute("controls");
       const nextSrc = normalizeMediaUrl(src);
       const currentSrc = normalizeMediaUrl(video.currentSrc || video.getAttribute("src") || video.src);
@@ -3167,6 +3192,15 @@
         consumeIntroEvent(event);
         if (dismissed) return;
         dismissed = true;
+        const suppressDelayedTap = (delayedEvent) => consumeIntroEvent(delayedEvent);
+        ["click", "pointerup", "touchend"].forEach((type) => {
+          intro.addEventListener(type, suppressDelayedTap, { capture: true, passive: false });
+        });
+        setTimeout(() => {
+          ["click", "pointerup", "touchend"].forEach((type) => {
+            intro.removeEventListener(type, suppressDelayedTap, { capture: true });
+          });
+        }, 1400);
         if (video) video.muted = true;
         playIntroAudio(settings, true).then((played) => {
           if (!played && introAudioInfo(settings).enabled) document.body.dataset.introAudioState = "waiting-for-user";
@@ -3174,7 +3208,7 @@
         if (!forceExperience) localStorage.setItem(introKey, "done");
         intro.classList.add("is-done");
         revealPage();
-        setTimeout(() => { intro.hidden = true; }, 650);
+        setTimeout(() => { intro.hidden = true; }, 950);
       };
       const dismissFromPointer = (event) => dismiss(event);
       intro.addEventListener("pointerdown", dismissFromPointer, { once: true, capture: true });
