@@ -567,6 +567,35 @@
       display: grid;
       gap: 14px;
     }
+    .connections-coming-soon {
+      min-height: 280px;
+      align-content: center;
+      padding: 26px;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(255,211,223,.16), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.032));
+    }
+    .connections-coming-soon .eyebrow {
+      margin: 0 0 10px;
+      color: rgba(255,211,223,.72);
+    }
+    .connections-coming-soon h3 {
+      margin: 0;
+      font-size: clamp(26px, 7vw, 42px);
+      letter-spacing: 0;
+    }
+    .connections-coming-soon p {
+      margin: 0;
+      max-width: 520px;
+      color: rgba(255,245,247,.72);
+      line-height: 1.55;
+    }
+    .connections-coming-soon .connection-benefits {
+      margin: 4px 0;
+      color: rgba(255,245,247,.82);
+    }
+    body[data-dev-mode="true"] .connections-coming-soon { display: none !important; }
+    body:not([data-dev-mode="true"]) .connections-implementation { display: none !important; }
     .connection-head {
       display: flex;
       align-items: flex-start;
@@ -1072,7 +1101,22 @@
           <h2>Connections</h2>
           <div class="section-note">Connect the platforms that power your creator workspace.</div>
           <div style="height:12px"></div>
-          <section class="connection-card" data-provider="tiktok">
+          <section class="connection-card connections-coming-soon" aria-label="Creator Connections coming soon">
+            <div class="eyebrow">COMING SOON</div>
+            <h3>Connections</h3>
+            <p>Creator Connections are currently being finalized.</p>
+            <p>Soon you'll be able to securely connect platforms such as:</p>
+            <div class="connection-benefits" aria-label="Future Creator Connections platforms">
+              <span>✓ TikTok</span>
+              <span>✓ Discord</span>
+              <span>✓ YouTube</span>
+              <span>✓ Twitch</span>
+              <span>✓ Kick</span>
+              <span>and more.</span>
+            </div>
+            <p>Hold tight.</p>
+          </section>
+          <section class="connection-card connections-implementation" data-provider="tiktok">
             <div class="connection-head">
               <div class="connection-title">
                 <strong>TikTok</strong>
@@ -3433,6 +3477,9 @@
         setStatus(readableMessage(error, "Could not load connections."), true, "connectionsStatus");
       }
     }
+    function connectionsDeveloperModeEnabled() {
+      return document.body.dataset.devMode === "true";
+    }
     function tiktokConnectionPayload() {
       return {
         provider: "tiktok",
@@ -3503,17 +3550,21 @@
       openApp();
       const connectionState = adminParams.get("tiktok_connection");
       const connectionMessage = adminParams.get("message") || "";
-      if (adminParams.get("tab") === "connections" || connectionState) {
+      const shouldOpenConnections = adminParams.get("tab") === "connections" || connectionState;
+      if (shouldOpenConnections) {
         setAdminTab("connections");
-        window.setTimeout(() => {
-          if (connectionState === "connected") {
-            setStatus("TikTok connected.", false, "connectionsStatus");
-          } else if (connectionState === "error") {
-            setStatus(connectionMessage || "TikTok connection failed.", true, "connectionsStatus");
-          }
-        }, 300);
+        if (connectionsDeveloperModeEnabled()) {
+          loadConnections();
+          window.setTimeout(() => {
+            if (connectionState === "connected") {
+              setStatus("TikTok connected.", false, "connectionsStatus");
+            } else if (connectionState === "error") {
+              setStatus(connectionMessage || "TikTok connection failed.", true, "connectionsStatus");
+            }
+          }, 300);
+        }
         if (connectionState) window.history.replaceState(null, "", "/mosyaamosya");
-      } else {
+      } else if (connectionsDeveloperModeEnabled()) {
         loadConnections();
       }
       setStatus("Loaded Mina Mosya settings.");
@@ -4016,6 +4067,9 @@
         document.body.dataset.devMode = enabled ? "true" : "false";
         if (enabled) localStorage.setItem("creator_media_dev_mode", "1");
         else localStorage.removeItem("creator_media_dev_mode");
+        if (enabled && document.querySelector('[data-admin-tab="connections"][aria-selected="true"]')) {
+          loadConnections();
+        }
       });
     }
     document.querySelectorAll("[data-admin-jump]").forEach((button) => {
