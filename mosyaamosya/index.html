@@ -1454,7 +1454,7 @@
       bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
       location: "Chicago 🇺🇸",
       avatar_url: "/assets/mosyaamosya/profile-v2.jpg",
-      hero_video_url: creatorHeroVideoPath,
+      hero_video_url: "",
       tiktok_url: "https://www.tiktok.com/@mosyaamosya",
       discord_url: "https://discord.gg/GGE7WsUZR",
       discord_invite_url: "https://discord.gg/GGE7WsUZR",
@@ -1659,7 +1659,11 @@
     }
     function heroVideo(settings) {
       if (tiktokInAppBrowser()) return "";
-      return safeUrl(settings.hero_video_url || settings.banner_url) || creatorHeroVideoPath;
+      const configured = safeUrl(settings.hero_video_url);
+      if (configured) return configured;
+      const banner = safeUrl(settings.banner_url);
+      if (banner) return banner;
+      return "";
     }
     function revealPage() { document.documentElement.classList.remove("intro-pending"); }
     const retryableVideos = new Set();
@@ -1716,6 +1720,16 @@
       if (existing && existing.tagName === "VIDEO") existing.remove();
       return createPoster(id, className, $(parentId));
     }
+    function removeDecorativeVideo(id, posterId, parentId) {
+      const video = $(id);
+      if (video) {
+        retryableVideos.delete(video);
+        video.remove();
+      }
+      const poster = ensureDecorativePoster(posterId, posterId === "heroPoster" ? "hero-video hero-poster" : "intro-poster", parentId);
+      if (poster) poster.classList.remove("media-poster-hidden");
+      return poster;
+    }
     function ensureDecorativeVideo(id, className, posterId, parentId) {
       if (tiktokInAppBrowser()) {
         bindVideoKillSwitch();
@@ -1766,6 +1780,11 @@
     function prepareMutedLoopVideo(video, src) {
       if (tiktokInAppBrowser()) {
         bindVideoKillSwitch();
+        return;
+      }
+      if (!src) {
+        if (video && video.id === "heroVideo") removeDecorativeVideo("heroVideo", "heroPoster", "hero");
+        if (video && video.id === "introVideo") removeDecorativeVideo("introVideo", "introPoster", "intro");
         return;
       }
       if (!video) return;
@@ -1880,9 +1899,17 @@
       }
       updateDecorativePoster(settings);
       const source = heroVideo(settings);
-      prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), source);
+      if (source) {
+        prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), source);
+      } else {
+        removeDecorativeVideo("heroVideo", "heroPoster", "hero");
+      }
       if (shouldShowWelcomeIntro(settings)) {
-        prepareMutedLoopVideo(ensureDecorativeVideo("introVideo", "", "introPoster", "intro"), source);
+        if (source) {
+          prepareMutedLoopVideo(ensureDecorativeVideo("introVideo", "", "introPoster", "intro"), source);
+        } else {
+          removeDecorativeVideo("introVideo", "introPoster", "intro");
+        }
       }
     }
     function introAudioInfo(settings) {
@@ -3487,9 +3514,11 @@
         revealPage();
         return;
       }
-      const video = ensureDecorativeVideo("introVideo", "", "introPoster", "intro");
+      const source = heroVideo(settings);
+      const video = source ? ensureDecorativeVideo("introVideo", "", "introPoster", "intro") : null;
       intro.hidden = false;
-      prepareMutedLoopVideo(video, heroVideo(settings));
+      if (source) prepareMutedLoopVideo(video, source);
+      else removeDecorativeVideo("introVideo", "introPoster", "intro");
       let dismissed = false;
       const consumeIntroEvent = (event) => {
         if (!event) return;
@@ -3541,7 +3570,11 @@
       $("avatarImage").src = profileImage(settings);
       $("avatarImage").alt = (settings.display_name || "Mina Mosya") + " profile photo";
       const heroVideoUrl = heroVideo(settings);
-      prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), heroVideoUrl);
+      if (heroVideoUrl) {
+        prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), heroVideoUrl);
+      } else {
+        removeDecorativeVideo("heroVideo", "heroPoster", "hero");
+      }
       applyLiveState({
         isLive: false,
         liveUrl: fallbackLiveUrl(settings),

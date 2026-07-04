@@ -3999,16 +3999,61 @@
       }
       window.open(url, "_blank", "noopener,noreferrer");
     }
-    function deleteMediaAsset(kind) {
+    async function deleteMediaAsset(kind) {
+      if (saving) return;
       const field = kind === "avatar" ? "avatar_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
       if (!form.elements[field]) return;
+      const stateKey = kind === "signature" ? "signature" : kind;
+      const label = kind === "avatar" ? "Profile Photo" : kind === "signature" ? "Creator Signature" : "Hero Video";
+      const preview = kind === "avatar" ? $("avatarPreview") : kind === "signature" ? $("introAudioPreview") : $("heroPreview");
+      const previousValue = form.elements[field].value;
+      const previousState = { ...(mediaState[stateKey] || {}) };
+      const previousPreviewSrc = preview ? (preview.currentSrc || preview.getAttribute("src") || preview.src || "") : "";
       form.elements[field].value = "";
       if (kind === "avatar") $("avatarPreview").removeAttribute("src");
-      if (kind === "hero") $("heroPreview").removeAttribute("src");
+      if (kind === "hero") {
+        $("heroPreview").pause();
+        $("heroPreview").removeAttribute("src");
+        $("heroPreview").load();
+      }
       if (kind === "signature") setIntroAudioPreview("");
-      mediaState[kind] = {};
-      setStatus("Media removed. Save page to publish the change.");
-      refreshMediaMetadata();
+      mediaState[stateKey] = {};
+      await refreshMediaMetadata();
+      const validationError = validateSettingsForm();
+      if (validationError) {
+        form.elements[field].value = previousValue;
+        mediaState[stateKey] = previousState;
+        if (kind === "avatar" && previousPreviewSrc) $("avatarPreview").src = previousPreviewSrc;
+        if (kind === "hero" && previousPreviewSrc) $("heroPreview").src = previousPreviewSrc;
+        if (kind === "signature") setIntroAudioPreview(previousPreviewSrc);
+        await refreshMediaMetadata();
+        setStatus(validationError, true);
+        return;
+      }
+      saving = true;
+      setSaveButtonState("saving");
+      setStatus("Removing " + label + "...");
+      try {
+        const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
+        fillForm(data.creator);
+        updatePreviewFrame();
+        loadLiveRuntime();
+        updateOverview(data.creator && data.creator.updated_at);
+        setSaveButtonState("saved", { resetAfter: 700 });
+        setStatus(label + " removed.");
+      } catch (error) {
+        form.elements[field].value = previousValue;
+        mediaState[stateKey] = previousState;
+        if (kind === "avatar" && previousPreviewSrc) $("avatarPreview").src = previousPreviewSrc;
+        if (kind === "hero" && previousPreviewSrc) $("heroPreview").src = previousPreviewSrc;
+        if (kind === "signature") setIntroAudioPreview(previousPreviewSrc);
+        await refreshMediaMetadata();
+        setSaveButtonState("failed", { resetAfter: 1500 });
+        setStatus("Failed to remove " + label + ": " + readableMessage(error, "Save failed."), true);
+        reportAdminWatchtower("Media", "Delete " + label, error, "Check saveCreator(), public.creators, and media field persistence.");
+      } finally {
+        saving = false;
+      }
     }
     function selectedFileForKind(kind) {
       const input = kind === "avatar" ? $("avatarFile") : kind === "signature" ? $("introAudioFile") : $("heroFile");

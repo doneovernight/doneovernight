@@ -1073,6 +1073,7 @@ async function uploadCreatorMedia(input = {}) {
 }
 
 function normalizeCreator(row = {}) {
+  const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
   return {
     ...DEFAULT_MINA_SETTINGS,
     ...row,
@@ -1084,7 +1085,7 @@ function normalizeCreator(row = {}) {
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
-    hero_video_url: clean(row.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: hasHeroVideoUrl ? clean(row.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(row.music_enabled, false),
     music_url: clean(row.music_url),
     music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
@@ -1261,6 +1262,7 @@ async function fetchCreator(slug = "mosyaamosya") {
 function creatorPayload(input = {}) {
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
+  const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
   if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
     const error = new Error("Creator Signature is enabled, but no valid direct audio URL is saved.");
     error.statusCode = 400;
@@ -1276,7 +1278,7 @@ function creatorPayload(input = {}) {
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
-    hero_video_url: clean(input.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: hasHeroVideoUrl ? clean(input.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(input.music_enabled, false),
     music_url: clean(input.music_url),
     music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
