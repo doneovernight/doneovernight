@@ -6,6 +6,7 @@
   <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
   <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
   <link rel="icon" href="/favicon.ico">
+  <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <script>
@@ -471,22 +472,11 @@
       height: auto;
       background: transparent;
       pointer-events: none;
-      transform: rotate(-10deg) scale(1);
+      display: block;
+      transform: translate3d(0,0,0) rotate(-10deg) scale(1);
       transform-origin: center;
-      filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
-      animation: battleStickerPulse 2.8s ease-in-out infinite;
-    }
-    @keyframes battleStickerPulse {
-      0%, 78%, 100% {
-        transform: rotate(-10deg) scale(1);
-        filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
-      }
-      42% {
-        transform: rotate(-10deg) scale(1.06);
-        filter:
-          drop-shadow(0 0 12px rgba(255, 62, 104, .32))
-          drop-shadow(0 7px 14px rgba(255, 48, 92, .2));
-      }
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .icon-badge {
@@ -1407,6 +1397,7 @@
     let currentSettings = { ...fallback };
     let latestPublicLiveState = null;
     let pageViewTracked = false;
+    const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
     const blockRegistry = {
       link: { implemented: true },
       discord: { implemented: true },
@@ -2311,12 +2302,23 @@
       })));
       const grid = $("buttonGrid");
       if (!grid) return;
+      const renderableActions = actions.map((action) => ({
+        ...action,
+        resolvedUrl: action.url || actionUrl(action, settings)
+      })).filter((action) => Boolean(action.resolvedUrl));
+      const renderSignature = JSON.stringify(renderableActions.map((action) => ({
+        key: action.key,
+        title: action.title,
+        sub: action.sub,
+        label: action.label,
+        url: action.resolvedUrl,
+        battleActive: Boolean(action.battleActive)
+      })));
+      if (grid.dataset.renderSignature === renderSignature) return;
+      grid.dataset.renderSignature = renderSignature;
       grid.innerHTML = "";
-      let renderedActions = 0;
-      actions.forEach((action) => {
-        const url = action.url || actionUrl(action, settings);
-        if (!url) return;
-        renderedActions += 1;
+      renderableActions.forEach((action) => {
+        const url = action.resolvedUrl;
         const item = document.createElement(url ? "a" : "div");
         const showBattleDiscount = action.key === "support" && Boolean(url);
         item.className = showBattleDiscount ? "link-button content-block prepare-card" : "link-button content-block";
@@ -2337,14 +2339,22 @@
         if (showBattleDiscount) {
           const shell = document.createElement("div");
           shell.className = action.battleActive ? "prepare-card-shell is-battle-active" : "prepare-card-shell";
-          shell.innerHTML = '<img class="prepare-discount-sticker" src="/assets/mosyaamosya/prepare-battle-discount.png" alt="" aria-hidden="true" loading="lazy" decoding="async">';
+          const sticker = document.createElement("img");
+          sticker.className = "prepare-discount-sticker";
+          sticker.src = prepareDiscountStickerSrc;
+          sticker.alt = "";
+          sticker.setAttribute("aria-hidden", "true");
+          sticker.loading = "eager";
+          sticker.decoding = "sync";
+          sticker.fetchPriority = "high";
+          shell.appendChild(sticker);
           shell.appendChild(item);
           grid.appendChild(shell);
         } else {
           grid.appendChild(item);
         }
       });
-      if (!renderedActions) grid.remove();
+      if (!renderableActions.length) grid.remove();
     }
 
     function renderPinnedBlock(settings) {
