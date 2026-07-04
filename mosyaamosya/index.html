@@ -454,12 +454,15 @@
     .prepare-card-shell.is-battle-active .prepare-card {
       animation: battleCardPulse 2.6s ease-in-out infinite;
       border-color: rgba(255, 159, 189, .28);
+      will-change: transform, box-shadow;
     }
     @keyframes battleCardPulse {
       0%, 80%, 100% {
+        transform: translate3d(0,0,0) scale(1);
         box-shadow: 0 18px 44px var(--ambient-secondary-glow), inset 0 1px rgba(255,255,255,.18);
       }
       42% {
+        transform: translate3d(0,0,0) scale(1.006);
         box-shadow: 0 20px 52px rgba(255, 72, 118, .2), inset 0 1px rgba(255,255,255,.22);
       }
     }
@@ -1413,6 +1416,7 @@
     let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
     let latestPublicLiveState = null;
+    let adminRuntimePushHoldUntil = 0;
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
     const blockRegistry = {
@@ -1807,15 +1811,18 @@
       if (liveRuntimeInFlight) return;
       liveRuntimeInFlight = true;
       try {
+        if (options.forceSettings === true) await refreshCreatorSettingsIfNeeded(settings, true);
         const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "mosyaamosya") + "&runtime_poll=" + Date.now(), {
           cache: "no-store",
           headers: { Accept: "application/json" }
         });
         if (!response.ok) throw new Error("Live runtime unavailable");
         const liveState = await response.json();
-        applyLiveState(liveState, settings);
-        await refreshCreatorSettingsIfNeeded(settings, options.forceSettings === true);
+        if (Date.now() < adminRuntimePushHoldUntil) return;
+        applyLiveState(liveState, currentSettings);
+        if (options.forceSettings !== true) await refreshCreatorSettingsIfNeeded(currentSettings, false);
       } catch (error) {
+        if (Date.now() < adminRuntimePushHoldUntil) return;
         applyLiveState({
           isLive: false,
           liveUrl: fallbackLiveUrl(settings),
@@ -1826,8 +1833,8 @@
           manualMode: false,
           error: "LIVE_RUNTIME_UNAVAILABLE",
           capabilities: {}
-        }, settings);
-        await refreshCreatorSettingsIfNeeded(settings, options.forceSettings === true);
+        }, currentSettings);
+        if (options.forceSettings === true) await refreshCreatorSettingsIfNeeded(currentSettings, true);
       } finally {
         liveRuntimeInFlight = false;
       }
@@ -1846,7 +1853,22 @@
       };
       document.addEventListener("visibilitychange", liveVisibilityHandler);
       liveMessageHandler = (event) => {
-        if (event.data && event.data.type === "creator-live-refresh") refreshLiveRuntime(currentSettings, { forceSettings: true });
+        if (!event.data || event.data.type !== "creator-live-refresh") return;
+        if (event.data.settings && typeof event.data.settings === "object") {
+          currentSettings = { ...currentSettings, ...event.data.settings };
+          renderButtons(currentSettings);
+          renderPinnedBlock(currentSettings);
+          renderPoll(currentSettings);
+          renderNewsletter(currentSettings);
+          renderCommunity(currentSettings);
+          renderFaq(currentSettings);
+        }
+        if (event.data.liveState && typeof event.data.liveState === "object") {
+          adminRuntimePushHoldUntil = Date.now() + 5000;
+          applyLiveState(event.data.liveState, currentSettings);
+          return;
+        }
+        refreshLiveRuntime(currentSettings, { forceSettings: true });
       };
       window.addEventListener("message", liveMessageHandler);
     }

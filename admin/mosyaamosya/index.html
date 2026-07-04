@@ -106,6 +106,17 @@
     }
     .button.primary { border: 0; background: linear-gradient(135deg, var(--accent), #ff9fbd); color: #24100e; box-shadow: 0 16px 42px rgba(255,159,189,.22); }
     .button.danger { color: #fecdd3; border-color: rgba(251,113,133,.36); }
+    .button[aria-pressed="true"] {
+      border-color: rgba(255,211,223,.48);
+      background: rgba(255,211,223,.14);
+      color: var(--text);
+      box-shadow: 0 0 0 3px rgba(255,211,223,.12), inset 0 1px rgba(255,255,255,.16);
+    }
+    .button.primary[aria-pressed="true"] {
+      background: linear-gradient(135deg, var(--accent), #ff9fbd);
+      color: #24100e;
+      box-shadow: 0 16px 42px rgba(255,159,189,.22), 0 0 0 3px rgba(255,211,223,.16);
+    }
     .button[disabled] { opacity: .62; cursor: wait; }
     .gate {
       min-height: 100svh;
@@ -2735,6 +2746,7 @@
       document.querySelectorAll("[data-battle-action]").forEach((button) => {
         const action = button.dataset.battleAction;
         const pressed = (action === "start" && snapshot.battle_mode_enabled) ||
+          (action === "end" && !snapshot.battle_mode_enabled) ||
           (action === "won" && snapshot.battle_result === "won") ||
           (action === "lost" && snapshot.battle_result === "lost") ||
           (action === "tie" && snapshot.battle_result === "tie");
@@ -2777,9 +2789,7 @@
       return labels[String(value || "").toLowerCase()] || "None";
     }
     function updateRuntimeStatusPanel() {
-      const liveNow = latestLiveRuntimeState && typeof latestLiveRuntimeState.isLive === "boolean"
-        ? latestLiveRuntimeState.isLive
-        : boolField("live_status");
+      const liveNow = boolField("live_status");
       if ($("runtimeCurrentStatus")) $("runtimeCurrentStatus").textContent = liveNow ? "🟢 Live now" : "⚪ Offline";
       if ($("runtimeSourceLabel")) $("runtimeSourceLabel").textContent = runtimeSourceLabel(latestLiveRuntimeState && latestLiveRuntimeState.source);
       if ($("runtimeLastChecked")) $("runtimeLastChecked").textContent = formatRuntimeDate(latestLiveRuntimeState && latestLiveRuntimeState.checkedAt);
@@ -2789,6 +2799,7 @@
       if (button) {
         button.textContent = liveNow ? "End Live" : "Start Live";
         button.dataset.runtimeAction = liveNow ? "end-live" : "start-live";
+        button.setAttribute("aria-pressed", liveNow ? "true" : "false");
         button.classList.add("primary");
         button.classList.remove("danger");
       }
@@ -2834,6 +2845,7 @@
       }
       saveUndoSnapshot(previous);
       writeBattleSnapshot(next);
+      refreshPreviewLiveRuntime();
       await saveRuntimeState(action === "start" ? "Battle Mode Enabled" : action === "end" ? "Battle Mode Disabled" : "Battle Saved");
     }
     async function saveRuntimeState(successMessage = "Runtime updated.") {
@@ -2851,11 +2863,59 @@
         source: data.creator && data.creator.manual_live_fallback_enabled ? "manual-fallback" : "unknown",
         checkedAt: data.creator && data.creator.updated_at
       };
+      updateBattleSummary();
+      updateRuntimeUi();
       refreshPreviewLiveRuntime();
       loadLiveRuntime();
       updateOverview(data.creator && data.creator.updated_at);
       setStatus(successMessage);
       return data;
+    }
+    function previewRuntimeSettings() {
+      const values = valuesFromForm();
+      return {
+        live_status: Boolean(values.live_status),
+        manual_live_fallback_enabled: values.manual_live_fallback_enabled !== false,
+        live_url: values.live_url,
+        live_button_text: values.live_button_text,
+        battle_mode_enabled: Boolean(values.battle_mode_enabled),
+        battle_opponent: values.battle_opponent,
+        battle_result: values.battle_result,
+        battle_win_streak: Math.max(0, Math.floor(Number(values.battle_win_streak) || 0)),
+        battle_updated_at: values.battle_updated_at,
+        pinned_block: values.pinned_block,
+        quick_announcement: values.quick_announcement,
+        next_live_datetime: values.next_live_datetime,
+        poll_enabled: Boolean(values.poll_enabled),
+        poll_question: values.poll_question,
+        poll_options: values.poll_options,
+        updated_at: new Date().toISOString()
+      };
+    }
+    function previewRuntimeLiveState() {
+      const settings = previewRuntimeSettings();
+      const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+      return {
+        isLive: Boolean(settings.live_status),
+        source: "admin-runtime",
+        confidence: "manual",
+        confirmed: false,
+        manualMode: settings.manual_live_fallback_enabled,
+        liveUrl: settings.live_url || ("https://www.tiktok.com/@" + username + "/live"),
+        checkedAt: settings.updated_at,
+        battleActive: Boolean(settings.battle_mode_enabled),
+        battleOpponent: settings.battle_mode_enabled && settings.battle_opponent ? settings.battle_opponent : null,
+        battleResult: settings.battle_mode_enabled && settings.battle_result ? settings.battle_result : null,
+        battleWinStreak: settings.battle_mode_enabled && settings.battle_win_streak > 0 ? settings.battle_win_streak : null,
+        capabilities: {
+          viewerCount: false,
+          likeCount: false,
+          liveDuration: false,
+          battleActive: Boolean(settings.battle_mode_enabled),
+          battleWinStreak: Boolean(settings.battle_mode_enabled && settings.battle_win_streak > 0),
+          battleResult: Boolean(settings.battle_mode_enabled && settings.battle_result)
+        }
+      };
     }
     function queueRuntimeAutosave(successMessage = "Runtime Updated") {
       window.clearTimeout(runtimeAutosaveTimer);
@@ -2868,6 +2928,7 @@
       }, 550);
     }
     async function applyRuntimeAction(action) {
+      if (action === "toggle-live") action = boolField("live_status") ? "end-live" : "start-live";
       if (action === "start-live") {
         setBoolField("live_status", true);
         latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
@@ -2880,6 +2941,7 @@
         }
         updateBattleSummary();
         updateRuntimeUi();
+        refreshPreviewLiveRuntime();
         try {
           setStatus("Saving live mode...");
           const data = await api({
@@ -2892,6 +2954,8 @@
           });
           fillForm(data.creator);
           latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
+          updateBattleSummary();
+          updateRuntimeUi();
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -2906,6 +2970,7 @@
         latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
         updateBattleSummary();
         updateRuntimeUi();
+        refreshPreviewLiveRuntime();
         try {
           setStatus("Saving live mode...");
           const data = await api({
@@ -2918,6 +2983,8 @@
           });
           fillForm(data.creator);
           latestLiveRuntimeState = { isLive: false, source: "admin-runtime", confidence: "manual", checkedAt: data.creator && data.creator.updated_at };
+          updateBattleSummary();
+          updateRuntimeUi();
           refreshPreviewLiveRuntime();
           loadLiveRuntime();
           updateOverview(data.creator && data.creator.updated_at);
@@ -2990,7 +3057,11 @@
     function refreshPreviewLiveRuntime() {
       const frame = $("previewFrame");
       if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type: "creator-live-refresh" }, "https://doneovernight.com");
+        frame.contentWindow.postMessage({
+          type: "creator-live-refresh",
+          settings: previewRuntimeSettings(),
+          liveState: previewRuntimeLiveState()
+        }, "https://doneovernight.com");
       }
     }
     function updatePreviewFrame(refresh = true) {
