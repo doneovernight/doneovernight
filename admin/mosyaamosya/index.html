@@ -1206,13 +1206,13 @@
 
             <section class="media-asset-card">
               <div class="media-asset-head">
-                <div class="media-asset-title"><strong>Profile Photo</strong><span>Used across Creator OS and as the TikTok fallback. Supports PNG, JPG, JPEG, and animated GIF.</span></div>
+                <div class="media-asset-title"><strong>Profile Photo</strong><span>Used across Creator OS and as the TikTok fallback. Supports static PNG, JPG, and JPEG images.</span></div>
                 <span class="media-health-pill" id="avatarHealthPill">Checking</span>
               </div>
               <input name="avatar_url" type="hidden">
               <div class="media-row">
                 <img class="media-preview" id="avatarPreview" alt="Profile image preview">
-                <input class="media-file-input" id="avatarFile" type="file" accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif">
+                <input class="media-file-input" id="avatarFile" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
               </div>
               <div class="media-spec-grid">
                 <div class="media-spec"><span>Resolution</span><strong id="avatarResolution">Unknown</strong></div>
@@ -3860,8 +3860,8 @@
     function isProfilePhotoFile(file) {
       const ext = mediaFileExtension(file);
       const mime = mediaFileMime(file);
-      return ["png", "jpg", "jpeg", "gif"].includes(ext) &&
-        (!mime || mime.startsWith("image/") || mime === "application/octet-stream");
+      return ["png", "jpg", "jpeg"].includes(ext) &&
+        (!mime || ["image/png", "image/jpeg", "application/octet-stream"].includes(mime));
     }
     function isHeroVideoFile(file) {
       const ext = mediaFileExtension(file);
@@ -3872,9 +3872,9 @@
       if (!file) return "";
       if (kind === "profile" || kind === "avatar") {
         if (mediaFileMime(file).startsWith("video/") || ["mp4", "mov", "webm", "avi", "m4v"].includes(mediaFileExtension(file))) {
-          return "Profile Photos support images and animated GIFs only.";
+          return "Profile Photos support static PNG and JPG images only.";
         }
-        return isProfilePhotoFile(file) ? "" : "Profile Photos support images and animated GIFs only.";
+        return isProfilePhotoFile(file) ? "" : "Profile Photos support static PNG and JPG images only.";
       }
       if (kind === "hero") return isHeroVideoFile(file) ? "" : "Hero Media supports MP4 only.";
       return "";
@@ -3893,7 +3893,7 @@
       if (kind === "avatar") {
         const ext = mediaUrlExtension(info.url);
         const mime = String(info.mime || "").toLowerCase();
-        if (ext === "gif" || mime === "image/gif") return { label: "Animated GIF", className: "ready" };
+        if (ext === "gif" || mime === "image/gif") return { label: "Needs static image", className: "warn" };
         if (["png", "jpg", "jpeg"].includes(ext) || ["image/png", "image/jpeg"].includes(mime)) return { label: "Static Image", className: "ready" };
         return { label: "Ready", className: "ready" };
       }
@@ -4116,7 +4116,7 @@
       await uploadMedia(kind === "signature" ? "intro-audio" : "profile");
     }
     async function optimizeProfileImage(file) {
-      if (!file || !file.type.startsWith("image/") || file.type === "image/gif") return { file, message: "" };
+      if (!file || !file.type.startsWith("image/")) return { file, message: "" };
       const url = URL.createObjectURL(file);
       const image = await new Promise((resolve, reject) => {
         const img = new Image();
