@@ -1216,12 +1216,25 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
 
 async function fetchCreatorFromAnalyticsBridge() {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_settings_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
+    "analytics_events?event_type=eq.creator_settings_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=25",
     { context: "Creator analytics bridge" }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
-  const metadata = rows[0].metadata || {};
-  return normalizeCreator(metadata.creator || metadata);
+  let best = null;
+  let bestTime = -Infinity;
+  rows.forEach((row) => {
+    const metadata = row && row.metadata ? row.metadata : {};
+    const creator = metadata.creator || metadata;
+    if (!creator || typeof creator !== "object") return;
+    const updatedTime = Date.parse(creator.updated_at || metadata.updated_at || "");
+    const createdTime = Date.parse(row.created_at || "");
+    const time = Number.isFinite(updatedTime) ? updatedTime : Number.isFinite(createdTime) ? createdTime : -Infinity;
+    if (!best || time > bestTime) {
+      best = creator;
+      bestTime = time;
+    }
+  });
+  return best ? normalizeCreator(best) : null;
 }
 
 async function fetchCreator(slug = "mosyaamosya") {
