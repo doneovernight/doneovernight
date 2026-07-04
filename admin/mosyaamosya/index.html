@@ -1441,7 +1441,10 @@
             <div class="runtime-section">
               <h3>Countdown</h3>
               <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
-              <button class="button" type="button" data-pinned-block="countdown">Pin Countdown</button>
+              <div class="runtime-actions two">
+                <button class="button" type="button" data-pinned-block="countdown">Pin Countdown</button>
+                <button class="button" type="button" data-runtime-action="reset-countdown">Reset Countdown</button>
+              </div>
             </div>
 
             <div class="runtime-section">
@@ -3270,12 +3273,17 @@
         await loadLiveRuntime();
         setStatus("Runtime refreshed.");
         return;
+      } else if (action === "reset-countdown") {
+        if (form.elements.next_live_datetime) form.elements.next_live_datetime.value = "";
+        if (String(form.elements.pinned_block.value || "") === "countdown") {
+          form.elements.pinned_block.value = "";
+        }
       } else if (action === "push-announcement") {
         form.elements.pinned_block.value = "announcement";
       }
       updateBattleSummary();
       updateRuntimeUi();
-      await saveRuntimeState(action === "reset-streak" ? "Win Streak Reset" : action === "push-announcement" ? "Announcement Updated" : "Runtime updated.");
+      await saveRuntimeState(action === "reset-streak" ? "Win Streak Reset" : action === "push-announcement" ? "Announcement Updated" : action === "reset-countdown" ? "Countdown reset" : "Runtime updated.");
     }
     async function setPinnedBlock(value) {
       form.elements.pinned_block.value = value;
