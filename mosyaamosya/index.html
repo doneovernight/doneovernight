@@ -1810,6 +1810,10 @@
     }
     function markDecorativeVideoReady(video) {
       if (!video) return;
+      if (video.paused) {
+        markDecorativeVideoUnavailable(video);
+        return;
+      }
       setDecorativePosterHidden(video, true);
       video.classList.add("is-ready");
     }
@@ -1821,13 +1825,19 @@
     function bindDecorativeVideoReadiness(video) {
       if (!video || video.dataset.readyBound === "true") return;
       video.dataset.readyBound = "true";
+      const requestPlayback = () => {
+        playMutedLoopVideo(video);
+        markDecorativeVideoReady(video);
+      };
       const markReady = () => markDecorativeVideoReady(video);
       const markUnavailable = () => markDecorativeVideoUnavailable(video);
-      video.addEventListener("loadeddata", markReady);
-      video.addEventListener("canplay", markReady);
+      video.addEventListener("loadeddata", requestPlayback);
+      video.addEventListener("canplay", requestPlayback);
       video.addEventListener("playing", markReady);
+      video.addEventListener("pause", markUnavailable);
+      video.addEventListener("stalled", () => playMutedLoopVideo(video));
       video.addEventListener("error", markUnavailable);
-      if (video.readyState >= 2) markReady();
+      if (video.readyState >= 2) requestPlayback();
     }
     function playMutedLoopVideo(video) {
       if (!video || tiktokInAppBrowser()) return;
