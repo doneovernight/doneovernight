@@ -3,6 +3,7 @@ const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
 const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
+const { reportCreatorError } = require("../lib/creator-watchtower");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
@@ -2676,6 +2677,14 @@ module.exports = async function handler(req, res) {
       if (error.message === "Payload too large") {
         return send(res, 413, { success: false, error: "Payload too large", code: "PAYLOAD_TOO_LARGE" });
       }
+      reportCreatorError({
+        slug: "mosyaamosya",
+        area: "Admin",
+        action: "Creator settings API",
+        error: error.detail || error.message || "Could not save creator settings",
+        url: "/api/creator-settings",
+        suggested_check: "Check public.creators, saveCreator(), and Vercel function logs."
+      }).catch(() => null);
       return send(res, error.statusCode || 500, {
         success: false,
         error: error.message || "Could not save creator settings",

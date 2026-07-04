@@ -1324,6 +1324,76 @@
   </script>
 
   <script>
+    (() => {
+      const endpoint = "/api/creator-health";
+      const rateWindow = 5 * 60 * 1000;
+      function text(value, limit) {
+        return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
+      }
+      function fingerprint(area, action, error) {
+        return btoa(unescape(encodeURIComponent([area, action, error].join("|")))).slice(0, 96);
+      }
+      function shouldReport(key) {
+        try {
+          const storageKey = "creator_watchtower_" + key;
+          const last = Number(localStorage.getItem(storageKey) || 0);
+          if (Date.now() - last < rateWindow) return false;
+          localStorage.setItem(storageKey, String(Date.now()));
+        } catch (error) {}
+        return true;
+      }
+      function report(area, action, error, extra) {
+        const message = text(error && (error.message || error.reason) || error, 700);
+        if (!message) return;
+        const key = fingerprint(area, action, message);
+        if (!shouldReport(key)) return;
+        try {
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            keepalive: true,
+            body: JSON.stringify({
+              action: "report_error",
+              slug: "mosyaamosya",
+              area,
+              action_name: action,
+              error: message,
+              url: location.href,
+              source: "production",
+              suggested_check: extra && extra.suggested_check
+            })
+          }).catch(() => {});
+        } catch (error) {}
+      }
+      window.creatorWatchtowerReport = report;
+      window.addEventListener("error", (event) => {
+        report("Public", "JavaScript error", event.message || event.error || "Window error");
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        report("Public", "Unhandled promise rejection", event.reason || "Unhandled rejection");
+      });
+      const originalFetch = window.fetch && window.fetch.bind(window);
+      if (originalFetch) {
+        window.fetch = async (...args) => {
+          const url = String(args[0] && args[0].url || args[0] || "");
+          try {
+            const response = await originalFetch(...args);
+            if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              report("Public", "Fetch " + response.status, url, { suggested_check: "Check Creator OS API response and Vercel logs." });
+            }
+            return response;
+          } catch (error) {
+            if (url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              report("Public", "Fetch failed", error);
+            }
+            throw error;
+          }
+        };
+      }
+    })();
+  </script>
+
+  <script>
     const fallback = {
       id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",

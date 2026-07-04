@@ -1148,6 +1148,10 @@
               <button class="button" id="reconnectTikTok" type="button" hidden>Reconnect</button>
               <button class="button danger" id="disconnectTikTok" type="button" hidden>Disconnect</button>
             </div>
+            <div class="connection-actions connection-dev-only">
+              <button class="button" id="runHealthCheck" type="button">Run Health Check</button>
+            </div>
+            <div class="status connection-dev-only" id="healthCheckStatus" aria-live="polite"></div>
             <details class="connection-beta connection-dev-only">
               <summary>Internal beta runtime access</summary>
               <div class="fields">
@@ -1735,6 +1739,76 @@
       </aside>
     </section>
   </main>
+
+  <script>
+    (() => {
+      const endpoint = "/api/creator-health";
+      const rateWindow = 5 * 60 * 1000;
+      function text(value, limit) {
+        return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
+      }
+      function fingerprint(area, action, error) {
+        return btoa(unescape(encodeURIComponent([area, action, error].join("|")))).slice(0, 96);
+      }
+      function shouldReport(key) {
+        try {
+          const storageKey = "creator_watchtower_admin_" + key;
+          const last = Number(localStorage.getItem(storageKey) || 0);
+          if (Date.now() - last < rateWindow) return false;
+          localStorage.setItem(storageKey, String(Date.now()));
+        } catch (error) {}
+        return true;
+      }
+      function report(area, action, error, extra) {
+        const message = text(error && (error.message || error.reason) || error, 700);
+        if (!message) return;
+        const key = fingerprint(area, action, message);
+        if (!shouldReport(key)) return;
+        try {
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            keepalive: true,
+            body: JSON.stringify({
+              action: "report_error",
+              slug: "mosyaamosya",
+              area,
+              action_name: action,
+              error: message,
+              url: location.href,
+              source: "production",
+              suggested_check: extra && extra.suggested_check
+            })
+          }).catch(() => {});
+        } catch (error) {}
+      }
+      window.creatorWatchtowerReport = report;
+      window.addEventListener("error", (event) => {
+        report("Admin", "JavaScript error", event.message || event.error || "Window error");
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        report("Admin", "Unhandled promise rejection", event.reason || "Unhandled rejection");
+      });
+      const originalFetch = window.fetch && window.fetch.bind(window);
+      if (originalFetch) {
+        window.fetch = async (...args) => {
+          const url = String(args[0] && args[0].url || args[0] || "");
+          try {
+            const response = await originalFetch(...args);
+            if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              report("Admin", "Fetch " + response.status, url, { suggested_check: "Check Creator OS API response and Vercel logs." });
+            }
+            return response;
+          } catch (error) {
+            if (url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              report("Admin", "Fetch failed", error);
+            }
+            throw error;
+          }
+        };
+      }
+    })();
+  </script>
 
   <script>
     const sessionFlag = "doneovernight_creator_mosyaamosya";
@@ -3236,6 +3310,7 @@
           await saveRuntimeState(successMessage);
         } catch (error) {
           setStatus("Runtime update failed: " + readableMessage(error, "Unknown error"), true);
+          reportAdminWatchtower("Runtime", successMessage, error, "Check saveRuntimeState(), public.creators updated_at, and runtime API response.");
         }
       }, 550);
     }
@@ -3276,6 +3351,7 @@
           setStatus("Live Started");
         } catch (error) {
           setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
+          reportAdminWatchtower("Runtime", "Start Live", error, "Check set_live_mode, public.creators live_status, and API response.");
         }
         return;
       } else if (action === "end-live") {
@@ -3307,6 +3383,7 @@
           setStatus("Live Ended");
         } catch (error) {
           setStatus("Failed to update live mode: " + readableMessage(error, "Unknown error"), true);
+          reportAdminWatchtower("Runtime", "End Live", error, "Check set_live_mode, public.creators live_status, and API response.");
         }
         return;
       } else if (action === "reset-streak") {
@@ -3434,6 +3511,11 @@
       }
       return data;
     }
+    function reportAdminWatchtower(area, action, error, hint) {
+      if (window.creatorWatchtowerReport) {
+        window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, { suggested_check: hint || "Check Creator OS admin action and Vercel logs." });
+      }
+    }
     function formatConnectionDate(value) {
       if (!value) return "Never";
       const date = new Date(value);
@@ -3475,6 +3557,42 @@
         setStatus(data.warning ? "Connections loaded. Apply the Creator Connections SQL to enable persistent storage." : "Connections loaded.", Boolean(data.warning), "connectionsStatus");
       } catch (error) {
         setStatus(readableMessage(error, "Could not load connections."), true, "connectionsStatus");
+      }
+    }
+    async function runCreatorHealthCheck() {
+      const button = $("runHealthCheck");
+      if (!button) return;
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "Checking...";
+      setStatus("Running health check...", false, "healthCheckStatus");
+      try {
+        const response = await fetch("/api/creator-health", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            action: "run_health_check",
+            slug: "mosyaamosya",
+            alert_on_failure: true
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) throw new Error(data.error || "Health check failed");
+        const summary = [
+          "Health: " + (data.overall || "unknown"),
+          "Settings: " + (data.settings?.source || data.settings?.status || "unknown"),
+          "Runtime: " + (data.runtime?.source || "unknown") + " / " + (data.runtime?.confidence || "unknown"),
+          "Database: " + (data.database?.status || "unknown")
+        ].join(" · ");
+        setStatus(summary, data.overall !== "healthy", "healthCheckStatus");
+      } catch (error) {
+        setStatus("Health check failed: " + readableMessage(error, "Unknown error"), true, "healthCheckStatus");
+        if (window.creatorWatchtowerReport) {
+          window.creatorWatchtowerReport("Admin", "Run Health Check", error, { suggested_check: "Check /api/creator-health and Vercel function logs." });
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
       }
     }
     function connectionsDeveloperModeEnabled() {
@@ -4135,6 +4253,7 @@
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
+    if ($("runHealthCheck")) $("runHealthCheck").addEventListener("click", runCreatorHealthCheck);
     document.querySelectorAll("[data-media-preview]").forEach((button) => {
       button.addEventListener("click", () => openMediaPreview(button.dataset.mediaPreview));
     });
