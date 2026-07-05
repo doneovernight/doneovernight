@@ -3034,6 +3034,9 @@ async function handleCreatorHealth(req, res) {
         error: input.error || input.message,
         url: input.url,
         source: input.source || "production",
+        auth_state: input.auth_state,
+        session_present: input.session_present,
+        watchtower_version: input.watchtower_version,
         suggested_check: input.suggested_check
       });
       return send(res, 200, result);

@@ -1858,8 +1858,17 @@
       const rateWindow = 5 * 60 * 1000;
       const creatorSessionFlag = "doneovernight_creator_mosyaamosya";
       const creatorSessionKey = "doneovernight_creator_mosyaamosya_session";
+      const watchtowerVersion = "admin-auth-state-v2";
+      window.__creatorAdminAuthState = window.__creatorAdminAuthState || "locked";
       function text(value, limit) {
         return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
+      }
+      function setAuthState(state) {
+        const value = String(state || "locked");
+        window.__creatorAdminAuthState = ["locked", "validating_session", "authenticated"].includes(value) ? value : "locked";
+      }
+      function authState() {
+        return window.__creatorAdminAuthState || "locked";
       }
       function hasExpectedCreatorSession() {
         try {
@@ -1868,11 +1877,13 @@
           return false;
         }
       }
-      function isExpectedLockedFetch(response, url) {
+      function isExpectedAuthFetch(response, url) {
+        const state = authState();
         return response && response.status === 401 &&
           url.includes("/api/creator-settings") &&
-          !hasExpectedCreatorSession();
+          (state === "locked" || state === "validating_session" || !hasExpectedCreatorSession());
       }
+      window.__setCreatorAdminAuthState = setAuthState;
       function fingerprint(area, action, error) {
         return btoa(unescape(encodeURIComponent([area, action, error].join("|")))).slice(0, 96);
       }
@@ -1903,6 +1914,9 @@
               error: message,
               url: location.href,
               source: "production",
+              auth_state: authState(),
+              session_present: hasExpectedCreatorSession(),
+              watchtower_version: watchtowerVersion,
               suggested_check: extra && extra.suggested_check
             })
           }).catch(() => {});
@@ -1922,7 +1936,7 @@
           try {
             const response = await originalFetch(...args);
             if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
-              if (isExpectedLockedFetch(response, url)) return response;
+              if (isExpectedAuthFetch(response, url)) return response;
               report("Admin", "Fetch " + response.status, url, { suggested_check: "Check Creator OS API response and Vercel logs." });
             }
             return response;
@@ -2484,6 +2498,10 @@
       return new Promise((resolve) => window.setTimeout(resolve, ms));
     }
     function creatorSession() { return sessionStorage.getItem(sessionKey) || ""; }
+    function setCreatorAuthState(state) {
+      if (window.__setCreatorAdminAuthState) window.__setCreatorAdminAuthState(state);
+      else window.__creatorAdminAuthState = state || "locked";
+    }
     function openApp() {
       const gate = $("gate");
       if (gate) gate.remove();
@@ -3820,12 +3838,14 @@
       const data = await api({ action: "login", creator_password: password, slug: "mosyaamosya" });
       sessionStorage.setItem(sessionFlag, "true");
       sessionStorage.setItem(sessionKey, data.creator_session || "");
+      setCreatorAuthState("authenticated");
       fillForm(data.creator);
       return data;
     }
     async function loadSettings() {
       setStatus("Loading Mina settings...");
       const data = await api({ action: "load", creator_session: creatorSession(), slug: "mosyaamosya" });
+      setCreatorAuthState("authenticated");
       fillForm(data.creator);
       openApp();
       const connectionState = adminParams.get("tiktok_connection");
@@ -4551,6 +4571,7 @@
       });
     });
     $("logoutButton").addEventListener("click", () => {
+      setCreatorAuthState("locked");
       sessionStorage.removeItem(sessionFlag);
       sessionStorage.removeItem(sessionKey);
       closeApp();
@@ -4673,11 +4694,15 @@
     applyAdminTheme(activeTheme);
     setAdminTab("overview");
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
+      setCreatorAuthState("validating_session");
       loadSettings().catch(() => {
+        setCreatorAuthState("locked");
         sessionStorage.removeItem(sessionFlag);
         sessionStorage.removeItem(sessionKey);
         closeApp();
       });
+    } else {
+      setCreatorAuthState("locked");
     }
   </script>
 </body>
