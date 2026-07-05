@@ -144,9 +144,13 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "community_link_subtitle",
   "community_link_cta_label",
   "community_link_url",
+  "community_sticker_enabled",
   "share_link_visible",
   "custom_links",
   "public_page_order"
+];
+const COMMUNITY_STICKER_CREATOR_FIELDS = [
+  "community_sticker_enabled"
 ];
 const SUPPORT_CREATOR_FIELDS = [
   "support_link_visible",
@@ -180,6 +184,26 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => !COMMUNITY_STICKER_CREATOR_FIELDS.includes(field)),
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
+).join(",");
+const CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => !COMMUNITY_STICKER_CREATOR_FIELDS.includes(field)),
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
+).join(",");
 const CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
@@ -363,6 +387,7 @@ const DEFAULT_MINA_SETTINGS = {
   community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
   community_link_cta_label: "Join Discord",
   community_link_url: "https://discord.gg/GGE7WsUZR",
+  community_sticker_enabled: true,
   share_link_visible: true,
   custom_links: [],
   public_page_order: [],
@@ -1399,6 +1424,7 @@ function normalizeCreator(row = {}) {
     community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(row.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
     community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_sticker_enabled: bool(row.community_sticker_enabled, true),
     share_link_visible: bool(row.share_link_visible, true),
     custom_links: normalizeCustomLinks(row.custom_links),
     public_page_order: normalizePublicPageOrder(row.public_page_order, row.custom_links),
@@ -1420,6 +1446,8 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   const selectAttempts = [
     CREATOR_FIELDS,
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
+    CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER,
+    CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER,
     CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_SUPPORT,
@@ -1629,6 +1657,7 @@ function creatorPayload(input = {}) {
     community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
     community_link_cta_label: clean(input.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
     community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_sticker_enabled: bool(input.community_sticker_enabled, true),
     share_link_visible: bool(input.share_link_visible, true),
     custom_links: normalizeCustomLinks(input.custom_links),
     public_page_order: normalizePublicPageOrder(input.public_page_order, input.custom_links),
@@ -1657,13 +1686,20 @@ async function saveCreatorToTable(payload) {
   SUPPORT_CREATOR_FIELDS.forEach((field) => {
     delete withoutSupportPayload[field];
   });
+  const withoutCommunityStickerPayload = { ...payload };
+  COMMUNITY_STICKER_CREATOR_FIELDS.forEach((field) => {
+    delete withoutCommunityStickerPayload[field];
+  });
   const { countdown_message, ...withoutCountdownMessagePayload } = payload;
+  const { countdown_message: countdownMessage, ...withoutCountdownMessageOrCommunityStickerPayload } = withoutCommunityStickerPayload;
   const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
   const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, payload: withoutCountdownMessagePayload },
+    { fields: CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER, payload: withoutCommunityStickerPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER, payload: withoutCountdownMessageOrCommunityStickerPayload },
     { fields: CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME, payload: withoutTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME, payload: withoutHeroImageOrTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },

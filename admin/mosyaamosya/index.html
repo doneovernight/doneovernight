@@ -1481,6 +1481,10 @@
                 <label>CTA<input name="community_link_cta_label"></label>
                 <label class="wide">Subtitle<input name="community_link_subtitle"></label>
                 <label class="wide">Destination<input name="community_link_url" type="url" placeholder="Discord invite or community URL"></label>
+                <label class="toggle-row wide">
+                  <span><strong>Sticker</strong><small>Show the community sticker.</small></span>
+                  <span class="switch"><input name="community_sticker_enabled" type="checkbox"><span class="track"></span></span>
+                </label>
               </div>
             </section>
 
@@ -3124,6 +3128,7 @@
         community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
         community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
         community_link_url: String(data.get("community_link_url") || "").trim(),
+        community_sticker_enabled: boolField("community_sticker_enabled", true),
         share_link_visible: boolField("share_link_visible", true),
         custom_links: readCustomLinks(),
         public_page_order: normalizePublicPageOrder(readPublicPageOrder(), readCustomLinks()),
@@ -3165,7 +3170,7 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "community_sticker_enabled", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
@@ -3190,6 +3195,7 @@
       if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
       if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
       if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
+      if (settings.community_sticker_enabled === undefined) setBoolField("community_sticker_enabled", true);
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
       syncLinkCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);

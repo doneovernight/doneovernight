@@ -573,7 +573,8 @@
       pointer-events: none;
     }
     .prepare-card-shell,
-    .support-card-shell {
+    .support-card-shell,
+    .community-card-shell {
       position: relative;
       overflow: visible;
       background: transparent;
@@ -582,7 +583,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     .prepare-card-shell .prepare-card,
-    .support-card-shell .support-card {
+    .support-card-shell .support-card,
+    .community-card-shell .community-card {
       position: relative;
       z-index: 1;
       overflow: hidden;
@@ -635,7 +637,8 @@
       92% { transform: translate3d(1.5px,0,0) rotate(-9.2deg) scale(1); }
       97% { transform: translate3d(-.5px,0,0) rotate(-10.4deg) scale(1); }
     }
-    .support-money-sticker {
+    .support-money-sticker,
+    .community-dino-sticker {
       position: absolute;
       top: -18px;
       left: -14px;
@@ -651,13 +654,28 @@
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
     }
+    .community-dino-sticker {
+      top: -18px;
+      left: -14px;
+      width: 56px;
+      filter: drop-shadow(0 10px 18px rgba(196, 231, 83, .16));
+      transform: translate3d(0,0,0) rotate(-6deg) scale(1);
+    }
     .support-money-sticker.is-animated {
       animation: supportStickerFloat 3.8s ease-in-out infinite;
+      will-change: transform;
+    }
+    .community-dino-sticker.is-animated {
+      animation: communityStickerFloat 4.2s ease-in-out infinite;
       will-change: transform;
     }
     @keyframes supportStickerFloat {
       0%, 100% { transform: translate3d(0,0,0) rotate(-7deg) scale(1); }
       48% { transform: translate3d(1px,-2px,0) rotate(-5.5deg) scale(1.035); }
+    }
+    @keyframes communityStickerFloat {
+      0%, 100% { transform: translate3d(0,0,0) rotate(-6deg) scale(1); }
+      50% { transform: translate3d(1px,-2px,0) rotate(-4.8deg) scale(1.028); }
     }
     .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .icon-badge {
@@ -1841,6 +1859,7 @@
       community_link_subtitle: "Join Mina's Discord for stream updates and community drops.",
       community_link_cta_label: "Join Discord",
       community_link_url: "https://discord.gg/GGE7WsUZR",
+      community_sticker_enabled: true,
       share_link_visible: true,
       custom_links: [],
       public_page_order: []
@@ -1922,6 +1941,7 @@
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
     const supportMoneyStickerSrc = "/assets/mosyaamosya/support-money-bag.png";
+    const communityStickerSrc = "/assets/mosyaamosya/community-sticker.png";
     const blockRegistry = {
       link: { implemented: true },
       discord: { implemented: true },
@@ -3597,6 +3617,7 @@
     }
 
     function renderCommunity(settings) {
+      removeElement("communityCardShell");
       removeElement("communityCard");
       const activeCommunityUrl = communityUrl(settings);
       const state = String(settings.community_state || "open").toLowerCase();
@@ -3617,11 +3638,18 @@
         card.querySelector("#communityCta").dataset.analyticsBlockTitle = textSetting(settings, "community_link_title", "Community");
         card.querySelector("#communityCta").dataset.analyticsDestination = activeCommunityUrl;
       }
+      const communityElement = settings.community_sticker_enabled === false ? card : createStickeredActionShell(card, {
+        shellClass: "community-card-shell",
+        stickerClass: "community-dino-sticker is-animated",
+        src: communityStickerSrc,
+        fetchPriority: "low"
+      });
+      if (communityElement !== card) communityElement.id = "communityCardShell";
       if (String(settings.pinned_block || "").toLowerCase() === "community") {
-        insertRuntimeTop(card);
+        insertRuntimeTop(communityElement);
         return;
       }
-      insertBeforeFooter(card);
+      insertBeforeFooter(communityElement);
     }
 
     function setupNewsletter() {
@@ -3915,6 +3943,7 @@
           community_link_visible: settings.community_link_visible,
           community_state: settings.community_state,
           community_link_url: settings.community_link_url,
+          community_sticker_enabled: settings.community_sticker_enabled,
           share_link_visible: settings.share_link_visible,
           poll_enabled: settings.poll_enabled,
           poll_question: settings.poll_question,
