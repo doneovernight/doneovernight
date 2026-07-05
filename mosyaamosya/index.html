@@ -3692,6 +3692,7 @@
 
     function createRuntimeTextBlock(settings, key) {
       const block = String(key || "").toLowerCase();
+      if (block === "countdown" && liveStatusCountdownVisible(settings)) return null;
       const announcement = String(settings.quick_announcement || "").trim();
       const nextDate = nextLiveDate(settings);
       const content = {
@@ -3709,6 +3710,16 @@
       copy.textContent = content.copy;
       section.append(title, copy);
       return section;
+    }
+
+    function liveStatusCountdownVisible(settings) {
+      const nextDate = nextLiveDate(settings);
+      if (!nextDate || nextDate.getTime() <= Date.now() || settings.live_status) return false;
+      const liveCard = $("liveCard");
+      const countdown = $("countdown");
+      if (!liveCard || liveCard.hidden || liveCard.getAttribute("aria-hidden") === "true") return false;
+      if (!countdown || countdown.hidden || countdown.getAttribute("aria-hidden") === "true") return false;
+      return countdown.classList.contains("is-visible") || Boolean(String(countdown.textContent || "").trim());
     }
 
     function ensurePageEngineHost() {
@@ -3880,7 +3891,7 @@
       version: 1,
       capabilities: { runtimeOverlay: true, time: true },
       enabled: () => true,
-      visible: (settings) => Boolean(nextLiveDate(settings)),
+      visible: (settings) => Boolean(nextLiveDate(settings)) && !liveStatusCountdownVisible(settings),
       configuration: { runtimeField: "next_live_datetime" },
       renderer: ({ settings }) => createRuntimeTextBlock(settings, "countdown")
     });
