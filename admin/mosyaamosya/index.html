@@ -1577,6 +1577,7 @@
             <div class="runtime-section">
               <h3>Countdown</h3>
               <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
+              <label>Countdown Message<input name="countdown_message" placeholder="Important battle!!"><span>Optional text shown with the next stream countdown.</span></label>
               <div class="runtime-actions two">
                 <button class="button" type="button" data-pinned-block="countdown">Pin Countdown</button>
                 <button class="button" type="button" data-runtime-action="reset-countdown">Reset Countdown</button>
@@ -3081,6 +3082,7 @@
         poll_question: String(data.get("poll_question") || "").trim(),
         poll_options: readPollOptions(),
         next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
+        countdown_message: String(data.get("countdown_message") || "").trim(),
         discord_link_visible: boolField("discord_link_visible", true),
         discord_link_title: String(data.get("discord_link_title") || "").trim(),
         discord_link_subtitle: String(data.get("discord_link_subtitle") || "").trim(),
@@ -4507,10 +4509,10 @@
         try { await setPinnedBlock(button.dataset.pinnedBlock); } catch (error) { setStatus(error.message || "Pinned block update failed", true); }
       });
     });
-    ["battle_opponent", "next_live_datetime", "quick_announcement", "poll_question"].forEach((name) => {
+    ["battle_opponent", "next_live_datetime", "countdown_message", "quick_announcement", "poll_question"].forEach((name) => {
       const field = form.elements[name];
       if (!field) return;
-      field.addEventListener("change", () => queueRuntimeAutosave(name === "battle_opponent" ? "Battle Saved" : name === "next_live_datetime" ? "Countdown Updated" : name === "quick_announcement" ? "Announcement Updated" : "Poll Updated"));
+      field.addEventListener("change", () => queueRuntimeAutosave(name === "battle_opponent" ? "Battle Saved" : (name === "next_live_datetime" || name === "countdown_message") ? "Countdown Updated" : name === "quick_announcement" ? "Announcement Updated" : "Poll Updated"));
     });
     ["manual_live_fallback_enabled", "poll_enabled"].forEach((name) => {
       const field = form.elements[name];

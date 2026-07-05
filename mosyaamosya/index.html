@@ -485,6 +485,26 @@
       font-size: 13px;
       font-weight: 850;
     }
+    .countdown[role="button"] {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .countdown-message {
+      display: block;
+      margin-top: 4px;
+      color: rgba(255,245,247,.9);
+      font-size: 13px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .countdown-helper {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255,211,223,.62);
+      font-size: 11px;
+      font-weight: 700;
+    }
     .countdown.is-visible { display: block; }
     .primary {
       min-height: 54px;
@@ -699,8 +719,15 @@
       box-shadow: inset 0 1px rgba(255,255,255,.12);
     }
     .runtime-pinned.is-visible { display: grid; gap: 4px; }
+    .runtime-pinned[role="button"] {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
     .runtime-pinned strong { color: var(--text); font-size: 14px; }
     .runtime-pinned span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .runtime-pinned .countdown-message { color: rgba(255,245,247,.9); font-size: 13px; }
+    .runtime-pinned .countdown-helper { color: rgba(255,211,223,.62); font-size: 11px; }
     .runtime-pinned .button-action { justify-self: end; margin-top: 6px; }
     .newsletter-start, .newsletter-thanks {
       width: 100%;
@@ -1733,6 +1760,7 @@
       auto_live_detection_enabled: true,
       manual_live_fallback_enabled: true,
       next_live_datetime: "",
+      countdown_message: "",
       theme_preset: "mina",
       background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
       welcome_intro_enabled: true,
@@ -2466,6 +2494,111 @@
       if (days > 0) return "Next stream in " + days + "d " + hours + "h";
       if (hours > 0) return "Next stream in " + hours + "h " + mins + "m";
       return "Next stream in " + mins + "m";
+    }
+    function countdownMessage(settings) {
+      return String(settings.countdown_message || "").trim();
+    }
+    function calendarDateTime(date, timezone) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone || fallback.timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(date).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {});
+      return parts.year + parts.month + parts.day + "T" + parts.hour + parts.minute + parts.second;
+    }
+    function escapeIcsText(value) {
+      return String(value || "")
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,")
+        .replace(/\r?\n/g, "\\n");
+    }
+    function createCountdownCalendar(settings) {
+      const start = nextLiveDate(settings);
+      if (!start) return null;
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const timezone = settings.timezone || fallback.timezone;
+      const title = countdownMessage(settings) || "Mina Mosya is live";
+      const pageUrl = "https://doneovernight.com/mosyaamosya";
+      const description = "Join Mina’s livestream: " + pageUrl;
+      return [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//DONEOVERNIGHT//Creator OS//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        "UID:mosyaamosya-" + start.getTime() + "@doneovernight.com",
+        "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z"),
+        "DTSTART;TZID=" + timezone + ":" + calendarDateTime(start, timezone),
+        "DTEND;TZID=" + timezone + ":" + calendarDateTime(end, timezone),
+        "SUMMARY:" + escapeIcsText(title),
+        "DESCRIPTION:" + escapeIcsText(description),
+        "URL:" + pageUrl,
+        "BEGIN:VALARM",
+        "TRIGGER:-PT15M",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:" + escapeIcsText(title),
+        "END:VALARM",
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ].join("\r\n");
+    }
+    function downloadCountdownCalendar(settings) {
+      const calendar = createCountdownCalendar(settings);
+      if (!calendar) return false;
+      const blob = new Blob([calendar], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "mina-next-stream.ics";
+      link.rel = "noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        link.remove();
+      }, 800);
+      trackCreatorEvent("countdown_calendar_click", { block_key: "countdown", block_title: countdownMessage(settings) || "Mina Mosya is live" });
+      return true;
+    }
+    function countdownMarkup(settings, date) {
+      const message = countdownMessage(settings);
+      return '<span class="countdown-time">' + escapeHtml(countdownText(date)) + " · " + escapeHtml(settings.timezone || fallback.timezone) + "</span>" +
+        (message ? '<span class="countdown-message">' + escapeHtml(message) + "</span>" : "") +
+        '<span class="countdown-helper">Tap to add reminder</span>';
+    }
+    function bindCountdownCalendar(element, settings) {
+      if (!element) return;
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("aria-label", "Add Mina's next stream to calendar");
+      element.onclick = (event) => {
+        event.preventDefault();
+        downloadCountdownCalendar(settings);
+      };
+      element.onkeydown = (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          downloadCountdownCalendar(settings);
+        }
+      };
+    }
+    function clearCountdownCalendarBinding(element) {
+      if (!element) return;
+      element.removeAttribute("role");
+      element.removeAttribute("tabindex");
+      element.removeAttribute("aria-label");
+      element.onclick = null;
+      element.onkeydown = null;
     }
 
     function fallbackLiveUrl(settings) {
@@ -3697,7 +3830,7 @@
       const nextDate = nextLiveDate(settings);
       const content = {
         announcement: announcement ? { title: "Announcement", copy: announcement } : null,
-        countdown: nextDate && nextDate.getTime() > Date.now() ? { title: "Countdown", copy: countdownText(nextDate) } : null
+        countdown: nextDate && nextDate.getTime() > Date.now() ? { title: "Countdown", copy: countdownText(nextDate), date: nextDate } : null
       }[block];
       if (!content) return null;
       const section = document.createElement("section");
@@ -3707,7 +3840,12 @@
       const title = document.createElement("strong");
       const copy = document.createElement("span");
       title.textContent = content.title;
-      copy.textContent = content.copy;
+      if (block === "countdown") {
+        copy.innerHTML = countdownMarkup(settings, content.date);
+        bindCountdownCalendar(section, settings);
+      } else {
+        copy.textContent = content.copy;
+      }
       section.append(title, copy);
       return section;
     }
@@ -3784,6 +3922,7 @@
           pinned_block: settings.pinned_block,
           quick_announcement: settings.quick_announcement,
           next_live_datetime: settings.next_live_datetime,
+          countdown_message: settings.countdown_message,
           custom_links: settings.custom_links
         }
       });
@@ -4252,10 +4391,12 @@
             if (!countdownZeroChecked) {
               countdownZeroChecked = true;
               countdown.textContent = "Checking live status...";
+              clearCountdownCalendarBinding(countdown);
               refreshLiveRuntime(settings);
             } else {
               countdown.textContent = "";
               countdown.classList.remove("is-visible");
+              clearCountdownCalendarBinding(countdown);
               const pinned = $("runtimePinned");
               if (pinned && String(currentSettings.pinned_block || "").toLowerCase() === "countdown") pinned.remove();
             }
@@ -4265,7 +4406,8 @@
             }
             return;
           }
-          countdown.textContent = countdownText(nextDate) + " · " + (settings.timezone || fallback.timezone);
+          countdown.innerHTML = countdownMarkup(settings, nextDate);
+          bindCountdownCalendar(countdown, settings);
         };
         renderCountdown();
         countdownTimer = setInterval(renderCountdown, 1000);
@@ -4273,6 +4415,7 @@
       } else {
         countdown.textContent = "";
         countdown.classList.remove("is-visible");
+        clearCountdownCalendarBinding(countdown);
       }
       renderPageEngine(settings);
       renderFooterNav(settings);

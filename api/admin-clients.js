@@ -71,9 +71,11 @@ const AMBIENT_CREATOR_FIELDS = [
 ];
 const PHASE_1_4_CREATOR_FIELDS = [
   "next_live_datetime",
+  "countdown_message",
   "discord_invite_url",
   "discord_server_id"
 ];
+const PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE = PHASE_1_4_CREATOR_FIELDS.filter((field) => field !== "countdown_message");
 const PHASE_2_CREATOR_FIELDS = [
   "creator_dna",
   "tiktok_live_username",
@@ -177,6 +179,7 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
   "tiktok_welcome_gate_copy_label"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
@@ -275,6 +278,7 @@ const DEFAULT_MINA_SETTINGS = {
   battle_updated_at: "",
   battle_undo_snapshot: "",
   next_live_datetime: "",
+  countdown_message: "",
   theme_preset: "mina",
   creator_dna: "streamer",
   subscribe_popup_enabled: false,
@@ -1399,6 +1403,7 @@ function normalizeCreator(row = {}) {
     custom_links: normalizeCustomLinks(row.custom_links),
     public_page_order: normalizePublicPageOrder(row.public_page_order, row.custom_links),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
+    countdown_message: clean(row.countdown_message),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
@@ -1414,6 +1419,7 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   let rows;
   const selectAttempts = [
     CREATOR_FIELDS,
+    CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
     CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_SUPPORT,
@@ -1627,6 +1633,7 @@ function creatorPayload(input = {}) {
     custom_links: normalizeCustomLinks(input.custom_links),
     public_page_order: normalizePublicPageOrder(input.public_page_order, input.custom_links),
     next_live_datetime: normalizeDateTime(input.next_live_datetime) || null,
+    countdown_message: clean(input.countdown_message),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
@@ -1650,11 +1657,13 @@ async function saveCreatorToTable(payload) {
   SUPPORT_CREATOR_FIELDS.forEach((field) => {
     delete withoutSupportPayload[field];
   });
+  const { countdown_message, ...withoutCountdownMessagePayload } = payload;
   const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
   const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
+    { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, payload: withoutCountdownMessagePayload },
     { fields: CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME, payload: withoutTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME, payload: withoutHeroImageOrTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },
@@ -1783,6 +1792,7 @@ async function setCreatorRuntimeState(input = {}) {
     poll_question: clean(input.poll_question),
     poll_options: normalizePollOptions(input.poll_options),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
+    countdown_message: clean(input.countdown_message),
     updated_at: now
   };
   const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
@@ -1802,6 +1812,7 @@ async function setCreatorRuntimeState(input = {}) {
     poll_enabled: patch.poll_enabled,
     poll_question: patch.poll_question,
     next_live_datetime: patch.next_live_datetime,
+    countdown_message: patch.countdown_message,
     updated_at: now
   });
   return {
