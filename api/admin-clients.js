@@ -62,6 +62,7 @@ const BASE_CREATOR_FIELDS = [
   "subscribe_popup_copy",
   "updated_at"
 ];
+const BASE_CREATOR_FIELDS_WITHOUT_HERO_IMAGE = BASE_CREATOR_FIELDS.filter((field) => field !== "hero_image_url");
 const AMBIENT_CREATOR_FIELDS = [
   "ambient_mode_enabled",
   "timezone",
@@ -177,6 +178,15 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS,
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
+const CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME = BASE_CREATOR_FIELDS_WITHOUT_HERO_IMAGE.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
   PHASE_2_CREATOR_FIELDS,
@@ -1405,6 +1415,7 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   const selectAttempts = [
     CREATOR_FIELDS,
     CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME,
+    CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_SUPPORT,
     CREATOR_FIELDS_WITHOUT_PAGE_ORDER,
     CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY,
@@ -1633,6 +1644,8 @@ async function saveCreatorToTable(payload) {
   TIKTOK_WELCOME_CREATOR_FIELDS.forEach((field) => {
     delete withoutTikTokWelcomePayload[field];
   });
+  const withoutHeroImageOrTikTokWelcomePayload = { ...withoutTikTokWelcomePayload };
+  delete withoutHeroImageOrTikTokWelcomePayload.hero_image_url;
   const withoutSupportPayload = { ...payload };
   SUPPORT_CREATOR_FIELDS.forEach((field) => {
     delete withoutSupportPayload[field];
@@ -1643,6 +1656,7 @@ async function saveCreatorToTable(payload) {
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
     { fields: CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME, payload: withoutTikTokWelcomePayload },
+    { fields: CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME, payload: withoutHeroImageOrTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },
     { fields: CREATOR_FIELDS_WITHOUT_PAGE_ORDER, payload: withoutPageOrderPayload },
     { fields: CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, payload: legacyVisibilityPayload },
