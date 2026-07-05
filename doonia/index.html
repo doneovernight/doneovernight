@@ -1,0 +1,2218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Doonia J | DONEOVERNIGHT Creator OS</title>
+  <meta name="description" content="Doonia J's premium creator hub for livestreams, community, and support.">
+  <link rel="icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <script>
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("experience") === "1" || localStorage.getItem("creator_intro_doonia_v1") !== "done") {
+        document.documentElement.classList.add("intro-pending");
+      }
+    } catch (error) {
+      document.documentElement.classList.add("intro-pending");
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #080504;
+      --text: #fff5f7;
+      --muted: rgba(255,245,247,.68);
+      --soft: rgba(255,245,247,.1);
+      --line: rgba(255,226,232,.16);
+      --pink: #ffd3df;
+      --pink-strong: #ff9fbd;
+      --brown: #8b5f4a;
+      --chocolate: #3a2119;
+      --deep: #0b0706;
+      --shadow: 0 28px 88px rgba(5,2,1,.45);
+      --ink: #f5f1ea;
+      --serif: 'Instrument Serif', 'Times New Roman', serif;
+      --ambient-atmosphere: transparent;
+      --ambient-grid-opacity: .18;
+      --ambient-hero-brightness: 1;
+      --ambient-hero-saturate: .94;
+      --ambient-video-opacity: .82;
+      --ambient-card-shadow: rgba(0,0,0,.26);
+      --ambient-primary-glow: rgba(255,159,189,.32);
+      --glass-bg: linear-gradient(140deg, rgba(255,255,255,.16), rgba(255,255,255,.055) 54%, rgba(255,255,255,.025));
+      --glass-line: rgba(255,245,247,.18);
+      --glass-highlight: rgba(255,255,255,.28);
+      --glass-shadow: 0 18px 54px rgba(0,0,0,.24);
+      --glass-x: 18%;
+      --glass-y: 0%;
+      --glass-shift-x: 0px;
+      --glass-shift-y: 0px;
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--deep); }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem),
+        radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem),
+        linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+    body::before {
+      background-image: linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px);
+      background-size: 100% 34px;
+      mask-image: linear-gradient(to bottom, transparent, black 18%, transparent 92%);
+      opacity: var(--ambient-grid-opacity);
+      z-index: 0;
+    }
+    body::after {
+      background: var(--ambient-atmosphere);
+      opacity: 0;
+      transition: opacity .8s ease;
+      z-index: 0;
+    }
+    body.ambient-enabled::after {
+      opacity: 1;
+    }
+    a, button { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 520px);
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: 14px 14px 0;
+      display: grid;
+      gap: 16px;
+      transition: opacity .35s ease;
+    }
+    .intro-pending .shell { opacity: 0; }
+    .hero-bleed-video {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      z-index: -1;
+      width: 100vw;
+      height: calc(76px + env(safe-area-inset-top));
+      object-fit: cover;
+      pointer-events: none;
+      filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
+      opacity: calc(var(--ambient-video-opacity) + .04);
+      transform: translateX(-50%) translateZ(0);
+    }
+    .hero {
+      position: relative;
+      min-height: 76vh;
+      overflow: hidden;
+      border: 1px solid rgba(255,211,223,.18);
+      border-radius: 34px;
+      background: linear-gradient(160deg, #26100c, #080504);
+      box-shadow: 0 22px 74px rgba(5,2,1,.38), inset 0 1px rgba(255,255,255,.2);
+      isolation: isolate;
+      transform: translateZ(0);
+    }
+    .hero-video {
+      position: absolute;
+      inset: -3%;
+      width: 106%;
+      height: 106%;
+      object-fit: cover;
+      filter: blur(.18px) saturate(var(--ambient-hero-saturate)) contrast(1.05) brightness(var(--ambient-hero-brightness));
+      transform: scale(1.006);
+      opacity: calc(var(--ambient-video-opacity) + .04);
+      animation: heroBreath 18s ease-in-out infinite;
+      z-index: -3;
+    }
+    .hero-media {
+      background: center / cover no-repeat var(--hero-image, url("/assets/doonia/hero-placeholder.svg"));
+    }
+    .hero-media > video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: inherit;
+    }
+    .link-button.is-disabled {
+      cursor: default;
+      opacity: .74;
+    }
+    .link-button.is-disabled .button-action {
+      color: rgba(255,255,255,.62);
+      border-color: rgba(212,160,76,.24);
+      background: rgba(255,255,255,.05);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(180deg, rgba(5,3,2,.1), rgba(5,3,2,.76) 68%, rgba(5,3,2,.94)),
+        radial-gradient(circle at 22% 24%, rgba(255,211,223,.2), transparent 28rem);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      box-shadow: inset 0 -120px 120px rgba(7,4,3,.66);
+      pointer-events: none;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(15,8,7,.44);
+      color: rgba(255,245,247,.86);
+      backdrop-filter: blur(18px);
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: inset 0 1px rgba(255,255,255,.14), 0 10px 30px rgba(0,0,0,.16);
+      position: relative;
+      overflow: hidden;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 42px;
+      min-width: 0;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 999px;
+      padding: 0 12px;
+      background: rgba(15,8,7,.38);
+      color: rgba(255,245,247,.76);
+      backdrop-filter: blur(16px) saturate(1.12);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      line-height: 1;
+      box-shadow: inset 0 1px rgba(255,255,255,.1), 0 8px 22px rgba(0,0,0,.12);
+      position: relative;
+      overflow: hidden;
+    }
+    .status-pill::before, .mini-pill::before {
+      content: "";
+      position: absolute;
+      inset: 1px 8px auto 8px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
+      opacity: .55;
+    }
+    .share-trigger {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      border-color: rgba(255,245,247,.14);
+      padding: 0;
+      justify-content: center;
+      gap: 0;
+      background: rgba(15,8,7,.38);
+      color: var(--pink);
+      backdrop-filter: blur(16px) saturate(1.12);
+      box-shadow: inset 0 1px rgba(255,255,255,.1), 0 8px 22px rgba(0,0,0,.12);
+      cursor: pointer;
+    }
+    .share-trigger::before { inset: 1px 10px auto; opacity: .42; }
+    .share-trigger svg {
+      width: 16px;
+      height: 16px;
+      position: relative;
+      z-index: 1;
+      stroke-width: 1.9;
+    }
+    a.mini-pill { cursor: pointer; }
+    a.mini-pill:focus-visible {
+      outline: 2px solid var(--pink);
+      outline-offset: 3px;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #1f1715;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 0 0 4px rgba(255,255,255,.035);
+    }
+    .is-live .live-dot {
+      background: #55f19b;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 0 0 4px rgba(85,241,155,.11), 0 0 14px rgba(85,241,155,.36);
+    }
+    .sound-button {
+      position: fixed;
+      right: 16px;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 20;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(255,211,223,.22);
+      border-radius: 999px;
+      background: rgba(21,10,8,.68);
+      color: var(--pink);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 46px rgba(0,0,0,.32), 0 0 32px rgba(255,159,189,.12);
+      backdrop-filter: blur(18px);
+      cursor: pointer;
+    }
+    .sound-button[hidden] { display: none; }
+    .hero-content {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .identity {
+      display: grid;
+      gap: 12px;
+    }
+    .avatar {
+      width: 92px;
+      height: 92px;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(255,211,223,.34);
+      background: rgba(255,255,255,.12);
+      box-shadow: 0 22px 58px rgba(0,0,0,.42), 0 0 44px rgba(255,159,189,.12);
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    h1 {
+      max-width: 7ch;
+      margin: 0;
+      font-size: clamp(52px, 18vw, 88px);
+      line-height: .82;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+    .handle {
+      color: rgba(255,245,247,.78);
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .bio {
+      margin: 0;
+      color: rgba(255,245,247,.78);
+      font-size: 16px;
+      line-height: 1.48;
+      text-wrap: pretty;
+    }
+    .living-glass, .live-card, .glass-card, .link-button, .community-card, .newsletter-card {
+      position: relative;
+      border: 1px solid var(--glass-line);
+      background: var(--glass-bg);
+      box-shadow: inset 0 1px rgba(255,255,255,.16), var(--glass-shadow);
+      backdrop-filter: blur(18px) saturate(1.14);
+      overflow: hidden;
+    }
+    .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.18), transparent 34%),
+        radial-gradient(circle at var(--glass-x) var(--glass-y), rgba(255,255,255,.14), transparent 18rem);
+      opacity: .62;
+      transform: translate3d(var(--glass-shift-x), var(--glass-shift-y), 0);
+      transition: transform .2s ease, background-position .2s ease;
+    }
+    .live-card {
+      display: grid;
+      gap: 12px;
+      border-radius: 26px;
+      padding: 16px;
+    }
+    .live-card > *, .link-button > *, .community-card > *, .newsletter-card > * { position: relative; z-index: 1; }
+    .live-copy {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+    .live-copy strong { display: block; font-size: 13px; letter-spacing: .04em; }
+    .live-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .live-meta {
+      display: none;
+      flex-wrap: wrap;
+      gap: 7px;
+      color: rgba(255,245,247,.68);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .live-meta.is-visible { display: flex; }
+    .live-meta span {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 999px;
+      padding: 7px 9px;
+      background: rgba(255,255,255,.045);
+      box-shadow: inset 0 1px rgba(255,255,255,.08);
+    }
+    .countdown {
+      display: none;
+      border: 1px solid rgba(255,211,223,.14);
+      border-radius: 16px;
+      padding: 10px 12px;
+      color: rgba(255,245,247,.76);
+      background: rgba(255,211,223,.06);
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .countdown.is-visible { display: block; }
+    .primary {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--pink), var(--pink-strong));
+      color: #25110f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 950;
+      box-shadow: 0 14px 36px var(--ambient-primary-glow), inset 0 1px rgba(255,255,255,.35);
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+    .primary:not([aria-disabled="true"]):hover { transform: translateY(-1px); filter: saturate(1.04); }
+    .primary:not([aria-disabled="true"]):active { transform: translateY(1px) scale(.992); }
+    .primary[aria-disabled="true"] {
+      border: 1px solid rgba(255,245,247,.14);
+      background: rgba(255,245,247,.08);
+      color: rgba(255,245,247,.52);
+      box-shadow: none;
+      cursor: default;
+    }
+    .button-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .link-button {
+      min-height: 64px;
+      border-radius: 24px;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      will-change: transform;
+    }
+    .link-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,245,247,.28);
+      background: linear-gradient(140deg, rgba(255,255,255,.18), rgba(255,255,255,.07));
+    }
+    .link-button:active { transform: translateY(1px) scale(.993); }
+    .link-button.is-disabled {
+      opacity: .52;
+      pointer-events: none;
+    }
+    .link-button.has-battle-discount {
+      overflow: visible;
+    }
+    .link-button.has-battle-discount::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      z-index: 3;
+      border: 1px solid var(--glass-line);
+      border-radius: 24px;
+      pointer-events: none;
+    }
+    .link-button.has-battle-discount > :not(.battle-discount-sticker) {
+      z-index: 4;
+    }
+    .battle-discount-sticker {
+      position: absolute;
+      top: -14px;
+      left: -12px;
+      z-index: 2;
+      width: clamp(44px, 12vw, 50px);
+      height: auto;
+      pointer-events: none;
+      transform: rotate(-10deg) scale(1);
+      transform-origin: center;
+      filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
+      animation: battleStickerPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes battleStickerPulse {
+      0%, 78%, 100% {
+        transform: rotate(-10deg) scale(1);
+        filter: drop-shadow(0 7px 14px rgba(255, 48, 92, .18));
+      }
+      42% {
+        transform: rotate(-10deg) scale(1.06);
+        filter:
+          drop-shadow(0 0 12px rgba(255, 62, 104, .32))
+          drop-shadow(0 7px 14px rgba(255, 48, 92, .2));
+      }
+    }
+    .link-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .icon-badge {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,211,223,.12);
+      color: var(--pink);
+      box-shadow: inset 0 1px rgba(255,255,255,.15);
+    }
+    .icon-badge svg { width: 19px; height: 19px; }
+    .button-text { min-width: 0; display: grid; gap: 2px; }
+    .button-text strong { font-size: 15px; }
+    .button-text span { color: var(--muted); font-size: 12px; }
+    .button-action {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,211,223,.16);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255,211,223,.09);
+      color: rgba(255,245,247,.84);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .community-card {
+      display: grid;
+      gap: 12px;
+      border-radius: 26px;
+      padding: 17px;
+    }
+    .community-card h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .community-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .newsletter-card {
+      min-height: 58px;
+      display: grid;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px;
+    }
+    .runtime-pinned {
+      display: none;
+      border: 1px solid var(--glass-line);
+      border-radius: 24px;
+      padding: 15px;
+      background: rgba(255,255,255,.055);
+      color: rgba(255,245,247,.78);
+      box-shadow: inset 0 1px rgba(255,255,255,.12);
+    }
+    .runtime-pinned.is-visible { display: grid; gap: 4px; }
+    .runtime-pinned strong { color: var(--text); font-size: 14px; }
+    .runtime-pinned span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .newsletter-start, .newsletter-thanks {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255,245,247,.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    .newsletter-thanks {
+      display: none;
+      cursor: default;
+      color: var(--pink);
+    }
+    .newsletter-form {
+      display: none;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+    }
+    .newsletter-card.is-editing .newsletter-start,
+    .newsletter-card.is-loading .newsletter-start,
+    .newsletter-card.is-done .newsletter-start {
+      display: none;
+    }
+    .newsletter-card.is-editing .newsletter-form,
+    .newsletter-card.is-loading .newsletter-form {
+      display: grid;
+    }
+    .newsletter-card.is-done .newsletter-thanks {
+      display: flex;
+    }
+    .newsletter-form input {
+      min-width: 0;
+      height: 46px;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 999px;
+      padding: 0 15px;
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline: none;
+    }
+    .newsletter-form button {
+      min-width: 88px;
+      min-height: 46px;
+      border-radius: 999px;
+    }
+    .newsletter-card.is-loading input {
+      opacity: .52;
+    }
+    .gap-spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,245,247,.26);
+      border-top-color: var(--pink);
+      display: inline-block;
+      animation: spinGap .9s linear infinite;
+    }
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px 4px;
+      color: rgba(255,245,247,.42);
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.7;
+      text-align: center;
+    }
+    .footer-nav a {
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: rgba(255,245,247,.58);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: none;
+      transition: color .18s ease, opacity .18s ease;
+    }
+    .footer-nav a:hover,
+    .footer-nav a:focus-visible {
+      color: rgba(255,245,247,.86);
+      outline: none;
+    }
+    .footer-nav a:active { opacity: .72; }
+    .sheet-copy {
+      display: grid;
+      gap: 12px;
+      margin-top: 4px;
+      color: rgba(255,245,247,.72);
+      font-size: 13px;
+      line-height: 1.58;
+    }
+    .sheet-copy p { margin: 0; }
+    .sheet-copy strong {
+      color: rgba(255,245,247,.9);
+      font-size: 13px;
+    }
+    .sheet-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .sheet-list li {
+      border-top: 1px solid rgba(255,245,247,.1);
+      padding-top: 8px;
+    }
+    .passport-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .passport-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 1px solid rgba(255,245,247,.1);
+      padding-top: 10px;
+      color: rgba(255,245,247,.72);
+      font-size: 13px;
+    }
+    .passport-row strong {
+      color: rgba(255,245,247,.92);
+      font-size: 13px;
+      text-align: right;
+    }
+    .sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      align-items: end;
+      background: rgba(4,2,2,.38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .24s ease;
+    }
+    .sheet.is-open { opacity: 1; pointer-events: auto; }
+    .sheet-panel {
+      width: min(100%, 520px);
+      max-height: min(82vh, 760px);
+      margin: 0 auto;
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 32px 32px 0 0;
+      padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+      background: linear-gradient(150deg, rgba(23,13,12,.92), rgba(9,5,4,.92));
+      box-shadow: 0 -24px 74px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.16);
+      backdrop-filter: blur(20px) saturate(1.1);
+      transform: translateY(18px);
+      transition: transform .28s ease;
+      overflow: auto;
+    }
+    .sheet.is-open .sheet-panel { transform: translateY(0); }
+    .sheet-handle {
+      width: 42px;
+      height: 4px;
+      border-radius: 999px;
+      margin: 0 auto 14px;
+      background: rgba(255,245,247,.22);
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .sheet-title { display: grid; gap: 3px; }
+    .sheet-title strong { font-size: 18px; }
+    .sheet-title span { color: var(--muted); font-size: 12px; }
+    .icon-button {
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .creator-share-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(255,245,247,.16);
+      border-radius: 24px;
+      padding: 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+    }
+    .creator-share-card img {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      object-fit: cover;
+    }
+    .share-grid, .explore-grid {
+      display: grid;
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .share-item, .explore-item {
+      border: 1px solid rgba(255,245,247,.13);
+      border-radius: 18px;
+      padding: 13px;
+      background: rgba(255,255,255,.055);
+      color: var(--text);
+      text-align: left;
+      font-weight: 900;
+      text-decoration: none;
+    }
+    .share-item span, .explore-item span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    @keyframes heroBreath {
+      0%, 100% { transform: scale(1.006) translate3d(0,0,0); }
+      50% { transform: scale(1.018) translate3d(-.35%, -.2%, 0); }
+    }
+    @keyframes spinGap { to { transform: rotate(360deg); } }
+    .foot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: rgba(255,245,247,.44);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .foot img { width: 118px; opacity: .5; filter: saturate(.75); }
+    .preview-badge {
+      position: fixed;
+      top: calc(12px + env(safe-area-inset-top));
+      left: 50%;
+      z-index: 60;
+      transform: translateX(-50%);
+      border: 1px solid rgba(255,245,247,.18);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(8,5,4,.62);
+      color: rgba(255,245,247,.74);
+      font-size: 11px;
+      font-weight: 900;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 14px 40px rgba(0,0,0,.22);
+    }
+    .preview-badge[hidden] { display: none; }
+    .intro {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: calc(28px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));
+      background: #080504;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .55s ease;
+      overflow: hidden;
+    }
+    .intro-pending .intro { opacity: 1; pointer-events: auto; }
+    .intro[hidden] { display: none; }
+    .intro.is-done { opacity: 0; pointer-events: none; }
+    .intro video {
+      position: absolute;
+      inset: -2%;
+      width: 104%;
+      height: 104%;
+      object-fit: cover;
+      filter: blur(2px) saturate(.9);
+      opacity: .66;
+    }
+    .intro-media {
+      position: absolute;
+      inset: 0;
+      background: center / cover no-repeat url("/assets/doonia/hero-placeholder.svg");
+      filter: saturate(.88) brightness(.58);
+    }
+    .intro::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(7,4,3,.32), rgba(7,4,3,.76));
+    }
+    .intro-copy {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 420px);
+      display: grid;
+      gap: 12px;
+      text-align: left;
+    }
+    .intro-copy span {
+      display: block;
+      font-size: clamp(34px, 11vw, 62px);
+      line-height: .92;
+      font-weight: 950;
+      letter-spacing: 0;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: rise .7s ease forwards;
+    }
+    .intro-copy span:nth-child(2) { animation-delay: .12s; }
+    .intro-copy span:nth-child(3) { animation-delay: .24s; }
+    .intro-copy span:nth-child(4) { animation-delay: .36s; }
+    .intro-copy span:nth-child(5) { animation-delay: .48s; }
+    .intro-copy span:nth-child(6) { animation-delay: .6s; }
+    .intro-copy small {
+      margin-top: 18px;
+      color: rgba(255,245,247,.64);
+      font-weight: 900;
+      letter-spacing: .02em;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise .7s ease .86s forwards;
+    }
+    @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
+      .hero-video {
+        animation: none !important;
+      }
+      .living-glass::before, .live-card::before, .link-button::before, .community-card::before, .newsletter-card::before {
+        transform: none !important;
+      }
+      .battle-discount-sticker {
+        animation: none !important;
+      }
+    }
+    @media (min-width: 760px) {
+      .shell { width: min(100%, 720px); padding-top: 28px; gap: 18px; }
+      .hero-bleed-video { display: none; }
+      .hero { min-height: 760px; border-radius: 42px; }
+      .hero-top { padding: 16px; }
+      .hero-content { left: 28px; right: 28px; bottom: 28px; }
+      .button-grid { grid-template-columns: repeat(2, 1fr); }
+      .link-button { min-height: 70px; }
+      .share-grid, .explore-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body class="theme-doonia">
+  <main class="shell">
+    <div class="hero-bleed-video hero-media" id="heroBleedMedia" aria-hidden="true"></div>
+    <section class="hero" id="hero">
+      <div class="hero-video hero-media" id="heroMedia" aria-hidden="true"></div>
+      <div class="hero-top">
+        <a class="mini-pill" id="location" href="#" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps"></a>
+        <div class="hero-actions">
+          <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
+        </div>
+      </div>
+      <div class="hero-content">
+        <div class="identity">
+          <div class="avatar"><img id="avatarImage" src="/assets/doonia/profile-placeholder.svg" alt="Doonia J"></div>
+          <div>
+            <h1 id="displayName">Doonia J</h1>
+            <div class="handle" id="handle">@doonia</div>
+          </div>
+          <p class="bio" id="bio">Daily livestreams, community, yapping, and soft chaos from Strength.</p>
+        </div>
+        <section class="live-card" id="liveCard">
+          <div class="live-copy">
+            <div>
+              <strong id="liveTitle">⚫ Offline</strong>
+              <span id="liveCopy">See you at the next stream.</span>
+            </div>
+          </div>
+          <a class="primary" id="primaryCta" href="#" aria-disabled="true">Join Live</a>
+          <div class="live-meta" id="liveMeta" aria-live="polite"></div>
+          <div class="countdown" id="countdown"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="button-grid" id="buttonGrid" aria-label="Doonia content blocks"></section>
+
+    <nav class="footer-nav" id="footerNav" aria-label="Creator OS links">
+      <a href="#privacy" data-open-sheet="privacySheet">Privacy</a>
+      <span aria-hidden="true">•</span>
+      <a href="#report" data-open-sheet="reportSheet">Report</a>
+      <span aria-hidden="true">•</span>
+      <a href="#about-creator-os" data-open-sheet="aboutCreatorOsSheet">About Creator OS</a>
+    </nav>
+
+    <div class="doneovernight-creator-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
+      <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
+      <footer class="foot">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </footer>
+    </div>
+  </main>
+
+  <div class="preview-badge" id="previewBadge" hidden>Preview Mode</div>
+  <audio id="introAudio" preload="none"></audio>
+
+  <section class="sheet" id="privacySheet" aria-label="Privacy" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="privacyTitle">Privacy</strong><span>Creator OS visitor privacy</span></div>
+        <button class="icon-button" type="button" data-close-sheet="privacySheet" aria-label="Close privacy">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>This page is designed to keep Doonia's creator experience focused and lightweight.</p>
+        <ul class="sheet-list">
+          <li>Creator links open directly to the services shown.</li>
+          <li>Newsletter interactions are kept minimal and only use the email you enter.</li>
+          <li>Live metadata is only shown when confirmed by Creator OS runtime capabilities.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" id="reportSheet" aria-label="Report Creator" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="reportTitle">Report Creator</strong><span>Help keep Creator OS safe</span></div>
+        <button class="icon-button" type="button" data-close-sheet="reportSheet" aria-label="Close report">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>Reports are reviewed by DONEOVERNIGHT. Include the creator URL and a short description of the issue.</p>
+        <p><a href="mailto:support@doneovernight.com?subject=Report%20Creator%20OS%20page%20-%20Doonia%20J">support@doneovernight.com</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" id="aboutCreatorOsSheet" aria-label="About Creator OS" aria-hidden="true">
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="aboutCreatorOsTitle">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div class="sheet-title"><strong id="aboutCreatorOsTitle">About Creator OS</strong><span>DONEOVERNIGHT creator infrastructure</span></div>
+        <button class="icon-button" type="button" data-close-sheet="aboutCreatorOsSheet" aria-label="Close About Creator OS">&times;</button>
+      </div>
+      <div class="sheet-copy">
+        <p>Creator OS is a premium operating layer for creators: profile, live runtime, community, support, and newsletter.</p>
+        <p>The creator stays first. The system appears only when a visitor asks for it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="intro" id="intro" aria-label="Welcome intro">
+    <div id="introMedia" class="intro-media" aria-hidden="true"></div>
+    <div class="intro-copy">
+      <span>Welcome.</span>
+      <span>Meet Doonia.</span>
+      <span>Strength.</span>
+      <span>Next workout.</span>
+      <span>Discipline.</span>
+      <span>Battle ready.</span>
+      <small>Tap anywhere to enter.</small>
+    </div>
+  </section>
+
+  <script>
+    const fallback = {
+      display_name: "Doonia J",
+      username: "doonia.j",
+      slug: "doonia",
+      bio: "Fitness, discipline, and premium training energy.",
+      location: "",
+      avatar_url: "/assets/doonia/profile-placeholder.svg",
+      banner_url: "/assets/doonia/hero-placeholder.svg",
+      hero_video_url: "",
+      tiktok_url: "https://www.tiktok.com/@doonia.j",
+      discord_url: "",
+      discord_invite_url: "",
+      discord_server_id: "",
+      instagram_url: "https://www.instagram.com/doonia.j/",
+      tiktok_coins_url: "https://www.tiktok.com/coin",
+      business_email: "",
+      live_url: "",
+      live_status: false,
+      live_button_text: "Next Workout",
+      tiktok_live_username: "doonia.j",
+      auto_live_detection_enabled: true,
+      manual_live_fallback_enabled: true,
+      next_live_datetime: "",
+      theme_preset: "doonia",
+      background_gradient: "radial-gradient(circle at 18% -10%, rgba(212,160,76,.24), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(126,82,36,.26), transparent 28rem), linear-gradient(155deg, #030303 0%, #120d08 46%, #050403 100%)",
+      welcome_intro_enabled: true,
+      music_enabled: false,
+      music_url: "",
+      music_volume: 0.35,
+      music_loop: true,
+      intro_audio_enabled: false,
+      intro_audio_url: "",
+      intro_audio_volume: 0.35,
+      intro_audio_fade_out_duration: 2,
+      intro_audio_stop_after: 4,
+      ambient_mode_enabled: true,
+      timezone: "America/New_York",
+      seasonal_effects_enabled: false,
+      holiday_effects_enabled: false,
+      redirect_mina_enabled: false,
+      creator_dna: "coach",
+      pinned_block: "",
+      community_state: "preview",
+      quick_announcement: "",
+      quick_poll: "",
+      faq_visible: false,
+      discord_visible: false,
+      creator_passport_visible: true,
+      discord_link_visible: false,
+      discord_link_title: "Community",
+      discord_link_subtitle: "Join the team.",
+      discord_link_cta_label: "Join",
+      tiktok_link_visible: true,
+      tiktok_link_title: "TikTok",
+      tiktok_link_subtitle: "@doonia.j",
+      tiktok_link_cta_label: "Watch",
+      battle_link_visible: true,
+      battle_link_title: "Prepare for Battle",
+      battle_link_subtitle: "Get your TikTok Coins before the live battle begins.",
+      battle_link_cta_label: "Prepare",
+      business_link_visible: true,
+      business_link_title: "Business",
+      business_link_subtitle: "Partnerships and collabs.",
+      business_link_cta_label: "Contact",
+      music_link_visible: false,
+      music_link_title: "Gym Playlist",
+      music_link_subtitle: "Coming soon.",
+      music_link_cta_label: "Listen",
+      newsletter_cta_label: "Subscribe",
+      newsletter_destination: "",
+      faq_link_visible: false,
+      faq_link_title: "7-Day Challenge",
+      faq_link_subtitle: "Coming soon.",
+      faq_link_cta_label: "Start",
+      faq_link_url: "",
+      community_link_visible: true,
+      community_link_title: "Community",
+      community_link_subtitle: "Join the team.",
+      community_link_cta_label: "Join",
+      community_link_url: "",
+      share_link_visible: true,
+      custom_links: [
+        { id: "legion", visible: true, title: "Workout Supplements", subtitle: "Legion Athletics - use code DOONIA.", cta_label: "Shop Legion", url: "https://legionathletics.rfrl.co/rnpon" },
+        { id: "kontrolled-insanity", visible: true, title: "Kontrolled Insanity", subtitle: "Official brand - use code DOONIA.", cta_label: "Shop", url: "https://kontrolledinsanity.com/?aff=88" },
+        { id: "amazon", visible: true, title: "Amazon Storefront", subtitle: "Gym essentials and favorites.", cta_label: "Shop", url: "https://a.co/d/04e5e97O" },
+        { id: "youtube", visible: true, title: "YouTube", subtitle: "Doonia J", cta_label: "Watch", url: "https://www.youtube.com/@doonia.j" },
+        { id: "support", visible: true, title: "Support Me", subtitle: "Every contribution helps me create more content.", cta_label: "Support", url: "" }
+      ]
+    };
+    const params = new URLSearchParams(window.location.search);
+    const forceExperience = params.get("experience") === "1";
+    const previewMode = params.get("preview") === "1";
+    const themePresets = {
+      mina: {
+        pink: "#ffd3df",
+        pinkStrong: "#ff9fbd",
+        brown: "#8b5f4a",
+        background: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)"
+      },
+      rose: {
+        pink: "#fecdd3",
+        pinkStrong: "#fb7185",
+        brown: "#f0abfc",
+        background: "radial-gradient(circle at 18% -10%, rgba(251,113,133,.2), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(240,171,252,.16), transparent 28rem), linear-gradient(155deg, #080504 0%, #1b090d 46%, #050403 100%)"
+      },
+      chocolate: {
+        pink: "#f2c6a8",
+        pinkStrong: "#c98b65",
+        brown: "#8b5f4a",
+        background: "radial-gradient(circle at 18% -10%, rgba(242,198,168,.18), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.28), transparent 28rem), linear-gradient(155deg, #070403 0%, #1d0f0b 48%, #050403 100%)"
+      },
+      onyx: {
+        pink: "#f5f1ea",
+        pinkStrong: "#9ca3af",
+        brown: "#6b7280",
+        background: "radial-gradient(circle at 18% -10%, rgba(245,241,234,.12), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(107,114,128,.18), transparent 28rem), linear-gradient(155deg, #030405 0%, #0d0e11 46%, #020202 100%)"
+      },
+      violet: {
+        pink: "#c4b5fd",
+        pinkStrong: "#8b5cf6",
+        brown: "#7c3aed",
+        background: "radial-gradient(circle at 18% -10%, rgba(196,181,253,.19), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(124,58,237,.2), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b25 46%, #050403 100%)"
+      },
+      neon: {
+        pink: "#67e8f9",
+        pinkStrong: "#fb7185",
+        brown: "#38bdf8",
+        background: "radial-gradient(circle at 18% -10%, rgba(103,232,249,.16), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(251,113,133,.16), transparent 28rem), linear-gradient(155deg, #030608 0%, #0f172a 46%, #030405 100%)"
+      },
+      founder: {
+        pink: "#e9c48a",
+        pinkStrong: "#c89b3c",
+        brown: "#111827",
+        background: "radial-gradient(circle at 18% -10%, rgba(233,196,138,.17), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(17,24,39,.28), transparent 28rem), linear-gradient(155deg, #040403 0%, #101010 46%, #020202 100%)"
+      }
+,
+      doonia: {
+        pink: "#f8efe0",
+        pinkStrong: "#d4a04c",
+        brown: "#8b5a24",
+        background: "radial-gradient(circle at 18% -10%, rgba(212,160,76,.24), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(126,82,36,.26), transparent 28rem), linear-gradient(155deg, #030303 0%, #120d08 46%, #050403 100%)"
+      }
+    };
+    const icons = {
+      live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9a8 8 0 0 1 16 0"/><path d="M7 12a5 5 0 0 1 10 0"/><circle cx="12" cy="17" r="2"/></svg>',
+      discord: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 18c-2.8-.8-4-2.4-4-2.4.4-4.2 1.8-7 1.8-7 2-1.4 3.8-1.5 3.8-1.5l.5 1"/><path d="M16 18c2.8-.8 4-2.4 4-2.4-.4-4.2-1.8-7-1.8-7-2-1.4-3.8-1.5-3.8-1.5l-.5 1"/><path d="M9 16s1 1 3 1 3-1 3-1"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>',
+      tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 3c.5 3 2.2 4.8 5 5v3.1c-1.9 0-3.5-.6-5-1.7v6.1A5.5 5.5 0 1 1 9.5 10c.4 0 .8 0 1.1.1v3.4a2.2 2.2 0 1 0 1.6 2.1V3h2.8Z"/></svg>',
+      heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>',
+      mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/></svg>',
+      sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9.5a4 4 0 0 1 0 5"/><path d="M17.7 6.8a8 8 0 0 1 0 10.4"/></svg>',
+      muted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m19 9-6 6"/><path d="m13 9 6 6"/></svg>'
+    };
+    const $ = (id) => document.getElementById(id);
+    const introKey = "creator_intro_doonia_v1";
+    let countdownTimer = null;
+    let liveRuntimeTimer = null;
+    let liveVisibilityHandler = null;
+    let currentSettings = { ...fallback };
+    const blockRegistry = {
+      link: { implemented: true },
+      discord: { implemented: true },
+      countdown: { implemented: true },
+      newsletter: { implemented: true },
+      explore: { implemented: true },
+      video: { implemented: false },
+      image: { implemented: false },
+      gallery: { implemented: false },
+      schedule: { implemented: false },
+      shop: { implemented: false },
+      faq: { implemented: false },
+      quote: { implemented: false },
+      location: { implemented: false },
+      youtube: { implemented: false },
+      spotify: { implemented: false },
+      tiktok: { implemented: false },
+      products: { implemented: false },
+      events: { implemented: false }
+    };
+    const discoveryArchitecture = [
+      ["Featured Creators", "Curated Creator OS showcases will appear here."],
+      ["Trending", "Fast-rising pages and live moments."],
+      ["Browse by DNA", "Streamer, Artist, Founder, Gamer, Coach, Business."],
+      ["Featured Themes", "Premium theme presets and seasonal looks."],
+      ["Recently Joined", "New Creator OS pages as they launch."]
+    ];
+
+    function safeUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.origin);
+        if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "mailto:") return url.href;
+      } catch (error) {}
+      return "";
+    }
+    function externalUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value);
+        if (url.protocol === "http:" || url.protocol === "https:") return url.href;
+      } catch (error) {}
+      return "";
+    }
+    function setText(id, value) { $(id).textContent = value || ""; }
+    function profileImage(settings) { return safeUrl(settings.avatar_url) || "/assets/doonia/profile-placeholder.svg"; }
+    function heroImage(settings) { return safeUrl(settings.banner_url || settings.avatar_url) || "/assets/doonia/hero-placeholder.svg"; }
+    function isTikTokMode() {
+      const ua = String(navigator.userAgent || "");
+      return /tiktok|musical_ly|bytedance/i.test(ua) || params.get("mode") === "tiktok";
+    }
+    function heroVideo(settings) { return isTikTokMode() ? "" : safeUrl(settings.hero_video_url); }
+    function setMediaBackground(element, imageUrl) {
+      if (!element) return;
+      element.replaceChildren();
+      element.style.setProperty("--hero-image", 'url("' + imageUrl.replace(/"/g, "%22") + '")');
+    }
+    function applyHeroMedia(settings) {
+      const imageUrl = heroImage(settings);
+      const videoUrl = heroVideo(settings);
+      ["heroMedia", "heroBleedMedia"].forEach((id) => {
+        const element = $(id);
+        setMediaBackground(element, imageUrl);
+        if (!element || !videoUrl) return;
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        video.poster = imageUrl;
+        video.src = videoUrl;
+        element.appendChild(video);
+      });
+    }
+    function revealPage() { document.documentElement.classList.remove("intro-pending"); }
+    function introAudioInfo(settings) {
+      const url = safeUrl(settings.intro_audio_url);
+      if (!settings.intro_audio_enabled || !url) return { url: "", enabled: false };
+      try {
+        const parsed = new URL(url);
+        const directAudio = /\.(mp3|m4a|aac|wav)$/i.test(parsed.pathname);
+        return { url: directAudio ? url : "", enabled: directAudio };
+      } catch (error) {
+        return { url: "", enabled: false };
+      }
+    }
+    function musicLinkInfo(settings) {
+      const url = externalUrl(settings.music_url);
+      if (settings.music_link_visible !== true || !url) return { url: "", enabled: false };
+      return { url, enabled: true };
+    }
+    function setIntroAudioSource(settings, url) {
+      const audio = $("introAudio");
+      if (audio.src !== url) audio.src = url;
+      audio.volume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
+      audio.loop = false;
+    }
+    async function playIntroAudio(settings, scheduleStop = false) {
+      const info = introAudioInfo(settings);
+      if (!info.enabled) return false;
+      const audio = $("introAudio");
+      const button = $("soundButton");
+      const volume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
+      setIntroAudioSource(settings, info.url);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = volume;
+      audio.loop = false;
+      try {
+        await audio.play();
+        if (button) button.innerHTML = icons.sound;
+        document.body.removeAttribute("data-intro-audio-error");
+        if (scheduleStop) scheduleIntroAudioStop(settings);
+        return true;
+      } catch (error) {
+        if (button) button.title = "Intro audio could not play. Tap again to retry.";
+        document.body.dataset.introAudioError = error && error.message ? error.message : "Intro audio playback was blocked.";
+        return false;
+      }
+    }
+    function fadeOutIntroAudio(settings) {
+      const audio = $("introAudio");
+      if (!audio || audio.paused) return;
+      const targetVolume = Math.max(0, Math.min(1, Number(settings.intro_audio_volume) || 0.35));
+      const startVolume = audio.volume || targetVolume;
+      let step = 0;
+      const duration = Math.max(0, Math.min(10, Number(settings.intro_audio_fade_out_duration) || 2));
+      const steps = duration > 0 ? Math.max(1, Math.round(duration * 20)) : 1;
+      const timer = window.setInterval(() => {
+        step += 1;
+        audio.volume = Math.max(0, startVolume * (1 - step / steps));
+        if (step >= steps) {
+          window.clearInterval(timer);
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = targetVolume;
+          const button = $("soundButton");
+          if (button) button.innerHTML = icons.muted;
+        }
+      }, duration > 0 ? Math.max(30, (duration * 1000) / steps) : 30);
+    }
+    function scheduleIntroAudioStop(settings) {
+      const fadeDuration = Math.max(0, Math.min(10, Number(settings.intro_audio_fade_out_duration) || 2));
+      const stopAfter = Math.max(1, Math.min(30, Number(settings.intro_audio_stop_after) || 4));
+      const fadeStart = Math.max(0, stopAfter - fadeDuration) * 1000;
+      window.setTimeout(() => fadeOutIntroAudio(settings), fadeStart);
+    }
+    function previewSettings(settings) {
+      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
+      const theme = params.get("preview_theme");
+      const dna = params.get("creator_dna");
+      return {
+        ...settings,
+        theme_preset: themePresets[theme] ? theme : settings.theme_preset,
+        creator_dna: allowedDna.has(dna) ? dna : settings.creator_dna
+      };
+    }
+    function hexToRgba(hex, alpha) {
+      const value = String(hex || "").replace("#", "");
+      if (value.length !== 6) return "rgba(255,159,189," + alpha + ")";
+      const red = parseInt(value.slice(0, 2), 16);
+      const green = parseInt(value.slice(2, 4), 16);
+      const blue = parseInt(value.slice(4, 6), 16);
+      return "rgba(" + red + "," + green + "," + blue + "," + alpha + ")";
+    }
+    function applyTheme(settings) {
+      const theme = themePresets[settings.theme_preset] || themePresets.doonia;
+      const customBackground = settings.background_gradient && settings.background_gradient !== fallback.background_gradient && !params.get("preview_theme");
+      document.documentElement.style.setProperty("--pink", theme.pink);
+      document.documentElement.style.setProperty("--pink-strong", theme.pinkStrong);
+      document.documentElement.style.setProperty("--brown", theme.brown);
+      document.documentElement.style.setProperty("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .3));
+      document.body.className = document.body.className.replace(/\btheme-[a-z0-9-]+\b/g, "").trim();
+      document.body.classList.add("theme-" + (settings.theme_preset || "mina"));
+      document.body.dataset.creatorDna = settings.creator_dna || "streamer";
+      document.body.style.background = customBackground ? settings.background_gradient : theme.background;
+    }
+    function nextLiveDate(settings) {
+      const value = settings.next_live_datetime;
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date : null;
+    }
+    function countdownText(date) {
+      const ms = date.getTime() - Date.now();
+      if (ms <= 0) return "Starting soon";
+      const minutes = Math.ceil(ms / 60000);
+      const days = Math.floor(minutes / 1440);
+      const hours = Math.floor((minutes % 1440) / 60);
+      const mins = minutes % 60;
+      if (days > 0) return "Next stream in " + days + "d " + hours + "h";
+      if (hours > 0) return "Next stream in " + hours + "h " + mins + "m";
+      return "Next stream in " + mins + "m";
+    }
+
+    function fallbackLiveUrl(settings) {
+      const username = String(settings.tiktok_live_username || settings.username || "doonia.j").replace(/^@+/, "") || "doonia.j";
+      return safeUrl(settings.live_url) || "https://www.tiktok.com/@" + username + "/live";
+    }
+    function compactNumber(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "";
+      try {
+        return new Intl.NumberFormat("en", {
+          notation: number >= 1000 ? "compact" : "standard",
+          maximumFractionDigits: number >= 1000 ? 1 : 0
+        }).format(number);
+      } catch (error) {
+        return number.toLocaleString();
+      }
+    }
+    function setLiveMeta(items) {
+      const meta = $("liveMeta");
+      if (!meta) return;
+      const visibleItems = items.filter(Boolean);
+      meta.classList.toggle("is-visible", visibleItems.length > 0);
+      meta.replaceChildren(...visibleItems.map((item) => {
+        const span = document.createElement("span");
+        span.textContent = item;
+        return span;
+      }));
+    }
+
+    function confirmedLiveSource(source) {
+      return source === "provider" || source === "runtime" || source === "confirmed";
+    }
+
+    function applyLiveState(liveState, settings) {
+      const source = String(liveState && liveState.source || "");
+      const loadingStatus = source === "loading";
+      const confirmed = liveState && (liveState.confirmed === true || confirmedLiveSource(source));
+      const isLive = Boolean(liveState && liveState.isLive);
+      const manualLive = !confirmed && source === "manual-fallback" && liveState.manualMode === true && isLive;
+      const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
+      const hasBattleMode = liveState && liveState.battleActive === true && capabilities.battleActive === true && featureOn(settings, "battle_link_visible", true);
+      const displayLive = (confirmed && isLive) || manualLive || hasBattleMode;
+      const confirmedOffline = confirmed && !isLive && !hasBattleMode;
+      const unknownStatus = !loadingStatus && !displayLive && !confirmedOffline;
+      const hasRealViewerCount = displayLive && capabilities.viewerCount === true && Number.isFinite(Number(liveState.viewerCount));
+      const hasRealLikeCount = displayLive && capabilities.likeCount === true && Number.isFinite(Number(liveState.likeCount));
+      const hasLiveDuration = displayLive && capabilities.liveDuration === true && typeof liveState.liveDuration === "string" && liveState.liveDuration.trim();
+      const hasManualStreak = hasBattleMode && capabilities.battleWinStreak === true && Number.isFinite(Number(liveState.battleWinStreak)) && Number(liveState.battleWinStreak) > 0;
+      document.body.classList.toggle("is-live", displayLive);
+      $("statusPill").querySelector("span:last-child").textContent = loadingStatus ? "Checking" : (displayLive ? "Live" : (unknownStatus ? "Unknown" : "Offline"));
+      setText("liveTitle", loadingStatus ? "Checking live status" : (hasBattleMode ? "Battle Mode" : (displayLive ? "LIVE NOW" : (unknownStatus ? "Live status unavailable" : "Offline"))));
+      if (hasBattleMode) {
+        setText("liveCopy", "Support the Battle" + (hasManualStreak ? " · " + Number(liveState.battleWinStreak).toLocaleString() + " win streak" : ""));
+      } else if (hasRealViewerCount) {
+        setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
+      } else {
+        setText("liveCopy", displayLive ? "" : (loadingStatus ? "" : (unknownStatus ? "Watch Doonia on TikTok." : "Live soon")));
+      }
+      setLiveMeta([
+        hasRealLikeCount && confirmed ? compactNumber(liveState.likeCount) + " likes" : "",
+        hasLiveDuration && confirmed ? "Live for " + liveState.liveDuration.trim() : ""
+      ]);
+
+      const cta = $("primaryCta");
+      if (loadingStatus) {
+        cta.textContent = "Checking...";
+        cta.href = "#";
+        cta.setAttribute("aria-disabled", "true");
+        cta.removeAttribute("target");
+        cta.removeAttribute("rel");
+        return;
+      }
+      if (displayLive) {
+        const battleUrl = hasBattleMode ? safeUrl(settings.tiktok_coins_url) : "";
+        cta.textContent = hasBattleMode ? textSetting(settings, "battle_link_cta_label", "Prepare") : (settings.live_button_text || "Join Live");
+        cta.href = battleUrl || safeUrl(liveState.liveUrl) || fallbackLiveUrl(settings);
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+        cta.removeAttribute("aria-disabled");
+        return;
+      }
+
+      if (unknownStatus) {
+        cta.textContent = "Watch TikTok";
+        cta.href = safeUrl(settings.tiktok_url) || fallbackLiveUrl(settings);
+        cta.target = "_blank";
+        cta.rel = "noreferrer";
+        cta.removeAttribute("aria-disabled");
+        return;
+      }
+      cta.textContent = settings.next_live_datetime ? "Next stream soon" : "Live soon";
+      cta.href = "#";
+      cta.setAttribute("aria-disabled", "true");
+      cta.removeAttribute("target");
+      cta.removeAttribute("rel");
+    }
+
+    async function refreshLiveRuntime(settings) {
+      try {
+        const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(settings.slug || "doonia"), {
+          headers: { Accept: "application/json" }
+        });
+        if (!response.ok) throw new Error("Live runtime unavailable");
+        const liveState = await response.json();
+        applyLiveState(liveState, settings);
+      } catch (error) {
+        applyLiveState({
+          isLive: false,
+          liveUrl: fallbackLiveUrl(settings),
+          viewerCount: null,
+          source: "error",
+          confidence: "unknown",
+          confirmed: false,
+          manualMode: false,
+          error: "LIVE_RUNTIME_UNAVAILABLE",
+          capabilities: {}
+        }, settings);
+      }
+    }
+
+    function setupLiveRuntime(settings) {
+      if (liveRuntimeTimer) clearInterval(liveRuntimeTimer);
+      if (liveVisibilityHandler) document.removeEventListener("visibilitychange", liveVisibilityHandler);
+      refreshLiveRuntime(settings);
+      liveRuntimeTimer = window.setInterval(() => refreshLiveRuntime(settings), 45000);
+      liveVisibilityHandler = () => {
+        if (document.visibilityState === "visible") refreshLiveRuntime(settings);
+      };
+      document.addEventListener("visibilitychange", liveVisibilityHandler);
+    }
+
+    function creatorTimeParts(timezone) {
+      const safeTimezone = timezone || fallback.timezone;
+      try {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: safeTimezone,
+          hour: "2-digit",
+          hour12: false,
+          month: "numeric",
+          day: "numeric"
+        }).formatToParts(new Date()).reduce((next, part) => {
+          if (part.type !== "literal") next[part.type] = Number(part.value);
+          return next;
+        }, {});
+        return {
+          hour: parts.hour === 24 ? 0 : parts.hour,
+          month: parts.month,
+          day: parts.day
+        };
+      } catch (error) {
+        return creatorTimeParts(fallback.timezone);
+      }
+    }
+
+    function creatorSeason(month) {
+      if (month === 12 || month === 1 || month === 2) return "winter";
+      if (month >= 6 && month <= 8) return "summer";
+      if (month >= 9 && month <= 11) return "autumn";
+      return "spring";
+    }
+
+    function creatorHoliday(month, day) {
+      if ((month === 12 && day >= 27) || (month === 1 && day <= 3)) return "new-year";
+      if (month === 12 && day >= 15 && day <= 26) return "christmas";
+      if (month === 10 && day >= 20 && day <= 31) return "halloween";
+      return "";
+    }
+
+    function setAmbientVar(name, value) {
+      document.documentElement.style.setProperty(name, value);
+    }
+
+    function resetAmbient() {
+      document.body.classList.remove(
+        "ambient-enabled",
+        "ambient-day",
+        "ambient-night",
+        "season-spring",
+        "season-summer",
+        "season-autumn",
+        "season-winter",
+        "holiday-christmas",
+        "holiday-halloween",
+        "holiday-new-year"
+      );
+      [
+        "--ambient-atmosphere",
+        "--ambient-grid-opacity",
+        "--ambient-hero-brightness",
+        "--ambient-hero-saturate",
+        "--ambient-video-opacity",
+        "--ambient-card-shadow",
+        "--ambient-primary-glow"
+      ].forEach((name) => document.documentElement.style.removeProperty(name));
+    }
+
+    function applyAmbient(settings) {
+      resetAmbient();
+      if (settings.ambient_mode_enabled === false) return;
+
+      const parts = creatorTimeParts(settings.timezone);
+      const isDay = parts.hour >= 7 && parts.hour < 18;
+      const season = creatorSeason(parts.month);
+      const holiday = settings.holiday_effects_enabled === false ? "" : creatorHoliday(parts.month, parts.day);
+      const atmosphere = [];
+      const theme = themePresets[settings.theme_preset] || themePresets.doonia;
+
+      document.body.classList.add("ambient-enabled", isDay ? "ambient-day" : "ambient-night");
+      document.body.dataset.creatorTimezone = settings.timezone || fallback.timezone;
+      document.body.dataset.creatorAmbient = isDay ? "day" : "night";
+
+      if (isDay) {
+        atmosphere.push(
+          "radial-gradient(circle at 50% -12%, rgba(255,228,205,.16), transparent 34rem)",
+          "linear-gradient(180deg, rgba(255,245,247,.035), rgba(255,245,247,0) 45%)"
+        );
+        setAmbientVar("--ambient-grid-opacity", ".12");
+        setAmbientVar("--ambient-hero-brightness", "1.06");
+        setAmbientVar("--ambient-hero-saturate", ".99");
+        setAmbientVar("--ambient-video-opacity", ".86");
+        setAmbientVar("--ambient-card-shadow", "rgba(0,0,0,.22)");
+        setAmbientVar("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .38));
+      } else {
+        atmosphere.push(
+          "radial-gradient(circle at 50% -8%, rgba(92,66,96,.18), transparent 34rem)",
+          "linear-gradient(180deg, rgba(8,5,4,.08), rgba(0,0,0,.2) 70%)"
+        );
+        setAmbientVar("--ambient-grid-opacity", ".2");
+        setAmbientVar("--ambient-hero-brightness", ".9");
+        setAmbientVar("--ambient-hero-saturate", ".9");
+        setAmbientVar("--ambient-video-opacity", ".78");
+        setAmbientVar("--ambient-card-shadow", "rgba(0,0,0,.34)");
+        setAmbientVar("--ambient-primary-glow", hexToRgba(theme.pinkStrong, .24));
+      }
+
+      if (settings.seasonal_effects_enabled !== false) {
+        document.body.classList.add("season-" + season);
+        if (season === "summer") {
+          atmosphere.push("radial-gradient(circle at 10% 12%, rgba(255,196,132,.12), transparent 24rem)");
+          if (isDay) setAmbientVar("--ambient-hero-brightness", "1.1");
+        } else if (season === "winter") {
+          atmosphere.push("radial-gradient(circle at 100% 8%, rgba(176,206,255,.1), transparent 26rem)");
+          if (!isDay) setAmbientVar("--ambient-hero-brightness", ".86");
+        } else if (season === "autumn") {
+          atmosphere.push("radial-gradient(circle at 95% 18%, rgba(190,104,56,.08), transparent 24rem)");
+        } else {
+          atmosphere.push("radial-gradient(circle at 8% 16%, rgba(255,211,223,.08), transparent 24rem)");
+        }
+      }
+
+      if (holiday) {
+        document.body.classList.add("holiday-" + holiday);
+        if (holiday === "christmas") {
+          atmosphere.push(
+            "radial-gradient(circle at 12% 24%, rgba(255,255,255,.16) 0 1px, transparent 1.8px)",
+            "radial-gradient(circle at 78% 18%, rgba(255,255,255,.12) 0 1px, transparent 1.8px)",
+            "radial-gradient(circle at 86% 64%, rgba(255,255,255,.1) 0 1px, transparent 1.8px)"
+          );
+        } else if (holiday === "halloween") {
+          atmosphere.push("radial-gradient(circle at 92% 18%, rgba(255,122,48,.13), transparent 26rem)");
+          setAmbientVar("--ambient-card-shadow", "rgba(35,13,4,.38)");
+        } else if (holiday === "new-year") {
+          atmosphere.push(
+            "radial-gradient(circle at 18% 22%, rgba(255,245,247,.14) 0 1px, transparent 2px)",
+            "radial-gradient(circle at 70% 36%, rgba(255,211,223,.13) 0 1px, transparent 2px)",
+            "radial-gradient(circle at 88% 70%, rgba(245,241,234,.12) 0 1px, transparent 2px)"
+          );
+        }
+      }
+
+      setAmbientVar("--ambient-atmosphere", atmosphere.join(", "));
+    }
+
+    function actionUrl(action, settings) {
+      if (action.key === "business") return settings.business_email ? "mailto:" + settings.business_email : "";
+      if (action.key === "discord") return safeUrl(settings.discord_invite_url || settings.discord_url);
+      if (action.key === "music") return externalUrl(settings.music_url);
+      return safeUrl(settings[action.field]);
+    }
+
+    function textSetting(settings, key, fallbackText) {
+      const value = String(settings[key] || "").trim();
+      return value || fallbackText;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function normalizeCustomLinks(value) {
+      if (!Array.isArray(value)) return [];
+      return value.slice(0, 12).map((link, index) => ({
+        id: String(link && link.id || "custom-" + index),
+        visible: !(link && link.visible === false),
+        title: String(link && link.title || "New link").trim() || "New link",
+        sub: String(link && link.subtitle || "").trim(),
+        label: String(link && (link.cta_label || link.cta) || "Open").trim() || "Open",
+        url: safeUrl(link && (link.url || link.destination))
+      })).filter((link) => link.visible && link.url);
+    }
+
+    function removeElement(id) {
+      const element = $(id);
+      if (element) element.remove();
+    }
+
+    function featureOn(settings, key, fallbackValue = true) {
+      return settings[key] === undefined ? fallbackValue : settings[key] === true;
+    }
+
+    function communityUrl(settings) {
+      return safeUrl(settings.community_link_url);
+    }
+
+    function communityEnabled(settings) {
+      return featureOn(settings, "community_link_visible", true) && Boolean(communityUrl(settings));
+    }
+
+    function discordEnabled(settings) {
+      return featureOn(settings, "discord_link_visible", true) && Boolean(safeUrl(settings.discord_invite_url || settings.discord_url));
+    }
+
+        function linkFromCustom(settings, id, fallbackLink = {}) {
+      const links = Array.isArray(settings.custom_links) ? settings.custom_links : [];
+      const found = links.find((link) => String(link && link.id || "").toLowerCase() === id);
+      const link = { ...fallbackLink, ...(found || {}) };
+      return {
+        key: id,
+        visible: link.visible !== false,
+        title: String(link.title || fallbackLink.title || "").trim(),
+        sub: String(link.subtitle || link.sub || fallbackLink.subtitle || fallbackLink.sub || "").trim(),
+        label: String(link.cta_label || link.cta || fallbackLink.cta_label || fallbackLink.label || "Open").trim(),
+        url: safeUrl(link.url || link.destination || fallbackLink.url || ""),
+        icon: fallbackLink.icon || icons.heart
+      };
+    }
+
+    function renderButtons(settings) {
+      const actions = [
+        { key: "support", visible: featureOn(settings, "battle_link_visible", true), title: textSetting(settings, "battle_link_title", "Prepare for Battle"), sub: textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the live battle begins."), field: "tiktok_coins_url", label: textSetting(settings, "battle_link_cta_label", "Prepare"), icon: icons.heart },
+        linkFromCustom(settings, "legion", { title: "Workout Supplements", subtitle: "Legion Athletics - use code DOONIA.", cta_label: "Shop Legion", url: "https://legionathletics.rfrl.co/rnpon", icon: icons.sound }),
+        linkFromCustom(settings, "kontrolled-insanity", { title: "Kontrolled Insanity", subtitle: "Official brand - use code DOONIA.", cta_label: "Shop", url: "https://kontrolledinsanity.com/?aff=88", icon: icons.heart }),
+        linkFromCustom(settings, "amazon", { title: "Amazon Storefront", subtitle: "Gym essentials and favorites.", cta_label: "Shop", url: "https://a.co/d/04e5e97O", icon: icons.heart }),
+        { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "doonia.j")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
+        { key: "instagram", visible: true, title: "Instagram", sub: "@doonia.j", field: "instagram_url", label: "Follow", icon: icons.heart },
+        linkFromCustom(settings, "youtube", { title: "YouTube", subtitle: "Doonia J", cta_label: "Watch", url: "https://www.youtube.com/@doonia.j", icon: icons.live }),
+        { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", "Partnerships and collabs."), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Contact"), icon: icons.mail },
+        linkFromCustom(settings, "support", { title: "Support Me", subtitle: "Every contribution helps me create more content.", cta_label: "Support", url: "", icon: icons.heart }),
+        { key: "community", visible: featureOn(settings, "community_link_visible", true), title: textSetting(settings, "community_link_title", "Community"), sub: textSetting(settings, "community_link_subtitle", "Join the team."), url: communityUrl(settings), label: textSetting(settings, "community_link_cta_label", "Join"), icon: icons.discord }
+      ].filter((action) => action.visible !== false);
+      const grid = $("buttonGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      actions.forEach((action) => {
+        const url = action.url || actionUrl(action, settings);
+        const item = document.createElement(url ? "a" : "div");
+        item.className = "link-button content-block" + (url ? "" : " is-disabled");
+        const showBattleDiscount = action.key === "support" && action.field === "tiktok_coins_url" && Boolean(url);
+        if (showBattleDiscount) item.classList.add("has-battle-discount");
+        item.dataset.blockType = action.key === "discord" ? "discord" : "link";
+        if (url) {
+          item.href = url;
+          item.target = url.startsWith("mailto:") ? "_self" : "_blank";
+          item.rel = "noreferrer";
+        } else {
+          item.setAttribute("aria-disabled", "true");
+        }
+        item.innerHTML =
+          (showBattleDiscount ? '<img class="battle-discount-sticker" src="/assets/doonia/prepare-battle-discount.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">' : "") +
+          '<span class="link-left"><span class="icon-badge">' + action.icon + '</span><span class="button-text"><strong>' +
+          escapeHtml(action.title) + '</strong><span>' + escapeHtml(action.sub) + '</span></span></span><span class="button-action">' +
+          escapeHtml(action.label) + '</span>';
+        grid.appendChild(item);
+      });
+    }
+
+
+    function renderPinnedBlock(settings) {
+      removeElement("runtimePinned");
+      const block = String(settings.pinned_block || "").toLowerCase();
+      const announcement = String(settings.quick_announcement || "").trim();
+      const poll = String(settings.quick_poll || "").trim();
+      const nextDate = nextLiveDate(settings);
+      const activeCommunityUrl = communityUrl(settings);
+      const battleUrl = safeUrl(settings.tiktok_coins_url);
+      const content = {
+        prepare: featureOn(settings, "battle_link_visible", true) && battleUrl ? [textSetting(settings, "battle_link_title", "Prepare for Battle"), textSetting(settings, "battle_link_subtitle", "Get your TikTok Coins before the battle begins.")] : null,
+        faq: featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url) ? [textSetting(settings, "faq_link_title", "FAQ"), textSetting(settings, "faq_link_subtitle", "Questions and answers")] : null,
+        poll: poll ? ["Poll", poll] : null,
+        announcement: ["Announcement", announcement || "No announcement yet."],
+        community: !communityEnabled(settings) || !activeCommunityUrl ? null : [textSetting(settings, "community_link_title", "Community"), textSetting(settings, "community_link_subtitle", "Join Doonia's Discord for stream updates and community drops.")],
+        newsletter: !featureOn(settings, "subscribe_popup_enabled", true) ? null : ["Newsletter", textSetting(settings, "subscribe_popup_copy", "Subscribe to the mailing list for Doonia updates.")],
+        countdown: nextDate ? ["Countdown", countdownText(nextDate)] : null
+      }[block];
+      const shouldShow = content && (block !== "announcement" || announcement);
+      if (!shouldShow) return;
+      const pinned = document.createElement("section");
+      pinned.className = "runtime-pinned is-visible";
+      pinned.id = "runtimePinned";
+      pinned.setAttribute("aria-live", "polite");
+      const title = document.createElement("strong");
+      const copy = document.createElement("span");
+      title.textContent = content[0];
+      copy.textContent = content[1];
+      pinned.append(title, copy);
+      const community = $("communityCard");
+      const grid = $("buttonGrid");
+      const shell = document.querySelector(".shell");
+      if (shell) shell.insertBefore(pinned, community || grid || $("footerNav"));
+    }
+
+    function setSheetOpen(id, open) {
+      const sheet = $(id);
+      if (!sheet) return;
+      sheet.classList.toggle("is-open", open);
+      sheet.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function insertBeforeFooter(element) {
+      const footerNav = $("footerNav");
+      const shell = document.querySelector(".shell");
+      if (!element || !shell) return;
+      shell.insertBefore(element, footerNav || shell.querySelector(".doneovernight-creator-footer"));
+    }
+
+    function renderCommunity(settings) {
+      removeElement("communityCard");
+      const activeCommunityUrl = communityUrl(settings);
+      if (!communityEnabled(settings) || !activeCommunityUrl) return;
+      const card = document.createElement("section");
+      card.className = "community-card";
+      card.id = "communityCard";
+      card.innerHTML =
+        '<div><h2>' + escapeHtml(textSetting(settings, "community_link_title", "Community")) + '</h2><p>' +
+        escapeHtml(textSetting(settings, "community_link_subtitle", "Join the team.")) +
+        '</p></div><a class="primary" id="communityCta" href="' + escapeHtml(activeCommunityUrl) + '" target="_blank" rel="noreferrer">' +
+        escapeHtml(textSetting(settings, "community_link_cta_label", "Join Discord")) + '</a>';
+      const grid = $("buttonGrid");
+      const shell = document.querySelector(".shell");
+      if (shell) shell.insertBefore(card, grid || $("footerNav"));
+    }
+
+    function setupNewsletter() {
+      const block = $("newsletterBlock");
+      const start = $("newsletterStart");
+      const form = $("newsletterForm");
+      const input = $("newsletterEmail");
+      const button = $("newsletterSubmit");
+      if (!block || !start || !form || !input || !button) return;
+      if (form.dataset.ready === "true") return;
+      form.dataset.ready = "true";
+      start.addEventListener("click", () => {
+        block.classList.add("is-editing");
+        window.setTimeout(() => input.focus(), 80);
+      });
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!input.value.trim()) {
+          input.focus();
+          return;
+        }
+        block.classList.remove("is-editing");
+        block.classList.add("is-loading");
+        button.innerHTML = '<span class="gap-spinner" aria-hidden="true"></span>';
+        button.setAttribute("aria-label", "Subscribing");
+        input.disabled = true;
+        button.disabled = true;
+        window.setTimeout(() => {
+          block.classList.remove("is-loading");
+          block.classList.add("is-done");
+        }, 650);
+      });
+    }
+
+    function renderNewsletter(settings) {
+      removeElement("newsletterBlock");
+      if (!featureOn(settings, "subscribe_popup_enabled", true)) return;
+      const block = document.createElement("section");
+      block.className = "newsletter-card";
+      block.id = "newsletterBlock";
+      block.dataset.blockType = "newsletter";
+      block.innerHTML =
+        '<button class="newsletter-start" id="newsletterStart" type="button"></button>' +
+        '<form class="newsletter-form" id="newsletterForm">' +
+        '<input id="newsletterEmail" type="email" autocomplete="email" placeholder="Your email" aria-label="Your email">' +
+        '<button class="primary" id="newsletterSubmit" type="submit">Submit</button>' +
+        '</form><div class="newsletter-thanks" id="newsletterThanks" aria-live="polite">Thanks for subscribing!</div>';
+      insertBeforeFooter(block);
+      const start = $("newsletterStart");
+      start.textContent = textSetting(settings, "newsletter_cta_label", "Subscribe to the Mailing List");
+    }
+
+    function setupExplore() {
+      const grid = $("exploreGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      discoveryArchitecture.forEach(([title, copy]) => {
+        const item = document.createElement("div");
+        item.className = "explore-item";
+        item.innerHTML = title + "<span>" + copy + "</span>";
+        grid.appendChild(item);
+      });
+    }
+
+    function setupShare(settings) {
+      removeElement("shareButton");
+      removeElement("shareSheet");
+      if (!featureOn(settings, "share_link_visible", true)) return;
+      const heroActions = document.querySelector(".hero-actions");
+      if (!heroActions) return;
+      const trigger = document.createElement("button");
+      trigger.className = "mini-pill share-trigger";
+      trigger.id = "shareButton";
+      trigger.type = "button";
+      trigger.setAttribute("aria-label", "Share Doonia J");
+      trigger.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2"/><path d="m8.6 13.4 6.8 4.2"/></svg>';
+      heroActions.appendChild(trigger);
+
+      const sheet = document.createElement("section");
+      sheet.className = "sheet";
+      sheet.id = "shareSheet";
+      sheet.setAttribute("aria-label", "Share Doonia J");
+      sheet.setAttribute("aria-hidden", "true");
+      sheet.innerHTML =
+        '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">' +
+        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="shareTitle">Share Doonia J</strong><span>Creator card and quick links</span></div>' +
+        '<button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button></div>' +
+        '<div class="creator-share-card"><img id="shareAvatar" src="/assets/doonia/profile-placeholder.svg" alt=""><div><strong id="shareName">Doonia J</strong><span class="muted" id="shareHandle">@doonia</span></div></div>' +
+        '<div class="share-grid" id="shareGrid"></div></div>';
+      document.body.insertBefore(sheet, $("privacySheet"));
+
+      const pageUrl = "https://doneovernight.com/" + (settings.slug || "doonia");
+      $("shareName").textContent = settings.display_name || "Doonia J";
+      $("shareHandle").textContent = "@" + (settings.username || settings.slug || "doonia");
+      $("shareAvatar").src = profileImage(settings);
+      const text = "Meet " + (settings.display_name || "Doonia J") + " on DONEOVERNIGHT Creator OS";
+      const encodedUrl = encodeURIComponent(pageUrl);
+      const encodedText = encodeURIComponent(text + " " + pageUrl);
+      const shareItems = [
+        ["Copy Link", "Save Doonia's Creator OS URL", "#", async (event) => {
+          event.preventDefault();
+          try {
+            await navigator.clipboard.writeText(pageUrl);
+            event.currentTarget.querySelector("span").textContent = "Copied.";
+          } catch (error) {
+            event.currentTarget.querySelector("span").textContent = pageUrl;
+          }
+        }],
+        ["WhatsApp", "Send to a chat", "https://wa.me/?text=" + encodedText],
+        ["Messages", "Open SMS", "sms:?&body=" + encodedText],
+        ["Instagram", "Open Instagram", "https://www.instagram.com/direct/inbox/"],
+        ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent("Doonia J") + "&body=" + encodedText]
+      ];
+      if (communityEnabled(settings)) {
+        shareItems.splice(4, 0, [
+          textSetting(settings, "community_link_title", "Community"),
+          textSetting(settings, "community_link_subtitle", "Open Doonia's community"),
+          communityUrl(settings)
+        ]);
+      }
+      if (discordEnabled(settings)) {
+        shareItems.splice(4, 0, [
+          textSetting(settings, "discord_link_title", "Discord"),
+          textSetting(settings, "discord_link_subtitle", "Open Doonia's Discord"),
+          safeUrl(settings.discord_invite_url || settings.discord_url)
+        ]);
+      }
+      if (featureOn(settings, "music_link_visible", false) && externalUrl(settings.music_url)) {
+        shareItems.push(["Music", textSetting(settings, "music_link_subtitle", "Doonia's current sound"), externalUrl(settings.music_url)]);
+      }
+      if (featureOn(settings, "faq_link_visible", false) && safeUrl(settings.faq_link_url)) {
+        shareItems.push(["FAQ", textSetting(settings, "faq_link_subtitle", "Questions and answers"), safeUrl(settings.faq_link_url)]);
+      }
+      if (navigator.share) {
+        shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
+          event.preventDefault();
+          await navigator.share({ title: "Doonia J", text, url: pageUrl }).catch(() => {});
+        }]);
+      }
+      const grid = $("shareGrid");
+      grid.innerHTML = "";
+      shareItems.forEach(([title, copy, href, handler]) => {
+        const item = document.createElement("a");
+        item.className = "share-item";
+        item.href = href;
+        item.innerHTML = title + "<span>" + copy + "</span>";
+        if (!href.startsWith("mailto:") && !href.startsWith("sms:") && href !== "#") {
+          item.target = "_blank";
+          item.rel = "noreferrer";
+        }
+        if (handler) item.addEventListener("click", handler);
+        grid.appendChild(item);
+      });
+      trigger.onclick = () => setSheetOpen("shareSheet", true);
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen("shareSheet", false);
+      });
+    }
+
+    function setupLivingGlassMotion() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      let frame = 0;
+      const apply = (x, y) => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          const shiftX = ((x - 50) / 50 * 5).toFixed(2) + "px";
+          const shiftY = ((y - 50) / 50 * 4).toFixed(2) + "px";
+          document.documentElement.style.setProperty("--glass-x", x.toFixed(1) + "%");
+          document.documentElement.style.setProperty("--glass-y", y.toFixed(1) + "%");
+          document.documentElement.style.setProperty("--glass-shift-x", shiftX);
+          document.documentElement.style.setProperty("--glass-shift-y", shiftY);
+        });
+      };
+      window.addEventListener("pointermove", (event) => {
+        apply((event.clientX / window.innerWidth) * 100, (event.clientY / window.innerHeight) * 100);
+      }, { passive: true });
+      window.addEventListener("deviceorientation", (event) => {
+        if (typeof event.gamma !== "number" || typeof event.beta !== "number") return;
+        apply(50 + Math.max(-18, Math.min(18, event.gamma)) * .7, 42 + Math.max(-22, Math.min(22, event.beta - 35)) * .45);
+      }, { passive: true });
+    }
+
+    setupLivingGlassMotion();
+
+    document.addEventListener("click", (event) => {
+      const closeButton = event.target.closest("[data-close-sheet]");
+      if (closeButton) {
+        event.preventDefault();
+        setSheetOpen(closeButton.dataset.closeSheet, false);
+        return;
+      }
+      const openButton = event.target.closest("[data-open-sheet]");
+      if (openButton) {
+        event.preventDefault();
+        setSheetOpen(openButton.dataset.openSheet, true);
+      }
+    });
+    document.querySelectorAll(".sheet").forEach((sheet) => {
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen(sheet.id, false);
+      });
+    });
+
+    window.addEventListener("message", (event) => {
+      if (!String(event.origin || "").endsWith("doneovernight.com")) return;
+      const data = event.data || {};
+      if (data.type !== "creator-theme-preview") return;
+      const allowedDna = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
+      currentSettings = {
+        ...currentSettings,
+        theme_preset: themePresets[data.theme_preset] ? data.theme_preset : currentSettings.theme_preset,
+        creator_dna: allowedDna.has(data.creator_dna) ? data.creator_dna : currentSettings.creator_dna
+      };
+      $("previewBadge").hidden = false;
+      applyTheme(currentSettings);
+      applyAmbient(currentSettings);
+    });
+
+    function setupMusic(settings) {
+      let button = $("soundButton");
+      const audio = $("introAudio");
+      const introInfo = introAudioInfo(settings);
+      const musicInfo = musicLinkInfo(settings);
+      if (!introInfo.enabled && !musicInfo.enabled) {
+        if (button) button.remove();
+        audio.pause();
+        audio.removeAttribute("src");
+        return;
+      }
+      if (!button) {
+        button = document.createElement("button");
+        button.className = "sound-button";
+        button.id = "soundButton";
+        button.type = "button";
+        document.body.insertBefore(button, $("previewBadge"));
+      }
+      button.onclick = null;
+      button.removeAttribute("data-mode");
+      audio.loop = false;
+      button.innerHTML = icons.sound;
+      if (introInfo.enabled) {
+        setIntroAudioSource(settings, introInfo.url);
+        button.dataset.mode = musicInfo.enabled ? "intro-audio-with-music-link" : "intro-audio";
+        button.title = musicInfo.enabled ? "Play intro audio. Music link opens externally in a future secondary action." : "Play intro audio";
+        button.setAttribute("aria-label", "Play intro audio");
+        button.onclick = async () => { await playIntroAudio(settings, true); };
+        return;
+      }
+      audio.pause();
+      audio.removeAttribute("src");
+      button.dataset.mode = "external";
+      button.title = "Open music link";
+      button.setAttribute("aria-label", "Open music link");
+      button.onclick = () => window.open(musicInfo.url, "_blank", "noopener,noreferrer");
+    }
+
+    function renderFooterNav(settings) {
+      const nav = $("footerNav");
+      if (!nav) return;
+      const items = [
+        ["Privacy", "privacySheet", "#privacy"],
+        ["Report", "reportSheet", "#report"]
+      ];
+      if (featureOn(settings, "creator_passport_visible", true)) {
+        items.push(["Creator Passport", "passportSheet", "#creator-passport"]);
+      }
+      items.push(["About Creator OS", "aboutCreatorOsSheet", "#about-creator-os"]);
+      nav.replaceChildren();
+      items.forEach(([label, sheetId, href], index) => {
+        if (index) {
+          const separator = document.createElement("span");
+          separator.setAttribute("aria-hidden", "true");
+          separator.textContent = "•";
+          nav.appendChild(separator);
+        }
+        const link = document.createElement("a");
+        link.href = href;
+        link.dataset.openSheet = sheetId;
+        link.textContent = label;
+        nav.appendChild(link);
+      });
+    }
+
+    function renderPassport(settings) {
+      removeElement("passportSheet");
+      if (!featureOn(settings, "creator_passport_visible", true)) return;
+      const sheet = document.createElement("section");
+      sheet.className = "sheet";
+      sheet.id = "passportSheet";
+      sheet.setAttribute("aria-label", "Creator Passport");
+      sheet.setAttribute("aria-hidden", "true");
+      const displayName = escapeHtml(settings.display_name || "Doonia J");
+      const dna = escapeHtml(String(settings.creator_dna || "streamer").replace(/^\w/, (letter) => letter.toUpperCase()));
+      const timezone = escapeHtml((settings.timezone || fallback.timezone).replace("America/", ""));
+      sheet.innerHTML =
+        '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="passportTitle">' +
+        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="passportTitle">Creator Passport</strong><span>' + displayName + ' on Creator OS</span></div>' +
+        '<button class="icon-button" type="button" data-close-sheet="passportSheet" aria-label="Close Creator Passport">&times;</button></div>' +
+        '<div class="passport-grid">' +
+        '<div class="passport-row"><span>' + displayName + '</span><strong>Joined Creator OS</strong></div>' +
+        '<div class="passport-row"><span>Joined</span><strong>July 2026</strong></div>' +
+        '<div class="passport-row"><span>Creator DNA</span><strong>' + dna + '</strong></div>' +
+        '<div class="passport-row"><span>Timezone</span><strong>' + timezone + '</strong></div>' +
+        '<div class="passport-row"><span>Powered by</span><strong>DONEOVERNIGHT Creator OS</strong></div>' +
+        '</div></div>';
+      document.body.insertBefore(sheet, $("aboutCreatorOsSheet"));
+      sheet.addEventListener("click", (event) => {
+        if (event.target === sheet) setSheetOpen("passportSheet", false);
+      });
+    }
+
+    function setupIntro(settings) {
+      const intro = $("intro");
+      if (!settings.welcome_intro_enabled || (!forceExperience && localStorage.getItem(introKey) === "done")) {
+        intro.hidden = true;
+        revealPage();
+        return;
+      }
+      const introMedia = $("introMedia");
+      if (introMedia) introMedia.style.backgroundImage = 'url("' + heroImage(settings).replace(/"/g, "%22") + '")';
+      intro.hidden = false;
+      const dismiss = () => {
+        playIntroAudio(settings, true).then((played) => {
+          if (!played && introAudioInfo(settings).enabled) document.body.dataset.introAudioState = "waiting-for-user";
+        });
+        if (!forceExperience) localStorage.setItem(introKey, "done");
+        intro.classList.add("is-done");
+        revealPage();
+        setTimeout(() => { intro.hidden = true; }, 650);
+      };
+      intro.addEventListener("click", dismiss, { once: true });
+      window.addEventListener("keydown", dismiss, { once: true });
+    }
+
+    function render(settings) {
+      settings = previewSettings(settings);
+      currentSettings = settings;
+      $("previewBadge").hidden = !previewMode;
+      document.body.classList.toggle("is-live", Boolean(settings.live_status));
+      applyTheme(settings);
+      applyAmbient(settings);
+      setText("displayName", settings.display_name || "Doonia J");
+      setText("handle", "@" + (settings.username || settings.slug || "doonia"));
+      setText("bio", settings.bio || fallback.bio);
+      setText("location", settings.location || fallback.location);
+      $("avatarImage").src = profileImage(settings);
+      $("avatarImage").alt = (settings.display_name || "Doonia J") + " profile photo";
+      applyHeroMedia(settings);
+      applyLiveState({
+        isLive: false,
+        liveUrl: fallbackLiveUrl(settings),
+        viewerCount: null,
+        source: "loading",
+        confidence: "unknown",
+        confirmed: false,
+        manualMode: false,
+        capabilities: {}
+      }, settings);
+      const nextDate = nextLiveDate(settings);
+      const countdown = $("countdown");
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      if (!settings.live_status && nextDate) {
+        const renderCountdown = () => {
+          countdown.textContent = countdownText(nextDate) + " · " + (settings.timezone || fallback.timezone);
+        };
+        renderCountdown();
+        countdownTimer = setInterval(renderCountdown, 60000);
+        countdown.classList.add("is-visible");
+      } else {
+        countdown.textContent = "";
+        countdown.classList.remove("is-visible");
+      }
+      renderCommunity(settings);
+      renderButtons(settings);
+      renderNewsletter(settings);
+      renderFooterNav(settings);
+      renderPassport(settings);
+      renderPinnedBlock(settings);
+      setupNewsletter();
+      setupShare(settings);
+      setupLiveRuntime(settings);
+      setupMusic(settings);
+      setupIntro(settings);
+    }
+
+    fetch("/api/creator-settings?slug=doonia")
+      .then((response) => response.json())
+      .then((data) => render({ ...fallback, ...(data.creator || {}) }))
+      .catch(() => render(fallback));
+  </script>
+</body>
+</html>

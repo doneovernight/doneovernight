@@ -1,0 +1,2183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doonia J Creator OS | Admin</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <style>
+    :root {
+      --bg: #090504;
+      --panel: rgba(255,245,247,.075);
+      --line: rgba(255,211,223,.16);
+      --text: #fff5f7;
+      --muted: rgba(255,245,247,.64);
+      --accent: #ffd3df;
+      --accent-2: #8b5f4a;
+      --danger: #fb7185;
+      --admin-bg-a: rgba(255,211,223,.18);
+      --admin-bg-b: rgba(139,95,74,.22);
+      --glass-panel: linear-gradient(140deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
+      --ink: #f5f1ea;
+      --ink-dim: rgba(245,241,234,.58);
+      --line-main: rgba(245,241,234,.1);
+      --serif: "Instrument Serif", "Times New Roman", serif;
+      --sans: "Manrope", system-ui, sans-serif;
+      --mono: "JetBrains Mono", monospace;
+      color-scheme: dark;
+      font-family: var(--sans);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% -8%, var(--admin-bg-a), transparent 30rem),
+        radial-gradient(circle at 100% 0%, var(--admin-bg-b), transparent 28rem),
+        #090504;
+      color: var(--text);
+    }
+    button, input, textarea, select { font: inherit; }
+    a { color: inherit; }
+    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 128px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 22px; }
+    .brand { display: grid; gap: 6px; }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    h1 { margin: 0; font-size: clamp(34px, 5vw, 66px); line-height: .9; letter-spacing: 0; }
+    .muted { color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .admin-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 12;
+      display: flex;
+      gap: 8px;
+      margin: 0 0 16px;
+      padding: 8px;
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 18px;
+      background: rgba(9,5,4,.72);
+      backdrop-filter: blur(18px) saturate(1.12);
+      overflow-x: auto;
+    }
+    .admin-tab {
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      color: rgba(255,245,247,.62);
+      padding: 0 14px;
+      font-weight: 950;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .admin-tab[aria-selected="true"] {
+      border-color: rgba(255,211,223,.18);
+      background: rgba(255,245,247,.09);
+      color: var(--text);
+      box-shadow: inset 0 1px rgba(255,255,255,.12);
+    }
+    .button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,245,247,.075);
+      color: var(--text);
+      padding: 0 14px;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .button.primary { border: 0; background: linear-gradient(135deg, var(--accent), #ff9fbd); color: #24100e; box-shadow: 0 16px 42px rgba(255,159,189,.22); }
+    .button.danger { color: #fecdd3; border-color: rgba(251,113,133,.36); }
+    .button[disabled] { opacity: .62; cursor: wait; }
+    .gate {
+      min-height: 100svh;
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: clamp(22px, 5vw, 56px) 18px 0;
+      overflow: hidden;
+      isolation: isolate;
+      transition: opacity .5s ease, transform .5s ease, filter .5s ease;
+    }
+    .gate::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255,211,223,.13), transparent 32rem),
+        radial-gradient(circle at 20% 88%, rgba(139,95,74,.16), transparent 28rem);
+      pointer-events: none;
+      z-index: -2;
+    }
+    .gate.is-exiting { opacity: 0; transform: scale(.992); filter: blur(8px); pointer-events: none; }
+    .gate-card, .panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--glass-panel);
+      box-shadow: 0 18px 56px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.14);
+      backdrop-filter: blur(18px) saturate(1.12);
+    }
+    .gate-card {
+      width: min(460px, 100%);
+      padding: clamp(30px, 5vw, 44px);
+      border-radius: 34px;
+      display: grid;
+      gap: 20px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.052)),
+        rgba(18,9,8,.54);
+      box-shadow:
+        0 34px 90px rgba(0,0,0,.36),
+        0 1px 0 rgba(255,255,255,.16) inset,
+        0 -1px 0 rgba(255,255,255,.05) inset;
+      position: relative;
+      z-index: 2;
+    }
+    .gate-card h1 {
+      font-size: clamp(48px, 9vw, 72px);
+      font-weight: 500;
+      line-height: .92;
+      letter-spacing: -.02em;
+    }
+    .gate-card .muted {
+      font-size: 15px;
+      line-height: 1.55;
+      color: rgba(255,245,247,.66);
+    }
+    .gate-card label { font-size: 12px; letter-spacing: .02em; }
+    .gate-card input {
+      min-height: 54px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.2);
+    }
+    .gate-card .button.primary {
+      min-height: 54px;
+      border-radius: 18px;
+      width: 100%;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .gate-card .button.primary:active { transform: scale(.992); }
+    .gate-card .status { min-height: 0; height: 0; overflow: hidden; }
+    .unlock-button-content {
+      min-width: 138px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .unlock-spinner,
+    .unlock-check {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 15px;
+      opacity: 0;
+      transform: scale(.82);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .unlock-spinner {
+      border: 2px solid rgba(36,16,14,.2);
+      border-top-color: rgba(36,16,14,.78);
+      border-radius: 999px;
+    }
+    .unlock-check {
+      display: grid;
+      place-items: center;
+      color: #24100e;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 950;
+    }
+    .gate-card[data-unlock-state="unlocking"] .unlock-spinner {
+      opacity: 1;
+      transform: scale(1);
+      animation: saveSpin .82s linear infinite;
+    }
+    .gate-card[data-unlock-state="welcome"] .unlock-check { opacity: 1; transform: scale(1); }
+    .gate-card[data-unlock-state="failed"] .button.primary {
+      background: linear-gradient(135deg, #fecdd3, #fb7185);
+      color: #2a080d;
+    }
+    .gate-footer {
+      position: absolute;
+      inset: auto 0 0;
+      min-height: 190px;
+      display: grid;
+      place-items: end center;
+      padding: 82px 6vw 34px;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .gate-powered {
+      position: relative;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      color: rgba(245,241,234,.44);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    .gate-powered img { width: 112px; opacity: .48; }
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; }
+    .stack { display: grid; gap: 16px; }
+    .tab-panel[hidden] { display: none !important; }
+    .panel { padding: 20px; }
+    .panel h2 { margin: 0 0 14px; font-size: 18px; }
+    .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 850; }
+    input, textarea, select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 13px 14px;
+      outline: none;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    select { appearance: none; }
+    input:focus, textarea:focus, select:focus { border-color: rgba(255,211,223,.62); box-shadow: 0 0 0 3px rgba(255,211,223,.1); }
+    .span-2 { grid-column: 1 / -1; }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px;
+      background: rgba(255,255,255,.045);
+    }
+    .switch-row strong { display: block; font-size: 14px; }
+    .switch-row span { color: var(--muted); font-size: 12px; }
+    .switch { position: relative; width: 54px; height: 30px; flex: 0 0 auto; }
+    .switch input { opacity: 0; position: absolute; inset: 0; }
+    .track { position: absolute; inset: 0; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.12); transition: .18s ease; }
+    .track::after { content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 999px; background: #fff5f7; transition: .18s ease; }
+    .switch input:checked + .track { background: var(--accent); }
+    .switch input:checked + .track::after { transform: translateX(24px); background: #24100e; }
+    .theme-grid, .dna-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .theme-option { border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.055); color: var(--text); padding: 12px; display: grid; gap: 9px; cursor: pointer; text-align: left; font-weight: 850; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+    .theme-option:hover { transform: translateY(-1px); background: rgba(255,255,255,.08); }
+    .theme-option[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.13), inset 0 1px rgba(255,255,255,.16); }
+    .swatch { height: 34px; border-radius: 10px; }
+    .mina { background: linear-gradient(135deg, #ffd3df, #8b5f4a 48%, #160b09); }
+    .rose { background: linear-gradient(135deg, #fb7185, #f0abfc); }
+    .chocolate { background: linear-gradient(135deg, #8b5f4a, #24100e); }
+    .onyx { background: linear-gradient(135deg, #f5f1ea, #050608); }
+    .violet { background: linear-gradient(135deg, #c4b5fd, #2e1065); }
+    .neon { background: linear-gradient(135deg, #67e8f9, #fb7185); }
+    .founder { background: linear-gradient(135deg, #e9c48a, #111827); }
+    .suggestion { border: 1px solid rgba(255,211,223,.14); border-radius: 14px; padding: 12px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 12px; line-height: 1.5; }
+    .status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 750; white-space: pre-line; }
+    .status.error { color: #fecdd3; }
+    .status.success { color: #bbf7d0; }
+    .media-control { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.04); }
+    .media-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .media-preview { width: 86px; height: 112px; border-radius: 16px; border: 1px solid var(--line); object-fit: cover; background: rgba(0,0,0,.24); }
+    .media-preview.video { width: 120px; }
+    .media-row audio { width: min(100%, 320px); }
+    .help-panel { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; background: rgba(255,255,255,.035); }
+    .link-list { display: grid; gap: 10px; }
+    .links-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 0 8px;
+      color: rgba(255,245,247,.78);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .links-section-head span {
+      color: rgba(255,245,247,.48);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .link-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,.045);
+      display: grid;
+      gap: 12px;
+    }
+    .link-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .link-card-title { display: grid; gap: 3px; }
+    .link-card-title strong { font-size: 14px; }
+    .link-card-title span { color: var(--muted); font-size: 12px; }
+    .link-card-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .link-card-fields .wide { grid-column: 1 / -1; }
+    .link-card-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .link-card-actions .button { min-height: 36px; padding: 0 11px; font-size: 12px; }
+    .advanced-box {
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.14);
+    }
+    .advanced-box summary {
+      cursor: pointer;
+      color: rgba(255,245,247,.72);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .advanced-box .fields { margin-top: 10px; }
+    .section-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .section-split { display: grid; gap: 12px; }
+    .add-link-row { display: flex; justify-content: center; }
+    .battle-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .battle-controls .button { min-height: 38px; padding: 0 10px; border-radius: 11px; font-size: 12px; }
+    .battle-controls .button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,211,223,.12); }
+    .battle-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: rgba(255,245,247,.72); font-size: 12px; }
+    .battle-summary span { border: 1px solid rgba(255,211,223,.14); border-radius: 999px; padding: 7px 9px; background: rgba(255,255,255,.04); }
+    .overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .stat-card { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: rgba(255,255,255,.045); }
+    .stat-card span { display: block; color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-card strong { display: block; margin-top: 7px; font-size: 18px; }
+    .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .runtime-board { display: grid; gap: 14px; }
+    .runtime-section { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(255,255,255,.04); display: grid; gap: 12px; }
+    .runtime-section h3 { margin: 0; font-size: 15px; }
+    .runtime-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .runtime-actions.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .runtime-actions .button { min-height: 58px; border-radius: 16px; font-size: 15px; }
+    .runtime-actions .button.primary { font-size: 16px; }
+    .runtime-field {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(0,0,0,.16);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .segment {
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.045);
+      color: rgba(255,245,247,.72);
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .segment[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(255,211,223,.12);
+    }
+    .runtime-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .sticky-save {
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 20;
+      width: min(360px, calc(100vw - 28px));
+      min-height: 48px;
+      overflow: hidden;
+      transform: translateX(-50%);
+      box-shadow: 0 18px 54px rgba(0,0,0,.35), 0 16px 42px rgba(255,159,189,.2);
+    }
+    .sticky-save[hidden] { display: none !important; }
+    .save-button-content {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      min-width: 0;
+      white-space: nowrap;
+    }
+    .save-button-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      display: block;
+      width: 100%;
+      max-width: calc(100% - 92px);
+      text-align: center;
+      opacity: 1;
+      transform: translate(-50%, -50%);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .save-button-label.is-fading { opacity: 0; transform: translate(-50%, calc(-50% + 3px)); }
+    .save-spinner,
+    .save-check {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      width: 15px;
+      height: 15px;
+      opacity: 0;
+      transform: translateY(-50%) scale(.82);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .save-spinner {
+      border: 2px solid rgba(36,16,14,.2);
+      border-top-color: rgba(36,16,14,.78);
+      border-radius: 999px;
+    }
+    .save-check {
+      display: grid;
+      place-items: center;
+      color: #24100e;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 950;
+    }
+    .sticky-save[data-save-state="saving"] .save-spinner {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+      animation: saveSpin .82s linear infinite;
+    }
+    .sticky-save[data-save-state="saved"] .save-check { opacity: 0; transform: translateY(-50%) scale(.82); }
+    .sticky-save[data-save-state="failed"] {
+      background: linear-gradient(135deg, #fecdd3, #fb7185);
+      color: #2a080d;
+    }
+    @keyframes saveSpin {
+      from { transform: translateY(-50%) rotate(0deg) scale(1); }
+      to { transform: translateY(-50%) rotate(360deg) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .save-button-label,
+      .save-spinner,
+      .save-check,
+      .unlock-spinner,
+      .unlock-check { transition: none; }
+      .sticky-save[data-save-state="saving"] .save-spinner { animation: none; }
+      .gate-card[data-unlock-state="unlocking"] .unlock-spinner { animation: none; }
+      .gate { transition: none; }
+    }
+    .preview { position: sticky; top: 18px; display: grid; gap: 12px; }
+    .phone { min-height: 620px; border: 1px solid var(--line); border-radius: 34px; padding: 12px; background: #020304; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
+    iframe { width: 100%; height: 596px; border: 0; border-radius: 24px; background: #080504; }
+    @media (max-width: 900px) {
+      .topbar { flex-direction: column; }
+      .actions { justify-content: flex-start; }
+      .grid { grid-template-columns: 1fr; }
+      .preview { display: none; }
+    }
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 18px, 1180px); padding-top: 12px; padding-bottom: 150px; }
+      .gate { padding-inline: 14px; }
+      .gate-card { border-radius: 28px; padding: 28px; }
+      .gate-footer { min-height: 150px; padding-bottom: 24px; }
+      .gate-powered img { width: 98px; }
+      .panel { padding: 14px; border-radius: 16px; }
+      .topbar { margin-bottom: 12px; }
+      .stack { gap: 12px; }
+      .fields { grid-template-columns: 1fr; }
+      .link-card-fields { grid-template-columns: 1fr; }
+      .link-card-fields .wide { grid-column: auto; }
+      .overview-grid, .runtime-actions, .runtime-actions.two, .segmented { grid-template-columns: 1fr; }
+      .theme-grid { grid-template-columns: repeat(2, 1fr); }
+      .dna-grid { grid-template-columns: 1fr; }
+      .span-2 { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gate" id="gate">
+    <form class="gate-card" id="loginForm" data-unlock-state="idle">
+      <div class="eyebrow">CREATOR ACCESS</div>
+      <h1>Doonia J</h1>
+      <p class="muted">Enter your creator password.</p>
+      <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
+      <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
+        <span class="unlock-button-content">
+          <span class="unlock-spinner" aria-hidden="true"></span>
+          <span class="unlock-check" aria-hidden="true">✓</span>
+          <span id="unlockButtonLabel">Unlock</span>
+        </span>
+      </button>
+      <div class="status" id="loginStatus" aria-live="polite"></div>
+    </form>
+    <div class="gate-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
+      <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
+      <div class="gate-powered">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </div>
+    </div>
+  </div>
+
+  <main class="shell" id="app" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <h1>Doonia J</h1>
+      </div>
+      <div class="actions">
+        <a class="button" href="https://doneovernight.com/doonia?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
+        <button class="button danger" id="logoutButton" type="button">Logout</button>
+      </div>
+    </header>
+
+    <nav class="admin-tabs" aria-label="Creator admin sections">
+      <button class="admin-tab" type="button" role="tab" aria-selected="true" data-admin-tab="overview">Overview</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="settings">Settings</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience">Experience</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links">Links</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime">Live Runtime</button>
+      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics">Analytics</button>
+    </nav>
+
+    <section class="grid">
+      <form class="stack" id="settingsForm" novalidate>
+        <section class="panel tab-panel" data-admin-panel="overview">
+          <h2>Overview</h2>
+          <div class="section-note">How is my page performing?</div>
+          <div style="height:12px"></div>
+          <div class="overview-grid">
+            <div class="stat-card"><span>Live Status</span><strong id="overviewLiveStatus">Checking</strong></div>
+            <div class="stat-card"><span>Battle</span><strong id="overviewBattleStatus">Inactive</strong></div>
+            <div class="stat-card"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
+            <div class="stat-card"><span>Last Save</span><strong id="overviewLastSave">Not yet</strong></div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Profile</h2>
+          <div class="section-note">Who am I?</div>
+          <div style="height:12px"></div>
+          <div class="fields">
+            <label>Display name<input name="display_name" required></label>
+            <label>Username / slug<input name="username" required></label>
+            <label class="span-2">Bio<textarea name="bio"></textarea></label>
+            <label>Location<input name="location"></label>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Profile Image</h2>
+          <div class="fields">
+            <label class="span-2">Profile Image URL<input name="avatar_url" type="url" placeholder="Paste asset URL if upload is unavailable"></label>
+            <div class="span-2 media-control">
+              <strong>Upload/change profile image</strong>
+              <span class="muted">Accepts image files. Paste an asset URL above if storage upload is unavailable.</span>
+              <div class="media-row">
+                <img class="media-preview" id="avatarPreview" alt="Profile image preview">
+                <input id="avatarFile" type="file" accept="image/*">
+                <button class="button" id="uploadAvatar" type="button">Upload image</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Hero</h2>
+          <div class="section-note">How does my page feel?</div>
+          <div style="height:12px"></div>
+          <div class="fields">
+            <label class="span-2">Hero Image URL<input name="banner_url" type="url" placeholder="Paste hero image asset URL"></label>
+            <div class="span-2 media-control">
+              <strong>Upload/change hero image</strong>
+              <span class="muted">Used as the TikTok-safe fallback and poster image.</span>
+              <div class="media-row">
+                <img class="media-preview" id="heroImagePreview" alt="Hero image preview">
+                <input id="heroImageFile" type="file" accept="image/*">
+                <button class="button" id="uploadHeroImage" type="button">Upload image</button>
+              </div>
+            </div>
+            <label class="span-2">Hero Video URL<input name="hero_video_url" type="url" placeholder="Paste vertical video asset URL"></label>
+            <div class="span-2 media-control">
+              <strong>Upload/change hero video</strong>
+              <span class="muted">Vertical video recommended. Keep it short, roughly 7-10 seconds, muted/loop friendly.</span>
+              <div class="media-row">
+                <video class="media-preview video" id="heroPreview" muted loop playsinline controls></video>
+                <input id="heroFile" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
+                <button class="button" id="uploadHero" type="button">Upload video</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="links" hidden>
+          <h2>Links</h2>
+          <div class="section-note">Where do I send people? Turning a block off removes it from the public page and related visitor surfaces.</div>
+          <div style="height:12px"></div>
+          <div class="links-section-head">Core links<span>Public blocks</span></div>
+          <div class="link-list">
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Discord</strong><span>Direct Discord invite link.</span></div>
+                <label class="switch" aria-label="Discord link visible"><input name="discord_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="discord_link_title"></label>
+                <label>CTA<input name="discord_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="discord_link_subtitle"></label>
+                <label class="wide">Destination<input name="discord_invite_url" type="url" placeholder="Discord invite URL"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>TikTok</strong><span>Main TikTok profile link.</span></div>
+                <label class="switch" aria-label="TikTok link visible"><input name="tiktok_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="tiktok_link_title"></label>
+                <label>CTA<input name="tiktok_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="tiktok_link_subtitle"></label>
+                <label class="wide">TikTok URL<input name="tiktok_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Prepare for Battle / TikTok Coins</strong><span>Support block before battles.</span></div>
+                <label class="switch" aria-label="Battle link visible"><input name="battle_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="battle_link_title"></label>
+                <label>CTA<input name="battle_link_cta_label"></label>
+                <label class="wide">Description<input name="battle_link_subtitle"></label>
+                <label class="wide">TikTok Coins URL<input name="tiktok_coins_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Business Email</strong><span>Booking and collaboration contact.</span></div>
+                <label class="switch" aria-label="Business email visible"><input name="business_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="business_link_title"></label>
+                <label>CTA<input name="business_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="business_link_subtitle"></label>
+                <label class="wide">Business email<input name="business_email" type="email"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Newsletter</strong><span>Compact mailing list interaction.</span></div>
+                <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
+                <label>CTA<input name="newsletter_cta_label"></label>
+                <label class="wide">Subtitle<input name="subscribe_popup_copy" placeholder="Get updates from Doonia"></label>
+                <label class="wide">Destination<input name="newsletter_destination" placeholder="In-page email signup"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
+                <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="music_link_title"></label>
+                <label>CTA<input name="music_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="music_link_subtitle"></label>
+                <label class="wide">Destination<input name="music_url" type="url" placeholder="Apple Music, Spotify, YouTube Music, or TikTok Sound"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>FAQ</strong><span>Optional FAQ destination.</span></div>
+                <label class="switch" aria-label="FAQ visible"><input name="faq_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="faq_link_title"></label>
+                <label>CTA<input name="faq_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="faq_link_subtitle"></label>
+                <label class="wide">Destination<input name="faq_link_url" type="url"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Community</strong><span>Public community block and visitor destination.</span></div>
+                <label class="switch" aria-label="Community visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+              <div class="link-card-fields">
+                <label>Title<input name="community_link_title"></label>
+                <label>CTA<input name="community_link_cta_label"></label>
+                <label class="wide">Subtitle<input name="community_link_subtitle"></label>
+                <label class="wide">Destination<input name="community_link_url" type="url" placeholder="Discord invite or community URL"></label>
+              </div>
+            </section>
+
+            <section class="link-card">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Share</strong><span>Creator share button and share sheet.</span></div>
+                <label class="switch" aria-label="Share visible"><input name="share_link_visible" type="checkbox"><span class="track"></span></label>
+              </div>
+            </section>
+
+            <div class="links-section-head">Custom links<span>Creator-defined blocks</span></div>
+            <section class="link-card" aria-label="Custom links builder">
+              <div class="link-card-head">
+                <div class="link-card-title"><strong>Custom Links</strong><span>Add, edit, disable, delete, and reorder custom blocks.</span></div>
+                <button class="button" id="addCustomLink" type="button">Add Link</button>
+              </div>
+              <div class="link-list" id="customLinksList"></div>
+              <input name="custom_links" type="hidden" value="[]">
+            </section>
+          </div>
+          <input name="discord_url" type="hidden">
+          <input name="discord_server_id" type="hidden">
+          <input name="community_state" type="hidden" value="open">
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="runtime" hidden>
+          <h2>Live Runtime</h2>
+          <div class="section-note">What is happening right now?</div>
+          <div style="height:12px"></div>
+          <div class="runtime-board">
+            <div class="runtime-section">
+              <h3>Live</h3>
+              <div class="runtime-actions two">
+                <button class="button primary" type="button" data-runtime-action="start-live">Start Live</button>
+                <button class="button danger" type="button" data-runtime-action="end-live">End Live</button>
+              </div>
+              <input name="live_url" type="hidden">
+              <input name="live_button_text" type="hidden">
+              <input name="tiktok_live_username" type="hidden">
+              <input name="auto_live_detection_enabled" type="hidden" value="true">
+              <input name="live_status" type="hidden" value="false">
+              <input name="battle_mode_enabled" type="hidden" value="false">
+              <div class="switch-row">
+                <div><strong>Manual live mode</strong><span>Use only when automatic detection is unavailable.</span></div>
+                <label class="switch" aria-label="Manual live mode"><input id="manualLiveModeControl" name="manual_live_fallback_enabled" type="checkbox"><span class="track"></span></label>
+              </div>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Battle</h3>
+              <div class="runtime-actions">
+                <button class="button primary" type="button" data-battle-action="start">Battle Mode ON</button>
+                <button class="button" type="button" data-battle-action="end">Battle Mode OFF</button>
+                <button class="button" type="button" data-battle-action="undo">Undo Last Result</button>
+                <button class="button" type="button" data-battle-action="won">Won</button>
+                <button class="button" type="button" data-battle-action="lost">Lost</button>
+                <button class="button" type="button" data-battle-action="tie">Tie</button>
+              </div>
+              <div class="runtime-field">
+                <label>Opponent Name<input name="battle_opponent" placeholder="Opponent name"></label>
+              </div>
+              <label>Current win streak<input name="battle_win_streak" type="number" min="0" step="1" inputmode="numeric"></label>
+              <label>Last result<input name="battle_result" readonly placeholder="None"></label>
+              <input name="battle_updated_at" type="hidden">
+              <input name="battle_undo_snapshot" type="hidden">
+              <div class="battle-summary" id="battleSummary"></div>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Statistics</h3>
+              <div class="runtime-actions two">
+                <button class="button" type="button" data-runtime-action="reset-streak">Reset Win Streak</button>
+                <button class="button" type="button" data-runtime-action="refresh-runtime">Refresh Runtime</button>
+              </div>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Pinned Block</h3>
+              <div class="segmented" id="pinnedBlockControls">
+                <button class="segment" type="button" data-pinned-block="prepare">Prepare for Battle</button>
+                <button class="segment" type="button" data-pinned-block="faq">FAQ</button>
+                <button class="segment" type="button" data-pinned-block="poll">Poll</button>
+                <button class="segment" type="button" data-pinned-block="announcement">Announcement</button>
+                <button class="segment" type="button" data-pinned-block="community">Community</button>
+                <button class="segment" type="button" data-pinned-block="newsletter">Newsletter</button>
+                <button class="segment" type="button" data-pinned-block="countdown">Countdown</button>
+              </div>
+              <input name="pinned_block" type="hidden">
+              <div class="runtime-note">Pinned blocks are saved immediately and prepared for public page modules.</div>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Countdown</h3>
+              <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
+              <button class="button" type="button" data-pinned-block="countdown">Pin Countdown</button>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Announcements</h3>
+              <label>Quick announcement field<textarea name="quick_announcement" placeholder="Short update for the public page"></textarea></label>
+              <button class="button primary" type="button" data-runtime-action="push-announcement">Push to public page</button>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Poll</h3>
+              <label>Quick poll field<textarea name="quick_poll" placeholder="Question for viewers"></textarea></label>
+              <button class="button" type="button" data-pinned-block="poll">Pin Poll</button>
+            </div>
+
+            <div class="runtime-section">
+              <h3>Runtime status</h3>
+              <div class="help-panel" id="liveRuntimeStatus">
+                Last checked: not yet. Status: unknown. Source: unknown.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="analytics" hidden>
+          <h2>Analytics</h2>
+          <div class="section-note">What happened?</div>
+          <div style="height:12px"></div>
+          <div class="help-panel">Analytics will live here when Creator OS reporting is enabled.</div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Welcome intro</h2>
+          <div class="switch-row">
+            <div><strong>Welcome Intro Enabled</strong><span>Shows the first-visit cinematic intro.</span></div>
+            <label class="switch" aria-label="Welcome intro enabled"><input name="welcome_intro_enabled" type="checkbox"><span class="track"></span></label>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Creator Signature</h2>
+          <div class="fields">
+            <div class="span-2 switch-row">
+              <div><strong>Creator Signature Enabled</strong><span>Short welcome sound that plays when visitors enter.</span></div>
+              <label class="switch" aria-label="Intro audio enabled"><input name="intro_audio_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <label class="span-2">Creator Signature URL<input name="intro_audio_url" type="url" placeholder="Paste direct audio asset URL"></label>
+            <div class="span-2 media-control">
+              <strong>Upload Creator Signature</strong>
+              <span class="muted">Upload a song or short sound. Creator OS will turn it into a short welcome signature.</span>
+              <div class="media-row">
+                <audio id="introAudioPreview" controls preload="none"></audio>
+                <input id="introAudioFile" type="file" accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac">
+                <button class="button" id="uploadIntroAudio" type="button">Upload audio</button>
+              </div>
+              <div class="status" id="introAudioUploadStatus" aria-live="polite"></div>
+            </div>
+            <label>Start time<input id="introAudioStartTime" type="number" min="0" max="3600" step="0.25" value="0"></label>
+            <label>Clip length<input id="introAudioClipLength" type="number" min="1" max="15" step="0.25" value="10"></label>
+            <label>Volume<input name="intro_audio_volume" type="number" min="0" max="1" step="0.05"></label>
+            <label>Fade Out Duration<input name="intro_audio_fade_out_duration" type="number" min="0" max="10" step="0.25" placeholder="2"></label>
+            <label>Stop After<input name="intro_audio_stop_after" type="number" min="1" max="30" step="0.25" placeholder="4"></label>
+            <div class="span-2 help-panel">Preferred intro length: 8-12 seconds. Creator OS uploads only a short prepared clip, never the full song.</div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Creator DNA</h2>
+          <div class="dna-grid" id="dnaGrid"></div>
+          <div style="height:12px"></div>
+          <div class="suggestion" id="dnaSuggestion">Creator DNA shapes layout defaults, CTA suggestions, admin guidance, and future AI prompts.</div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Theme Engine</h2>
+          <div class="muted" style="margin-bottom:12px;">Preview Theme updates the admin and preview instantly. Save only when it feels right.</div>
+          <div class="theme-grid" id="themeGrid"></div>
+          <div style="height:12px"></div>
+          <label>Background Gradient<textarea name="background_gradient"></textarea></label>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>Ambient mode</h2>
+          <div class="fields">
+            <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
+            <div class="span-2 switch-row">
+              <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to Doonia's local time.</span></div>
+              <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="span-2 switch-row">
+              <div><strong>Seasonal effects enabled</strong><span>Subtle seasonal lighting and gradient shifts.</span></div>
+              <label class="switch" aria-label="Seasonal effects enabled"><input name="seasonal_effects_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="span-2 switch-row">
+              <div><strong>Holiday effects enabled</strong><span>Premium holiday atmosphere without gimmicks.</span></div>
+              <label class="switch" aria-label="Holiday effects enabled"><input name="holiday_effects_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Password</h2>
+          <div class="fields">
+            <label>Current password<input name="current_password" type="password" autocomplete="current-password"></label>
+            <label>New password<input name="new_password" type="password" autocomplete="new-password"></label>
+            <label>Confirm new password<input name="confirm_password" type="password" autocomplete="new-password"></label>
+            <div class="switch-row">
+              <div><strong>Password auth</strong><span>Stored hashed server-side when storage is available.</span></div>
+              <button class="button" id="savePassword" type="button">Save password</button>
+            </div>
+            <div class="span-2 status" id="passwordStatus"></div>
+          </div>
+        </section>
+
+        <section class="panel tab-panel" data-admin-panel="settings">
+          <h2>Creator Passport</h2>
+          <div class="fields">
+            <div class="switch-row span-2">
+              <div><strong>Creator Passport</strong><span>Show Creator Passport in the footer navigation.</span></div>
+              <label class="switch" aria-label="Creator Passport visibility"><input name="creator_passport_visible" type="checkbox"><span class="track"></span></label>
+            </div>
+            <div class="span-2 help-panel">
+              <strong>Quick Access</strong><br>
+              Add to Home Screen for a faster creator dashboard feel.<br>
+              Preview icon: DONEOVERNIGHT wordmark. Doonia can choose an icon theme; changing it later may require reinstalling.
+            </div>
+            <a class="button span-2" href="https://doneovernight.com/doonia?experience=1&preview=1" target="_blank" rel="noreferrer">Open Quick Access</a>
+            <details class="advanced-box span-2">
+              <summary>Advanced</summary>
+              <div class="fields">
+                <div class="switch-row span-2">
+                  <div><strong>Doonia route</strong><span>Production routing serves /doonia and /admin/doonia.</span></div>
+                  <label class="switch" aria-label="Doonia route"><input name="redirect_mina_enabled" type="checkbox"><span class="track"></span></label>
+                </div>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <button class="button primary sticky-save tab-panel" data-admin-panel="settings experience links" data-save-state="idle" id="saveFloating" type="button" aria-live="polite">
+          <span class="save-button-content">
+            <span class="save-spinner" aria-hidden="true"></span>
+            <span class="save-check" aria-hidden="true">✓</span>
+            <span class="save-button-label" id="saveButtonLabel">Save page</span>
+          </span>
+        </button>
+        <div class="status" id="saveStatus"></div>
+      </form>
+
+      <aside class="preview">
+        <section class="panel">
+          <h2>Live preview</h2>
+          <div class="muted">Theme and DNA preview instantly. Save to publish.</div>
+        </section>
+        <div class="phone"><iframe id="previewFrame" src="https://doneovernight.com/doonia" title="Doonia public page preview"></iframe></div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const sessionFlag = "doneovernight_creator_doonia";
+    const sessionKey = "doneovernight_creator_doonia_session";
+    const themes = [
+      ["doonia", "Doonia Fitness"],
+      ["mina", "Mina Premium"],
+      ["rose", "Baby Pink"],
+      ["chocolate", "Warm Brown"],
+      ["onyx", "Midnight DON"],
+      ["violet", "Creator Violet"],
+      ["neon", "Neon DON"],
+      ["founder", "Founder DON"]
+    ];
+    const themeVars = {
+      doonia: ["#d4a04c", "#8b5a24", "rgba(212,160,76,.2)", "rgba(126,82,36,.24)"],
+      mina: ["#ffd3df", "#8b5f4a", "rgba(255,211,223,.18)", "rgba(139,95,74,.22)"],
+      rose: ["#fecdd3", "#fb7185", "rgba(251,113,133,.18)", "rgba(240,171,252,.16)"],
+      chocolate: ["#f2c6a8", "#8b5f4a", "rgba(139,95,74,.22)", "rgba(58,33,25,.26)"],
+      onyx: ["#f5f1ea", "#6b7280", "rgba(245,241,234,.12)", "rgba(75,85,99,.18)"],
+      violet: ["#c4b5fd", "#7c3aed", "rgba(124,58,237,.18)", "rgba(196,181,253,.14)"],
+      neon: ["#67e8f9", "#fb7185", "rgba(103,232,249,.16)", "rgba(251,113,133,.16)"],
+      founder: ["#e9c48a", "#111827", "rgba(233,196,138,.16)", "rgba(17,24,39,.24)"]
+    };
+    const dnaOptions = [
+      ["streamer", "Streamer", "Live-first CTA, Discord community, countdown priority."],
+      ["influencer", "Influencer", "Social proof, collabs, and platform links first."],
+      ["founder", "Founder", "Business CTA, launches, waitlists, credibility blocks."],
+      ["artist", "Artist", "Visual-first layout, softer drops, expressive intro prompts."],
+      ["musician", "Musician", "Audio, releases, shows, and fan membership prompts."],
+      ["podcaster", "Podcaster", "Episode cadence, audio-first prompts, guest CTAs."],
+      ["gamer", "Gamer", "Live status, community, clips, and high-contrast prompts."],
+      ["realtor", "Realtor", "Listings, neighborhoods, lead capture, and trust blocks."],
+      ["coach", "Coach", "Programs, proof, booking, and newsletter conversion."],
+      ["restaurant", "Restaurant", "Menu, reservations, events, and local discovery."],
+      ["business", "Business", "Offer, credibility, contact, and productized services."]
+    ];
+    let activeTheme = "doonia";
+    let activeDna = "coach";
+    let saving = false;
+    let saveResetTimer = 0;
+    let saveFadeTimer = 0;
+    let unlockResetTimer = 0;
+    let pendingSaveScroll = null;
+    const form = document.getElementById("settingsForm");
+    const $ = (id) => document.getElementById(id);
+    form.noValidate = true;
+
+    function readableMessage(value, fallback = "Something went wrong.") {
+      if (!value) return fallback;
+      if (typeof value === "string") return value;
+      if (value instanceof Error) return value.message || fallback;
+      if (typeof value === "object") {
+        const parts = [];
+        const add = (item) => {
+          if (!item) return;
+          if (typeof item === "string") parts.push(item);
+          else if (typeof item === "object") {
+            ["message", "error", "details", "hint", "code", "status", "statusCode"].forEach((key) => {
+              if (item[key] && typeof item[key] !== "object") parts.push(String(item[key]));
+            });
+          }
+        };
+        add(value);
+        add(value.error);
+        add(value.details);
+        add(value.data);
+        const message = parts.filter(Boolean).join(" ");
+        if (message) return message;
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return fallback;
+        }
+      }
+      return String(value);
+    }
+    function setStatus(message, isError, targetId = "saveStatus") {
+      const status = $(targetId);
+      status.textContent = message ? readableMessage(message, "") : "";
+      status.classList.toggle("error", Boolean(isError));
+      status.classList.toggle("success", Boolean(message) && !isError);
+    }
+    function setSaveButtonState(state, options = {}) {
+      const button = $("saveFloating");
+      const label = $("saveButtonLabel");
+      if (!button || !label) return;
+      const textByState = {
+        idle: "Save page",
+        saving: "Saving...",
+        saved: "Saved ✓",
+        failed: "Error"
+      };
+      const text = textByState[state] || textByState.idle;
+      window.clearTimeout(saveResetTimer);
+      window.clearTimeout(saveFadeTimer);
+      button.dataset.saveState = state;
+      button.disabled = state === "saving";
+      button.setAttribute("aria-label", text);
+      if (label.textContent !== text) {
+        label.classList.add("is-fading");
+        saveFadeTimer = window.setTimeout(() => {
+          label.textContent = text;
+          label.classList.remove("is-fading");
+        }, 120);
+      }
+      if (options.resetAfter) {
+        saveResetTimer = window.setTimeout(() => {
+          setSaveButtonState("idle");
+        }, options.resetAfter);
+      }
+    }
+    function blurActiveControl() {
+      const active = document.activeElement;
+      if (active && form.contains(active) && typeof active.blur === "function") active.blur();
+    }
+    function restoreScrollPosition(position) {
+      window.requestAnimationFrame(() => window.scrollTo(position.x, position.y));
+    }
+    function captureSaveTap() {
+      pendingSaveScroll = { x: window.scrollX, y: window.scrollY };
+      blurActiveControl();
+    }
+    function fieldName(element) {
+      const label = element.closest("label");
+      if (!label) return element.name || "field";
+      return Array.from(label.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent.trim())
+        .filter(Boolean)
+        .join(" ")
+        .replace(/\s+/g, " ") || element.name || "field";
+    }
+    function isAcceptableUrl(value) {
+      if (!value) return true;
+      if (value.startsWith("/")) return true;
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    function isExternalUrl(value) {
+      if (!value) return true;
+      try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    }
+    function directAudioUrl(value) {
+      if (!value) return "";
+      try {
+        const url = new URL(value, window.location.origin);
+        if ((url.protocol === "http:" || url.protocol === "https:") && /\.(mp3|m4a|aac|wav)$/i.test(url.pathname)) return url.href;
+      } catch {}
+      return "";
+    }
+    function validateIntroAudioFile(file) {
+      if (!file) return "Choose an .mp3, .m4a, or .aac file first.";
+      const extensionOk = /\.(mp3|m4a|aac)$/i.test(file.name || "");
+      const mime = String(file.type || "").toLowerCase();
+      const mimeOk = !mime || mime === "application/octet-stream" || [
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mpeg3",
+        "audio/x-mpeg",
+        "audio/x-mpeg-3",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/x-m4a",
+        "audio/aac",
+        "audio/aacp"
+      ].includes(mime);
+      if (!extensionOk) return "Intro audio must use .mp3, .m4a, or .aac.";
+      if (!mimeOk) return "Unsupported audio MIME type: " + (mime || "unknown") + ".";
+      return "";
+    }
+    const INTRO_AUDIO_MAX_UPLOAD_BYTES = 2_000_000;
+    const INTRO_AUDIO_MAX_CLIP_SECONDS = 15;
+    const INTRO_AUDIO_DEFAULT_CLIP_SECONDS = 10;
+    const INTRO_AUDIO_TARGET_SAMPLE_RATE = 44100;
+
+    function introAudioClipControls() {
+      const startInput = $("introAudioStartTime");
+      const lengthInput = $("introAudioClipLength");
+      const start = Math.max(0, Number(startInput && startInput.value) || 0);
+      const length = Math.max(1, Math.min(INTRO_AUDIO_MAX_CLIP_SECONDS, Number(lengthInput && lengthInput.value) || INTRO_AUDIO_DEFAULT_CLIP_SECONDS));
+      if (lengthInput && Number(lengthInput.value) !== length) lengthInput.value = String(length);
+      if (startInput && Number(startInput.value) !== start) startInput.value = String(start);
+      return { start, length };
+    }
+    function decodeAudioArrayBuffer(arrayBuffer) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error("This browser cannot prepare audio clips. Try Safari, Chrome, or a shorter direct file.");
+      const context = new AudioContextClass();
+      return new Promise((resolve, reject) => {
+        const close = () => {
+          if (typeof context.close === "function") context.close().catch(() => {});
+        };
+        const onSuccess = (buffer) => {
+          close();
+          resolve(buffer);
+        };
+        const onFailure = () => {
+          close();
+          reject(new Error("This browser could not decode that audio file. Try an .mp3 file or choose a different song."));
+        };
+        try {
+          const result = context.decodeAudioData(arrayBuffer.slice(0), onSuccess, onFailure);
+          if (result && typeof result.then === "function") result.then(onSuccess).catch(onFailure);
+        } catch (error) {
+          onFailure();
+        }
+      });
+    }
+    async function renderIntroAudioClip(sourceBuffer, start, length) {
+      const OfflineContextClass = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OfflineContextClass) throw new Error("This browser cannot trim audio before upload. Try Safari or Chrome.");
+      const available = Math.max(0, sourceBuffer.duration - start);
+      const duration = Math.min(length, INTRO_AUDIO_MAX_CLIP_SECONDS, available);
+      if (duration < 0.5) throw new Error("Start time is past the usable part of the audio. Choose an earlier start time.");
+      const frameCount = Math.max(1, Math.ceil(duration * INTRO_AUDIO_TARGET_SAMPLE_RATE));
+      const offline = new OfflineContextClass(1, frameCount, INTRO_AUDIO_TARGET_SAMPLE_RATE);
+      const source = offline.createBufferSource();
+      source.buffer = sourceBuffer;
+      source.connect(offline.destination);
+      source.start(0, start, duration);
+      const rendered = await offline.startRendering();
+      return { buffer: rendered, duration };
+    }
+    function wavBlobFromAudioBuffer(audioBuffer) {
+      const samples = audioBuffer.getChannelData(0);
+      const buffer = new ArrayBuffer(44 + samples.length * 2);
+      const view = new DataView(buffer);
+      const writeString = (offset, value) => {
+        for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+      };
+      writeString(0, "RIFF");
+      view.setUint32(4, 36 + samples.length * 2, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, audioBuffer.sampleRate, true);
+      view.setUint32(28, audioBuffer.sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(36, "data");
+      view.setUint32(40, samples.length * 2, true);
+      let offset = 44;
+      for (let index = 0; index < samples.length; index += 1, offset += 2) {
+        const sample = Math.max(-1, Math.min(1, samples[index]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+      return new Blob([buffer], { type: "audio/wav" });
+    }
+    function introAudioClipName(file) {
+      const base = String(file && file.name || "creator-signature")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-z0-9._-]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 56) || "creator-signature";
+      return base + "-intro-clip.wav";
+    }
+    async function prepareIntroAudioUpload(file) {
+      const error = validateIntroAudioFile(file);
+      if (error) throw new Error(error);
+      if (file.size <= INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        try {
+          const probeBuffer = await decodeAudioArrayBuffer(await file.arrayBuffer());
+          if (probeBuffer.duration <= INTRO_AUDIO_MAX_CLIP_SECONDS) {
+            return { file, message: "", previewUrl: URL.createObjectURL(file), duration: probeBuffer.duration, clipped: false };
+          }
+        } catch (probeError) {
+          throw probeError;
+        }
+      }
+      const { start, length } = introAudioClipControls();
+      setIntroAudioStatus("Creating a short intro clip before upload...", false);
+      const decoded = await decodeAudioArrayBuffer(await file.arrayBuffer());
+      const shouldUseClip = decoded.duration > INTRO_AUDIO_MAX_CLIP_SECONDS || file.size > INTRO_AUDIO_MAX_UPLOAD_BYTES || start > 0;
+      if (!shouldUseClip && file.size <= INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        return { file, message: "", previewUrl: URL.createObjectURL(file), duration: decoded.duration, clipped: false };
+      }
+      const clip = await renderIntroAudioClip(decoded, start, length);
+      const blob = wavBlobFromAudioBuffer(clip.buffer);
+      if (blob.size > INTRO_AUDIO_MAX_UPLOAD_BYTES) {
+        throw new Error("The prepared intro clip is still too large. Choose a shorter clip length under 15 seconds.");
+      }
+      const clippedFile = new File([blob], introAudioClipName(file), { type: "audio/wav" });
+      const message = decoded.duration > INTRO_AUDIO_MAX_CLIP_SECONDS
+        ? "We created a short intro clip from the beginning of your song."
+        : "We prepared a short upload-safe creator signature.";
+      return { file: clippedFile, message, previewUrl: URL.createObjectURL(clippedFile), duration: clip.duration, clipped: true };
+    }
+    function audioPreviewErrorMessage(audio) {
+      const error = audio && audio.error;
+      if (!error) return "Preview could not load this audio file.";
+      const messages = {
+        1: "Preview loading was aborted.",
+        2: "Preview failed because of a network error.",
+        3: "Preview failed because the audio could not be decoded.",
+        4: "Preview failed because the audio format is not supported by this browser."
+      };
+      return messages[error.code] || ("Preview error code " + error.code + ".");
+    }
+    function setIntroAudioStatus(message, isError) {
+      setStatus(message, isError, "introAudioUploadStatus");
+    }
+    function introAudioSaveContext() {
+      return boolField("intro_audio_enabled") || Boolean(String(form.elements.intro_audio_url && form.elements.intro_audio_url.value || "").trim());
+    }
+    function introAudioSaveError(reason) {
+      return "Could not save intro audio.\n\nReason:\n" + readableMessage(reason, "Unknown save error.");
+    }
+    async function setIntroAudioPreview(url, options = {}) {
+      const preview = $("introAudioPreview");
+      if (!preview) return false;
+      const src = String(url || "").trim();
+      preview.pause();
+      if (!src) {
+        preview.removeAttribute("src");
+        preview.load();
+        setIntroAudioStatus("", false);
+        return false;
+      }
+      preview.src = src;
+      preview.load();
+      setIntroAudioStatus(options.loadingMessage || "Loading audio preview...", false);
+      await new Promise((resolve) => {
+        let settled = false;
+        const done = (message, isError) => {
+          if (settled) return;
+          settled = true;
+          preview.removeEventListener("canplaythrough", onReady);
+          preview.removeEventListener("loadedmetadata", onReady);
+          preview.removeEventListener("error", onError);
+          if (message !== undefined) setIntroAudioStatus(message, isError);
+          resolve(!isError);
+        };
+        const onReady = () => done("Audio preview ready.", false);
+        const onError = () => done(audioPreviewErrorMessage(preview), true);
+        preview.addEventListener("canplaythrough", onReady, { once: true });
+        preview.addEventListener("loadedmetadata", onReady, { once: true });
+        preview.addEventListener("error", onError, { once: true });
+        window.setTimeout(() => done("Audio preview is still loading. Press play to test it.", false), 4500);
+      });
+      if (options.play) {
+        try {
+          preview.currentTime = 0;
+          await preview.play();
+          setIntroAudioStatus(options.successMessage || "✓ Audio uploaded\nPreview available\nReady to save", false);
+          return true;
+        } catch (error) {
+          const message = error && error.name === "NotAllowedError"
+            ? "Audio uploaded. Browser blocked autoplay in preview; press play to test it."
+            : "Audio uploaded, but preview playback failed: " + (error.message || audioPreviewErrorMessage(preview));
+          setIntroAudioStatus(message, error && error.name !== "NotAllowedError");
+          return false;
+        }
+      }
+      return true;
+    }
+    function validateSettingsForm() {
+      const elements = Array.from(form.elements).filter((element) => {
+        return element.name && !element.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
+      });
+      for (const element of elements) {
+        const value = String(element.value || "").trim();
+        if (element.required && !value) return fieldName(element) + " is required.";
+        if (value && element.name === "music_url" && !isExternalUrl(value)) return "Enter a valid external music link.";
+        if (element.name === "intro_audio_url" && boolField("intro_audio_enabled") && !directAudioUrl(value)) return "Creator Signature is enabled. Upload audio or paste a direct audio URL.";
+        if (value && element.type === "url" && !isAcceptableUrl(value)) return "Enter a valid URL for " + fieldName(element) + ".";
+        if (value && element.type === "email" && element.validity.typeMismatch) return "Enter a valid email for " + fieldName(element) + ".";
+        if (value && element.type === "number" && element.validity.badInput) return "Enter a valid number for " + fieldName(element) + ".";
+      }
+      for (const element of document.querySelectorAll("[data-custom-url]")) {
+        const value = String(element.value || "").trim();
+        if (value && !isAcceptableUrl(value)) return "Enter a valid URL for custom link.";
+      }
+      return "";
+    }
+    function setLoginStatus(message, isError) {
+      const status = $("loginStatus");
+      status.textContent = message || "";
+      status.classList.toggle("error", Boolean(isError));
+    }
+    function setUnlockButtonState(state, options = {}) {
+      const form = $("loginForm");
+      const button = $("unlockButton");
+      const label = $("unlockButtonLabel");
+      if (!form || !button || !label) return;
+      const textByState = {
+        idle: "Unlock",
+        unlocking: "Unlocking...",
+        welcome: "Welcome back",
+        failed: "Try again"
+      };
+      const text = textByState[state] || textByState.idle;
+      window.clearTimeout(unlockResetTimer);
+      form.dataset.unlockState = state;
+      button.disabled = state === "unlocking" || state === "welcome";
+      button.setAttribute("aria-label", text);
+      label.textContent = text;
+      if (options.resetAfter) {
+        unlockResetTimer = window.setTimeout(() => setUnlockButtonState("idle"), options.resetAfter);
+      }
+    }
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+    function creatorSession() { return sessionStorage.getItem(sessionKey) || ""; }
+    function openApp() {
+      const gate = $("gate");
+      if (gate) gate.remove();
+      $("app").hidden = false;
+      window.scrollTo(0, 0);
+    }
+    function closeApp() { window.location.reload(); }
+    function normalizeSlug(value) { return String(value || "doonia").toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "doonia"; }
+    function normalizeDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date.toISOString() : "";
+    }
+    function inputDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 16) : "";
+    }
+    function clampVolume(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return 0.35;
+      return Math.max(0, Math.min(1, number));
+    }
+    function clampDuration(value, fallback, min = 0, max = 30) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.max(min, Math.min(max, number));
+    }
+    function boolField(name, fallback = false) {
+      const element = form.elements[name];
+      if (!element) return fallback;
+      if (element.type === "checkbox") return element.checked;
+      return String(element.value || "").toLowerCase() === "true";
+    }
+    function setBoolField(name, value) {
+      const element = form.elements[name];
+      if (!element) return;
+      if (element.type === "checkbox") {
+        element.checked = Boolean(value);
+      } else {
+        element.value = Boolean(value) ? "true" : "false";
+      }
+    }
+    function customLinkId() {
+      return "custom-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+    }
+    function readCustomLinks() {
+      const rows = Array.from(document.querySelectorAll("[data-custom-link-row]"));
+      return rows.map((row) => ({
+        id: row.dataset.customLinkId || customLinkId(),
+        visible: Boolean(row.querySelector("[data-custom-visible]") && row.querySelector("[data-custom-visible]").checked),
+        title: String(row.querySelector("[data-custom-title]")?.value || "").trim() || "New link",
+        subtitle: String(row.querySelector("[data-custom-subtitle]")?.value || "").trim(),
+        cta_label: String(row.querySelector("[data-custom-cta]")?.value || "").trim() || "Open",
+        url: String(row.querySelector("[data-custom-url]")?.value || "").trim()
+      }));
+    }
+    function syncCustomLinksField() {
+      const field = form.elements.custom_links;
+      if (field) field.value = JSON.stringify(readCustomLinks());
+    }
+    function moveCustomLinkRow(row, direction) {
+      const list = $("customLinksList");
+      if (!list || !row) return;
+      if (direction === "up" && row.previousElementSibling) {
+        list.insertBefore(row, row.previousElementSibling);
+      } else if (direction === "down" && row.nextElementSibling) {
+        list.insertBefore(row.nextElementSibling, row);
+      }
+      syncCustomLinksField();
+    }
+    function createCustomLinkRow(link = {}) {
+      const row = document.createElement("section");
+      row.className = "link-card";
+      row.dataset.customLinkRow = "true";
+      row.dataset.customLinkId = link.id || customLinkId();
+      row.innerHTML = [
+        '<div class="link-card-head">',
+          '<div class="link-card-title"><strong>Custom Link</strong><span>Creator-defined public block.</span></div>',
+          '<label class="switch" aria-label="Custom link visible"><input data-custom-visible type="checkbox"><span class="track"></span></label>',
+        '</div>',
+        '<div class="link-card-fields">',
+          '<label>Title<input data-custom-title></label>',
+          '<label>CTA<input data-custom-cta></label>',
+          '<label class="wide">Subtitle<input data-custom-subtitle></label>',
+          '<label class="wide">Destination<input data-custom-url type="url"></label>',
+        '</div>',
+        '<div class="link-card-actions">',
+          '<button class="button" data-move-custom-link="up" type="button">Up</button>',
+          '<button class="button" data-move-custom-link="down" type="button">Down</button>',
+          '<button class="button danger" data-remove-custom-link type="button">Delete</button>',
+        '</div>'
+      ].join("");
+      row.querySelector("[data-custom-visible]").checked = link.visible !== false;
+      row.querySelector("[data-custom-title]").value = link.title || "New link";
+      row.querySelector("[data-custom-subtitle]").value = link.subtitle || "";
+      row.querySelector("[data-custom-cta]").value = link.cta_label || link.cta || "Open";
+      row.querySelector("[data-custom-url]").value = link.url || link.destination || "";
+      row.addEventListener("input", syncCustomLinksField);
+      row.addEventListener("change", syncCustomLinksField);
+      row.querySelectorAll("[data-move-custom-link]").forEach((button) => {
+        button.addEventListener("click", () => moveCustomLinkRow(row, button.dataset.moveCustomLink));
+      });
+      row.querySelector("[data-remove-custom-link]").addEventListener("click", () => {
+        row.remove();
+        syncCustomLinksField();
+      });
+      return row;
+    }
+    function writeCustomLinks(links = []) {
+      const list = $("customLinksList");
+      if (!list) return;
+      list.replaceChildren();
+      const normalized = Array.isArray(links) ? links : [];
+      normalized.forEach((link) => list.appendChild(createCustomLinkRow(link)));
+      syncCustomLinksField();
+    }
+    function addCustomLink() {
+      const list = $("customLinksList");
+      if (!list) return;
+      list.appendChild(createCustomLinkRow({ title: "New link", cta_label: "Open", visible: true, url: "" }));
+      syncCustomLinksField();
+    }
+    function valuesFromForm() {
+      syncLinkCompatibilityFields();
+      const data = new FormData(form);
+      return {
+        display_name: String(data.get("display_name") || "").trim(),
+        username: String(data.get("username") || "").trim(),
+        slug: "doonia",
+        bio: String(data.get("bio") || "").trim(),
+        location: String(data.get("location") || "").trim(),
+        avatar_url: String(data.get("avatar_url") || "").trim(),
+        banner_url: String(data.get("banner_url") || "").trim(),
+        hero_video_url: String(data.get("hero_video_url") || "").trim(),
+        tiktok_url: String(data.get("tiktok_url") || "").trim(),
+        discord_url: String(data.get("discord_url") || "").trim(),
+        tiktok_coins_url: String(data.get("tiktok_coins_url") || "").trim(),
+        business_email: String(data.get("business_email") || "").trim(),
+        live_url: String(data.get("live_url") || "").trim(),
+        live_status: boolField("live_status"),
+        live_button_text: String(data.get("live_button_text") || "").trim() || "Next Workout",
+        tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || "doonia.j",
+        auto_live_detection_enabled: boolField("auto_live_detection_enabled", true),
+        manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
+        battle_mode_enabled: boolField("battle_mode_enabled"),
+        battle_opponent: String(data.get("battle_opponent") || "").trim(),
+        battle_result: String(data.get("battle_result") || "").trim(),
+        battle_win_streak: Math.max(0, Math.floor(Number(data.get("battle_win_streak")) || 0)),
+        battle_updated_at: String(data.get("battle_updated_at") || "").trim(),
+        battle_undo_snapshot: String(data.get("battle_undo_snapshot") || "").trim(),
+        pinned_block: String(data.get("pinned_block") || "").trim(),
+        community_state: String(data.get("community_state") || "open").trim(),
+        quick_announcement: String(data.get("quick_announcement") || "").trim(),
+        quick_poll: String(data.get("quick_poll") || "").trim(),
+        next_live_datetime: normalizeDateTime(data.get("next_live_datetime")),
+        discord_link_visible: boolField("discord_link_visible", true),
+        discord_link_title: String(data.get("discord_link_title") || "").trim(),
+        discord_link_subtitle: String(data.get("discord_link_subtitle") || "").trim(),
+        discord_link_cta_label: String(data.get("discord_link_cta_label") || "").trim(),
+        tiktok_link_visible: boolField("tiktok_link_visible", true),
+        tiktok_link_title: String(data.get("tiktok_link_title") || "").trim(),
+        tiktok_link_subtitle: String(data.get("tiktok_link_subtitle") || "").trim(),
+        tiktok_link_cta_label: String(data.get("tiktok_link_cta_label") || "").trim(),
+        battle_link_visible: boolField("battle_link_visible", true),
+        battle_link_title: String(data.get("battle_link_title") || "").trim(),
+        battle_link_subtitle: String(data.get("battle_link_subtitle") || "").trim(),
+        battle_link_cta_label: String(data.get("battle_link_cta_label") || "").trim(),
+        business_link_visible: boolField("business_link_visible", true),
+        business_link_title: String(data.get("business_link_title") || "").trim(),
+        business_link_subtitle: String(data.get("business_link_subtitle") || "").trim(),
+        business_link_cta_label: String(data.get("business_link_cta_label") || "").trim(),
+        music_link_visible: boolField("music_link_visible"),
+        music_link_title: String(data.get("music_link_title") || "").trim(),
+        music_link_subtitle: String(data.get("music_link_subtitle") || "").trim(),
+        music_link_cta_label: String(data.get("music_link_cta_label") || "").trim(),
+        newsletter_cta_label: String(data.get("newsletter_cta_label") || "").trim(),
+        newsletter_destination: String(data.get("newsletter_destination") || "").trim(),
+        faq_link_visible: boolField("faq_link_visible"),
+        faq_link_title: String(data.get("faq_link_title") || "").trim(),
+        faq_link_subtitle: String(data.get("faq_link_subtitle") || "").trim(),
+        faq_link_cta_label: String(data.get("faq_link_cta_label") || "").trim(),
+        faq_link_url: String(data.get("faq_link_url") || "").trim(),
+        community_link_visible: boolField("community_link_visible", true),
+        community_link_title: String(data.get("community_link_title") || "").trim(),
+        community_link_subtitle: String(data.get("community_link_subtitle") || "").trim(),
+        community_link_cta_label: String(data.get("community_link_cta_label") || "").trim(),
+        community_link_url: String(data.get("community_link_url") || "").trim(),
+        share_link_visible: boolField("share_link_visible", true),
+        custom_links: readCustomLinks(),
+        welcome_intro_enabled: boolField("welcome_intro_enabled", true),
+        intro_audio_enabled: boolField("intro_audio_enabled"),
+        intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
+        intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
+        intro_audio_fade_out_duration: clampDuration(data.get("intro_audio_fade_out_duration"), 2, 0, 10),
+        intro_audio_stop_after: clampDuration(data.get("intro_audio_stop_after"), 4, 1, 30),
+        music_enabled: boolField("music_link_visible"),
+        music_url: String(data.get("music_url") || "").trim(),
+        music_volume: clampVolume(data.get("music_volume")),
+        music_loop: boolField("music_loop", true),
+        theme_preset: activeTheme,
+        creator_dna: activeDna,
+        background_gradient: String(data.get("background_gradient") || "").trim(),
+        ambient_mode_enabled: boolField("ambient_mode_enabled", true),
+        timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
+        seasonal_effects_enabled: boolField("seasonal_effects_enabled", true),
+        holiday_effects_enabled: boolField("holiday_effects_enabled", true),
+        discord_invite_url: String(data.get("discord_invite_url") || "").trim(),
+        discord_server_id: String(data.get("discord_server_id") || "").trim(),
+        subscribe_popup_enabled: boolField("subscribe_popup_enabled", true),
+        subscribe_popup_title: String(data.get("subscribe_popup_title") || "").trim(),
+        subscribe_popup_copy: String(data.get("subscribe_popup_copy") || "").trim(),
+        faq_visible: boolField("faq_link_visible"),
+        discord_visible: boolField("discord_link_visible", true),
+        creator_passport_visible: boolField("creator_passport_visible", true),
+        redirect_mina_enabled: boolField("redirect_mina_enabled", true)
+      };
+    }
+    function fillForm(settings) {
+      Object.entries(settings || {}).forEach(([key, value]) => {
+        const element = form.elements[key];
+        if (!element || element.type === "checkbox") return;
+        element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
+      });
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+        if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
+      });
+      if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
+      if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
+      if (settings.music_loop === undefined) setBoolField("music_loop", true);
+      if (settings.intro_audio_enabled === undefined) setBoolField("intro_audio_enabled", false);
+      if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
+      if (settings.seasonal_effects_enabled === undefined) setBoolField("seasonal_effects_enabled", true);
+      if (settings.holiday_effects_enabled === undefined) setBoolField("holiday_effects_enabled", true);
+      if (settings.subscribe_popup_enabled === undefined) setBoolField("subscribe_popup_enabled", true);
+      if (settings.creator_passport_visible === undefined) setBoolField("creator_passport_visible", true);
+      if (settings.redirect_mina_enabled === undefined) setBoolField("redirect_mina_enabled", true);
+      if (settings.discord_link_visible === undefined) setBoolField("discord_link_visible", true);
+      if (settings.tiktok_link_visible === undefined) setBoolField("tiktok_link_visible", true);
+      if (settings.battle_link_visible === undefined) setBoolField("battle_link_visible", true);
+      if (settings.business_link_visible === undefined) setBoolField("business_link_visible", true);
+      if (settings.music_link_visible === undefined) setBoolField("music_link_visible", false);
+      if (settings.faq_link_visible === undefined) setBoolField("faq_link_visible", false);
+      if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
+      if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
+      syncLinkCompatibilityFields();
+      writeCustomLinks(settings.custom_links || []);
+      activeTheme = settings.theme_preset || "doonia";
+      activeDna = settings.creator_dna || "coach";
+      $("avatarPreview").src = settings.avatar_url || "";
+      $("heroImagePreview").src = settings.banner_url || settings.avatar_url || "";
+      $("heroPreview").src = settings.hero_video_url || "";
+      setIntroAudioPreview(settings.intro_audio_url || "", { loadingMessage: "Loading saved audio preview..." });
+      renderThemes();
+      renderDna();
+      applyAdminTheme(activeTheme);
+      updateBattleSummary();
+      updateRuntimeUi();
+      updateOverview(settings.updated_at);
+      updatePreviewFrame(false);
+    }
+    function syncLinkCompatibilityFields() {
+      if (!form) return;
+      const discordUrl = form.elements.discord_invite_url ? String(form.elements.discord_invite_url.value || "").trim() : "";
+      const communityVisible = boolField("community_link_visible", true);
+      if (form.elements.discord_url) form.elements.discord_url.value = discordUrl;
+      if (form.elements.community_state) form.elements.community_state.value = communityVisible ? "open" : "hidden";
+    }
+    function normalizeBattleResult(value) {
+      const result = String(value || "").toLowerCase();
+      return ["won", "lost", "tie"].includes(result) ? result : "";
+    }
+    function battleSnapshot() {
+      return {
+        battle_mode_enabled: boolField("battle_mode_enabled"),
+        live_status: boolField("live_status"),
+        manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
+        battle_opponent: String(form.elements.battle_opponent.value || "").trim(),
+        battle_result: normalizeBattleResult(form.elements.battle_result.value),
+        battle_win_streak: Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)),
+        battle_updated_at: String(form.elements.battle_updated_at.value || "").trim()
+      };
+    }
+    function writeBattleSnapshot(snapshot) {
+      setBoolField("battle_mode_enabled", Boolean(snapshot.battle_mode_enabled));
+      setBoolField("live_status", Boolean(snapshot.live_status));
+      setBoolField("manual_live_fallback_enabled", snapshot.manual_live_fallback_enabled !== false);
+      form.elements.battle_opponent.value = snapshot.battle_opponent || "";
+      form.elements.battle_result.value = normalizeBattleResult(snapshot.battle_result);
+      form.elements.battle_win_streak.value = Math.max(0, Math.floor(Number(snapshot.battle_win_streak) || 0));
+      form.elements.battle_updated_at.value = snapshot.battle_updated_at || "";
+      updateBattleSummary();
+      updateRuntimeUi();
+    }
+    function saveUndoSnapshot(snapshot) {
+      form.elements.battle_undo_snapshot.value = JSON.stringify(snapshot);
+    }
+    function readUndoSnapshot() {
+      try {
+        return JSON.parse(form.elements.battle_undo_snapshot.value || "");
+      } catch (error) {
+        return null;
+      }
+    }
+    function updateBattleSummary() {
+      const summary = $("battleSummary");
+      if (!summary || !form.elements.battle_mode_enabled) return;
+      const snapshot = battleSnapshot();
+      const active = snapshot.battle_mode_enabled ? "Battle active" : "Battle inactive";
+      const result = snapshot.battle_result ? "Last result: " + snapshot.battle_result : "No result";
+      const streak = snapshot.battle_win_streak > 0 ? snapshot.battle_win_streak + " win streak" : "No win streak";
+      const opponent = snapshot.battle_opponent ? "Opponent: " + snapshot.battle_opponent : "No opponent";
+      summary.innerHTML = [active, result, streak, opponent].map((item) => "<span>" + item + "</span>").join("");
+      document.querySelectorAll("[data-battle-action]").forEach((button) => {
+        const action = button.dataset.battleAction;
+        const pressed = (action === "start" && snapshot.battle_mode_enabled) ||
+          (action === "won" && snapshot.battle_result === "won") ||
+          (action === "lost" && snapshot.battle_result === "lost") ||
+          (action === "tie" && snapshot.battle_result === "tie");
+        button.setAttribute("aria-pressed", pressed ? "true" : "false");
+      });
+      updateOverview();
+    }
+    function updateOverview(updatedAt) {
+      const snapshot = battleSnapshot();
+      if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = boolField("live_status") ? (boolField("manual_live_fallback_enabled", true) ? "Manual live" : "Live") : "Offline";
+      if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = snapshot.battle_mode_enabled ? "Active" : "Inactive";
+      if ($("overviewWinStreak")) $("overviewWinStreak").textContent = String(snapshot.battle_win_streak || 0);
+      if ($("overviewLastSave")) {
+        const date = updatedAt ? new Date(updatedAt) : null;
+        $("overviewLastSave").textContent = date && Number.isFinite(date.getTime()) ? date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Not yet";
+      }
+    }
+    function updateRuntimeUi() {
+      document.querySelectorAll("[data-pinned-block]").forEach((button) => {
+        button.setAttribute("aria-pressed", button.dataset.pinnedBlock === String(form.elements.pinned_block.value || ""));
+      });
+      updateOverview();
+    }
+    async function applyBattleAction(action) {
+      const previous = battleSnapshot();
+      const next = { ...previous, battle_updated_at: new Date().toISOString() };
+      if (action === "start") {
+        next.battle_mode_enabled = true;
+        next.live_status = true;
+        next.manual_live_fallback_enabled = true;
+        next.battle_result = "";
+      } else if (action === "end") {
+        next.battle_mode_enabled = false;
+      } else if (action === "won") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "won";
+        next.battle_win_streak = previous.battle_win_streak + 1;
+      } else if (action === "lost") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "lost";
+        next.battle_win_streak = 0;
+      } else if (action === "tie") {
+        next.battle_mode_enabled = false;
+        next.battle_result = "tie";
+        next.battle_win_streak = 0;
+      } else if (action === "undo") {
+        const undo = readUndoSnapshot();
+        if (!undo) {
+          setStatus("Nothing to undo.", true);
+          return;
+        }
+        writeBattleSnapshot(undo);
+        form.elements.battle_undo_snapshot.value = "";
+        await saveSettings();
+        setStatus("Battle change undone.");
+        return;
+      }
+      saveUndoSnapshot(previous);
+      writeBattleSnapshot(next);
+      await saveSettings();
+      setStatus("Battle control saved.");
+    }
+    async function applyRuntimeAction(action) {
+      if (action === "start-live") {
+        setBoolField("live_status", true);
+        setBoolField("manual_live_fallback_enabled", true);
+      } else if (action === "end-live") {
+        setBoolField("live_status", false);
+        setBoolField("manual_live_fallback_enabled", false);
+        setBoolField("battle_mode_enabled", false);
+      } else if (action === "reset-streak") {
+        form.elements.battle_win_streak.value = 0;
+        form.elements.battle_result.value = "";
+        form.elements.battle_updated_at.value = new Date().toISOString();
+      } else if (action === "refresh-runtime") {
+        await loadLiveRuntime();
+        setStatus("Runtime refreshed.");
+        return;
+      } else if (action === "push-announcement") {
+        form.elements.pinned_block.value = "announcement";
+      }
+      updateBattleSummary();
+      updateRuntimeUi();
+      await saveSettings();
+      setStatus("Runtime updated.");
+    }
+    async function setPinnedBlock(value) {
+      form.elements.pinned_block.value = value;
+      updateRuntimeUi();
+      await saveSettings();
+      setStatus("Pinned block updated.");
+    }
+    function setAdminTab(name) {
+      const active = name || "overview";
+      document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.adminTab === active ? "true" : "false");
+      });
+      document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
+        panel.hidden = !String(panel.dataset.adminPanel || "").split(/\s+/).includes(active);
+      });
+      if (active === "runtime") loadLiveRuntime();
+    }
+    function applyAdminTheme(theme) {
+      const vars = themeVars[theme] || themeVars.mina;
+      document.documentElement.style.setProperty("--accent", vars[0]);
+      document.documentElement.style.setProperty("--accent-2", vars[1]);
+      document.documentElement.style.setProperty("--admin-bg-a", vars[2]);
+      document.documentElement.style.setProperty("--admin-bg-b", vars[3]);
+    }
+    function previewUrl() {
+      const url = new URL("https://doneovernight.com/doonia");
+      url.searchParams.set("preview", "1");
+      url.searchParams.set("preview_theme", activeTheme);
+      url.searchParams.set("creator_dna", activeDna);
+      return url;
+    }
+    function sendPreviewTheme() {
+      const frame = $("previewFrame");
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage({ type: "creator-theme-preview", theme_preset: activeTheme, creator_dna: activeDna }, "https://doneovernight.com");
+      }
+    }
+    function updatePreviewFrame(refresh = true) {
+      const url = previewUrl();
+      if (refresh) url.searchParams.set("refresh", Date.now());
+      $("previewFrame").src = url.href;
+    }
+    function renderThemes() {
+      const grid = $("themeGrid");
+      grid.innerHTML = "";
+      themes.forEach(([value, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "theme-option";
+        button.setAttribute("aria-pressed", value === activeTheme ? "true" : "false");
+        button.innerHTML = '<span class="swatch ' + value + '"></span><span>' + label + '</span>';
+        button.addEventListener("click", () => {
+          activeTheme = value;
+          applyAdminTheme(activeTheme);
+          renderThemes();
+          sendPreviewTheme();
+        });
+        grid.appendChild(button);
+      });
+    }
+    function renderDna() {
+      const grid = $("dnaGrid");
+      const active = dnaOptions.find(([value]) => value === activeDna) || dnaOptions[1];
+      $("dnaSuggestion").textContent = active[2];
+      grid.innerHTML = "";
+      dnaOptions.forEach(([value, label, description]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "theme-option";
+        button.setAttribute("aria-pressed", value === activeDna ? "true" : "false");
+        button.innerHTML = '<span>' + label + '</span><small class="muted">' + description + '</small>';
+        button.addEventListener("click", () => {
+          activeDna = value;
+          renderDna();
+          sendPreviewTheme();
+        });
+        grid.appendChild(button);
+      });
+    }
+    async function api(payload) {
+      const response = await fetch("/api/creator-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const text = await response.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (error) {
+        data = { error: text || response.statusText };
+      }
+      if (!response.ok || data.success !== true) {
+        const error = new Error(readableMessage(data.error || data.message || data, "Creator settings request failed"));
+        error.status = response.status;
+        error.payload = data;
+        throw error;
+      }
+      return data;
+    }
+    async function login(password) {
+      setLoginStatus("");
+      const data = await api({ action: "login", creator_password: password, slug: "doonia" });
+      sessionStorage.setItem(sessionFlag, "true");
+      sessionStorage.setItem(sessionKey, data.creator_session || "");
+      fillForm(data.creator);
+      return data;
+    }
+    async function loadSettings() {
+      setStatus("Loading Doonia settings...");
+      const data = await api({ action: "load", creator_session: creatorSession(), slug: "doonia" });
+      fillForm(data.creator);
+      openApp();
+      setStatus("Loaded Doonia J settings.");
+    }
+    async function saveSettings() {
+      if (saving) return;
+      const scrollPosition = pendingSaveScroll || { x: window.scrollX, y: window.scrollY };
+      pendingSaveScroll = null;
+      blurActiveControl();
+      const validationError = validateSettingsForm();
+      if (validationError) {
+        setStatus(validationError, true);
+        setSaveButtonState("failed", { resetAfter: 1400 });
+        restoreScrollPosition(scrollPosition);
+        throw new Error(validationError);
+      }
+      saving = true;
+      setSaveButtonState("saving");
+      setStatus("");
+      try {
+        const data = await api({ creator_session: creatorSession(), creator: valuesFromForm() });
+        fillForm(data.creator);
+        updatePreviewFrame();
+        loadLiveRuntime();
+        updateOverview(data.creator && data.creator.updated_at);
+        setSaveButtonState("saved", { resetAfter: 700 });
+        restoreScrollPosition(scrollPosition);
+      } catch (error) {
+        setStatus(introAudioSaveContext() ? introAudioSaveError(error) : readableMessage(error, "Save failed."), true);
+        setSaveButtonState("failed", { resetAfter: 1500 });
+        restoreScrollPosition(scrollPosition);
+        throw error;
+      } finally {
+        saving = false;
+      }
+    }
+    async function loadLiveRuntime() {
+      const status = $("liveRuntimeStatus");
+      if (!status) return;
+      try {
+        const response = await fetch("/api/creator-live-status?slug=doonia", { headers: { Accept: "application/json" } });
+        const data = await response.json();
+        const capabilities = data.capabilities || {};
+        const source = data.source || "unknown";
+        const confidence = data.confidence || (data.confirmed ? "confirmed" : "unknown");
+        const manualMode = data.manualMode === true || boolField("manual_live_fallback_enabled", true);
+        const blocked = data.error && /blocked|403|429|captcha|forbidden|rate/i.test(String(data.error));
+        const manualNotice = source === "manual-fallback"
+          ? (manualMode ? "Manual live mode is active." : "Live status unconfirmed.")
+          : "";
+        const blockedNotice = blocked
+          ? "TikTok blocked automatic detection. Manual live mode is " + (manualMode ? "active." : "available but off.")
+          : data.error === "AUTO_RUNTIME_NOT_CONFIGURED"
+          ? "Automatic live provider is not configured. Manual live mode is " + (manualMode ? "active." : "available but off.")
+          : "";
+        const viewer = capabilities.viewerCount === true && Number.isFinite(Number(data.viewerCount)) ? Number(data.viewerCount).toLocaleString() : "unavailable";
+        const streak = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? Number(data.battleWinStreak).toLocaleString() : "not set";
+        const error = data.error ? readableMessage(data.error, "Unknown runtime error") : "none";
+        status.textContent = [
+          "Last checked: " + (data.checkedAt || "unknown"),
+          "Status: " + (data.isLive ? "LIVE NOW" : "Offline"),
+          "Source: " + source,
+          "Confidence: " + confidence,
+          "Manual override: " + (manualMode ? "ON" : "OFF"),
+          manualNotice,
+          blockedNotice,
+          "Viewer count: " + viewer,
+          "Battle mode: " + (data.battleActive ? "active" : "inactive"),
+          "Win streak: " + streak,
+          "Runtime error: " + error,
+          "Capabilities: viewerCount=" + Boolean(capabilities.viewerCount) + ", battleActive=" + Boolean(capabilities.battleActive) + ", battleWinStreak=" + Boolean(capabilities.battleWinStreak) + ", gifts=" + Boolean(capabilities.gifts)
+        ].filter(Boolean).join(". ") + ".";
+        if ($("overviewLiveStatus")) $("overviewLiveStatus").textContent = data.isLive ? (data.confirmed ? "Live" : "Manual live") : "Offline";
+        if ($("overviewBattleStatus")) $("overviewBattleStatus").textContent = data.battleActive ? "Active" : "Inactive";
+        if ($("overviewWinStreak")) $("overviewWinStreak").textContent = capabilities.battleWinStreak === true && Number.isFinite(Number(data.battleWinStreak)) ? String(data.battleWinStreak) : String(Math.max(0, Math.floor(Number(form.elements.battle_win_streak.value) || 0)));
+      } catch (error) {
+        status.textContent = "Last checked: error. Status: unknown. Source: error.";
+      }
+    }
+    function readFileData(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Could not read media file"));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function uploadMedia(kind) {
+      const input = kind === "profile" ? $("avatarFile") : kind === "hero-image" ? $("heroImageFile") : kind === "intro-audio" ? $("introAudioFile") : $("heroFile");
+      const file = input.files && input.files[0];
+      if (!file) {
+        setStatus("Choose a file first, or paste an asset URL.", true);
+        return;
+      }
+      if (kind === "intro-audio") {
+        const audioError = validateIntroAudioFile(file);
+        if (audioError) {
+          setIntroAudioStatus(audioError, true);
+          setStatus(audioError, true);
+          return;
+        }
+      }
+      const field = kind === "profile" ? "avatar_url" : kind === "hero-image" ? "banner_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
+      const preview = kind === "profile" ? $("avatarPreview") : kind === "hero-image" ? $("heroImagePreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
+      let uploadFile = file;
+      let preparedIntroAudio = null;
+      if (kind === "intro-audio") {
+        try {
+          setStatus("Preparing Creator Signature...");
+          setIntroAudioStatus("Preparing Creator Signature...", false);
+          preparedIntroAudio = await prepareIntroAudioUpload(file);
+          uploadFile = preparedIntroAudio.file;
+          await setIntroAudioPreview(preparedIntroAudio.previewUrl, { loadingMessage: "Loading prepared audio preview..." });
+          if (preparedIntroAudio.message) setIntroAudioStatus(preparedIntroAudio.message + "\nReady to upload.", false);
+        } catch (error) {
+          const message = readableMessage(error, "Could not create intro clip.");
+          setIntroAudioStatus(message, true);
+          setStatus(message, true);
+          return;
+        }
+      } else {
+        preview.src = URL.createObjectURL(file);
+      }
+      setStatus(kind === "intro-audio" ? "Uploading audio..." : "Uploading media...");
+      try {
+        const data = await api({
+          action: "upload_media",
+          creator_session: creatorSession(),
+          slug: "doonia",
+          kind,
+          file: {
+            name: uploadFile.name,
+            type: uploadFile.type,
+            data: await readFileData(uploadFile)
+          }
+        });
+        form.elements[field].value = data.media.url;
+        if (kind === "intro-audio") {
+          const successMessage = (preparedIntroAudio && preparedIntroAudio.message ? preparedIntroAudio.message + "\n" : "") + "✓ Audio uploaded\nPreview available\nReady to save";
+          await setIntroAudioPreview(data.media.url, { play: true, loadingMessage: "Loading uploaded audio...", successMessage });
+          setStatus(successMessage);
+        } else {
+          preview.src = data.media.url;
+          setStatus("Media uploaded. Save page to publish it.");
+        }
+      } catch (error) {
+        const message = readableMessage(error, "Upload unavailable");
+        if (kind === "intro-audio") setIntroAudioStatus(message, true);
+        setStatus(message + " Paste a hosted asset URL instead.", true);
+      }
+    }
+    async function savePassword() {
+      setStatus("Saving password...", false, "passwordStatus");
+      try {
+        const data = await api({
+          action: "change_password",
+          creator_session: creatorSession(),
+          current_password: form.elements.current_password.value,
+          new_password: form.elements.new_password.value,
+          confirm_password: form.elements.confirm_password.value
+        });
+        if (data.creator_session) sessionStorage.setItem(sessionKey, data.creator_session);
+        form.elements.current_password.value = "";
+        form.elements.new_password.value = "";
+        form.elements.confirm_password.value = "";
+        setStatus("Password saved.", false, "passwordStatus");
+      } catch (error) {
+        setStatus(error.message || "Password save failed", true, "passwordStatus");
+      }
+    }
+    $("loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const password = $("creatorPassword").value.trim();
+      if (!password) return;
+      try {
+        setUnlockButtonState("unlocking");
+        await login(password);
+        setUnlockButtonState("welcome");
+        await wait(720);
+        const gate = $("gate");
+        if (gate) gate.classList.add("is-exiting");
+        await wait(420);
+        openApp();
+      } catch (error) {
+        setLoginStatus("");
+        setUnlockButtonState("failed", { resetAfter: 1300 });
+      }
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try { await saveSettings(); } catch (error) {}
+    });
+    form.addEventListener("invalid", (event) => {
+      event.preventDefault();
+      const message = validateSettingsForm() || "Check the highlighted field.";
+      setStatus(message, true);
+      setSaveButtonState("failed", { resetAfter: 1400 });
+    }, true);
+    $("saveFloating").addEventListener("pointerdown", captureSaveTap);
+    $("saveFloating").addEventListener("touchstart", captureSaveTap, { passive: true });
+    $("saveFloating").addEventListener("click", async (event) => {
+      event.preventDefault();
+      try { await saveSettings(); } catch (error) {}
+    });
+    document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+      button.addEventListener("click", () => setAdminTab(button.dataset.adminTab));
+    });
+    document.querySelectorAll("[data-admin-jump]").forEach((button) => {
+      button.addEventListener("click", () => setAdminTab(button.dataset.adminJump));
+    });
+    document.querySelectorAll("[data-runtime-action]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await applyRuntimeAction(button.dataset.runtimeAction); } catch (error) { setStatus(error.message || "Runtime update failed", true); }
+      });
+    });
+    document.querySelectorAll("[data-pinned-block]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try { await setPinnedBlock(button.dataset.pinnedBlock); } catch (error) { setStatus(error.message || "Pinned block update failed", true); }
+      });
+    });
+    $("logoutButton").addEventListener("click", () => {
+      sessionStorage.removeItem(sessionFlag);
+      sessionStorage.removeItem(sessionKey);
+      closeApp();
+    });
+    $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
+    $("uploadHeroImage").addEventListener("click", () => uploadMedia("hero-image"));
+    $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
+    $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
+    $("addCustomLink").addEventListener("click", addCustomLink);
+    $("manualLiveModeControl").addEventListener("change", async () => {
+      updateOverview();
+      try {
+        await saveSettings();
+        await loadLiveRuntime();
+        setStatus("Manual live mode updated.");
+      } catch (error) {
+        setStatus(error.message || "Manual live mode update failed", true);
+      }
+    });
+    $("savePassword").addEventListener("click", savePassword);
+    ["battle_mode_enabled", "battle_opponent", "battle_result", "battle_win_streak"].forEach((key) => {
+      if (form.elements[key]) form.elements[key].addEventListener("input", updateBattleSummary);
+      if (form.elements[key]) form.elements[key].addEventListener("change", updateBattleSummary);
+    });
+    ["battle_opponent"].forEach((key) => {
+      if (form.elements[key]) form.elements[key].addEventListener("change", async () => {
+        try { await saveSettings(); } catch (error) { setStatus(error.message || "Runtime update failed", true); }
+      });
+    });
+    document.querySelectorAll("[data-battle-action]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        try {
+          await applyBattleAction(button.dataset.battleAction);
+        } catch (error) {
+          setStatus(error.message || "Battle control failed", true);
+        }
+      });
+    });
+    loadLiveRuntime();
+    window.setInterval(loadLiveRuntime, 60000);
+    renderThemes();
+    renderDna();
+    applyAdminTheme(activeTheme);
+    setAdminTab("overview");
+    $("previewFrame").addEventListener("load", sendPreviewTheme);
+    if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
+      loadSettings().catch(() => {
+        sessionStorage.removeItem(sessionFlag);
+        sessionStorage.removeItem(sessionKey);
+        closeApp();
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,11 +1,13 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
+const DOONIA_CREATOR_ID = "22222222-2222-4222-8222-222222222222";
 const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
+const MAX_INTRO_AUDIO_BYTES = 2_000_000;
 const CREATOR_MEDIA_BUCKET = process.env.CREATOR_MEDIA_BUCKET || "creator-media";
 const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/mpeg",
@@ -17,7 +19,10 @@ const AUDIO_UPLOAD_MIME_TYPES = new Set([
   "audio/m4a",
   "audio/x-m4a",
   "audio/aac",
-  "audio/aacp"
+  "audio/aacp",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav"
 ]);
 const GENERIC_UPLOAD_MIME_TYPES = new Set(["", "application/octet-stream", "binary/octet-stream"]);
 const BASE_CREATOR_FIELDS = [
@@ -232,6 +237,127 @@ const DEFAULT_MINA_SETTINGS = {
   updated_at: new Date(0).toISOString()
 };
 
+const DEFAULT_DOONIA_SETTINGS = {
+  ...DEFAULT_MINA_SETTINGS,
+  id: DOONIA_CREATOR_ID,
+  display_name: "Doonia J",
+  username: "doonia.j",
+  slug: "doonia",
+  bio: "Fitness, discipline, and premium training energy.",
+  location: "",
+  avatar_url: "/assets/doonia/profile-placeholder.svg",
+  banner_url: "/assets/doonia/hero-placeholder.svg",
+  hero_video_url: "",
+  tiktok_url: "https://www.tiktok.com/@doonia.j",
+  discord_url: "",
+  instagram_url: "https://www.instagram.com/doonia.j/",
+  tiktok_coins_url: "https://www.tiktok.com/coin",
+  business_email: "",
+  live_url: "",
+  live_status: false,
+  live_button_text: "Next Workout",
+  tiktok_live_username: "doonia.j",
+  next_live_datetime: "",
+  theme_preset: "doonia",
+  creator_dna: "coach",
+  background_gradient: "radial-gradient(circle at 18% -10%, rgba(212,160,76,.24), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(126,82,36,.26), transparent 28rem), linear-gradient(155deg, #030303 0%, #120d08 46%, #050403 100%)",
+  timezone: "America/New_York",
+  seasonal_effects_enabled: false,
+  holiday_effects_enabled: false,
+  discord_invite_url: "",
+  discord_server_id: "",
+  pinned_block: "",
+  community_state: "preview",
+  quick_announcement: "",
+  quick_poll: "",
+  faq_visible: false,
+  discord_visible: false,
+  creator_passport_visible: true,
+  discord_link_visible: false,
+  discord_link_title: "Community",
+  discord_link_subtitle: "Join the team.",
+  discord_link_cta_label: "Join",
+  tiktok_link_visible: true,
+  tiktok_link_title: "TikTok",
+  tiktok_link_subtitle: "@doonia.j",
+  tiktok_link_cta_label: "Watch",
+  battle_link_visible: true,
+  battle_link_title: "Prepare for Battle",
+  battle_link_subtitle: "Get your TikTok Coins before the live battle begins.",
+  battle_link_cta_label: "Prepare",
+  business_link_visible: true,
+  business_link_title: "Business",
+  business_link_subtitle: "Partnerships and collabs.",
+  business_link_cta_label: "Contact",
+  music_link_visible: false,
+  music_link_title: "Gym Playlist",
+  music_link_subtitle: "Coming soon.",
+  music_link_cta_label: "Listen",
+  newsletter_cta_label: "Subscribe",
+  newsletter_destination: "",
+  faq_link_visible: false,
+  faq_link_title: "7-Day Challenge",
+  faq_link_subtitle: "Coming soon.",
+  faq_link_cta_label: "Start",
+  faq_link_url: "",
+  community_link_visible: true,
+  community_link_title: "Community",
+  community_link_subtitle: "Join the team.",
+  community_link_cta_label: "Join",
+  community_link_url: "",
+  share_link_visible: true,
+  custom_links: [
+    {
+      id: "legion",
+      visible: true,
+      title: "Workout Supplements",
+      subtitle: "Legion Athletics — use code DOONIA.",
+      cta_label: "Shop Legion",
+      url: "https://legionathletics.rfrl.co/rnpon"
+    },
+    {
+      id: "kontrolled-insanity",
+      visible: true,
+      title: "Kontrolled Insanity",
+      subtitle: "Official brand — use code DOONIA.",
+      cta_label: "Shop",
+      url: "https://kontrolledinsanity.com/?aff=88"
+    },
+    {
+      id: "amazon",
+      visible: true,
+      title: "Amazon Storefront",
+      subtitle: "Gym essentials and favorites.",
+      cta_label: "Shop",
+      url: "https://a.co/d/04e5e97O"
+    },
+    {
+      id: "youtube",
+      visible: true,
+      title: "YouTube",
+      subtitle: "Doonia J",
+      cta_label: "Watch",
+      url: "https://www.youtube.com/@doonia.j"
+    },
+    {
+      id: "support",
+      visible: true,
+      title: "Support Me",
+      subtitle: "Every contribution helps me create more content.",
+      cta_label: "Support",
+      url: ""
+    }
+  ],
+  redirect_mina_enabled: false,
+  updated_at: new Date(0).toISOString()
+};
+
+const DEFAULT_CREATOR_SETTINGS_BY_SLUG = {
+  mosyaamosya: DEFAULT_MINA_SETTINGS,
+  mina: DEFAULT_MINA_SETTINGS,
+  doonia: DEFAULT_DOONIA_SETTINGS
+};
+
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json");
@@ -272,13 +398,34 @@ function bool(value, fallback = false) {
   return fallback;
 }
 
+function normalizeSlug(value) {
+  const slug = clean(value || DEFAULT_MINA_SETTINGS.slug)
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || DEFAULT_MINA_SETTINGS.slug;
+}
+
+function defaultCreator(value = "mosyaamosya") {
+  const slug = normalizeSlug(value);
+  return DEFAULT_CREATOR_SETTINGS_BY_SLUG[slug] || DEFAULT_MINA_SETTINGS;
+}
+
+function creatorIdForSlug(value = "mosyaamosya") {
+  return defaultCreator(value).id || MINA_CREATOR_ID;
+}
+
+function bridgeEventType(prefix, slug = "mosyaamosya") {
+  return prefix + "_" + normalizeSlug(slug);
+}
+
 function isDirectIntroAudioUrl(value) {
   const raw = clean(value);
   if (!raw) return false;
   try {
     const parsed = new URL(raw, "https://doneovernight.com");
     return (parsed.protocol === "http:" || parsed.protocol === "https:") &&
-      /\.(mp3|m4a|aac)$/i.test(parsed.pathname);
+      /\.(mp3|m4a|aac|wav)$/i.test(parsed.pathname);
   } catch (error) {
     return false;
   }
@@ -303,9 +450,10 @@ function signText(value) {
   return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url");
 }
 
-function createCreatorSession(role = "creator") {
+function createCreatorSession(role = "creator", slug = "mosyaamosya") {
+  const safeSlug = normalizeSlug(slug);
   const payload = {
-    sub: "mosyaamosya",
+    sub: safeSlug,
     role,
     exp: Date.now() + CREATOR_SESSION_TTL_MS,
     nonce: crypto.randomBytes(12).toString("base64url")
@@ -314,14 +462,15 @@ function createCreatorSession(role = "creator") {
   return encoded + "." + signText(encoded);
 }
 
-function verifyCreatorSession(token) {
+function verifyCreatorSession(token, slug = "mosyaamosya") {
   const value = clean(token);
   if (!value || !sessionSecret()) return null;
   const [encoded, signature] = value.split(".");
   if (!encoded || !signature || !timingSafeEqualText(signature, signText(encoded))) return null;
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-    if (payload.sub !== "mosyaamosya" || Number(payload.exp) < Date.now()) return null;
+    const expectedSlug = normalizeSlug(slug);
+    if (normalizeSlug(payload.sub) !== expectedSlug || Number(payload.exp) < Date.now()) return null;
     return payload;
   } catch (error) {
     return null;
@@ -452,42 +601,43 @@ async function fetchClients() {
   return supabaseFetch("portal_requests?select=*&order=created_at.desc", { context: "Admin clients" });
 }
 
-async function fetchCreatorPasswordHashFromTable() {
-  const rows = await supabaseFetch("creator_auth?creator_id=eq." + MINA_CREATOR_ID + "&select=password_hash,updated_at&limit=1", {
+async function fetchCreatorPasswordHashFromTable(slug = "mosyaamosya") {
+  const rows = await supabaseFetch("creator_auth?creator_id=eq." + creatorIdForSlug(slug) + "&select=password_hash,updated_at&limit=1", {
     context: "Creator auth"
   });
   return Array.isArray(rows) && rows[0] ? clean(rows[0].password_hash) : "";
 }
 
-async function fetchCreatorPasswordHashFromBridge() {
+async function fetchCreatorPasswordHashFromBridge(slug = "mosyaamosya") {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_auth_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
+    "analytics_events?event_type=eq." + bridgeEventType("creator_auth", slug) + "&select=metadata,created_at&order=created_at.desc&limit=1",
     { context: "Creator auth bridge" }
   );
   const metadata = Array.isArray(rows) && rows[0] && rows[0].metadata ? rows[0].metadata : {};
   return clean(metadata.password_hash);
 }
 
-async function fetchCreatorPasswordHash() {
+async function fetchCreatorPasswordHash(slug = "mosyaamosya") {
   try {
-    const hash = await fetchCreatorPasswordHashFromTable();
+    const hash = await fetchCreatorPasswordHashFromTable(slug);
     if (hash) return hash;
   } catch (error) {}
 
   try {
-    const hash = await fetchCreatorPasswordHashFromBridge();
+    const hash = await fetchCreatorPasswordHashFromBridge(slug);
     if (hash) return hash;
   } catch (error) {}
 
+  if (normalizeSlug(slug) === "doonia") return clean(process.env.DOONIA_CREATOR_PASSWORD_HASH || process.env.CREATOR_OS_DOONIA_PASSWORD_HASH);
   return clean(process.env.MINA_CREATOR_PASSWORD_HASH || process.env.CREATOR_OS_MINA_PASSWORD_HASH);
 }
 
-async function saveCreatorPasswordHashToTable(passwordHash) {
+async function saveCreatorPasswordHashToTable(passwordHash, slug = "mosyaamosya") {
   await supabaseFetch("creator_auth?on_conflict=creator_id", {
     method: "POST",
     prefer: "resolution=merge-duplicates",
     body: [{
-      creator_id: MINA_CREATOR_ID,
+      creator_id: creatorIdForSlug(slug),
       password_hash: passwordHash,
       updated_at: new Date().toISOString()
     }],
@@ -495,52 +645,49 @@ async function saveCreatorPasswordHashToTable(passwordHash) {
   });
 }
 
-async function saveCreatorPasswordHashToBridge(passwordHash) {
+async function saveCreatorPasswordHashToBridge(passwordHash, slug = "mosyaamosya") {
+  const safeSlug = normalizeSlug(slug);
   await supabaseFetch("analytics_events", {
     method: "POST",
     body: {
-      event_type: "creator_auth_mosyaamosya",
+      event_type: bridgeEventType("creator_auth", safeSlug),
       source: "creator_os_admin",
-      route: "/mosyaamosya",
+      route: "/" + safeSlug,
       metadata: { password_hash: passwordHash }
     },
     context: "Creator auth bridge"
   });
 }
 
-async function saveCreatorPasswordHash(passwordHash) {
+async function saveCreatorPasswordHash(passwordHash, slug = "mosyaamosya") {
   try {
-    await saveCreatorPasswordHashToTable(passwordHash);
+    await saveCreatorPasswordHashToTable(passwordHash, slug);
   } catch (error) {
-    await saveCreatorPasswordHashToBridge(passwordHash);
+    await saveCreatorPasswordHashToBridge(passwordHash, slug);
   }
 }
 
-async function verifyCreatorPassword(password) {
+async function verifyCreatorPassword(password, slug = "mosyaamosya") {
   const value = clean(password);
   if (!value) return false;
-  const storedHash = await fetchCreatorPasswordHash();
+  const safeSlug = normalizeSlug(slug);
+  const storedHash = await fetchCreatorPasswordHash(safeSlug);
   if (storedHash) return verifyPassword(value, storedHash);
-  const envPassword = clean(process.env.MINA_CREATOR_PASSWORD || process.env.CREATOR_OS_MINA_PASSWORD);
+  const envPassword = safeSlug === "doonia"
+    ? clean(process.env.DOONIA_CREATOR_PASSWORD || process.env.CREATOR_OS_DOONIA_PASSWORD || "dooniadoonia")
+    : clean(process.env.MINA_CREATOR_PASSWORD || process.env.CREATOR_OS_MINA_PASSWORD);
   return envPassword ? timingSafeEqualText(value, envPassword) : false;
 }
 
 async function verifyCreatorAccess(input = {}) {
-  const session = verifyCreatorSession(input.creator_session || input.creatorSession);
+  const slug = normalizeSlug(input.slug || (input.creator && input.creator.slug) || "mosyaamosya");
+  const session = verifyCreatorSession(input.creator_session || input.creatorSession, slug);
   if (session) return { authorized: true, role: session.role || "creator" };
 
   const password = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
-  if (await verifyCreatorPassword(password)) return { authorized: true, role: "creator" };
+  if (await verifyCreatorPassword(password, slug)) return { authorized: true, role: "creator" };
   if (await verifyAdminKey(password)) return { authorized: true, role: "master" };
   return { authorized: false, role: "" };
-}
-
-function normalizeSlug(value) {
-  const slug = clean(value || DEFAULT_MINA_SETTINGS.slug)
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || DEFAULT_MINA_SETTINGS.slug;
 }
 
 function normalizeUsername(value) {
@@ -552,7 +699,7 @@ function normalizeUsername(value) {
 }
 
 function normalizeTheme(value) {
-  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder"]);
+  const allowed = new Set(["mina", "doonia", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder"]);
   const preset = clean(value || DEFAULT_MINA_SETTINGS.theme_preset).toLowerCase();
   return allowed.has(preset) ? preset : DEFAULT_MINA_SETTINGS.theme_preset;
 }
@@ -626,6 +773,7 @@ function mediaExtension(mimeType, fallbackName = "") {
   if (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/x-mpeg", "audio/x-mpeg-3"].includes(mimeType)) return "mp3";
   if (["audio/aac", "audio/aacp"].includes(mimeType)) return "aac";
   if (["audio/mp4", "audio/m4a", "audio/x-m4a"].includes(mimeType)) return named === "aac" ? "aac" : "m4a";
+  if (["audio/wav", "audio/wave", "audio/x-wav"].includes(mimeType)) return "wav";
   return named || "bin";
 }
 
@@ -634,18 +782,19 @@ function isIntroAudioFile(mimeType, fallbackName = "") {
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
   return (AUDIO_UPLOAD_MIME_TYPES.has(normalized) || GENERIC_UPLOAD_MIME_TYPES.has(normalized)) &&
-    ["mp3", "m4a", "aac"].includes(named);
+    ["mp3", "m4a", "aac", "wav"].includes(named);
 }
 
 function normalizeIntroAudioMimeType(mimeType, fallbackName = "") {
   const ext = clean(fallbackName).toLowerCase().match(/\.([a-z0-9]{2,5})$/);
   const named = ext ? ext[1] : "";
   const normalized = clean(mimeType).toLowerCase();
-  if (!["mp3", "m4a", "aac"].includes(named)) return "";
+  if (!["mp3", "m4a", "aac", "wav"].includes(named)) return "";
   if (normalized && !AUDIO_UPLOAD_MIME_TYPES.has(normalized) && !GENERIC_UPLOAD_MIME_TYPES.has(normalized)) return "";
   if (named === "mp3") return "audio/mpeg";
   if (named === "m4a") return "audio/mp4";
   if (named === "aac") return "audio/aac";
+  if (named === "wav") return "audio/wav";
   return "";
 }
 
@@ -660,6 +809,7 @@ function parseDataUrl(value, fallbackMimeType = "") {
 
 async function uploadCreatorMedia(input = {}) {
   const kind = clean(input.kind);
+  const slug = normalizeSlug(input.slug || input.creator_slug || "mosyaamosya");
   const file = input.file || {};
   const parsed = parseDataUrl(file.data || file.dataUrl, file.type);
   if (!parsed) {
@@ -672,7 +822,7 @@ async function uploadCreatorMedia(input = {}) {
   const isVideo = parsed.mimeType.startsWith("video/");
   const isIntroAudio = isIntroAudioFile(parsed.mimeType, file.name);
   const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : parsed.mimeType;
-  if (kind === "profile" && !isImage) {
+  if ((kind === "profile" || kind === "hero-image") && !isImage) {
     const error = new Error("Profile media must be an image file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
@@ -685,25 +835,26 @@ async function uploadCreatorMedia(input = {}) {
     throw error;
   }
   if (kind === "intro-audio" && !isIntroAudio) {
-    const error = new Error("Intro audio must be an .mp3, .m4a, or .aac file.");
+    const error = new Error("Intro audio must be an .mp3, .m4a, .aac, or prepared .wav file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
   if (kind === "intro-audio" && !uploadMimeType) {
-    const error = new Error("Intro audio MIME type does not match .mp3, .m4a, or .aac.");
+    const error = new Error("Intro audio MIME type does not match a supported direct audio file.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
-  if (!["profile", "hero", "intro-audio"].includes(kind)) {
+  if (!["profile", "hero-image", "hero", "intro-audio"].includes(kind)) {
     const error = new Error("Unsupported media upload type.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_KIND";
     throw error;
   }
-  if (parsed.buffer.length > MAX_MEDIA_BYTES) {
-    const error = new Error(kind === "intro-audio" ? "Intro audio is too large. Use an .mp3, .m4a, or .aac file under 10 MB." : "Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
+  const maxBytes = kind === "intro-audio" ? MAX_INTRO_AUDIO_BYTES : MAX_MEDIA_BYTES;
+  if (parsed.buffer.length > maxBytes) {
+    const error = new Error(kind === "intro-audio" ? "Prepared intro audio is too large. Upload a clip under 2 MB." : "Media file is too large. Use a compressed 7-10 second vertical video or paste a hosted asset URL.");
     error.statusCode = 413;
     error.code = "MEDIA_TOO_LARGE";
     throw error;
@@ -711,7 +862,7 @@ async function uploadCreatorMedia(input = {}) {
 
   const { url, serviceRoleKey } = getSupabaseConfig("Creator media upload");
   const ext = mediaExtension(uploadMimeType, file.name);
-  const path = "mosyaamosya/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
+  const path = slug + "/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
   const response = await fetch(url + "/storage/v1/object/" + CREATOR_MEDIA_BUCKET + "/" + path, {
     method: "POST",
     headers: {
@@ -765,45 +916,46 @@ async function uploadCreatorMedia(input = {}) {
 }
 
 function normalizeCreator(row = {}) {
+  const defaults = defaultCreator(row.slug || row.username || row.id || "mosyaamosya");
   return {
-    ...DEFAULT_MINA_SETTINGS,
+    ...defaults,
     ...row,
-    id: row.id || MINA_CREATOR_ID,
-    display_name: clean(row.display_name) || DEFAULT_MINA_SETTINGS.display_name,
-    username: clean(row.username) || DEFAULT_MINA_SETTINGS.username,
+    id: row.id || defaults.id,
+    display_name: clean(row.display_name) || defaults.display_name,
+    username: clean(row.username) || defaults.username,
     slug: normalizeSlug(row.slug || row.username),
-    bio: clean(row.bio) || DEFAULT_MINA_SETTINGS.bio,
+    bio: clean(row.bio) || defaults.bio,
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
-    hero_video_url: clean(row.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: clean(row.hero_video_url) || defaults.hero_video_url,
     music_enabled: bool(row.music_enabled, false),
     music_url: clean(row.music_url),
-    music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
+    music_volume: Math.max(0, Math.min(1, number(row.music_volume, defaults.music_volume))),
     music_loop: bool(row.music_loop, true),
     intro_audio_enabled: bool(row.intro_audio_enabled, false),
     intro_audio_url: clean(row.intro_audio_url),
-    intro_audio_volume: Math.max(0, Math.min(1, number(row.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
-    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(row.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
-    intro_audio_stop_after: Math.max(1, Math.min(30, number(row.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
+    intro_audio_volume: Math.max(0, Math.min(1, number(row.intro_audio_volume, defaults.intro_audio_volume))),
+    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(row.intro_audio_fade_out_duration, defaults.intro_audio_fade_out_duration))),
+    intro_audio_stop_after: Math.max(1, Math.min(30, number(row.intro_audio_stop_after, defaults.intro_audio_stop_after))),
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
-    background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    background_gradient: clean(row.background_gradient) || defaults.background_gradient,
     ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
-    timezone: clean(row.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    timezone: clean(row.timezone) || defaults.timezone,
     seasonal_effects_enabled: bool(row.seasonal_effects_enabled, true),
     holiday_effects_enabled: bool(row.holiday_effects_enabled, true),
     redirect_mina_enabled: bool(row.redirect_mina_enabled, true),
     tiktok_url: clean(row.tiktok_url),
-    discord_url: clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
+    discord_url: clean(row.discord_url) || defaults.discord_url,
     instagram_url: clean(row.instagram_url),
     tiktok_coins_url: clean(row.tiktok_coins_url),
     business_email: clean(row.business_email),
     live_url: clean(row.live_url),
     live_status: bool(row.live_status, false),
-    live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
-    tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    live_button_text: clean(row.live_button_text) || defaults.live_button_text,
+    tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || defaults.tiktok_live_username),
     auto_live_detection_enabled: bool(row.auto_live_detection_enabled, true),
-    manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, defaults.manual_live_fallback_enabled),
     battle_mode_enabled: bool(row.battle_mode_enabled, false),
     battle_opponent: clean(row.battle_opponent),
     battle_result: normalizeBattleResult(row.battle_result),
@@ -818,46 +970,46 @@ function normalizeCreator(row = {}) {
     discord_visible: bool(row.discord_visible, true),
     creator_passport_visible: bool(row.creator_passport_visible, true),
     discord_link_visible: bool(row.discord_link_visible, true),
-    discord_link_title: clean(row.discord_link_title) || DEFAULT_MINA_SETTINGS.discord_link_title,
-    discord_link_subtitle: clean(row.discord_link_subtitle) || DEFAULT_MINA_SETTINGS.discord_link_subtitle,
-    discord_link_cta_label: clean(row.discord_link_cta_label) || DEFAULT_MINA_SETTINGS.discord_link_cta_label,
+    discord_link_title: clean(row.discord_link_title) || defaults.discord_link_title,
+    discord_link_subtitle: clean(row.discord_link_subtitle) || defaults.discord_link_subtitle,
+    discord_link_cta_label: clean(row.discord_link_cta_label) || defaults.discord_link_cta_label,
     tiktok_link_visible: bool(row.tiktok_link_visible, true),
-    tiktok_link_title: clean(row.tiktok_link_title) || DEFAULT_MINA_SETTINGS.tiktok_link_title,
-    tiktok_link_subtitle: clean(row.tiktok_link_subtitle) || DEFAULT_MINA_SETTINGS.tiktok_link_subtitle,
-    tiktok_link_cta_label: clean(row.tiktok_link_cta_label) || DEFAULT_MINA_SETTINGS.tiktok_link_cta_label,
+    tiktok_link_title: clean(row.tiktok_link_title) || defaults.tiktok_link_title,
+    tiktok_link_subtitle: clean(row.tiktok_link_subtitle) || defaults.tiktok_link_subtitle,
+    tiktok_link_cta_label: clean(row.tiktok_link_cta_label) || defaults.tiktok_link_cta_label,
     battle_link_visible: bool(row.battle_link_visible, true),
-    battle_link_title: clean(row.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
-    battle_link_subtitle: clean(row.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
-    battle_link_cta_label: clean(row.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    battle_link_title: clean(row.battle_link_title) || defaults.battle_link_title,
+    battle_link_subtitle: clean(row.battle_link_subtitle) || defaults.battle_link_subtitle,
+    battle_link_cta_label: clean(row.battle_link_cta_label) || defaults.battle_link_cta_label,
     business_link_visible: bool(row.business_link_visible, true),
-    business_link_title: clean(row.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
-    business_link_subtitle: clean(row.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
-    business_link_cta_label: clean(row.business_link_cta_label) || DEFAULT_MINA_SETTINGS.business_link_cta_label,
+    business_link_title: clean(row.business_link_title) || defaults.business_link_title,
+    business_link_subtitle: clean(row.business_link_subtitle) || defaults.business_link_subtitle,
+    business_link_cta_label: clean(row.business_link_cta_label) || defaults.business_link_cta_label,
     music_link_visible: bool(row.music_link_visible, false),
-    music_link_title: clean(row.music_link_title) || DEFAULT_MINA_SETTINGS.music_link_title,
-    music_link_subtitle: clean(row.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
-    music_link_cta_label: clean(row.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
-    newsletter_cta_label: clean(row.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    music_link_title: clean(row.music_link_title) || defaults.music_link_title,
+    music_link_subtitle: clean(row.music_link_subtitle) || defaults.music_link_subtitle,
+    music_link_cta_label: clean(row.music_link_cta_label) || defaults.music_link_cta_label,
+    newsletter_cta_label: clean(row.newsletter_cta_label) || defaults.newsletter_cta_label,
     newsletter_destination: clean(row.newsletter_destination),
     faq_link_visible: bool(row.faq_link_visible, false),
-    faq_link_title: clean(row.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
-    faq_link_subtitle: clean(row.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
-    faq_link_cta_label: clean(row.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_title: clean(row.faq_link_title) || defaults.faq_link_title,
+    faq_link_subtitle: clean(row.faq_link_subtitle) || defaults.faq_link_subtitle,
+    faq_link_cta_label: clean(row.faq_link_cta_label) || defaults.faq_link_cta_label,
     faq_link_url: clean(row.faq_link_url),
     community_link_visible: bool(row.community_link_visible, true),
-    community_link_title: clean(row.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
-    community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
-    community_link_cta_label: clean(row.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
-    community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_link_title: clean(row.community_link_title) || defaults.community_link_title,
+    community_link_subtitle: clean(row.community_link_subtitle) || defaults.community_link_subtitle,
+    community_link_cta_label: clean(row.community_link_cta_label) || defaults.community_link_cta_label,
+    community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || defaults.community_link_url,
     share_link_visible: bool(row.share_link_visible, true),
     custom_links: normalizeCustomLinks(row.custom_links),
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: normalizeCreatorDna(row.creator_dna),
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
-    subscribe_popup_title: clean(row.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
-    subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
-    discord_invite_url: clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    subscribe_popup_title: clean(row.subscribe_popup_title) || defaults.subscribe_popup_title,
+    subscribe_popup_copy: clean(row.subscribe_popup_copy) || defaults.subscribe_popup_copy,
+    discord_invite_url: clean(row.discord_invite_url) || clean(row.discord_url) || defaults.discord_invite_url,
     discord_server_id: clean(row.discord_server_id)
   };
 }
@@ -884,9 +1036,9 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   return normalizeCreator(rows[0]);
 }
 
-async function fetchCreatorFromAnalyticsBridge() {
+async function fetchCreatorFromAnalyticsBridge(slug = "mosyaamosya") {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_settings_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
+    "analytics_events?event_type=eq." + bridgeEventType("creator_settings", slug) + "&select=metadata,created_at&order=created_at.desc&limit=1",
     { context: "Creator analytics bridge" }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -895,16 +1047,30 @@ async function fetchCreatorFromAnalyticsBridge() {
 }
 
 async function fetchCreator(slug = "mosyaamosya") {
+  const safeSlug = normalizeSlug(slug);
   let tableResult = null;
   try {
-    const creator = await fetchCreatorFromTable(slug);
+    const creator = await fetchCreatorFromTable(safeSlug);
     if (creator) tableResult = { creator, source: "database" };
   } catch (error) {
     // The dedicated creators table may not exist until the SQL file is applied.
   }
 
+  if (safeSlug === "doonia" && tableResult) {
+    try {
+      const creator = await fetchCreatorFromAnalyticsBridge(safeSlug);
+      if (creator) {
+        return {
+          creator: normalizeCreator({ ...tableResult.creator, ...creator, id: tableResult.creator.id, slug: tableResult.creator.slug }),
+          source: "database"
+        };
+      }
+    } catch (error) {}
+    return tableResult;
+  }
+
   try {
-    const creator = await fetchCreatorFromAnalyticsBridge();
+    const creator = await fetchCreatorFromAnalyticsBridge(safeSlug);
     if (creator) {
       const tableTime = tableResult && Date.parse(tableResult.creator.updated_at || "");
       const bridgeTime = Date.parse(creator.updated_at || "");
@@ -917,55 +1083,56 @@ async function fetchCreator(slug = "mosyaamosya") {
   }
 
   if (tableResult) return tableResult;
-  return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
+  return { creator: normalizeCreator(defaultCreator(safeSlug)), source: "seed" };
 }
 
 function creatorPayload(input = {}) {
+  const defaults = defaultCreator(input.slug || input.username || "mosyaamosya");
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
-    const error = new Error("Intro audio is enabled, but no valid direct .mp3, .m4a, or .aac URL is saved.");
+    const error = new Error("Creator Signature is enabled, but no valid direct audio URL is saved.");
     error.statusCode = 400;
     error.code = "INVALID_INTRO_AUDIO_URL";
     throw error;
   }
   return {
-    id: MINA_CREATOR_ID,
-    display_name: clean(input.display_name) || DEFAULT_MINA_SETTINGS.display_name,
-    username: clean(input.username) || DEFAULT_MINA_SETTINGS.username,
+    id: input.id === DOONIA_CREATOR_ID || normalizeSlug(input.slug || input.username) === "doonia" ? DOONIA_CREATOR_ID : defaults.id,
+    display_name: clean(input.display_name) || defaults.display_name,
+    username: clean(input.username) || defaults.username,
     slug: normalizeSlug(input.slug || input.username),
     bio: clean(input.bio),
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
-    hero_video_url: clean(input.hero_video_url) || DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_video_url: clean(input.hero_video_url) || defaults.hero_video_url,
     music_enabled: bool(input.music_enabled, false),
     music_url: clean(input.music_url),
-    music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
+    music_volume: Math.max(0, Math.min(1, number(input.music_volume, defaults.music_volume))),
     music_loop: bool(input.music_loop, true),
     intro_audio_enabled: introAudioEnabled,
     intro_audio_url: introAudioUrl,
-    intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
-    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
-    intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
+    intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, defaults.intro_audio_volume))),
+    intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, defaults.intro_audio_fade_out_duration))),
+    intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, defaults.intro_audio_stop_after))),
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
-    background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    background_gradient: clean(input.background_gradient) || defaults.background_gradient,
     ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
-    timezone: clean(input.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    timezone: clean(input.timezone) || defaults.timezone,
     seasonal_effects_enabled: bool(input.seasonal_effects_enabled, true),
     holiday_effects_enabled: bool(input.holiday_effects_enabled, true),
     redirect_mina_enabled: bool(input.redirect_mina_enabled, true),
     tiktok_url: clean(input.tiktok_url),
-    discord_url: clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
+    discord_url: clean(input.discord_url) || defaults.discord_url,
     instagram_url: clean(input.instagram_url),
     tiktok_coins_url: clean(input.tiktok_coins_url),
     business_email: clean(input.business_email),
     live_url: clean(input.live_url),
     live_status: bool(input.live_status, false),
-    live_button_text: clean(input.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
-    tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    live_button_text: clean(input.live_button_text) || defaults.live_button_text,
+    tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || defaults.tiktok_live_username),
     auto_live_detection_enabled: bool(input.auto_live_detection_enabled, true),
-    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, defaults.manual_live_fallback_enabled),
     battle_mode_enabled: bool(input.battle_mode_enabled, false),
     battle_opponent: clean(input.battle_opponent),
     battle_result: normalizeBattleResult(input.battle_result),
@@ -980,46 +1147,46 @@ function creatorPayload(input = {}) {
     discord_visible: bool(input.discord_visible, true),
     creator_passport_visible: bool(input.creator_passport_visible, true),
     discord_link_visible: bool(input.discord_link_visible, true),
-    discord_link_title: clean(input.discord_link_title) || DEFAULT_MINA_SETTINGS.discord_link_title,
-    discord_link_subtitle: clean(input.discord_link_subtitle) || DEFAULT_MINA_SETTINGS.discord_link_subtitle,
-    discord_link_cta_label: clean(input.discord_link_cta_label) || DEFAULT_MINA_SETTINGS.discord_link_cta_label,
+    discord_link_title: clean(input.discord_link_title) || defaults.discord_link_title,
+    discord_link_subtitle: clean(input.discord_link_subtitle) || defaults.discord_link_subtitle,
+    discord_link_cta_label: clean(input.discord_link_cta_label) || defaults.discord_link_cta_label,
     tiktok_link_visible: bool(input.tiktok_link_visible, true),
-    tiktok_link_title: clean(input.tiktok_link_title) || DEFAULT_MINA_SETTINGS.tiktok_link_title,
-    tiktok_link_subtitle: clean(input.tiktok_link_subtitle) || DEFAULT_MINA_SETTINGS.tiktok_link_subtitle,
-    tiktok_link_cta_label: clean(input.tiktok_link_cta_label) || DEFAULT_MINA_SETTINGS.tiktok_link_cta_label,
+    tiktok_link_title: clean(input.tiktok_link_title) || defaults.tiktok_link_title,
+    tiktok_link_subtitle: clean(input.tiktok_link_subtitle) || defaults.tiktok_link_subtitle,
+    tiktok_link_cta_label: clean(input.tiktok_link_cta_label) || defaults.tiktok_link_cta_label,
     battle_link_visible: bool(input.battle_link_visible, true),
-    battle_link_title: clean(input.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
-    battle_link_subtitle: clean(input.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
-    battle_link_cta_label: clean(input.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    battle_link_title: clean(input.battle_link_title) || defaults.battle_link_title,
+    battle_link_subtitle: clean(input.battle_link_subtitle) || defaults.battle_link_subtitle,
+    battle_link_cta_label: clean(input.battle_link_cta_label) || defaults.battle_link_cta_label,
     business_link_visible: bool(input.business_link_visible, true),
-    business_link_title: clean(input.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
-    business_link_subtitle: clean(input.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
-    business_link_cta_label: clean(input.business_link_cta_label) || DEFAULT_MINA_SETTINGS.business_link_cta_label,
+    business_link_title: clean(input.business_link_title) || defaults.business_link_title,
+    business_link_subtitle: clean(input.business_link_subtitle) || defaults.business_link_subtitle,
+    business_link_cta_label: clean(input.business_link_cta_label) || defaults.business_link_cta_label,
     music_link_visible: bool(input.music_link_visible, false),
-    music_link_title: clean(input.music_link_title) || DEFAULT_MINA_SETTINGS.music_link_title,
-    music_link_subtitle: clean(input.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
-    music_link_cta_label: clean(input.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
-    newsletter_cta_label: clean(input.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    music_link_title: clean(input.music_link_title) || defaults.music_link_title,
+    music_link_subtitle: clean(input.music_link_subtitle) || defaults.music_link_subtitle,
+    music_link_cta_label: clean(input.music_link_cta_label) || defaults.music_link_cta_label,
+    newsletter_cta_label: clean(input.newsletter_cta_label) || defaults.newsletter_cta_label,
     newsletter_destination: clean(input.newsletter_destination),
     faq_link_visible: bool(input.faq_link_visible, false),
-    faq_link_title: clean(input.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
-    faq_link_subtitle: clean(input.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
-    faq_link_cta_label: clean(input.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_title: clean(input.faq_link_title) || defaults.faq_link_title,
+    faq_link_subtitle: clean(input.faq_link_subtitle) || defaults.faq_link_subtitle,
+    faq_link_cta_label: clean(input.faq_link_cta_label) || defaults.faq_link_cta_label,
     faq_link_url: clean(input.faq_link_url),
     community_link_visible: bool(input.community_link_visible, true),
-    community_link_title: clean(input.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
-    community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
-    community_link_cta_label: clean(input.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
-    community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_link_title: clean(input.community_link_title) || defaults.community_link_title,
+    community_link_subtitle: clean(input.community_link_subtitle) || defaults.community_link_subtitle,
+    community_link_cta_label: clean(input.community_link_cta_label) || defaults.community_link_cta_label,
+    community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || defaults.community_link_url,
     share_link_visible: bool(input.share_link_visible, true),
     custom_links: normalizeCustomLinks(input.custom_links),
     next_live_datetime: normalizeDateTime(input.next_live_datetime),
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: normalizeCreatorDna(input.creator_dna),
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
-    subscribe_popup_title: clean(input.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
-    subscribe_popup_copy: clean(input.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
-    discord_invite_url: clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    subscribe_popup_title: clean(input.subscribe_popup_title) || defaults.subscribe_popup_title,
+    subscribe_popup_copy: clean(input.subscribe_popup_copy) || defaults.subscribe_popup_copy,
+    discord_invite_url: clean(input.discord_invite_url) || clean(input.discord_url) || defaults.discord_invite_url,
     discord_server_id: clean(input.discord_server_id),
     updated_at: new Date().toISOString()
   };
@@ -1035,27 +1202,42 @@ async function saveCreatorToTable(payload) {
       context: "Creator settings"
     });
   } catch (error) {
-    const { share_link_visible, ...legacyPayload } = payload;
-    rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=representation",
-      body: [legacyPayload],
-      context: "Creator settings"
-    });
-    await saveCreatorToAnalyticsBridge(payload).catch(() => null);
+    try {
+      const { share_link_visible, ...legacyPayload } = payload;
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: [legacyPayload],
+        context: "Creator settings"
+      });
+      await saveCreatorToAnalyticsBridge(payload).catch(() => null);
+    } catch (legacyError) {
+      const basePayload = {};
+      BASE_CREATOR_FIELDS.forEach((field) => {
+        if (field !== "updated_at" && Object.prototype.hasOwnProperty.call(payload, field)) basePayload[field] = payload[field];
+      });
+      rows = await supabaseFetch("creators?on_conflict=id&select=" + BASE_CREATOR_SELECT, {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: [basePayload],
+        context: "Creator settings"
+      });
+      await saveCreatorToAnalyticsBridge(payload).catch(() => null);
+    }
   }
   const row = Array.isArray(rows) && rows[0] ? rows[0] : payload;
   return { creator: normalizeCreator({ ...payload, ...row }), source: "database" };
 }
 
 async function saveCreatorToAnalyticsBridge(payload) {
+  const slug = normalizeSlug(payload.slug || "mosyaamosya");
   const rows = await supabaseFetch("analytics_events?select=metadata,created_at", {
     method: "POST",
     prefer: "return=representation",
     body: {
-      event_type: "creator_settings_mosyaamosya",
+      event_type: bridgeEventType("creator_settings", slug),
       source: "creator_os_admin",
-      route: "/mosyaamosya",
+      route: "/" + slug,
       metadata: { creator: payload }
     },
     context: "Creator analytics bridge"
@@ -1078,12 +1260,15 @@ async function handleCreatorSettings(req, res) {
   if (req.method === "GET") {
     try {
       const query = getQuery(req);
-      const result = await fetchCreator(clean(query.slug) || "mosyaamosya");
+      const slug = normalizeSlug(clean(query.slug) || "mosyaamosya");
+      const result = await fetchCreator(slug);
       return send(res, 200, { success: true, creator: result.creator, source: result.source });
     } catch (error) {
+      const query = getQuery(req);
+      const slug = normalizeSlug(clean(query.slug) || "mosyaamosya");
       return send(res, 200, {
         success: true,
-        creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+        creator: normalizeCreator(defaultCreator(slug)),
         source: "fallback",
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
@@ -1097,14 +1282,15 @@ async function handleCreatorSettings(req, res) {
 
   const input = await parseBody(req);
   if (input.action === "login") {
+    const slug = normalizeSlug(input.slug || "mosyaamosya");
     const credential = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
-    const creatorOk = await verifyCreatorPassword(credential);
+    const creatorOk = await verifyCreatorPassword(credential, slug);
     const masterOk = creatorOk ? false : await verifyAdminKey(credential);
     if (!creatorOk && !masterOk) {
       return send(res, 401, { success: false, error: "Creator access denied" });
     }
-    const result = await fetchCreator(input.slug || "mosyaamosya").catch(() => ({
-      creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+    const result = await fetchCreator(slug).catch(() => ({
+      creator: normalizeCreator(defaultCreator(slug)),
       source: "fallback"
     }));
     return send(res, 200, {
@@ -1112,7 +1298,7 @@ async function handleCreatorSettings(req, res) {
       creator: result.creator,
       source: result.source,
       role: masterOk ? "master" : "creator",
-      creator_session: createCreatorSession(masterOk ? "master" : "creator")
+      creator_session: createCreatorSession(masterOk ? "master" : "creator", slug)
     });
   }
 
@@ -1122,13 +1308,14 @@ async function handleCreatorSettings(req, res) {
   }
 
   if (input.action === "load") {
+    const slug = normalizeSlug(input.slug || "mosyaamosya");
     try {
-      const result = await fetchCreator(input.slug || "mosyaamosya");
+      const result = await fetchCreator(slug);
       return send(res, 200, { success: true, creator: result.creator, source: result.source });
     } catch (error) {
       return send(res, 200, {
         success: true,
-        creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+        creator: normalizeCreator(defaultCreator(slug)),
         source: "fallback",
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
@@ -1136,6 +1323,7 @@ async function handleCreatorSettings(req, res) {
   }
 
   if (input.action === "change_password") {
+    const slug = normalizeSlug(input.slug || "mosyaamosya");
     const currentPassword = clean(input.current_password || input.currentPassword);
     const newPassword = clean(input.new_password || input.newPassword);
     const confirmPassword = clean(input.confirm_password || input.confirmPassword);
@@ -1145,14 +1333,14 @@ async function handleCreatorSettings(req, res) {
     if (newPassword !== confirmPassword) {
       return send(res, 400, { success: false, error: "New passwords do not match." });
     }
-    if (access.role !== "master" && !(await verifyCreatorPassword(currentPassword))) {
+    if (access.role !== "master" && !(await verifyCreatorPassword(currentPassword, slug))) {
       return send(res, 401, { success: false, error: "Current password is incorrect." });
     }
-    await saveCreatorPasswordHash(hashPassword(newPassword));
+    await saveCreatorPasswordHash(hashPassword(newPassword), slug);
     return send(res, 200, {
       success: true,
       message: "Creator password updated.",
-      creator_session: createCreatorSession("creator")
+      creator_session: createCreatorSession("creator", slug)
     });
   }
 
@@ -1169,6 +1357,31 @@ module.exports = async function handler(req, res) {
   const query = getQuery(req);
   if (query.creator_live_status === "1") {
     return handleCreatorLiveStatus(req, res);
+  }
+
+  if (query.creator_health === "1") {
+    const slug = normalizeSlug(query.slug || "mosyaamosya");
+    try {
+      const settings = await fetchCreator(slug);
+      return send(res, 200, {
+        success: true,
+        slug,
+        creator: settings.creator,
+        source: settings.source,
+        health: {
+          settings: settings.source,
+          databaseBacked: settings.source === "database"
+        }
+      });
+    } catch (error) {
+      return send(res, 200, {
+        success: false,
+        slug,
+        source: "fallback",
+        warning: error.code || "CREATOR_HEALTH_FALLBACK",
+        creator: normalizeCreator(defaultCreator(slug))
+      });
+    }
   }
 
   if (query.creator_settings === "1") {
