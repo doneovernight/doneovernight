@@ -11,9 +11,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <script>
+    (() => {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const rawSlug = parts[0] === "admin" ? parts[1] : parts[0];
+      window.__creatorSlug = String(rawSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
+    })();
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("experience") === "1" || localStorage.getItem("creator_intro_mosyaamosya_v1") !== "done") {
+      if (params.get("experience") === "1" || localStorage.getItem("creator_intro_" + window.__creatorSlug + "_v1") !== "done") {
         document.documentElement.classList.add("intro-pending");
       }
     } catch (error) {
@@ -66,7 +71,7 @@
       if (isTikTok) {
         document.documentElement.classList.add("tiktok-in-app-browser");
         try {
-          if (sessionStorage.getItem("creator_tiktok_welcome_mosyaamosya_v1") !== "continued") {
+          if (sessionStorage.getItem("creator_tiktok_welcome_" + window.__creatorSlug + "_v1") !== "continued") {
             document.documentElement.classList.add("tiktok-gate-pending");
           }
         } catch (error) {
@@ -1704,6 +1709,7 @@
         return true;
       }
       function report(area, action, error, extra) {
+        const reportSlug = String(window.__creatorSlug || "mosyaamosya");
         const message = text(error && (error.message || error.reason) || error, 700);
         if (!message) return;
         const key = fingerprint(area, action, message);
@@ -1715,7 +1721,7 @@
             keepalive: true,
             body: JSON.stringify({
               action: "report_error",
-              slug: "mosyaamosya",
+              slug: reportSlug,
               area,
               action_name: action,
               error: message,
@@ -1755,11 +1761,12 @@
   </script>
 
   <script>
+    const currentCreatorSlug = String(window.__creatorSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
     const fallback = {
       id: "11111111-1111-4111-8111-111111111111",
       display_name: "Mina Mosya",
       username: "mosyaamosya",
-      slug: "mosyaamosya",
+      slug: currentCreatorSlug,
       bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
       location: "Chicago 🇺🇸",
       avatar_url: "",
@@ -1865,6 +1872,22 @@
       public_page_order: []
     };
     const params = new URLSearchParams(window.location.search);
+    if (currentCreatorSlug !== "mosyaamosya") {
+      fallback.id = "";
+      fallback.display_name = "Creator";
+      fallback.username = currentCreatorSlug;
+      fallback.slug = currentCreatorSlug;
+      fallback.bio = "";
+      fallback.location = "";
+      fallback.avatar_url = "";
+      fallback.hero_image_url = "";
+      fallback.hero_video_url = "";
+      fallback.tiktok_url = "";
+      fallback.discord_url = "";
+      fallback.tiktok_coins_url = "";
+      fallback.business_email = "";
+      fallback.discord_invite_url = "";
+    }
     const TIKTOK_BROWSER_HELPER_ENABLED = true;
     const forceExperience = params.get("experience") === "1";
     const previewMode = params.get("preview") === "1";
@@ -1922,8 +1945,8 @@
       muted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m19 9-6 6"/><path d="m13 9 6 6"/></svg>'
     };
     const $ = (id) => document.getElementById(id);
-    const introKey = "creator_intro_mosyaamosya_v1";
-    const tiktokWelcomeKey = "creator_tiktok_welcome_mosyaamosya_v1";
+    const introKey = "creator_intro_" + currentCreatorSlug + "_v1";
+    const tiktokWelcomeKey = "creator_tiktok_welcome_" + currentCreatorSlug + "_v1";
     const liveRuntimePollMs = 2500;
     let countdownTimer = null;
     let countdownZeroChecked = false;
@@ -2547,7 +2570,7 @@
       const end = new Date(start.getTime() + 60 * 60 * 1000);
       const timezone = settings.timezone || fallback.timezone;
       const title = countdownMessage(settings) || "Mina Mosya is live";
-      const pageUrl = "https://doneovernight.com/mosyaamosya";
+      const pageUrl = "https://doneovernight.com/" + currentCreatorSlug + "";
       const description = "Join Mina’s livestream: " + pageUrl;
       return [
         "BEGIN:VCALENDAR",
@@ -2556,7 +2579,7 @@
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        "UID:mosyaamosya-" + start.getTime() + "@doneovernight.com",
+        "UID:" + currentCreatorSlug + "-" + start.getTime() + "@doneovernight.com",
         "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z"),
         "DTSTART;TZID=" + timezone + ":" + calendarDateTime(start, timezone),
         "DTEND;TZID=" + timezone + ":" + calendarDateTime(end, timezone),
@@ -4464,7 +4487,7 @@
 
     primeDecorativeVideos(fallback);
     function fetchCreatorSettingsForCurrentSurface() {
-      return fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery() + creatorMediaDebugQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
+      return fetch("/api/creator-settings?slug=" + encodeURIComponent(currentCreatorSlug) + "" + creatorSettingsSurfaceQuery() + creatorMediaDebugQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
         .then((response) => response.json());
     }
     fetchCreatorSettingsForCurrentSurface()

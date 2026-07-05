@@ -1094,7 +1094,7 @@
         <h1>Mina Mosya</h1>
       </div>
       <div class="actions">
-        <a class="button" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Experience My Page</a>
+        <a class="button" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Experience My Page</a>
         <label class="developer-toggle"><input id="developerModeToggle" type="checkbox"> Developer Mode</label>
         <button class="button danger" id="logoutButton" type="button">Logout</button>
       </div>
@@ -1169,7 +1169,7 @@
             </div>
             <p class="connection-runtime-note" id="tiktokConnectionRuntimeNote" hidden></p>
             <div class="fields connection-dev-only" id="tiktokConnectionFields">
-              <label>Username<input id="tiktokConnectionUsernameInput" autocomplete="off" placeholder="mosyaamosya"></label>
+              <label>Username<input id="tiktokConnectionUsernameInput" autocomplete="off" placeholder="creator slug"></label>
             </div>
             <div class="connection-actions">
               <button class="button primary" id="connectTikTok" type="button">Connect TikTok</button>
@@ -1819,7 +1819,7 @@
               Add to Home Screen for a faster creator dashboard feel.<br>
               Preview icon: DONEOVERNIGHT wordmark. Mina can choose an icon theme; changing it later may require reinstalling.
             </div>
-            <a class="button span-2" href="https://doneovernight.com/mosyaamosya?experience=1&preview=1" target="_blank" rel="noreferrer">Open Quick Access</a>
+            <a class="button span-2" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Open Quick Access</a>
             <details class="advanced-box span-2">
               <summary>Advanced</summary>
               <div class="fields">
@@ -1847,12 +1847,17 @@
           <h2>Live preview</h2>
           <div class="muted">A read-only mirror of the live public page.</div>
         </section>
-        <div class="phone"><iframe id="previewFrame" src="https://doneovernight.com/mosyaamosya?preview=1" title="Mina public page preview"></iframe></div>
+        <div class="phone"><iframe id="previewFrame" src="about:blank" title="Creator public page preview"></iframe></div>
       </aside>
     </section>
   </main>
 
   <script>
+    (() => {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const rawSlug = parts[0] === "admin" ? parts[1] : parts[0];
+      window.__creatorSlug = String(rawSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
+    })();
     (() => {
       const endpoint = "/api/creator-health";
       const rateWindow = 5 * 60 * 1000;
@@ -1872,6 +1877,7 @@
         return true;
       }
       function report(area, action, error, extra) {
+        const reportSlug = String(window.__creatorSlug || "mosyaamosya");
         const message = text(error && (error.message || error.reason) || error, 700);
         if (!message) return;
         const key = fingerprint(area, action, message);
@@ -1883,7 +1889,7 @@
             keepalive: true,
             body: JSON.stringify({
               action: "report_error",
-              slug: "mosyaamosya",
+              slug: reportSlug,
               area,
               action_name: action,
               error: message,
@@ -1923,8 +1929,9 @@
   </script>
 
   <script>
-    const sessionFlag = "doneovernight_creator_mosyaamosya";
-    const sessionKey = "doneovernight_creator_mosyaamosya_session";
+    const currentCreatorSlug = String(window.__creatorSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
+    const sessionFlag = "doneovernight_creator_" + currentCreatorSlug;
+    const sessionKey = "doneovernight_creator_" + currentCreatorSlug + "_session";
     const themes = [
       ["mina", "Mina Premium"],
       ["rose", "Baby Pink"],
@@ -2476,7 +2483,7 @@
       window.scrollTo(0, 0);
     }
     function closeApp() { window.location.reload(); }
-    function normalizeSlug(value) { return String(value || "mosyaamosya").toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya"; }
+    function normalizeSlug(value) { return String(value || currentCreatorSlug).toLowerCase().trim().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || currentCreatorSlug; }
     function normalizeDateTime(value) {
       if (!value) return "";
       const date = new Date(value);
@@ -2925,7 +2932,7 @@
       const status = $("responseStatus");
       if (status) setStatus("Loading results...", false, "responseStatus");
       try {
-        const data = await api({ action: "load_responses", creator_session: creatorSession(), slug: "mosyaamosya" });
+        const data = await api({ action: "load_responses", creator_session: creatorSession(), slug: currentCreatorSlug });
         renderPollResults(data.responses && data.responses.poll);
         latestNewsletterRows = (data.responses && data.responses.newsletter) || [];
         renderNewsletterInbox(latestNewsletterRows);
@@ -2937,7 +2944,7 @@
     async function resetPollResults() {
       setStatus("Resetting poll results...", false, "responseStatus");
       try {
-        const data = await api({ action: "reset_poll_results", creator_session: creatorSession(), slug: "mosyaamosya" });
+        const data = await api({ action: "reset_poll_results", creator_session: creatorSession(), slug: currentCreatorSlug });
         renderPollResults(data.poll);
         setStatus("Poll results reset.", false, "responseStatus");
       } catch (error) {
@@ -3012,7 +3019,7 @@
     async function loadAnalytics() {
       setStatus("Loading analytics...", false, "analyticsStatus");
       try {
-        const data = await api({ action: "load_creator_analytics", creator_session: creatorSession(), slug: "mosyaamosya" });
+        const data = await api({ action: "load_creator_analytics", creator_session: creatorSession(), slug: currentCreatorSlug });
         renderAnalytics(data.analytics || {});
       } catch (error) {
         setStatus(readableMessage(error, "Could not load analytics."), true, "analyticsStatus");
@@ -3056,7 +3063,7 @@
       return {
         display_name: String(data.get("display_name") || "").trim(),
         username: String(data.get("username") || "").trim(),
-        slug: normalizeSlug(data.get("slug") || data.get("username")),
+        slug: currentCreatorSlug,
         bio: String(data.get("bio") || "").trim(),
         location: String(data.get("location") || "").trim(),
         avatar_url: String(data.get("avatar_url") || "").trim(),
@@ -3069,7 +3076,7 @@
         live_url: String(data.get("live_url") || "").trim(),
         live_status: boolField("live_status"),
         live_button_text: String(data.get("live_button_text") || "").trim() || "Join Live",
-        tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || "mosyaamosya",
+        tiktok_live_username: String(data.get("tiktok_live_username") || "").trim() || currentCreatorSlug,
         auto_live_detection_enabled: boolField("auto_live_detection_enabled", true),
         manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
         battle_mode_enabled: boolField("battle_mode_enabled"),
@@ -3407,7 +3414,7 @@
       const data = await api({
         action: "set_runtime_state",
         creator_session: creatorSession(),
-        slug: "mosyaamosya",
+        slug: currentCreatorSlug,
         ...values,
         current_win_streak: values.battle_win_streak
       });
@@ -3423,7 +3430,7 @@
       return data;
     }
     function setLatestRuntimeStateFromCreator(creator, source = "admin-runtime") {
-      const username = String((creator && creator.tiktok_live_username) || form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+      const username = String((creator && creator.tiktok_live_username) || form.elements.tiktok_live_username.value || currentCreatorSlug).replace(/^@+/, "") || currentCreatorSlug;
       const battleActive = Boolean(creator && creator.battle_mode_enabled);
       latestLiveRuntimeState = {
         isLive: Boolean(creator && creator.live_status),
@@ -3466,7 +3473,7 @@
       if (action === "start-live") {
         setBoolField("live_status", true);
         latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
-        const username = String(form.elements.tiktok_live_username.value || "mosyaamosya").replace(/^@+/, "") || "mosyaamosya";
+        const username = String(form.elements.tiktok_live_username.value || currentCreatorSlug).replace(/^@+/, "") || currentCreatorSlug;
         if (form.elements.live_url && !String(form.elements.live_url.value || "").trim()) {
           form.elements.live_url.value = "https://www.tiktok.com/@" + username + "/live";
         }
@@ -3482,7 +3489,7 @@
           const data = await api({
             action: "set_live_mode",
             creator_session: creatorSession(),
-            slug: "mosyaamosya",
+            slug: currentCreatorSlug,
             live_status: true,
             live_url: form.elements.live_url.value,
             tiktok_live_username: form.elements.tiktok_live_username.value
@@ -3514,7 +3521,7 @@
           const data = await api({
             action: "set_live_mode",
             creator_session: creatorSession(),
-            slug: "mosyaamosya",
+            slug: currentCreatorSlug,
             live_status: false,
             live_url: form.elements.live_url.value,
             tiktok_live_username: form.elements.tiktok_live_username.value
@@ -3587,9 +3594,20 @@
       document.documentElement.style.setProperty("--admin-bg-b", vars[3]);
     }
     function previewUrl() {
-      const url = new URL("https://doneovernight.com/mosyaamosya");
+      const url = new URL("https://doneovernight.com/" + currentCreatorSlug + "");
       url.searchParams.set("preview", "1");
       return url;
+    }
+    function publicExperienceUrl() {
+      const url = new URL("https://doneovernight.com/" + currentCreatorSlug);
+      url.searchParams.set("experience", "1");
+      url.searchParams.set("preview", "1");
+      return url.href;
+    }
+    function updatePublicPageLinks() {
+      document.querySelectorAll("[data-public-page-link='experience']").forEach((link) => {
+        link.href = publicExperienceUrl();
+      });
     }
     function refreshPreviewLiveRuntime() {
       const frame = $("previewFrame");
@@ -3638,10 +3656,15 @@
       });
     }
     async function api(payload) {
+      const bodyPayload = {
+        ...(payload || {}),
+        slug: currentCreatorSlug,
+        ...(payload && payload.creator ? { creator: { ...payload.creator, slug: currentCreatorSlug } } : {})
+      };
       const response = await fetch("/api/creator-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(bodyPayload)
       });
       const text = await response.text();
       let data = {};
@@ -3679,17 +3702,17 @@
       statusEl.textContent = statusLabel;
       statusEl.className = "connection-status " + (connected ? "connected" : "not_connected");
       $("tiktokConnectionCopy").textContent = connected
-        ? "TikTok is connected to Mina's creator workspace."
+        ? "TikTok is connected to this creator workspace."
         : "Connect your TikTok account to enable live features.";
       $("tiktokConnectionRequired").hidden = connected;
       $("tiktokConnectionDetails").hidden = !connected;
       $("tiktokConnectionRuntimeNote").hidden = !connected || !tiktok.runtime_message;
       $("tiktokConnectionRuntimeNote").textContent = tiktok.runtime_message || "";
-      $("tiktokConnectionUsername").textContent = tiktok.username ? "@" + tiktok.username : "@mosyaamosya";
+      $("tiktokConnectionUsername").textContent = tiktok.username ? "@" + tiktok.username : "@" + currentCreatorSlug;
       $("tiktokConnectionRuntime").textContent = tiktok.live_runtime_status || "Trying to reconnect...";
       $("tiktokConnectionLastSync").textContent = formatConnectionDate(tiktok.last_sync_at || tiktok.updated_at);
       $("tiktokConnectionError").textContent = tiktok.last_error || tiktok.metadata?.runtime_error || "None";
-      $("tiktokConnectionUsernameInput").value = tiktok.username || form.elements.tiktok_live_username.value || "mosyaamosya";
+      $("tiktokConnectionUsernameInput").value = tiktok.username || form.elements.tiktok_live_username.value || currentCreatorSlug;
       $("tiktokRuntimeEnabled").checked = tiktok.runtime_enabled !== false;
       $("connectTikTok").hidden = connected;
       $("connectTikTok").textContent = "Connect TikTok";
@@ -3699,7 +3722,7 @@
     async function loadConnections() {
       setStatus("Loading connections...", false, "connectionsStatus");
       try {
-        const data = await api({ action: "load_connections", creator_session: creatorSession(), slug: "mosyaamosya" });
+        const data = await api({ action: "load_connections", creator_session: creatorSession(), slug: currentCreatorSlug });
         renderConnections(data.connections || []);
         setStatus(data.warning ? "Connections loaded. Apply the Creator Connections SQL to enable persistent storage." : "Connections loaded.", Boolean(data.warning), "connectionsStatus");
       } catch (error) {
@@ -3719,7 +3742,7 @@
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({
             action: "run_health_check",
-            slug: "mosyaamosya",
+            slug: currentCreatorSlug,
             alert_on_failure: true
           })
         });
@@ -3748,7 +3771,7 @@
     function tiktokConnectionPayload() {
       return {
         provider: "tiktok",
-        username: $("tiktokConnectionUsernameInput").value.trim() || "mosyaamosya",
+        username: $("tiktokConnectionUsernameInput").value.trim() || currentCreatorSlug,
         runtime_enabled: $("tiktokRuntimeEnabled").checked,
         session_cookie: $("tiktokSessionCookie").value.trim()
       };
@@ -3763,7 +3786,7 @@
         const data = await api({
           action,
           creator_session: creatorSession(),
-          slug: "mosyaamosya",
+          slug: currentCreatorSlug,
           connection: tiktokConnectionPayload()
         });
         if (data.configured === false || !data.auth_url) {
@@ -3787,8 +3810,8 @@
         const data = await api({
           action: "disconnect_tiktok",
           creator_session: creatorSession(),
-          slug: "mosyaamosya",
-          connection: { username: $("tiktokConnectionUsernameInput").value.trim() || "mosyaamosya" }
+          slug: currentCreatorSlug,
+          connection: { username: $("tiktokConnectionUsernameInput").value.trim() || currentCreatorSlug }
         });
         $("tiktokSessionCookie").value = "";
         renderConnections([data.connection]);
@@ -3802,15 +3825,15 @@
     }
     async function login(password) {
       setLoginStatus("");
-      const data = await api({ action: "login", creator_password: password, slug: "mosyaamosya" });
+      const data = await api({ action: "login", creator_password: password, slug: currentCreatorSlug });
       sessionStorage.setItem(sessionFlag, "true");
       sessionStorage.setItem(sessionKey, data.creator_session || "");
       fillForm(data.creator);
       return data;
     }
     async function loadSettings() {
-      setStatus("Loading Mina settings...");
-      const data = await api({ action: "load", creator_session: creatorSession(), slug: "mosyaamosya" });
+      setStatus("Loading creator settings...");
+      const data = await api({ action: "load", creator_session: creatorSession(), slug: currentCreatorSlug });
       fillForm(data.creator);
       openApp();
       const connectionState = adminParams.get("tiktok_connection");
@@ -3828,11 +3851,11 @@
             }
           }, 300);
         }
-        if (connectionState) window.history.replaceState(null, "", "/mosyaamosya");
+        if (connectionState) window.history.replaceState(null, "", "/admin/" + currentCreatorSlug);
       } else if (connectionsDeveloperModeEnabled()) {
         loadConnections();
       }
-      setStatus("Loaded Mina Mosya settings.");
+      setStatus("Loaded creator settings.");
     }
     async function saveSettings() {
       if (saving) return;
@@ -3871,7 +3894,7 @@
       const status = $("liveRuntimeStatus");
       if (!status) return;
       try {
-        const response = await fetch("/api/creator-live-status?slug=mosyaamosya", { cache: "no-store", headers: { Accept: "application/json" } });
+        const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(currentCreatorSlug) + "", { cache: "no-store", headers: { Accept: "application/json" } });
         const data = await response.json();
         if (Date.now() < runtimePreviewHoldUntil) return;
         latestLiveRuntimeState = data;
@@ -4656,6 +4679,8 @@
     renderThemes();
     renderDna();
     applyAdminTheme(activeTheme);
+    updatePublicPageLinks();
+    updatePreviewFrame(false);
     setAdminTab("overview");
     if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) {
       loadSettings().catch(() => {

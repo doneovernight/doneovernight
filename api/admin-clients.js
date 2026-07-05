@@ -1,6 +1,7 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
+const DEFAULT_CREATOR_SLUG = "mosyaamosya";
 const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const { reportCreatorError, runCreatorHealth } = require("../lib/creator-watchtower");
@@ -406,6 +407,85 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeSlug(value) {
+  const slug = clean(value || DEFAULT_CREATOR_SLUG)
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || DEFAULT_CREATOR_SLUG;
+}
+
+function analyticsSlug(value) {
+  return normalizeSlug(value).replace(/[^a-z0-9_]+/g, "_");
+}
+
+function isDefaultCreatorSlug(value) {
+  const slug = normalizeSlug(value);
+  return slug === DEFAULT_CREATOR_SLUG || slug === "mina";
+}
+
+function deterministicCreatorId(slug) {
+  const safeSlug = normalizeSlug(slug);
+  if (isDefaultCreatorSlug(safeSlug)) return MINA_CREATOR_ID;
+  const hex = crypto.createHash("sha256").update("creator-os:" + safeSlug).digest("hex");
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    "4" + hex.slice(13, 16),
+    ((parseInt(hex.slice(16, 17), 16) & 0x3) | 0x8).toString(16) + hex.slice(17, 20),
+    hex.slice(20, 32)
+  ].join("-");
+}
+
+function defaultCreatorForSlug(value = DEFAULT_CREATOR_SLUG) {
+  const slug = normalizeSlug(value);
+  if (isDefaultCreatorSlug(slug)) return DEFAULT_MINA_SETTINGS;
+  const username = slug.replace(/-/g, ".");
+  return {
+    ...DEFAULT_MINA_SETTINGS,
+    id: deterministicCreatorId(slug),
+    display_name: "",
+    username,
+    slug,
+    bio: "",
+    location: "",
+    avatar_url: "",
+    banner_url: "",
+    hero_image_url: "",
+    hero_video_url: "",
+    tiktok_url: "",
+    discord_url: "",
+    instagram_url: "",
+    tiktok_coins_url: "",
+    business_email: "",
+    live_url: "",
+    live_status: false,
+    tiktok_live_username: username,
+    theme_preset: "founder",
+    background_gradient: "",
+    discord_invite_url: "",
+    community_state: "hidden",
+    faq_visible: false,
+    discord_visible: false,
+    discord_link_visible: false,
+    tiktok_link_visible: false,
+    battle_link_visible: false,
+    support_link_visible: false,
+    business_link_visible: false,
+    community_link_visible: false,
+    subscribe_popup_enabled: false,
+    redirect_mina_enabled: false,
+    updated_at: new Date(0).toISOString()
+  };
+}
+
+function notFoundError(slug) {
+  const error = new Error("Creator not found: " + normalizeSlug(slug));
+  error.statusCode = 404;
+  error.code = "CREATOR_NOT_FOUND";
+  return error;
+}
+
 function readableError(value, fallback = "Unknown error") {
   if (!value) return fallback;
   if (typeof value === "string") return value;
@@ -547,11 +627,11 @@ function setTikTokOAuthCookie(res, payload) {
   res.setHeader("Set-Cookie", TIKTOK_OAUTH_COOKIE + "=" + signed + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600");
 }
 
-function redirectTikTokCallback(res, status, message = "") {
+function redirectTikTokCallback(res, status, message = "", slug = DEFAULT_CREATOR_SLUG) {
   const params = new URLSearchParams({ tab: "connections", tiktok_connection: status });
   if (message) params.set("message", message);
   res.statusCode = 302;
-  res.setHeader("Location", "/mosyaamosya?" + params.toString());
+  res.setHeader("Location", "/admin/" + normalizeSlug(slug) + "?" + params.toString());
   res.setHeader("Set-Cookie", clearCookieHeader(TIKTOK_OAUTH_COOKIE));
   res.end("");
 }
@@ -585,9 +665,10 @@ function inspectTikTokSessionCookie(value = "") {
   };
 }
 
-function createCreatorSession(role = "creator") {
+function createCreatorSession(role = "creator", slug = DEFAULT_CREATOR_SLUG) {
+  const safeSlug = normalizeSlug(slug);
   const payload = {
-    sub: "mosyaamosya",
+    sub: safeSlug,
     role,
     exp: Date.now() + CREATOR_SESSION_TTL_MS,
     nonce: crypto.randomBytes(12).toString("base64url")
@@ -596,14 +677,14 @@ function createCreatorSession(role = "creator") {
   return encoded + "." + signText(encoded);
 }
 
-function verifyCreatorSession(token) {
+function verifyCreatorSession(token, slug = DEFAULT_CREATOR_SLUG) {
   const value = clean(token);
   if (!value || !sessionSecret()) return null;
   const [encoded, signature] = value.split(".");
   if (!encoded || !signature || !timingSafeEqualText(signature, signText(encoded))) return null;
   try {
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-    if (payload.sub !== "mosyaamosya" || Number(payload.exp) < Date.now()) return null;
+    if (normalizeSlug(payload.sub) !== normalizeSlug(slug) || Number(payload.exp) < Date.now()) return null;
     return payload;
   } catch (error) {
     return null;
@@ -777,42 +858,55 @@ async function fetchClients() {
   return supabaseFetch("portal_requests?select=*&order=created_at.desc", { context: "Admin clients" });
 }
 
-async function fetchCreatorPasswordHashFromTable() {
-  const rows = await supabaseFetch("creator_auth?creator_id=eq." + MINA_CREATOR_ID + "&select=password_hash,updated_at&limit=1", {
+async function creatorIdForSlug(slug = DEFAULT_CREATOR_SLUG) {
+  try {
+    const rows = await supabaseFetch("creators?slug=eq." + encodeURIComponent(normalizeSlug(slug)) + "&select=id&limit=1", {
+      context: "Creator auth lookup"
+    });
+    if (Array.isArray(rows) && rows[0] && clean(rows[0].id)) return clean(rows[0].id);
+  } catch (error) {}
+  return deterministicCreatorId(slug);
+}
+
+async function fetchCreatorPasswordHashFromTable(slug = DEFAULT_CREATOR_SLUG) {
+  const creatorId = await creatorIdForSlug(slug);
+  const rows = await supabaseFetch("creator_auth?creator_id=eq." + encodeURIComponent(creatorId) + "&select=password_hash,updated_at&limit=1", {
     context: "Creator auth"
   });
   return Array.isArray(rows) && rows[0] ? clean(rows[0].password_hash) : "";
 }
 
-async function fetchCreatorPasswordHashFromBridge() {
+async function fetchCreatorPasswordHashFromBridge(slug = DEFAULT_CREATOR_SLUG) {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_auth_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=1",
+    "analytics_events?event_type=eq.creator_auth_" + analyticsSlug(slug) + "&select=metadata,created_at&order=created_at.desc&limit=1",
     { context: "Creator auth bridge" }
   );
   const metadata = Array.isArray(rows) && rows[0] && rows[0].metadata ? rows[0].metadata : {};
   return clean(metadata.password_hash);
 }
 
-async function fetchCreatorPasswordHash() {
+async function fetchCreatorPasswordHash(slug = DEFAULT_CREATOR_SLUG) {
   try {
-    const hash = await fetchCreatorPasswordHashFromTable();
+    const hash = await fetchCreatorPasswordHashFromTable(slug);
     if (hash) return hash;
   } catch (error) {}
 
   try {
-    const hash = await fetchCreatorPasswordHashFromBridge();
+    const hash = await fetchCreatorPasswordHashFromBridge(slug);
     if (hash) return hash;
   } catch (error) {}
 
+  if (!isDefaultCreatorSlug(slug)) return "";
   return clean(process.env.MINA_CREATOR_PASSWORD_HASH || process.env.CREATOR_OS_MINA_PASSWORD_HASH);
 }
 
-async function saveCreatorPasswordHashToTable(passwordHash) {
+async function saveCreatorPasswordHashToTable(passwordHash, slug = DEFAULT_CREATOR_SLUG) {
+  const creatorId = await creatorIdForSlug(slug);
   await supabaseFetch("creator_auth?on_conflict=creator_id", {
     method: "POST",
     prefer: "resolution=merge-duplicates",
     body: [{
-      creator_id: MINA_CREATOR_ID,
+      creator_id: creatorId,
       password_hash: passwordHash,
       updated_at: new Date().toISOString()
     }],
@@ -820,52 +914,47 @@ async function saveCreatorPasswordHashToTable(passwordHash) {
   });
 }
 
-async function saveCreatorPasswordHashToBridge(passwordHash) {
+async function saveCreatorPasswordHashToBridge(passwordHash, slug = DEFAULT_CREATOR_SLUG) {
+  const safeSlug = normalizeSlug(slug);
   await supabaseFetch("analytics_events", {
     method: "POST",
     body: {
-      event_type: "creator_auth_mosyaamosya",
+      event_type: "creator_auth_" + analyticsSlug(safeSlug),
       source: "creator_os_admin",
-      route: "/mosyaamosya",
+      route: "/" + safeSlug,
       metadata: { password_hash: passwordHash }
     },
     context: "Creator auth bridge"
   });
 }
 
-async function saveCreatorPasswordHash(passwordHash) {
+async function saveCreatorPasswordHash(passwordHash, slug = DEFAULT_CREATOR_SLUG) {
   try {
-    await saveCreatorPasswordHashToTable(passwordHash);
+    await saveCreatorPasswordHashToTable(passwordHash, slug);
   } catch (error) {
-    await saveCreatorPasswordHashToBridge(passwordHash);
+    await saveCreatorPasswordHashToBridge(passwordHash, slug);
   }
 }
 
-async function verifyCreatorPassword(password) {
+async function verifyCreatorPassword(password, slug = DEFAULT_CREATOR_SLUG) {
   const value = clean(password);
   if (!value) return false;
-  const storedHash = await fetchCreatorPasswordHash();
+  const storedHash = await fetchCreatorPasswordHash(slug);
   if (storedHash) return verifyPassword(value, storedHash);
+  if (!isDefaultCreatorSlug(slug)) return false;
   const envPassword = clean(process.env.MINA_CREATOR_PASSWORD || process.env.CREATOR_OS_MINA_PASSWORD);
   return envPassword ? timingSafeEqualText(value, envPassword) : false;
 }
 
 async function verifyCreatorAccess(input = {}) {
-  const session = verifyCreatorSession(input.creator_session || input.creatorSession);
+  const slug = normalizeSlug(input.slug || (input.creator && input.creator.slug) || DEFAULT_CREATOR_SLUG);
+  const session = verifyCreatorSession(input.creator_session || input.creatorSession, slug);
   if (session) return { authorized: true, role: session.role || "creator" };
 
   const password = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
-  if (await verifyCreatorPassword(password)) return { authorized: true, role: "creator" };
+  if (await verifyCreatorPassword(password, slug)) return { authorized: true, role: "creator" };
   if (await verifyAdminKey(password)) return { authorized: true, role: "master" };
   return { authorized: false, role: "" };
-}
-
-function normalizeSlug(value) {
-  const slug = clean(value || DEFAULT_MINA_SETTINGS.slug)
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || DEFAULT_MINA_SETTINGS.slug;
 }
 
 function normalizeUsername(value) {
@@ -987,7 +1076,7 @@ function visitorHash(req, input = {}, pollKey = "") {
 }
 
 function publicCreatorSlug(creator = {}) {
-  return normalizeSlug(creator.slug || creator.username || "mosyaamosya");
+  return normalizeSlug(creator.slug || creator.username || DEFAULT_CREATOR_SLUG);
 }
 
 function creatorEventSlug(creator = {}) {
@@ -1193,6 +1282,7 @@ function parseDataUrl(value, fallbackMimeType = "") {
 
 async function uploadCreatorMedia(input = {}) {
   const kind = clean(input.kind);
+  const slug = normalizeSlug(input.slug || input.creator_slug || DEFAULT_CREATOR_SLUG);
   const file = input.file || {};
   const parsed = parseDataUrl(file.data || file.dataUrl, file.type);
   if (!parsed) {
@@ -1252,7 +1342,7 @@ async function uploadCreatorMedia(input = {}) {
 
   const { url, serviceRoleKey } = getSupabaseConfig("Creator media upload");
   const ext = mediaExtension(uploadMimeType, file.name);
-  const path = "mosyaamosya/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
+  const path = slug + "/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
   const response = await fetch(url + "/storage/v1/object/" + CREATOR_MEDIA_BUCKET + "/" + path, {
     method: "POST",
     headers: {
@@ -1306,6 +1396,7 @@ async function uploadCreatorMedia(input = {}) {
 }
 
 function normalizeCreator(row = {}) {
+  const defaults = defaultCreatorForSlug(row.slug || row.username || DEFAULT_CREATOR_SLUG);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
   const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(row, "hero_image_url");
   const legacyGateMessage = clean(row.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(row.tiktok_welcome_message);
@@ -1317,18 +1408,18 @@ function normalizeCreator(row = {}) {
   const gateSecondary = clean(row.tiktok_welcome_gate_secondary_label) || clean(row.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label;
   const gateCopy = clean(row.tiktok_welcome_gate_copy_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label;
   return {
-    ...DEFAULT_MINA_SETTINGS,
+    ...defaults,
     ...row,
-    id: row.id || MINA_CREATOR_ID,
-    display_name: clean(row.display_name) || DEFAULT_MINA_SETTINGS.display_name,
-    username: clean(row.username) || DEFAULT_MINA_SETTINGS.username,
+    id: row.id || defaults.id,
+    display_name: clean(row.display_name) || defaults.display_name,
+    username: clean(row.username) || defaults.username,
     slug: normalizeSlug(row.slug || row.username),
-    bio: clean(row.bio) || DEFAULT_MINA_SETTINGS.bio,
+    bio: clean(row.bio) || defaults.bio,
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
-    hero_image_url: hasHeroImageUrl && isHeroImageUrl(row.hero_image_url) ? clean(row.hero_image_url) : DEFAULT_MINA_SETTINGS.hero_image_url,
-    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(row.hero_video_url) ? clean(row.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_image_url: hasHeroImageUrl && isHeroImageUrl(row.hero_image_url) ? clean(row.hero_image_url) : defaults.hero_image_url,
+    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(row.hero_video_url) ? clean(row.hero_video_url) : defaults.hero_video_url,
     music_enabled: bool(row.music_enabled, false),
     music_url: clean(row.music_url),
     music_volume: Math.max(0, Math.min(1, number(row.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
@@ -1350,23 +1441,23 @@ function normalizeCreator(row = {}) {
     tiktok_welcome_gate_secondary_label: gateSecondary,
     tiktok_welcome_gate_copy_label: gateCopy,
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
-    background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    background_gradient: clean(row.background_gradient) || defaults.background_gradient,
     ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
-    timezone: clean(row.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    timezone: clean(row.timezone) || defaults.timezone,
     seasonal_effects_enabled: bool(row.seasonal_effects_enabled, true),
     holiday_effects_enabled: bool(row.holiday_effects_enabled, true),
-    redirect_mina_enabled: bool(row.redirect_mina_enabled, true),
+    redirect_mina_enabled: bool(row.redirect_mina_enabled, defaults.redirect_mina_enabled),
     tiktok_url: clean(row.tiktok_url),
-    discord_url: clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
+    discord_url: clean(row.discord_url) || defaults.discord_url,
     instagram_url: clean(row.instagram_url),
     tiktok_coins_url: clean(row.tiktok_coins_url),
     business_email: clean(row.business_email),
     live_url: clean(row.live_url),
     live_status: bool(row.live_status, false),
     live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
-    tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || defaults.tiktok_live_username),
     auto_live_detection_enabled: bool(row.auto_live_detection_enabled, true),
-    manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, defaults.manual_live_fallback_enabled),
     battle_mode_enabled: bool(row.battle_mode_enabled, false),
     battle_opponent: clean(row.battle_opponent),
     battle_result: normalizeBattleResult(row.battle_result),
@@ -1440,7 +1531,7 @@ function normalizeCreator(row = {}) {
   };
 }
 
-async function fetchCreatorFromTable(slug = "mosyaamosya") {
+async function fetchCreatorFromTable(slug = DEFAULT_CREATOR_SLUG) {
   const safeSlug = encodeURIComponent(normalizeSlug(slug));
   let rows;
   const selectAttempts = [
@@ -1474,9 +1565,9 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   return normalizeCreator(rows[0]);
 }
 
-async function fetchCreatorFromAnalyticsBridge() {
+async function fetchCreatorFromAnalyticsBridge(slug = DEFAULT_CREATOR_SLUG) {
   const rows = await supabaseFetch(
-    "analytics_events?event_type=eq.creator_settings_mosyaamosya&select=metadata,created_at&order=created_at.desc&limit=25",
+    "analytics_events?event_type=eq.creator_settings_" + analyticsSlug(slug) + "&select=metadata,created_at&order=created_at.desc&limit=25",
     { context: "Creator analytics bridge" }
   );
   if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -1497,9 +1588,10 @@ async function fetchCreatorFromAnalyticsBridge() {
   return best ? normalizeCreator(best) : null;
 }
 
-async function fetchCreator(slug = "mosyaamosya") {
+async function fetchCreator(slug = DEFAULT_CREATOR_SLUG) {
+  const safeSlug = normalizeSlug(slug);
   try {
-    const creator = await fetchCreatorFromTable(slug);
+    const creator = await fetchCreatorFromTable(safeSlug);
     if (creator) return { creator, source: "database" };
   } catch (error) {
     // The dedicated creators table may not exist until the SQL file is applied.
@@ -1508,13 +1600,14 @@ async function fetchCreator(slug = "mosyaamosya") {
   // Legacy fallback only. analytics_events snapshots must never override the
   // persistent creators row once it exists, because runtime actions write there.
   try {
-    const creator = await fetchCreatorFromAnalyticsBridge();
+    const creator = await fetchCreatorFromAnalyticsBridge(safeSlug);
     if (creator) return { creator, source: "analytics_bridge" };
   } catch (error) {
     // If the bridge table is unavailable, fall through to the seeded defaults.
   }
 
-  return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
+  if (isDefaultCreatorSlug(safeSlug)) return { creator: normalizeCreator(DEFAULT_MINA_SETTINGS), source: "seed" };
+  throw notFoundError(safeSlug);
 }
 
 function creatorSurface(input = {}) {
@@ -1533,6 +1626,8 @@ function sanitizeCreatorForSurface(creator = {}, surface = "web") {
 }
 
 function creatorPayload(input = {}) {
+  const slug = normalizeSlug(input.slug || input.username || DEFAULT_CREATOR_SLUG);
+  const defaults = defaultCreatorForSlug(slug);
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
@@ -1552,10 +1647,10 @@ function creatorPayload(input = {}) {
     throw error;
   }
   return {
-    id: MINA_CREATOR_ID,
-    display_name: clean(input.display_name) || DEFAULT_MINA_SETTINGS.display_name,
-    username: clean(input.username) || DEFAULT_MINA_SETTINGS.username,
-    slug: normalizeSlug(input.slug || input.username),
+    id: clean(input.id) || defaults.id,
+    display_name: clean(input.display_name) || defaults.display_name,
+    username: clean(input.username) || defaults.username,
+    slug,
     bio: clean(input.bio),
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
@@ -1588,7 +1683,7 @@ function creatorPayload(input = {}) {
     timezone: clean(input.timezone) || DEFAULT_MINA_SETTINGS.timezone,
     seasonal_effects_enabled: bool(input.seasonal_effects_enabled, true),
     holiday_effects_enabled: bool(input.holiday_effects_enabled, true),
-    redirect_mina_enabled: bool(input.redirect_mina_enabled, true),
+    redirect_mina_enabled: bool(input.redirect_mina_enabled, defaults.redirect_mina_enabled),
     tiktok_url: clean(input.tiktok_url),
     discord_url: clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
     instagram_url: clean(input.instagram_url),
@@ -1735,13 +1830,14 @@ async function saveCreatorToTable(payload) {
 }
 
 async function saveCreatorToAnalyticsBridge(payload) {
+  const slug = normalizeSlug(payload.slug || DEFAULT_CREATOR_SLUG);
   const rows = await supabaseFetch("analytics_events?select=metadata,created_at", {
     method: "POST",
     prefer: "return=representation",
     body: {
-      event_type: "creator_settings_mosyaamosya",
+      event_type: "creator_settings_" + analyticsSlug(slug),
       source: "creator_os_admin",
-      route: "/mosyaamosya",
+      route: "/" + slug,
       metadata: { creator: payload }
     },
     context: "Creator analytics bridge"
@@ -1756,7 +1852,7 @@ async function saveCreator(input = {}) {
   return saveCreatorToTable(payload);
 }
 
-function runtimeActionEventType(slug = "mosyaamosya") {
+function runtimeActionEventType(slug = DEFAULT_CREATOR_SLUG) {
   return "creator_runtime_action_" + normalizeSlug(slug).replace(/[^a-z0-9_]+/g, "_");
 }
 
@@ -1774,11 +1870,11 @@ async function saveCreatorRuntimeAction(slug, metadata = {}) {
 }
 
 async function setCreatorLiveMode(input = {}) {
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
-  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(DEFAULT_MINA_SETTINGS) }));
-  const current = currentResult.creator || normalizeCreator(DEFAULT_MINA_SETTINGS);
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
+  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(defaultCreatorForSlug(slug)) }));
+  const current = currentResult.creator || normalizeCreator(defaultCreatorForSlug(slug));
   const isLive = bool(input.live_status ?? input.enabled, false);
-  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
+  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || DEFAULT_CREATOR_SLUG);
   const now = new Date().toISOString();
   const patch = {
     live_status: isLive,
@@ -1807,9 +1903,9 @@ async function setCreatorLiveMode(input = {}) {
 }
 
 async function setCreatorRuntimeState(input = {}) {
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
-  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(DEFAULT_MINA_SETTINGS) }));
-  const current = currentResult.creator || normalizeCreator(DEFAULT_MINA_SETTINGS);
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
+  const currentResult = await fetchCreator(slug).catch(() => ({ creator: normalizeCreator(defaultCreatorForSlug(slug)) }));
+  const current = currentResult.creator || normalizeCreator(defaultCreatorForSlug(slug));
   const now = new Date().toISOString();
   const patch = {
     manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, current.manual_live_fallback_enabled),
@@ -1831,7 +1927,7 @@ async function setCreatorRuntimeState(input = {}) {
     countdown_message: clean(input.countdown_message),
     updated_at: now
   };
-  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || "mosyaamosya");
+  const username = normalizeUsername(input.tiktok_live_username || current.tiktok_live_username || current.username || DEFAULT_CREATOR_SLUG);
   if (patch.live_status && !patch.live_url) patch.live_url = "https://www.tiktok.com/@" + username + "/live";
 
   const saved = await saveCreator({ ...current, ...patch });
@@ -1913,7 +2009,7 @@ function sanitizeConnection(row = {}, runtime = null) {
   };
 }
 
-async function fetchCreatorRuntimeSnapshot(slug = "mosyaamosya") {
+async function fetchCreatorRuntimeSnapshot(slug = DEFAULT_CREATOR_SLUG) {
   const fields = [
     "creator_slug",
     "username",
@@ -1935,12 +2031,12 @@ async function fetchCreatorRuntimeSnapshot(slug = "mosyaamosya") {
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
 
-function defaultTikTokConnection(runtime = null) {
+function defaultTikTokConnection(runtime = null, slug = DEFAULT_CREATOR_SLUG, username = DEFAULT_MINA_SETTINGS.tiktok_live_username) {
   return sanitizeConnection({
-    creator_slug: "mosyaamosya",
+    creator_slug: normalizeSlug(slug),
     provider: "tiktok",
     status: "not_connected",
-    username: DEFAULT_MINA_SETTINGS.tiktok_live_username,
+    username: normalizeUsername(username),
     runtime_enabled: true,
     metadata: {
       credential_kind: "",
@@ -1951,7 +2047,7 @@ function defaultTikTokConnection(runtime = null) {
 }
 
 async function fetchCreatorConnections(input = {}) {
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
   const runtime = await fetchCreatorRuntimeSnapshot(slug).catch(() => null);
   let rows = [];
   try {
@@ -1962,7 +2058,7 @@ async function fetchCreatorConnections(input = {}) {
     );
   } catch (error) {
     return {
-      connections: [defaultTikTokConnection(runtime)],
+      connections: [defaultTikTokConnection(runtime, slug)],
       runtime,
       warning: error.statusCode === 404 ? "CREATOR_CONNECTIONS_TABLE_NOT_APPLIED" : (error.code || "CREATOR_CONNECTIONS_UNAVAILABLE")
     };
@@ -1971,7 +2067,7 @@ async function fetchCreatorConnections(input = {}) {
     ? rows.filter((row) => row && typeof row === "object")
     : [];
   const sanitized = validRows.map((row) => sanitizeConnection(row, row.provider === "tiktok" ? runtime : null));
-  if (!sanitized.some((connection) => connection.provider === "tiktok")) sanitized.unshift(defaultTikTokConnection(runtime));
+  if (!sanitized.some((connection) => connection.provider === "tiktok")) sanitized.unshift(defaultTikTokConnection(runtime, slug));
   return { connections: sanitized, runtime };
 }
 
@@ -1991,13 +2087,13 @@ function connectionPayload(input = {}) {
   const hasSessionCookie = sessionInfo.valid || bool(input.has_session_cookie, false);
   const status = normalizeConnectionStatus(input.status, username ? "connected" : "not_connected");
   return {
-    creator_slug: normalizeSlug(input.slug || "mosyaamosya"),
+    creator_slug: normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG),
     provider,
     status,
     username,
     external_id: clean(input.external_id),
     ...(sessionInfo.valid ? { access_token_encrypted: encryptConnectionSecret(sessionCookie) } : {}),
-    session_reference: sessionInfo.valid ? "supabase:creator_connections:" + provider + ":" + normalizeSlug(input.slug || "mosyaamosya") : clean(input.session_reference),
+    session_reference: sessionInfo.valid ? "supabase:creator_connections:" + provider + ":" + normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG) : clean(input.session_reference),
     runtime_enabled: runtimeEnabled,
     last_sync_at: now,
     last_error: "",
@@ -2031,7 +2127,7 @@ async function saveCreatorConnection(input = {}) {
 }
 
 async function disconnectCreatorConnection(input = {}) {
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
   const provider = normalizeConnectionProvider(input.provider || "tiktok");
   const now = new Date().toISOString();
   const payload = {
@@ -2073,7 +2169,7 @@ function startTikTokOAuth(input = {}, res) {
     };
   }
   const state = crypto.randomBytes(24).toString("base64url");
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
   setTikTokOAuthCookie(res, {
     state,
     slug,
@@ -2154,7 +2250,7 @@ async function fetchTikTokUser(accessToken) {
 }
 
 async function saveTikTokOAuthConnection(input = {}) {
-  const slug = normalizeSlug(input.slug || "mosyaamosya");
+  const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
   const token = input.token || {};
   const user = input.user || {};
   const now = new Date().toISOString();
@@ -2233,12 +2329,12 @@ async function handleTikTokOAuthCallback(req, res) {
     const token = await exchangeTikTokCode(code, config);
     const user = await fetchTikTokUser(token.access_token);
     await saveTikTokOAuthConnection({
-      slug: statePayload.slug || "mosyaamosya",
+      slug: statePayload.slug || DEFAULT_CREATOR_SLUG,
       token,
       user,
       scopes: clean(query.scopes)
     });
-    return redirectTikTokCallback(res, "connected");
+    return redirectTikTokCallback(res, "connected", "", statePayload.slug || DEFAULT_CREATOR_SLUG);
   } catch (error) {
     return redirectTikTokCallback(res, "error", readableError(error, "TikTok connection failed."));
   }
@@ -2353,12 +2449,13 @@ async function fetchAnalyticsEvents(eventType, limit = 1000) {
 }
 
 async function saveAnalyticsEvent(eventType, metadata = {}) {
+  const routeSlug = normalizeSlug(metadata.creator_slug || metadata.slug || DEFAULT_CREATOR_SLUG);
   await supabaseFetch("analytics_events", {
     method: "POST",
     body: {
       event_type: eventType,
       source: "creator_os_response",
-      route: "/mosyaamosya",
+      route: "/" + routeSlug,
       metadata
     },
     context: "Creator response bridge"
@@ -2394,7 +2491,7 @@ function analyticsVisitorHash(req, input = {}) {
 }
 
 async function trackCreatorAnalyticsEvent(req, input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
   const eventName = normalizeAnalyticsEventName(input.event_name || input.eventName || input.name);
   if (!eventName) {
@@ -2500,12 +2597,13 @@ function latestAt(rows = []) {
 }
 
 async function loadCreatorAnalytics(input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
+  const slug = publicCreatorSlug(creator);
   const [events, responses, liveStatus] = await Promise.all([
     fetchAnalyticsEvents(creatorAnalyticsEventType(creator), 1000).catch(() => []),
-    loadCreatorResponses(input).catch(() => ({ poll: null, newsletter: [] })),
-    handleCreatorLiveStatusForAnalytics(input.slug || "mosyaamosya").catch(() => null)
+    loadCreatorResponses({ ...input, slug }).catch(() => ({ poll: null, newsletter: [] })),
+    handleCreatorLiveStatusForAnalytics(slug).catch(() => null)
   ]);
   const now = Date.now();
   const liveWindow = events.filter((row) => {
@@ -2629,7 +2727,7 @@ async function savePollVoteToBridge(req, creator, definition, selected, voterHas
 }
 
 async function submitPollVote(req, input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
   const definition = pollDefinition(creator);
   if (!definition.enabled) {
@@ -2690,7 +2788,7 @@ function validEmail(value) {
 }
 
 async function submitNewsletterSignup(req, input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
   if (!bool(creator.subscribe_popup_enabled, true)) {
     const error = new Error("Newsletter is not available.");
@@ -2794,7 +2892,7 @@ async function fetchNewsletterSignupsFromBridge(creator) {
 }
 
 async function loadCreatorResponses(input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
   const poll = await pollStateForCreator(creator);
   const newsletter = await fetchNewsletterSignups(creator).catch(() => []);
@@ -2802,7 +2900,7 @@ async function loadCreatorResponses(input = {}) {
 }
 
 async function resetPollResults(input = {}) {
-  const result = await fetchCreator(input.slug || "mosyaamosya");
+  const result = await fetchCreator(input.slug || DEFAULT_CREATOR_SLUG);
   const creator = result.creator;
   const definition = pollDefinition(creator);
   if (!definition.pollKey) return pollStateForCreator(creator);
@@ -2828,10 +2926,11 @@ async function resetPollResults(input = {}) {
 
 async function handleCreatorSettings(req, res) {
   if (req.method === "GET") {
+    const query = getQuery(req);
+    const surface = creatorSurface(query);
+    const slug = normalizeSlug(clean(query.slug) || DEFAULT_CREATOR_SLUG);
     try {
-      const query = getQuery(req);
-      const surface = creatorSurface(query);
-      const result = await fetchCreator(clean(query.slug) || "mosyaamosya");
+      const result = await fetchCreator(slug);
       const payload = {
         success: true,
         creator: sanitizeCreatorForSurface(result.creator, surface),
@@ -2843,11 +2942,12 @@ async function handleCreatorSettings(req, res) {
       }
       return send(res, 200, payload);
     } catch (error) {
-      const query = getQuery(req);
-      const surface = creatorSurface(query);
+      if (error.statusCode === 404) {
+        return send(res, 404, { success: false, error: "Creator not found", code: "CREATOR_NOT_FOUND", slug });
+      }
       const payload = {
-        success: true,
-        creator: sanitizeCreatorForSurface(DEFAULT_MINA_SETTINGS, surface),
+        success: isDefaultCreatorSlug(slug),
+        creator: sanitizeCreatorForSurface(defaultCreatorForSlug(slug), surface),
         source: "fallback",
         surface,
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
@@ -2855,7 +2955,7 @@ async function handleCreatorSettings(req, res) {
       if (query.creator_media_debug === "1") {
         payload.debug = creatorMediaDebugServerInfo(req, DEFAULT_MINA_SETTINGS, surface);
       }
-      return send(res, 200, {
+      return send(res, isDefaultCreatorSlug(slug) ? 200 : 404, {
         ...payload
       });
     }
@@ -2867,8 +2967,9 @@ async function handleCreatorSettings(req, res) {
   }
 
   const input = await parseBody(req);
+  input.slug = normalizeSlug(input.slug || (input.creator && input.creator.slug) || DEFAULT_CREATOR_SLUG);
   if (input.action === "poll_state") {
-    const result = await fetchCreator(input.slug || "mosyaamosya");
+    const result = await fetchCreator(input.slug);
     const poll = await pollStateForCreator(result.creator);
     return send(res, 200, { success: true, poll });
   }
@@ -2889,9 +2990,9 @@ async function handleCreatorSettings(req, res) {
   }
 
   if (input.action === "creator_media_debug_report") {
-    await saveAnalyticsEvent("creator_media_debug_mosyaamosya", {
-      creator_slug: clean(input.slug) || "mosyaamosya",
-      route: clean(input.route) || "/mosyaamosya",
+    await saveAnalyticsEvent("creator_media_debug_" + analyticsSlug(input.slug), {
+      creator_slug: input.slug,
+      route: clean(input.route) || "/" + input.slug,
       server: creatorMediaDebugServerInfo(req, {}, creatorSurface(input)),
       client: safeDebugValue(input.client || input.debug || {}),
       created_at: new Date().toISOString()
@@ -2900,14 +3001,15 @@ async function handleCreatorSettings(req, res) {
   }
 
   if (input.action === "login") {
+    const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
     const credential = clean(input.creator_password || input.creatorPassword || input.admin_key || input.adminKey);
-    const creatorOk = await verifyCreatorPassword(credential);
+    const creatorOk = await verifyCreatorPassword(credential, slug);
     const masterOk = creatorOk ? false : await verifyAdminKey(credential);
     if (!creatorOk && !masterOk) {
       return send(res, 401, { success: false, error: "Creator access denied" });
     }
-    const result = await fetchCreator(input.slug || "mosyaamosya").catch(() => ({
-      creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+    const result = await fetchCreator(slug).catch(() => ({
+      creator: normalizeCreator(defaultCreatorForSlug(slug)),
       source: "fallback"
     }));
     return send(res, 200, {
@@ -2915,7 +3017,7 @@ async function handleCreatorSettings(req, res) {
       creator: result.creator,
       source: result.source,
       role: masterOk ? "master" : "creator",
-      creator_session: createCreatorSession(masterOk ? "master" : "creator")
+      creator_session: createCreatorSession(masterOk ? "master" : "creator", slug)
     });
   }
 
@@ -2926,12 +3028,13 @@ async function handleCreatorSettings(req, res) {
 
   if (input.action === "load") {
     try {
-      const result = await fetchCreator(input.slug || "mosyaamosya");
+      const result = await fetchCreator(input.slug);
       return send(res, 200, { success: true, creator: result.creator, source: result.source });
     } catch (error) {
+      if (error.statusCode === 404) return send(res, 404, { success: false, error: "Creator not found", code: "CREATOR_NOT_FOUND", slug: input.slug });
       return send(res, 200, {
         success: true,
-        creator: normalizeCreator(DEFAULT_MINA_SETTINGS),
+        creator: normalizeCreator(defaultCreatorForSlug(input.slug)),
         source: "fallback",
         warning: error.code || "CREATOR_SETTINGS_FALLBACK"
       });
@@ -2951,7 +3054,7 @@ async function handleCreatorSettings(req, res) {
   if (input.action === "disconnect_tiktok") {
     const connection = await disconnectCreatorConnection({
       ...input.connection,
-      slug: input.slug || "mosyaamosya",
+      slug: input.slug,
       provider: "tiktok"
     });
     return send(res, 200, { success: true, connection });
@@ -2967,14 +3070,14 @@ async function handleCreatorSettings(req, res) {
     if (newPassword !== confirmPassword) {
       return send(res, 400, { success: false, error: "New passwords do not match." });
     }
-    if (access.role !== "master" && !(await verifyCreatorPassword(currentPassword))) {
+    if (access.role !== "master" && !(await verifyCreatorPassword(currentPassword, input.slug))) {
       return send(res, 401, { success: false, error: "Current password is incorrect." });
     }
-    await saveCreatorPasswordHash(hashPassword(newPassword));
+    await saveCreatorPasswordHash(hashPassword(newPassword), input.slug);
     return send(res, 200, {
       success: true,
       message: "Creator password updated.",
-      creator_session: createCreatorSession("creator")
+      creator_session: createCreatorSession("creator", input.slug)
     });
   }
 
@@ -3008,27 +3111,39 @@ async function handleCreatorSettings(req, res) {
     return send(res, 200, { success: true, creator: result.creator, source: result.source });
   }
 
-  const result = await saveCreator(input.creator || input);
+  const result = await saveCreator(input.creator ? { ...input.creator, slug: input.slug } : input);
   return send(res, 200, { success: true, creator: result.creator, source: result.source });
 }
 
 async function handleCreatorHealth(req, res) {
   if (req.method === "GET") {
     const input = getQuery(req);
+    const slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
+    if (!isDefaultCreatorSlug(slug)) {
+      try {
+        await fetchCreator(slug);
+      } catch (error) {
+        if (error.statusCode === 404) {
+          return send(res, 404, { success: false, error: "Creator not found", code: "CREATOR_NOT_FOUND", slug });
+        }
+        throw error;
+      }
+    }
     const health = await runCreatorHealth({
       req,
-      slug: input.slug || "mosyaamosya",
+      slug,
       sendAlertOnFailure: input.alert === "1"
     });
-    return send(res, 200, health);
+    return send(res, health.database && health.database.error === "Creator row missing" ? 404 : 200, health);
   }
 
   if (req.method === "POST") {
     const input = await parseBody(req);
+    input.slug = normalizeSlug(input.slug || DEFAULT_CREATOR_SLUG);
     if (input.action === "report_error") {
       const result = await reportCreatorError({
-        slug: input.slug || "mosyaamosya",
-        creator: input.creator || "Mina Mosya",
+        slug: input.slug,
+        creator: input.creator || input.slug,
         area: input.area,
         action: input.action_name || input.event || input.watchtower_action,
         error: input.error || input.message,
@@ -3040,12 +3155,22 @@ async function handleCreatorHealth(req, res) {
     }
 
     if (input.action === "run_health_check") {
+      if (!isDefaultCreatorSlug(input.slug)) {
+        try {
+          await fetchCreator(input.slug);
+        } catch (error) {
+          if (error.statusCode === 404) {
+            return send(res, 404, { success: false, error: "Creator not found", code: "CREATOR_NOT_FOUND", slug: input.slug });
+          }
+          throw error;
+        }
+      }
       const health = await runCreatorHealth({
         req,
-        slug: input.slug || "mosyaamosya",
+        slug: input.slug,
         sendAlertOnFailure: input.alert_on_failure === true
       });
-      return send(res, 200, health);
+      return send(res, health.database && health.database.error === "Creator row missing" ? 404 : 200, health);
     }
 
     return send(res, 400, { success: false, error: "Unsupported health action" });
@@ -3088,7 +3213,7 @@ module.exports = async function handler(req, res) {
         return send(res, 413, { success: false, error: "Payload too large", code: "PAYLOAD_TOO_LARGE" });
       }
       reportCreatorError({
-        slug: "mosyaamosya",
+        slug: normalizeSlug(query.slug || DEFAULT_CREATOR_SLUG),
         area: "Admin",
         action: "Creator settings API",
         error: error.detail || error.message || "Could not save creator settings",
