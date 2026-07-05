@@ -25,6 +25,7 @@
       const isTikTok = params.get("tiktok_in_app") === "1" || /tiktok|musical_ly|musically|bytedance|bytedancewebview|ttwebview|aweme|trill/i.test(ua);
       window.__creatorTikTokInAppBrowser = isTikTok;
       window.__creatorVideoKillSwitch = isTikTok;
+      window.__creatorTikTokStaticMediaMode = isTikTok;
       let storedDebugEnabled = false;
       try { storedDebugEnabled = localStorage.getItem("creator_media_dev_mode") === "1"; } catch (error) {}
       const debugEnabled = params.get("debug_media") === "1" || params.get("creator_debug") === "1" || storedDebugEnabled;
@@ -49,6 +50,7 @@
           queryForcedTikTok: params.get("tiktok_in_app") === "1",
           isTikTokInApp: isTikTok,
           videoKillSwitch: isTikTok,
+          staticMediaMode: isTikTok,
           selectedMediaPath: isTikTok ? "tiktok-static" : "web-video"
         },
         events: []
@@ -1993,7 +1995,7 @@
       return heroImage(settings) || profileImage(settings);
     }
     function heroVideo(settings) {
-      if (tiktokInAppBrowser()) return "";
+      if (tiktokStaticMediaMode()) return "";
       const configured = safeUrl(settings.hero_video_url);
       if (configured && isMp4Url(configured)) return configured;
       return "";
@@ -2002,14 +2004,39 @@
     const retryableVideos = new Set();
     let videoRetryBound = false;
     function tiktokInAppBrowser() {
-      return Boolean(window.__creatorVideoKillSwitch || window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
+      return Boolean(window.__creatorTikTokInAppBrowser || document.documentElement.classList.contains("tiktok-in-app-browser"));
+    }
+    function tiktokGateEnabled(settings = {}) {
+      const enabled = settings.tiktok_welcome_gate_enabled !== undefined ? settings.tiktok_welcome_gate_enabled : settings.tiktok_welcome_enabled;
+      return enabled !== false;
+    }
+    function tiktokStaticMediaMode() {
+      return Boolean(window.__creatorVideoKillSwitch || window.__creatorTikTokStaticMediaMode);
+    }
+    function setTikTokStaticMediaMode(active) {
+      const enabled = Boolean(active);
+      window.__creatorVideoKillSwitch = enabled;
+      window.__creatorTikTokStaticMediaMode = enabled;
+      if (window.__creatorMediaDebug && window.__creatorMediaDebug.detection) {
+        window.__creatorMediaDebug.detection.videoKillSwitch = enabled;
+        window.__creatorMediaDebug.detection.staticMediaMode = enabled;
+        window.__creatorMediaDebug.detection.selectedMediaPath = enabled ? "tiktok-static" : "web-video";
+      }
+      if (!enabled && videoKillObserver) {
+        videoKillObserver.disconnect();
+        videoKillObserver = null;
+      }
+    }
+    function applyTikTokMediaMode(settings = {}) {
+      if (!tiktokInAppBrowser()) return;
+      setTikTokStaticMediaMode(tiktokGateEnabled(settings));
     }
     function creatorSettingsSurfaceQuery() {
-      return tiktokInAppBrowser() ? "&surface=tiktok" : "";
+      return tiktokStaticMediaMode() ? "&surface=tiktok" : "";
     }
     function sanitizeSettingsForSurface(settings) {
       const next = { ...(settings || {}) };
-      if (tiktokInAppBrowser()) {
+      if (tiktokStaticMediaMode()) {
         next.hero_video_url = "";
         next.banner_url = "";
       }
@@ -2061,7 +2088,7 @@
           tiktokInAppBrowserRuntime: tiktokInAppBrowser(),
           helperLooksLikeTikTok: looksLikeTikTokBrowser(),
           creatorSettingsSurfaceQuery: creatorSettingsSurfaceQuery(),
-          selectedMediaPath: tiktokInAppBrowser() ? "tiktok-static" : "web-video"
+          selectedMediaPath: tiktokStaticMediaMode() ? "tiktok-static" : "web-video"
         },
         settings: {
           slug: settings.slug || "mosyaamosya",
@@ -2118,7 +2145,7 @@
       }
     }
     function enforceVideoKillSwitch() {
-      if (!tiktokInAppBrowser()) return;
+      if (!tiktokStaticMediaMode()) return;
       const before = mediaResourceSummary();
       retryableVideos.clear();
       document.querySelectorAll("video, source").forEach((element) => element.remove());
@@ -2131,7 +2158,7 @@
       });
     }
     function bindVideoKillSwitch() {
-      if (!tiktokInAppBrowser() || videoKillObserver) return;
+      if (!tiktokStaticMediaMode() || videoKillObserver) return;
       enforceVideoKillSwitch();
       videoKillObserver = new MutationObserver(() => enforceVideoKillSwitch());
       videoKillObserver.observe(document.documentElement, {
@@ -2175,7 +2202,7 @@
       return poster;
     }
     function ensureDecorativeVideo(id, className, posterId, parentId) {
-      if (tiktokInAppBrowser()) {
+      if (tiktokStaticMediaMode()) {
         bindVideoKillSwitch();
         ensureDecorativePoster(posterId, posterId === "heroPoster" ? "hero-video hero-poster" : "intro-poster", parentId);
         recordMediaDebug("decorative_video_blocked_by_tiktok_path", { id, posterId, parentId });
@@ -2224,7 +2251,7 @@
       }
     }
     function prepareMutedLoopVideo(video, src) {
-      if (tiktokInAppBrowser()) {
+      if (tiktokStaticMediaMode()) {
         bindVideoKillSwitch();
         return;
       }
@@ -2310,7 +2337,7 @@
       if (video.readyState >= 2) requestPlayback();
     }
     function playMutedLoopVideo(video) {
-      if (!video || tiktokInAppBrowser()) return;
+      if (!video || tiktokStaticMediaMode()) return;
       video.muted = true;
       video.defaultMuted = true;
       const attempt = video.play();
@@ -2344,7 +2371,7 @@
       }
     }
     function primeDecorativeVideos(settings) {
-      if (tiktokInAppBrowser()) {
+      if (tiktokStaticMediaMode()) {
         bindVideoKillSwitch();
         return;
       }
@@ -2456,7 +2483,7 @@
       document.body.className = document.body.className.replace(/\btheme-[a-z0-9-]+\b/g, "").trim();
       document.body.classList.add("theme-" + (settings.theme_preset || "mina"));
       document.body.dataset.creatorDna = settings.creator_dna || "streamer";
-      if (tiktokInAppBrowser()) {
+      if (tiktokStaticMediaMode()) {
         document.body.style.removeProperty("background");
         return;
       }
@@ -4200,7 +4227,9 @@
     }
 
     function render(settings) {
-      settings = sanitizeSettingsForSurface(previewSettings(settings));
+      settings = previewSettings(settings);
+      applyTikTokMediaMode(settings);
+      settings = sanitizeSettingsForSurface(settings);
       currentSettings = settings;
       updateDecorativePoster(settings);
       $("previewBadge").hidden = !previewMode;
@@ -4292,14 +4321,25 @@
     }
 
     primeDecorativeVideos(fallback);
-    fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery() + creatorMediaDebugQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
-      .then((response) => response.json())
+    function fetchCreatorSettingsForCurrentSurface() {
+      return fetch("/api/creator-settings?slug=mosyaamosya" + creatorSettingsSurfaceQuery() + creatorMediaDebugQuery(), { cache: "no-store", headers: { Accept: "application/json" } })
+        .then((response) => response.json());
+    }
+    fetchCreatorSettingsForCurrentSurface()
       .then((data) => {
-        const settings = sanitizeSettingsForSurface({ ...fallback, ...(data.creator || {}) });
+        const settings = { ...fallback, ...(data.creator || {}) };
         if (data.debug) settings.__creator_server_media_debug = data.debug;
+        if (tiktokInAppBrowser() && data.surface === "tiktok" && !tiktokGateEnabled(settings)) {
+          setTikTokStaticMediaMode(false);
+          return fetchCreatorSettingsForCurrentSurface().then((webData) => {
+            const webSettings = { ...fallback, ...(webData.creator || {}) };
+            if (webData.debug) webSettings.__creator_server_media_debug = webData.debug;
+            render(webSettings);
+          });
+        }
         render(settings);
       })
-      .catch(() => render(sanitizeSettingsForSurface(fallback)));
+      .catch(() => render(fallback));
   </script>
 </body>
 </html>
