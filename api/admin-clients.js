@@ -3180,8 +3180,46 @@ async function handleCreatorHealth(req, res) {
   return send(res, 405, { success: false, error: "Method not allowed" });
 }
 
+function creatorEngineShell(surface = "public") {
+  const enginePath = surface === "admin" ? "/admin/mosyaamosya/index.html" : "/mosyaamosya/index.html";
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Creator OS</title></head><body><script>(function(){var engine=" + JSON.stringify(enginePath) + ";fetch(engine,{cache:\"no-store\"}).then(function(response){if(!response.ok) throw new Error(\"Creator OS engine unavailable\");return response.text();}).then(function(html){document.open();document.write(html);document.close();}).catch(function(error){document.body.textContent=error&&error.message?error.message:\"Creator OS unavailable\";});})();</script></body></html>";
+}
+
+async function handleCreatorPage(req, res) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.setHeader("Allow", "GET, HEAD");
+    return send(res, 405, { success: false, error: "Method not allowed" });
+  }
+  const query = getQuery(req);
+  const slug = normalizeSlug(query.slug || DEFAULT_CREATOR_SLUG);
+  const surface = clean(query.surface).toLowerCase() === "admin" ? "admin" : "public";
+  if (!isDefaultCreatorSlug(slug)) {
+    try {
+      await fetchCreator(slug);
+    } catch (error) {
+      if (error.statusCode === 404) {
+        return send(res, 404, "Creator not found", "text/plain; charset=utf-8");
+      }
+      throw error;
+    }
+  }
+  return send(res, 200, req.method === "HEAD" ? "" : creatorEngineShell(surface), "text/html; charset=utf-8");
+}
+
 module.exports = async function handler(req, res) {
   const query = getQuery(req);
+  if (query.creator_page === "1") {
+    try {
+      return await handleCreatorPage(req, res);
+    } catch (error) {
+      return send(res, error.statusCode || 500, {
+        success: false,
+        error: error.message || "Creator page request failed",
+        code: error.code || "CREATOR_PAGE_FAILED"
+      });
+    }
+  }
+
   if (query.creator_live_status === "1") {
     return handleCreatorLiveStatus(req, res);
   }
