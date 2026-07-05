@@ -1606,9 +1606,7 @@
       <h2 id="tiktokWelcomeTitle">Hey, Mina here! 👋</h2>
       <div class="tiktok-welcome-message" id="tiktokWelcomeMessage"></div>
       <div class="tiktok-welcome-actions">
-        <button class="primary" id="tiktokWelcomeOpenBrowser" type="button">Open in Browser</button>
-        <button id="tiktokWelcomeContinue" type="button">Continue in TikTok</button>
-        <button class="text" id="tiktokWelcomeCopy" type="button">Copy Link</button>
+        <button class="primary" id="tiktokWelcomeContinue" type="button">Continue in TikTok</button>
       </div>
       <div class="tiktok-welcome-status" id="tiktokWelcomeStatus" aria-live="polite"></div>
     </div>
@@ -1785,14 +1783,14 @@
       intro_audio_fade_out_duration: 2,
       intro_audio_stop_after: 4,
       tiktok_welcome_enabled: true,
-      tiktok_welcome_title: "Hey, Mina here! 👋",
-      tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
-      tiktok_welcome_primary_label: "Open in Browser",
+      tiktok_welcome_title: "Hey, Mina here! 💖",
+      tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.\n\nIt really helps me, and you'll get the full experience.",
+      tiktok_welcome_primary_label: "Continue in TikTok",
       tiktok_welcome_secondary_label: "Continue in TikTok",
       tiktok_welcome_gate_enabled: true,
-      tiktok_welcome_gate_title: "Hey, Mina here! 👋",
-      tiktok_welcome_gate_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose Open in browser.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
-      tiktok_welcome_gate_primary_label: "Open My Page",
+      tiktok_welcome_gate_title: "Hey, Mina here! 💖",
+      tiktok_welcome_gate_message: "For the best experience, please open my page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.\n\nIt really helps me, and you'll get the full experience.",
+      tiktok_welcome_gate_primary_label: "Continue in TikTok",
       tiktok_welcome_gate_secondary_label: "Continue in TikTok",
       tiktok_welcome_gate_copy_label: "Copy Link",
       ambient_mode_enabled: true,
@@ -2939,16 +2937,12 @@
       const title = $("tiktokWelcomeTitle");
       const message = $("tiktokWelcomeMessage");
       const arrow = $("tiktokWelcomeArrow");
-      const openButton = $("tiktokWelcomeOpenBrowser");
       const continueButton = $("tiktokWelcomeContinue");
-      const copyButton = $("tiktokWelcomeCopy");
       if (avatar) avatar.src = profileImage(settings) || heroImage(settings);
       if (arrow && !arrow.getAttribute("src")) arrow.src = "/assets/mosyaamosya/tiktok-three-dots-arrow.png";
       if (title) title.textContent = textSetting(settings, "tiktok_welcome_gate_title", textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_gate_title));
       if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_gate_message", textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_gate_message)));
-      if (openButton) openButton.textContent = textSetting(settings, "tiktok_welcome_gate_primary_label", textSetting(settings, "tiktok_welcome_primary_label", fallback.tiktok_welcome_gate_primary_label));
       if (continueButton) continueButton.textContent = textSetting(settings, "tiktok_welcome_gate_secondary_label", textSetting(settings, "tiktok_welcome_secondary_label", fallback.tiktok_welcome_gate_secondary_label));
-      if (copyButton) copyButton.textContent = textSetting(settings, "tiktok_welcome_gate_copy_label", fallback.tiktok_welcome_gate_copy_label);
       gate.hidden = false;
       requestAnimationFrame(() => gate.classList.add("is-visible"));
       if (!gate.dataset.bound) {
@@ -2974,20 +2968,6 @@
             continueInTikTok(event);
             return true;
           }
-          if (button.id === "tiktokWelcomeCopy") {
-            await copyBrowserExperienceUrl();
-            return true;
-          }
-          if (button.id === "tiktokWelcomeOpenBrowser") {
-            await copyBrowserExperienceUrl();
-            try {
-              window.open(browserExperienceUrl(), "_blank", "noopener,noreferrer");
-              setTikTokGateStatus("If TikTok stays here, use ••• and choose Open in browser.");
-            } catch (error) {
-              setTikTokGateStatus("Use ••• and choose Open in browser.");
-            }
-            return true;
-          }
           return true;
         };
         ["pointerdown", "touchstart"].forEach((type) => {
@@ -3004,19 +2984,6 @@
           }, { capture: true, passive: false });
         });
       }
-      if (openButton && !openButton.dataset.bound) {
-        openButton.dataset.bound = "true";
-        openButton.addEventListener("click", async (event) => {
-          consumeGateEvent(event);
-          await copyBrowserExperienceUrl();
-          try {
-            window.open(browserExperienceUrl(), "_blank", "noopener,noreferrer");
-            setTikTokGateStatus("If TikTok stays here, use ••• and choose Open in browser.");
-          } catch (error) {
-            setTikTokGateStatus("Use ••• and choose Open in browser.");
-          }
-        }, { capture: true });
-      }
       if (continueButton && !continueButton.dataset.bound) {
         continueButton.dataset.bound = "true";
         continueButton.addEventListener("click", (event) => {
@@ -3026,13 +2993,6 @@
           hideTikTokWelcomeGate();
           $("intro").hidden = true;
           revealPage();
-        }, { capture: true });
-      }
-      if (copyButton && !copyButton.dataset.bound) {
-        copyButton.dataset.bound = "true";
-        copyButton.addEventListener("click", async (event) => {
-          consumeGateEvent(event);
-          await copyBrowserExperienceUrl();
         }, { capture: true });
       }
       return true;

@@ -1679,13 +1679,11 @@
               <div><strong>Enabled</strong><span>Shown only inside TikTok when enabled.</span></div>
               <label class="switch" aria-label="TikTok welcome gate enabled"><input name="tiktok_welcome_gate_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Title<input name="tiktok_welcome_gate_title" placeholder="Hey, Mina here! 👋"></label>
+            <label class="span-2">Title<input name="tiktok_welcome_gate_title" placeholder="Hey, Mina here! 💖"></label>
             <label class="span-2">Message<textarea name="tiktok_welcome_gate_message" rows="7" placeholder="For the best experience, please open my page in your browser."></textarea></label>
-            <label>Primary Button Label<input name="tiktok_welcome_gate_primary_label" placeholder="Open My Page"></label>
-            <label>Secondary Button Label<input name="tiktok_welcome_gate_secondary_label" placeholder="Continue in TikTok"></label>
-            <label>Copy Link Label<input name="tiktok_welcome_gate_copy_label" placeholder="Copy Link"></label>
+            <label class="span-2">Button Label<input name="tiktok_welcome_gate_secondary_label" placeholder="Continue in TikTok"></label>
             <div class="help-panel span-2">
-              Recommended copy invites visitors to tap the three dots in TikTok and choose Open in browser. Normal browsers never see this gate.
+              This message is only shown to visitors opening your page inside the TikTok app.
             </div>
             <button class="button span-2" id="resetTikTokWelcomeCopy" type="button">Reset to Recommended</button>
           </div>
@@ -1971,11 +1969,9 @@
       signature: {}
     };
     const recommendedTikTokWelcome = {
-      title: "Hey, Mina here! 👋",
-      message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose Open in browser.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
-      primary: "Open My Page",
-      secondary: "Continue in TikTok",
-      copy: "Copy Link"
+      title: "Hey, Mina here! 💖",
+      message: "For the best experience, please open my page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.\n\nIt really helps me, and you'll get the full experience.",
+      button: "Continue in TikTok"
     };
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
@@ -3133,9 +3129,7 @@
         tiktok_welcome_gate_enabled: boolField("tiktok_welcome_gate_enabled", true),
         tiktok_welcome_gate_title: String(data.get("tiktok_welcome_gate_title") || "").trim(),
         tiktok_welcome_gate_message: String(data.get("tiktok_welcome_gate_message") || "").trim(),
-        tiktok_welcome_gate_primary_label: String(data.get("tiktok_welcome_gate_primary_label") || "").trim(),
         tiktok_welcome_gate_secondary_label: String(data.get("tiktok_welcome_gate_secondary_label") || "").trim(),
-        tiktok_welcome_gate_copy_label: String(data.get("tiktok_welcome_gate_copy_label") || "").trim(),
         intro_audio_enabled: boolField("intro_audio_enabled"),
         intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
         intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
@@ -3219,9 +3213,7 @@
       setBoolField("tiktok_welcome_gate_enabled", true);
       if (form.elements.tiktok_welcome_gate_title) form.elements.tiktok_welcome_gate_title.value = recommendedTikTokWelcome.title;
       if (form.elements.tiktok_welcome_gate_message) form.elements.tiktok_welcome_gate_message.value = recommendedTikTokWelcome.message;
-      if (form.elements.tiktok_welcome_gate_primary_label) form.elements.tiktok_welcome_gate_primary_label.value = recommendedTikTokWelcome.primary;
-      if (form.elements.tiktok_welcome_gate_secondary_label) form.elements.tiktok_welcome_gate_secondary_label.value = recommendedTikTokWelcome.secondary;
-      if (form.elements.tiktok_welcome_gate_copy_label) form.elements.tiktok_welcome_gate_copy_label.value = recommendedTikTokWelcome.copy;
+      if (form.elements.tiktok_welcome_gate_secondary_label) form.elements.tiktok_welcome_gate_secondary_label.value = recommendedTikTokWelcome.button;
       setStatus("TikTok Welcome copy restored. Save page to publish.");
     }
     function syncLinkCompatibilityFields() {
