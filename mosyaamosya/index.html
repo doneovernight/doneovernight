@@ -1205,6 +1205,21 @@
       mask-image: linear-gradient(to bottom, transparent, black 18%, black 78%, transparent);
       pointer-events: none;
     }
+    .tiktok-welcome-arrow {
+      position: fixed;
+      top: calc(8px + env(safe-area-inset-top));
+      right: 2px;
+      z-index: 2;
+      width: min(34vw, 170px);
+      max-width: 170px;
+      height: auto;
+      opacity: .86;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      transform: translate3d(0, 0, 0);
+      filter: drop-shadow(0 0 18px rgba(255, 121, 170, .24));
+    }
     .tiktok-welcome-card {
       position: relative;
       z-index: 1;
@@ -1308,6 +1323,10 @@
       }
       .tiktok-welcome-card {
         gap: 12px;
+      }
+      .tiktok-welcome-arrow {
+        width: min(30vw, 128px);
+        opacity: .76;
       }
       .tiktok-welcome-avatar-wrap {
         width: 84px;
@@ -1579,6 +1598,7 @@
   </section>
 
   <section class="tiktok-welcome-gate" id="tiktokWelcomeGate" aria-labelledby="tiktokWelcomeTitle" hidden>
+    <img class="tiktok-welcome-arrow" id="tiktokWelcomeArrow" alt="" aria-hidden="true" loading="eager" decoding="async">
     <div class="tiktok-welcome-card">
       <div class="tiktok-welcome-avatar-wrap" aria-hidden="true">
         <img class="tiktok-welcome-avatar" id="tiktokWelcomeAvatar" alt="">
@@ -2918,10 +2938,12 @@
       const avatar = $("tiktokWelcomeAvatar");
       const title = $("tiktokWelcomeTitle");
       const message = $("tiktokWelcomeMessage");
+      const arrow = $("tiktokWelcomeArrow");
       const openButton = $("tiktokWelcomeOpenBrowser");
       const continueButton = $("tiktokWelcomeContinue");
       const copyButton = $("tiktokWelcomeCopy");
       if (avatar) avatar.src = profileImage(settings) || heroImage(settings);
+      if (arrow && !arrow.getAttribute("src")) arrow.src = "/assets/mosyaamosya/tiktok-three-dots-arrow.png";
       if (title) title.textContent = textSetting(settings, "tiktok_welcome_gate_title", textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_gate_title));
       if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_gate_message", textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_gate_message)));
       if (openButton) openButton.textContent = textSetting(settings, "tiktok_welcome_gate_primary_label", textSetting(settings, "tiktok_welcome_primary_label", fallback.tiktok_welcome_gate_primary_label));
