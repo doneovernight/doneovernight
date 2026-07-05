@@ -121,6 +121,7 @@ const LINK_BLOCK_CREATOR_FIELDS = [
   "support_link_cta_label",
   "support_link_provider",
   "support_link_url",
+  "support_sticker_key",
   "support_sticker_enabled",
   "support_sticker_animation_enabled",
   "business_link_visible",
@@ -159,8 +160,12 @@ const SUPPORT_CREATOR_FIELDS = [
   "support_link_cta_label",
   "support_link_provider",
   "support_link_url",
+  "support_sticker_key",
   "support_sticker_enabled",
   "support_sticker_animation_enabled"
+];
+const SUPPORT_STICKER_KEY_CREATOR_FIELDS = [
+  "support_sticker_key"
 ];
 const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_enabled",
@@ -201,6 +206,26 @@ const CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER = BASE_CREATOR_FIELDS.concat(
   PHASE_3_CREATOR_FIELDS,
   POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => !COMMUNITY_STICKER_CREATOR_FIELDS.includes(field)),
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
+).join(",");
+const CREATOR_FIELDS_WITHOUT_SUPPORT_STICKER_KEY = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => !SUPPORT_STICKER_KEY_CREATOR_FIELDS.includes(field)),
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
+).join(",");
+const CREATOR_FIELDS_WITHOUT_RECENT_OPTIONAL_STICKER_FIELDS = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS.filter((field) => !COMMUNITY_STICKER_CREATOR_FIELDS.includes(field) && !SUPPORT_STICKER_KEY_CREATOR_FIELDS.includes(field)),
   INTRO_AUDIO_CREATOR_FIELDS,
   TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
@@ -364,6 +389,7 @@ const DEFAULT_MINA_SETTINGS = {
   support_link_cta_label: "Support",
   support_link_provider: "custom",
   support_link_url: "",
+  support_sticker_key: "coffee",
   support_sticker_enabled: true,
   support_sticker_animation_enabled: true,
   business_link_visible: true,
@@ -913,6 +939,19 @@ function normalizeSupportProvider(value) {
   return allowed.has(normalized) ? normalized : "custom";
 }
 
+function normalizeStickerKey(value, fallback = "coffee") {
+  const key = clean(value).toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  const aliases = {
+    moneybag: "money_bag",
+    money: "money_bag",
+    coffee_cup: "coffee",
+    buy_me_a_coffee: "coffee"
+  };
+  const normalized = aliases[key] || key;
+  const allowed = new Set(["coffee", "money_bag"]);
+  return allowed.has(normalized) ? normalized : fallback;
+}
+
 function normalizeCommunityState(value) {
   const allowed = new Set(["open", "preview", "hidden"]);
   const state = clean(value).toLowerCase();
@@ -1401,6 +1440,7 @@ function normalizeCreator(row = {}) {
     support_link_cta_label: clean(row.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
     support_link_provider: normalizeSupportProvider(row.support_link_provider),
     support_link_url: clean(row.support_link_url),
+    support_sticker_key: normalizeStickerKey(row.support_sticker_key, DEFAULT_MINA_SETTINGS.support_sticker_key),
     support_sticker_enabled: bool(row.support_sticker_enabled, true),
     support_sticker_animation_enabled: bool(row.support_sticker_animation_enabled, true),
     business_link_visible: bool(row.business_link_visible, true),
@@ -1448,6 +1488,8 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
     CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER,
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER,
+    CREATOR_FIELDS_WITHOUT_SUPPORT_STICKER_KEY,
+    CREATOR_FIELDS_WITHOUT_RECENT_OPTIONAL_STICKER_FIELDS,
     CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_SUPPORT,
@@ -1634,6 +1676,7 @@ function creatorPayload(input = {}) {
     support_link_cta_label: clean(input.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
     support_link_provider: normalizeSupportProvider(input.support_link_provider),
     support_link_url: clean(input.support_link_url),
+    support_sticker_key: normalizeStickerKey(input.support_sticker_key, DEFAULT_MINA_SETTINGS.support_sticker_key),
     support_sticker_enabled: bool(input.support_sticker_enabled, true),
     support_sticker_animation_enabled: bool(input.support_sticker_animation_enabled, true),
     business_link_visible: bool(input.business_link_visible, true),
@@ -1690,8 +1733,16 @@ async function saveCreatorToTable(payload) {
   COMMUNITY_STICKER_CREATOR_FIELDS.forEach((field) => {
     delete withoutCommunityStickerPayload[field];
   });
+  const withoutSupportStickerKeyPayload = { ...payload };
+  SUPPORT_STICKER_KEY_CREATOR_FIELDS.forEach((field) => {
+    delete withoutSupportStickerKeyPayload[field];
+  });
   const { countdown_message, ...withoutCountdownMessagePayload } = payload;
   const { countdown_message: countdownMessage, ...withoutCountdownMessageOrCommunityStickerPayload } = withoutCommunityStickerPayload;
+  const { countdown_message: countdownMessageForRecent, ...withoutRecentOptionalStickerPayload } = withoutSupportStickerKeyPayload;
+  COMMUNITY_STICKER_CREATOR_FIELDS.forEach((field) => {
+    delete withoutRecentOptionalStickerPayload[field];
+  });
   const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
   const { share_link_visible, ...legacyVisibilityPayload } = withoutPageOrderPayload;
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
@@ -1700,6 +1751,8 @@ async function saveCreatorToTable(payload) {
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, payload: withoutCountdownMessagePayload },
     { fields: CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER, payload: withoutCommunityStickerPayload },
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER, payload: withoutCountdownMessageOrCommunityStickerPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_SUPPORT_STICKER_KEY, payload: withoutSupportStickerKeyPayload },
+    { fields: CREATOR_FIELDS_WITHOUT_RECENT_OPTIONAL_STICKER_FIELDS, payload: withoutRecentOptionalStickerPayload },
     { fields: CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME, payload: withoutTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_HERO_IMAGE_OR_TIKTOK_WELCOME, payload: withoutHeroImageOrTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },

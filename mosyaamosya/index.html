@@ -8,6 +8,7 @@
   <link rel="icon" href="/favicon.ico">
   <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
   <link rel="preload" as="image" href="/assets/mosyaamosya/support-coffee-sticker.png" fetchpriority="low">
+  <link rel="preload" as="image" href="/assets/mosyaamosya/support-money-bag.png" fetchpriority="low">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
   <script>
@@ -1836,6 +1837,7 @@
       support_link_cta_label: "Support",
       support_link_provider: "custom",
       support_link_url: "",
+      support_sticker_key: "coffee",
       support_sticker_enabled: true,
       support_sticker_animation_enabled: true,
       business_link_visible: true,
@@ -1940,8 +1942,11 @@
     let pageEngineSignature = "";
     let pageViewTracked = false;
     const prepareDiscountStickerSrc = "/assets/mosyaamosya/prepare-battle-discount.png";
-    const supportMoneyStickerSrc = "/assets/mosyaamosya/support-coffee-sticker.png";
     const communityStickerSrc = "/assets/mosyaamosya/community-sticker.png";
+    const stickerLibrary = {
+      coffee: { key: "coffee", name: "Coffee", src: "/assets/mosyaamosya/support-coffee-sticker.png", className: "support-money-sticker" },
+      money_bag: { key: "money_bag", name: "Money Bag", src: "/assets/mosyaamosya/support-money-bag.png", className: "support-money-sticker" }
+    };
     const blockRegistry = {
       link: { implemented: true },
       discord: { implemented: true },
@@ -2996,6 +3001,17 @@
       }[char]));
     }
 
+    function normalizeStickerKey(value, fallbackKey = "coffee") {
+      const key = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const aliases = { moneybag: "money_bag", money: "money_bag", buy_me_a_coffee: "coffee", coffee_cup: "coffee" };
+      const normalized = aliases[key] || key;
+      return stickerLibrary[normalized] ? normalized : fallbackKey;
+    }
+
+    function stickerFromLibrary(value, fallbackKey = "coffee") {
+      return stickerLibrary[normalizeStickerKey(value, fallbackKey)] || stickerLibrary[fallbackKey];
+    }
+
     function formatTikTokWelcomeMessage(value) {
       const paragraphs = String(value || fallback.tiktok_welcome_gate_message || fallback.tiktok_welcome_message || "")
         .split(/\n{2,}/)
@@ -3519,7 +3535,7 @@
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "prepare", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
-        { key: "support", visible: featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
+        { key: "support", visible: featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false, supportStickerKey: normalizeStickerKey(settings.support_sticker_key) },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
         { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
@@ -3572,10 +3588,11 @@
         escapeHtml(action.label) + '</span>';
       if (!showBattleDiscount && !showSupportSticker) return item;
       if (showSupportSticker) {
+        const sticker = stickerFromLibrary(action.supportStickerKey);
         return createStickeredActionShell(item, {
           shellClass: "support-card-shell",
-          stickerClass: action.supportStickerAnimated === false ? "support-money-sticker" : "support-money-sticker is-animated",
-          src: supportMoneyStickerSrc,
+          stickerClass: action.supportStickerAnimated === false ? sticker.className : sticker.className + " is-animated",
+          src: sticker.src,
           fetchPriority: "low"
         });
       }
@@ -3930,6 +3947,7 @@
           support_link_cta_label: settings.support_link_cta_label,
           support_link_provider: settings.support_link_provider,
           support_link_url: settings.support_link_url,
+          support_sticker_key: settings.support_sticker_key,
           support_sticker_enabled: settings.support_sticker_enabled,
           support_sticker_animation_enabled: settings.support_sticker_animation_enabled,
           business_link_visible: settings.business_link_visible,

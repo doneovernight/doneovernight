@@ -506,6 +506,72 @@
     .toggle-row .switch {
       flex: 0 0 auto;
     }
+    .sticker-library {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      min-width: 0;
+    }
+    .sticker-option {
+      position: relative;
+      min-width: 0;
+      min-height: 104px;
+      display: grid;
+      gap: 7px;
+      place-items: center;
+      border: 1px solid rgba(255,211,223,.12);
+      border-radius: 16px;
+      padding: 10px;
+      background: rgba(0,0,0,.12);
+      color: rgba(255,245,247,.72);
+      cursor: pointer;
+      box-shadow: inset 0 1px rgba(255,255,255,.06);
+      transition: border-color .18s ease, background .18s ease, color .18s ease;
+    }
+    .sticker-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .sticker-option img {
+      width: 54px;
+      height: 42px;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.18));
+      pointer-events: none;
+    }
+    .sticker-option span { font-size: 12px; font-weight: 900; text-align: center; }
+    .sticker-option::after {
+      content: "✓";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), #ff9fbd);
+      color: #24100e;
+      font-size: 12px;
+      font-weight: 950;
+      opacity: 0;
+      transform: scale(.84);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .sticker-option:has(input:checked) {
+      border-color: rgba(255,211,223,.58);
+      background: rgba(255,211,223,.105);
+      color: var(--text);
+      box-shadow: 0 0 0 3px rgba(255,211,223,.11), inset 0 1px rgba(255,255,255,.14);
+    }
+    .sticker-option:has(input:checked)::after { opacity: 1; transform: scale(1); }
+    .sticker-library-note {
+      border: 1px solid rgba(255,211,223,.1);
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,.045);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .sticker-library-note strong { display: block; color: rgba(255,245,247,.82); font-size: 12px; margin-bottom: 2px; }
     .faq-builder-head { padding-top: 2px; }
     .faq-card-heading {
       display: flex;
@@ -1384,14 +1450,17 @@
                   </select>
                 </label>
                 <label class="wide">Destination URL<input name="support_link_url" type="url" placeholder="https://"></label>
+                <div class="wide sticker-library" id="supportStickerPicker"></div>
+                <input name="support_sticker_key" type="hidden" value="coffee">
                 <label class="toggle-row wide">
-                  <span><strong>Sticker</strong><small>Show the coffee sticker.</small></span>
+                  <span><strong>Sticker</strong><small>Show the selected sticker.</small></span>
                   <span class="switch"><input name="support_sticker_enabled" type="checkbox"><span class="track"></span></span>
                 </label>
                 <label class="toggle-row wide">
                   <span><strong>Sticker animation</strong><small>Keep the idle motion subtle.</small></span>
                   <span class="switch"><input name="support_sticker_animation_enabled" type="checkbox"><span class="track"></span></span>
                 </label>
+                <div class="wide sticker-library-note"><strong>✨ More stickers on their way.</strong>We'll continue expanding the Creator OS Sticker Library with new sticker packs.</div>
               </div>
             </section>
 
@@ -1962,6 +2031,10 @@
       ["violet", "Creator Violet"],
       ["neon", "Neon DON"],
       ["founder", "Founder DON"]
+    ];
+    const stickerLibrary = [
+      { key: "coffee", name: "Coffee", src: "/assets/mosyaamosya/support-coffee-sticker.png", packs: ["support"] },
+      { key: "money_bag", name: "Money Bag", src: "/assets/mosyaamosya/support-money-bag.png", packs: ["support"] }
     ];
     const themeVars = {
       mina: ["#ffd3df", "#8b5f4a", "rgba(255,211,223,.18)", "rgba(139,95,74,.22)"],
@@ -2544,6 +2617,33 @@
       } else {
         element.value = Boolean(value) ? "true" : "false";
       }
+    }
+    function normalizeStickerKey(value, fallback = "coffee") {
+      const key = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const aliases = { moneybag: "money_bag", money: "money_bag", buy_me_a_coffee: "coffee", coffee_cup: "coffee" };
+      const normalized = aliases[key] || key;
+      return stickerLibrary.some((sticker) => sticker.key === normalized) ? normalized : fallback;
+    }
+    function renderStickerPicker(targetId, fieldName, pack, selectedKey) {
+      const target = $(targetId);
+      const field = form.elements[fieldName];
+      if (!target || !field) return;
+      const selected = normalizeStickerKey(selectedKey || field.value);
+      field.value = selected;
+      target.innerHTML = "";
+      stickerLibrary.filter((sticker) => sticker.packs.includes(pack)).forEach((sticker) => {
+        const label = document.createElement("label");
+        label.className = "sticker-option";
+        label.innerHTML =
+          '<input type="radio" name="' + escapeAdmin(fieldName + "_choice") + '" value="' + escapeAdmin(sticker.key) + '"' +
+          (sticker.key === selected ? " checked" : "") + '>' +
+          '<img src="' + escapeAdmin(sticker.src) + '" alt="" aria-hidden="true" loading="lazy" decoding="async">' +
+          '<span>' + escapeAdmin(sticker.name) + '</span>';
+        label.querySelector("input").addEventListener("change", (event) => {
+          field.value = normalizeStickerKey(event.target.value);
+        });
+        target.appendChild(label);
+      });
     }
     const pageBlockRegistry = [
       { key: "community", label: "Community", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
@@ -3138,6 +3238,7 @@
         support_link_cta_label: String(data.get("support_link_cta_label") || "").trim(),
         support_link_provider: String(data.get("support_link_provider") || "custom").trim(),
         support_link_url: String(data.get("support_link_url") || "").trim(),
+        support_sticker_key: normalizeStickerKey(data.get("support_sticker_key")),
         support_sticker_enabled: boolField("support_sticker_enabled", true),
         support_sticker_animation_enabled: boolField("support_sticker_animation_enabled", true),
         business_link_visible: boolField("business_link_visible", true),
@@ -3222,6 +3323,7 @@
       if (settings.tiktok_link_visible === undefined) setBoolField("tiktok_link_visible", true);
       if (settings.battle_link_visible === undefined) setBoolField("battle_link_visible", true);
       if (settings.support_link_visible === undefined) setBoolField("support_link_visible", false);
+      if (form.elements.support_sticker_key) form.elements.support_sticker_key.value = normalizeStickerKey(settings.support_sticker_key);
       if (settings.support_sticker_enabled === undefined) setBoolField("support_sticker_enabled", true);
       if (settings.support_sticker_animation_enabled === undefined) setBoolField("support_sticker_animation_enabled", true);
       if (settings.business_link_visible === undefined) setBoolField("business_link_visible", true);
@@ -3230,6 +3332,7 @@
       if (settings.community_link_visible === undefined) setBoolField("community_link_visible", true);
       if (settings.community_sticker_enabled === undefined) setBoolField("community_sticker_enabled", true);
       if (settings.share_link_visible === undefined) setBoolField("share_link_visible", true);
+      renderStickerPicker("supportStickerPicker", "support_sticker_key", "support", settings.support_sticker_key);
       syncLinkCompatibilityFields();
       writeCustomLinks(settings.custom_links || []);
       applyPublicPageOrder(settings.public_page_order || []);
