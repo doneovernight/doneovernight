@@ -1219,6 +1219,7 @@
               </div>
               <div class="media-health-grid">
                 <div class="media-health-card"><span>Hero Video</span><strong id="heroHealth">Checking</strong></div>
+                <div class="media-health-card"><span>Hero Image</span><strong id="heroImageHealth">Checking</strong></div>
                 <div class="media-health-card"><span>Profile Photo</span><strong id="profileHealth">Checking</strong></div>
                 <div class="media-health-card"><span>Creator Signature</span><strong id="signatureHealth">Checking</strong></div>
               </div>
@@ -1284,6 +1285,32 @@
                 <button class="button" type="button" data-media-preview="hero">Preview</button>
                 <button class="button danger" type="button" data-media-delete="hero">Delete</button>
                 <button class="button" type="button" data-media-optimize="hero">Optimize</button>
+              </div>
+            </section>
+
+            <section class="media-asset-card">
+              <div class="media-asset-head">
+                <div class="media-asset-title"><strong>Hero Image</strong><span>Used as a stable fallback for TikTok and when no Hero Video is set. Supports static PNG, JPG, and JPEG images.</span></div>
+                <span class="media-health-pill" id="heroImageHealthPill">Checking</span>
+              </div>
+              <input name="hero_image_url" type="hidden">
+              <div class="media-row">
+                <img class="media-preview video" id="heroImagePreview" alt="Hero image preview">
+                <input class="media-file-input" id="heroImageFile" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg">
+              </div>
+              <div class="media-spec-grid">
+                <div class="media-spec"><span>Resolution</span><strong id="heroImageResolution">Unknown</strong></div>
+                <div class="media-spec"><span>File size</span><strong id="heroImageFileSize">Unknown</strong></div>
+                <div class="media-spec"><span>Last updated</span><strong id="heroImageLastUpdated">Unknown</strong></div>
+                <div class="media-spec media-dev-row"><span>MIME</span><strong id="heroImageMime">Hidden</strong></div>
+                <div class="media-spec media-dev-row"><span>Storage bucket</span><strong>creator-media</strong></div>
+                <div class="media-spec media-dev-row"><span>Asset URL</span><strong id="heroImageAssetUrl">Hidden</strong></div>
+              </div>
+              <div class="media-actions">
+                <button class="button primary" id="uploadHeroImage" type="button">Replace</button>
+                <button class="button" type="button" data-media-preview="hero-image">Preview</button>
+                <button class="button danger" type="button" data-media-delete="hero-image">Delete</button>
+                <button class="button" type="button" data-media-optimize="hero-image">Optimize</button>
               </div>
             </section>
           </div>
@@ -1644,18 +1671,19 @@
         </section>
 
         <section class="panel tab-panel" data-admin-panel="experience" hidden>
-          <h2>TikTok Welcome</h2>
+          <h2>TikTok Welcome Gate</h2>
           <div class="section-note">This message is only shown when visitors open your page inside the TikTok app.</div>
           <div style="height:12px"></div>
           <div class="fields">
             <div class="span-2 switch-row">
-              <div><strong>TikTok Welcome Enabled</strong><span>Ask TikTok visitors to open the page in their browser for the full experience.</span></div>
-              <label class="switch" aria-label="TikTok welcome enabled"><input name="tiktok_welcome_enabled" type="checkbox"><span class="track"></span></label>
+              <div><strong>Enabled</strong><span>Shown only inside TikTok when enabled.</span></div>
+              <label class="switch" aria-label="TikTok welcome gate enabled"><input name="tiktok_welcome_gate_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Title<input name="tiktok_welcome_title" placeholder="Hey, Mina here! 👋"></label>
-            <label class="span-2">Message<textarea name="tiktok_welcome_message" rows="7" placeholder="For the best experience, please open my page in your browser."></textarea></label>
-            <label>Primary Button Label<input name="tiktok_welcome_primary_label" placeholder="Open in Browser"></label>
-            <label>Secondary Button Label<input name="tiktok_welcome_secondary_label" placeholder="Continue in TikTok"></label>
+            <label class="span-2">Title<input name="tiktok_welcome_gate_title" placeholder="Hey, Mina here! 👋"></label>
+            <label class="span-2">Message<textarea name="tiktok_welcome_gate_message" rows="7" placeholder="For the best experience, please open my page in your browser."></textarea></label>
+            <label>Primary Button Label<input name="tiktok_welcome_gate_primary_label" placeholder="Open My Page"></label>
+            <label>Secondary Button Label<input name="tiktok_welcome_gate_secondary_label" placeholder="Continue in TikTok"></label>
+            <label>Copy Link Label<input name="tiktok_welcome_gate_copy_label" placeholder="Copy Link"></label>
             <div class="help-panel span-2">
               Recommended copy invites visitors to tap the three dots in TikTok and choose Open in browser. Normal browsers never see this gate.
             </div>
@@ -1939,13 +1967,15 @@
     const mediaState = {
       avatar: {},
       hero: {},
+      heroImage: {},
       signature: {}
     };
     const recommendedTikTokWelcome = {
       title: "Hey, Mina here! 👋",
-      message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
-      primary: "Open in Browser",
-      secondary: "Continue in TikTok"
+      message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose Open in browser.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+      primary: "Open My Page",
+      secondary: "Continue in TikTok",
+      copy: "Copy Link"
     };
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
@@ -3029,6 +3059,7 @@
         bio: String(data.get("bio") || "").trim(),
         location: String(data.get("location") || "").trim(),
         avatar_url: String(data.get("avatar_url") || "").trim(),
+        hero_image_url: String(data.get("hero_image_url") || "").trim(),
         hero_video_url: String(data.get("hero_video_url") || "").trim(),
         tiktok_url: String(data.get("tiktok_url") || "").trim(),
         discord_url: String(data.get("discord_url") || "").trim(),
@@ -3099,11 +3130,12 @@
         custom_links: readCustomLinks(),
         public_page_order: normalizePublicPageOrder(readPublicPageOrder(), readCustomLinks()),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
-        tiktok_welcome_enabled: boolField("tiktok_welcome_enabled", true),
-        tiktok_welcome_title: String(data.get("tiktok_welcome_title") || "").trim(),
-        tiktok_welcome_message: String(data.get("tiktok_welcome_message") || "").trim(),
-        tiktok_welcome_primary_label: String(data.get("tiktok_welcome_primary_label") || "").trim(),
-        tiktok_welcome_secondary_label: String(data.get("tiktok_welcome_secondary_label") || "").trim(),
+        tiktok_welcome_gate_enabled: boolField("tiktok_welcome_gate_enabled", true),
+        tiktok_welcome_gate_title: String(data.get("tiktok_welcome_gate_title") || "").trim(),
+        tiktok_welcome_gate_message: String(data.get("tiktok_welcome_gate_message") || "").trim(),
+        tiktok_welcome_gate_primary_label: String(data.get("tiktok_welcome_gate_primary_label") || "").trim(),
+        tiktok_welcome_gate_secondary_label: String(data.get("tiktok_welcome_gate_secondary_label") || "").trim(),
+        tiktok_welcome_gate_copy_label: String(data.get("tiktok_welcome_gate_copy_label") || "").trim(),
         intro_audio_enabled: boolField("intro_audio_enabled"),
         intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
         intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
@@ -3137,13 +3169,13 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
       if (settings.poll_enabled === undefined) setBoolField("poll_enabled", false);
-      if (settings.tiktok_welcome_enabled === undefined) setBoolField("tiktok_welcome_enabled", true);
+      if (settings.tiktok_welcome_gate_enabled === undefined) setBoolField("tiktok_welcome_gate_enabled", settings.tiktok_welcome_enabled !== false);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
       if (settings.intro_audio_enabled === undefined) setBoolField("intro_audio_enabled", false);
       if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
@@ -3171,6 +3203,7 @@
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
       $("avatarPreview").src = settings.avatar_url || "";
+      $("heroImagePreview").src = settings.hero_image_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
       setIntroAudioPreview(settings.intro_audio_url || "", { loadingMessage: "Loading saved audio preview..." });
       refreshMediaMetadata();
@@ -3183,11 +3216,12 @@
       updatePreviewFrame(false);
     }
     function resetTikTokWelcomeCopy() {
-      setBoolField("tiktok_welcome_enabled", true);
-      if (form.elements.tiktok_welcome_title) form.elements.tiktok_welcome_title.value = recommendedTikTokWelcome.title;
-      if (form.elements.tiktok_welcome_message) form.elements.tiktok_welcome_message.value = recommendedTikTokWelcome.message;
-      if (form.elements.tiktok_welcome_primary_label) form.elements.tiktok_welcome_primary_label.value = recommendedTikTokWelcome.primary;
-      if (form.elements.tiktok_welcome_secondary_label) form.elements.tiktok_welcome_secondary_label.value = recommendedTikTokWelcome.secondary;
+      setBoolField("tiktok_welcome_gate_enabled", true);
+      if (form.elements.tiktok_welcome_gate_title) form.elements.tiktok_welcome_gate_title.value = recommendedTikTokWelcome.title;
+      if (form.elements.tiktok_welcome_gate_message) form.elements.tiktok_welcome_gate_message.value = recommendedTikTokWelcome.message;
+      if (form.elements.tiktok_welcome_gate_primary_label) form.elements.tiktok_welcome_gate_primary_label.value = recommendedTikTokWelcome.primary;
+      if (form.elements.tiktok_welcome_gate_secondary_label) form.elements.tiktok_welcome_gate_secondary_label.value = recommendedTikTokWelcome.secondary;
+      if (form.elements.tiktok_welcome_gate_copy_label) form.elements.tiktok_welcome_gate_copy_label.value = recommendedTikTokWelcome.copy;
       setStatus("TikTok Welcome copy restored. Save page to publish.");
     }
     function syncLinkCompatibilityFields() {
@@ -3989,6 +4023,12 @@
         }
         return isProfilePhotoFile(file) ? "" : "Profile Photos support static PNG and JPG images only.";
       }
+      if (kind === "hero-image") {
+        if (mediaFileMime(file).startsWith("video/") || ["mp4", "mov", "webm", "avi", "m4v", "gif"].includes(mediaFileExtension(file))) {
+          return "Hero Image supports static PNG and JPG images only.";
+        }
+        return isProfilePhotoFile(file) ? "" : "Hero Image supports static PNG and JPG images only.";
+      }
       if (kind === "hero") return isHeroVideoFile(file) ? "" : "Hero Media supports MP4 only.";
       return "";
     }
@@ -4009,6 +4049,12 @@
         if (ext === "gif" || mime === "image/gif") return { label: "Needs static image", className: "warn" };
         if (["png", "jpg", "jpeg"].includes(ext) || ["image/png", "image/jpeg"].includes(mime)) return { label: "Static Image", className: "ready" };
         return { label: "Ready", className: "ready" };
+      }
+      if (kind === "hero-image") {
+        const ext = mediaUrlExtension(info.url);
+        const mime = String(info.mime || "").toLowerCase();
+        if (["png", "jpg", "jpeg"].includes(ext) || ["image/png", "image/jpeg"].includes(mime)) return { label: "Ready", className: "ready" };
+        return { label: "Needs static image", className: "warn" };
       }
       if (kind === "signature") {
         if (!supportedSignatureAudio(info)) return { label: "Needs Optimization", className: "warn" };
@@ -4083,8 +4129,9 @@
     function renderMediaSummary() {
       const avatar = mediaState.avatar || {};
       const hero = mediaState.hero || {};
+      const heroImage = mediaState.heroImage || {};
       const signature = mediaState.signature || {};
-      const imageBytes = avatar.size || 0;
+      const imageBytes = (avatar.size || 0) + (heroImage.size || 0);
       const videoBytes = hero.size || 0;
       const audioBytes = signature.size || 0;
       const totalBytes = imageBytes + videoBytes + audioBytes;
@@ -4097,30 +4144,38 @@
       setText("mediaPerformance", loadLabel);
       const avatarHealth = classifyHealth("avatar", avatar);
       const heroHealth = classifyHealth("hero", hero);
+      const heroImageHealth = classifyHealth("hero-image", heroImage);
       const signatureHealth = classifyHealth("signature", signature);
       setText("profileHealth", avatarHealth.label);
       setText("heroHealth", heroHealth.label);
+      setText("heroImageHealth", heroImageHealth.label);
       setText("signatureHealth", signatureHealth.label);
       applyHealthPill("avatarHealthPill", avatarHealth);
       applyHealthPill("heroHealthPill", heroHealth);
-      applyHealthPill("mediaOverallHealth", [avatarHealth, heroHealth, signatureHealth].some((item) => item.className === "warn") ? { label: "Needs Optimization", className: "warn" } : { label: "Ready", className: "ready" });
+      applyHealthPill("heroImageHealthPill", heroImageHealth);
+      applyHealthPill("mediaOverallHealth", [avatarHealth, heroHealth, heroImageHealth, signatureHealth].some((item) => item.className === "warn") ? { label: "Needs Optimization", className: "warn" } : { label: "Ready", className: "ready" });
     }
     async function refreshMediaMetadata() {
       const avatarUrl = String(form.elements.avatar_url?.value || mediaState.avatar?.url || "").trim();
+      const heroImageUrl = String(form.elements.hero_image_url?.value || mediaState.heroImage?.url || "").trim();
       const heroUrl = String(form.elements.hero_video_url?.value || mediaState.hero?.url || "").trim();
       const signatureUrl = String(form.elements.intro_audio_url?.value || mediaState.signature?.url || "").trim();
-      const [avatarHead, heroHead, signatureHead, avatarMeta, heroMeta, signatureMeta] = await Promise.all([
+      const [avatarHead, heroImageHead, heroHead, signatureHead, avatarMeta, heroImageMeta, heroMeta, signatureMeta] = await Promise.all([
         headMedia(avatarUrl),
+        headMedia(heroImageUrl),
         headMedia(heroUrl),
         headMedia(signatureUrl),
         loadImageMetadata(avatarUrl),
+        loadImageMetadata(heroImageUrl),
         loadVideoMetadata(heroUrl),
         loadAudioMetadata(signatureUrl)
       ]);
       const avatarExisting = mediaState.avatar?.url === avatarUrl ? mediaState.avatar : {};
+      const heroImageExisting = mediaState.heroImage?.url === heroImageUrl ? mediaState.heroImage : {};
       const heroExisting = mediaState.hero?.url === heroUrl ? mediaState.hero : {};
       const signatureExisting = mediaState.signature?.url === signatureUrl ? mediaState.signature : {};
       mediaState.avatar = { url: avatarUrl, ...avatarExisting, ...avatarHead, ...avatarMeta };
+      mediaState.heroImage = { url: heroImageUrl, ...heroImageExisting, ...heroImageHead, ...heroImageMeta };
       mediaState.hero = { url: heroUrl, ...heroExisting, ...heroHead, ...heroMeta };
       mediaState.signature = { url: signatureUrl, ...signatureExisting, ...signatureHead, ...signatureMeta };
       setText("avatarResolution", avatarMeta.width && avatarMeta.height ? avatarMeta.width + " x " + avatarMeta.height : "Unknown");
@@ -4128,6 +4183,11 @@
       setText("avatarLastUpdated", avatarHead.updated ? new Date(avatarHead.updated).toLocaleDateString() : "Unknown");
       setText("avatarMime", avatarHead.mime || "Unknown");
       setText("avatarAssetUrl", avatarUrl || "Not set");
+      setText("heroImageResolution", heroImageMeta.width && heroImageMeta.height ? heroImageMeta.width + " x " + heroImageMeta.height : "Unknown");
+      setText("heroImageFileSize", formatBytes(heroImageHead.size));
+      setText("heroImageLastUpdated", heroImageHead.updated ? new Date(heroImageHead.updated).toLocaleDateString() : "Unknown");
+      setText("heroImageMime", heroImageHead.mime || "Unknown");
+      setText("heroImageAssetUrl", heroImageUrl || "Not set");
       setText("heroResolution", heroMeta.width && heroMeta.height ? heroMeta.width + " x " + heroMeta.height : "Unknown");
       setText("heroDuration", formatSeconds(heroMeta.duration));
       setText("heroFileSize", formatBytes(heroHead.size));
@@ -4146,8 +4206,8 @@
       renderMediaSummary();
     }
     function openMediaPreview(kind) {
-      const field = kind === "avatar" ? "avatar_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
-      const stateKey = kind === "signature" ? "signature" : kind;
+      const field = kind === "avatar" ? "avatar_url" : kind === "hero-image" ? "hero_image_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
+      const stateKey = kind === "signature" ? "signature" : kind === "hero-image" ? "heroImage" : kind;
       const url = String(form.elements[field]?.value || mediaState[stateKey]?.url || "").trim();
       if (!url) {
         setStatus("No media asset to preview.", true);
@@ -4157,16 +4217,17 @@
     }
     async function deleteMediaAsset(kind) {
       if (saving) return;
-      const field = kind === "avatar" ? "avatar_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
+      const field = kind === "avatar" ? "avatar_url" : kind === "hero-image" ? "hero_image_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
       if (!form.elements[field]) return;
-      const stateKey = kind === "signature" ? "signature" : kind;
-      const label = kind === "avatar" ? "Profile Photo" : kind === "signature" ? "Creator Signature" : "Hero Video";
-      const preview = kind === "avatar" ? $("avatarPreview") : kind === "signature" ? $("introAudioPreview") : $("heroPreview");
+      const stateKey = kind === "signature" ? "signature" : kind === "hero-image" ? "heroImage" : kind;
+      const label = kind === "avatar" ? "Profile Photo" : kind === "hero-image" ? "Hero Image" : kind === "signature" ? "Creator Signature" : "Hero Video";
+      const preview = kind === "avatar" ? $("avatarPreview") : kind === "hero-image" ? $("heroImagePreview") : kind === "signature" ? $("introAudioPreview") : $("heroPreview");
       const previousValue = form.elements[field].value;
       const previousState = { ...(mediaState[stateKey] || {}) };
       const previousPreviewSrc = preview ? (preview.currentSrc || preview.getAttribute("src") || preview.src || "") : "";
       form.elements[field].value = "";
       if (kind === "avatar") $("avatarPreview").removeAttribute("src");
+      if (kind === "hero-image") $("heroImagePreview").removeAttribute("src");
       if (kind === "hero") {
         $("heroPreview").pause();
         $("heroPreview").removeAttribute("src");
@@ -4180,6 +4241,7 @@
         form.elements[field].value = previousValue;
         mediaState[stateKey] = previousState;
         if (kind === "avatar" && previousPreviewSrc) $("avatarPreview").src = previousPreviewSrc;
+        if (kind === "hero-image" && previousPreviewSrc) $("heroImagePreview").src = previousPreviewSrc;
         if (kind === "hero" && previousPreviewSrc) $("heroPreview").src = previousPreviewSrc;
         if (kind === "signature") setIntroAudioPreview(previousPreviewSrc);
         await refreshMediaMetadata();
@@ -4201,6 +4263,7 @@
         form.elements[field].value = previousValue;
         mediaState[stateKey] = previousState;
         if (kind === "avatar" && previousPreviewSrc) $("avatarPreview").src = previousPreviewSrc;
+        if (kind === "hero-image" && previousPreviewSrc) $("heroImagePreview").src = previousPreviewSrc;
         if (kind === "hero" && previousPreviewSrc) $("heroPreview").src = previousPreviewSrc;
         if (kind === "signature") setIntroAudioPreview(previousPreviewSrc);
         await refreshMediaMetadata();
@@ -4212,7 +4275,7 @@
       }
     }
     function selectedFileForKind(kind) {
-      const input = kind === "avatar" ? $("avatarFile") : kind === "signature" ? $("introAudioFile") : $("heroFile");
+      const input = kind === "avatar" ? $("avatarFile") : kind === "hero-image" ? $("heroImageFile") : kind === "signature" ? $("introAudioFile") : $("heroFile");
       return input && input.files && input.files[0] ? input.files[0] : null;
     }
     async function optimizeMediaAsset(kind) {
@@ -4226,9 +4289,9 @@
         setStatus(kind === "signature" ? "Choose an audio file, then Recreate Clip." : "Choose an image file, then Optimize.", true);
         return;
       }
-      await uploadMedia(kind === "signature" ? "intro-audio" : "profile");
+      await uploadMedia(kind === "signature" ? "intro-audio" : kind === "hero-image" ? "hero-image" : "profile");
     }
-    async function optimizeProfileImage(file) {
+    async function optimizeProfileImage(file, label = "Profile photo") {
       if (!file || !file.type.startsWith("image/")) return { file, message: "" };
       const url = URL.createObjectURL(file);
       const image = await new Promise((resolve, reject) => {
@@ -4254,11 +4317,11 @@
       const name = String(file.name || "profile-photo").replace(/\.[^.]+$/, "") + "-optimized." + extension;
       return {
         file: new File([blob], name, { type }),
-        message: "Profile photo optimized for mobile."
+        message: label + " optimized for mobile."
       };
     }
     async function uploadMedia(kind) {
-      const input = kind === "profile" ? $("avatarFile") : kind === "intro-audio" ? $("introAudioFile") : $("heroFile");
+      const input = kind === "profile" ? $("avatarFile") : kind === "hero-image" ? $("heroImageFile") : kind === "intro-audio" ? $("introAudioFile") : $("heroFile");
       const file = input.files && input.files[0];
       if (!file) {
         setStatus("Choose a file first, or paste an asset URL.", true);
@@ -4278,8 +4341,8 @@
           return;
         }
       }
-      const field = kind === "profile" ? "avatar_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
-      const preview = kind === "profile" ? $("avatarPreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
+      const field = kind === "profile" ? "avatar_url" : kind === "hero-image" ? "hero_image_url" : kind === "intro-audio" ? "intro_audio_url" : "hero_video_url";
+      const preview = kind === "profile" ? $("avatarPreview") : kind === "hero-image" ? $("heroImagePreview") : kind === "intro-audio" ? $("introAudioPreview") : $("heroPreview");
       let uploadFile = file;
       let preparedIntroAudio = null;
       if (kind === "intro-audio") {
@@ -4296,10 +4359,11 @@
           setStatus(message, true);
           return;
         }
-      } else if (kind === "profile") {
+      } else if (kind === "profile" || kind === "hero-image") {
         try {
-          setStatus("Optimizing profile photo...");
-          const optimized = await optimizeProfileImage(file);
+          const label = kind === "hero-image" ? "Hero image" : "Profile photo";
+          setStatus("Optimizing " + label.toLowerCase() + "...");
+          const optimized = await optimizeProfileImage(file, label);
           uploadFile = optimized.file;
           if (optimized.message) setStatus(optimized.message + " Uploading image...");
         } catch (error) {
@@ -4336,13 +4400,14 @@
           setStatus(successMessage);
         } else {
           preview.src = data.media.url;
-          mediaState[kind === "profile" ? "avatar" : "hero"] = {
+          mediaState[kind === "profile" ? "avatar" : kind === "hero-image" ? "heroImage" : "hero"] = {
             url: data.media.url,
             size: data.media.size,
             mime: data.media.contentType,
             updated: new Date().toUTCString()
           };
-          setStatus(kind === "profile" ? "Profile photo uploaded. Saving..." : "Hero video uploaded. Saving...");
+          const label = kind === "profile" ? "Profile photo" : kind === "hero-image" ? "Hero image" : "Hero video";
+          setStatus(label + " uploaded. Saving...");
           saving = true;
           setSaveButtonState("saving");
           try {
@@ -4352,12 +4417,12 @@
             loadLiveRuntime();
             updateOverview(saved.creator && saved.creator.updated_at);
             setSaveButtonState("saved", { resetAfter: 700 });
-            setStatus(kind === "profile" ? "Profile photo uploaded and saved." : "Hero video uploaded and saved.");
+            setStatus(label + " uploaded and saved.");
           } catch (saveError) {
             setSaveButtonState("failed", { resetAfter: 1500 });
             const saveMessage = readableMessage(saveError, "Save failed.");
-            setStatus((kind === "profile" ? "Profile photo uploaded, but could not be saved: " : "Hero video uploaded, but could not be saved: ") + saveMessage, true);
-            reportAdminWatchtower("Media", kind === "profile" ? "Save uploaded Profile Photo" : "Save uploaded Hero Video", saveError, "Check saveCreator(), public.creators, and media field persistence.");
+            setStatus(label + " uploaded, but could not be saved: " + saveMessage, true);
+            reportAdminWatchtower("Media", "Save uploaded " + label, saveError, "Check saveCreator(), public.creators, and media field persistence.");
           } finally {
             saving = false;
           }
@@ -4477,6 +4542,7 @@
     });
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
     $("uploadHero").addEventListener("click", () => uploadMedia("hero"));
+    $("uploadHeroImage").addEventListener("click", () => uploadMedia("hero-image"));
     $("uploadIntroAudio").addEventListener("click", () => uploadMedia("intro-audio"));
     if ($("runHealthCheck")) $("runHealthCheck").addEventListener("click", runCreatorHealthCheck);
     document.querySelectorAll("[data-media-preview]").forEach((button) => {
@@ -4512,6 +4578,19 @@
       }
       $("heroPreview").src = URL.createObjectURL(file);
       mediaState.hero = { url: $("heroPreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
+      refreshMediaMetadata();
+    });
+    $("heroImageFile").addEventListener("change", () => {
+      const file = selectedFileForKind("hero-image");
+      if (!file) return;
+      const mediaError = validateMediaFile("hero-image", file);
+      if (mediaError) {
+        $("heroImageFile").value = "";
+        setStatus(mediaError, true);
+        return;
+      }
+      $("heroImagePreview").src = URL.createObjectURL(file);
+      mediaState.heroImage = { url: $("heroImagePreview").src, size: file.size, mime: file.type, updated: new Date().toUTCString() };
       refreshMediaMetadata();
     });
     $("introAudioFile").addEventListener("change", () => {

@@ -1737,6 +1737,7 @@
       bio: "Daily livestreams, community, yapping, and soft chaos from Chicago.",
       location: "Chicago 🇺🇸",
       avatar_url: "",
+      hero_image_url: "",
       hero_video_url: "",
       tiktok_url: "https://www.tiktok.com/@mosyaamosya",
       discord_url: "https://discord.gg/GGE7WsUZR",
@@ -1768,6 +1769,12 @@
       tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
       tiktok_welcome_primary_label: "Open in Browser",
       tiktok_welcome_secondary_label: "Continue in TikTok",
+      tiktok_welcome_gate_enabled: true,
+      tiktok_welcome_gate_title: "Hey, Mina here! 👋",
+      tiktok_welcome_gate_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose Open in browser.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+      tiktok_welcome_gate_primary_label: "Open My Page",
+      tiktok_welcome_gate_secondary_label: "Continue in TikTok",
+      tiktok_welcome_gate_copy_label: "Copy Link",
       ambient_mode_enabled: true,
       timezone: "America/Chicago",
       seasonal_effects_enabled: true,
@@ -1953,6 +1960,7 @@
     }
     function setText(id, value) { $(id).textContent = value || ""; }
     function profileImage(settings) { return safeUrl(settings.avatar_url); }
+    function heroImage(settings) { return safeUrl(settings.hero_image_url); }
     function isMp4Url(value) {
       const url = safeUrl(value);
       if (!url) return false;
@@ -1964,7 +1972,7 @@
       }
     }
     function decorativePosterImage(settings) {
-      return profileImage(settings);
+      return heroImage(settings) || profileImage(settings);
     }
     function heroVideo(settings) {
       if (tiktokInAppBrowser()) return "";
@@ -2040,6 +2048,7 @@
         settings: {
           slug: settings.slug || "mosyaamosya",
           hero_video_url_exists_after_client_sanitize: Boolean(settings.hero_video_url),
+          hero_image_exists: Boolean(settings.hero_image_url),
           profile_image_exists: Boolean(settings.avatar_url),
           welcome_intro_enabled: settings.welcome_intro_enabled !== false
         },
@@ -2829,11 +2838,11 @@
     }
 
     function formatTikTokWelcomeMessage(value) {
-      const paragraphs = String(value || fallback.tiktok_welcome_message || "")
+      const paragraphs = String(value || fallback.tiktok_welcome_gate_message || fallback.tiktok_welcome_message || "")
         .split(/\n{2,}/)
         .map((part) => part.trim())
         .filter(Boolean);
-      return (paragraphs.length ? paragraphs : [fallback.tiktok_welcome_message])
+      return (paragraphs.length ? paragraphs : [fallback.tiktok_welcome_gate_message])
         .map((part) => {
           const escaped = escapeHtml(part).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
           return "<p>" + escaped.replace(/\n/g, "<br>") + "</p>";
@@ -2841,11 +2850,15 @@
         .join("");
     }
 
-    function browserExperienceUrl() {
+    function canonicalCreatorUrl() {
       const url = new URL(window.location.href);
       ["tiktok_in_app", "debug_media", "creator_debug", "preview", "verify", "refresh"].forEach((key) => url.searchParams.delete(key));
-      url.searchParams.set("experience", "1");
+      url.searchParams.delete("experience");
       return url.href;
+    }
+
+    function browserExperienceUrl() {
+      return canonicalCreatorUrl();
     }
 
     function setTikTokGateStatus(message) {
@@ -2854,7 +2867,7 @@
     }
 
     async function copyBrowserExperienceUrl() {
-      const url = browserExperienceUrl();
+      const url = canonicalCreatorUrl();
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(url);
@@ -2875,7 +2888,8 @@
 
     function shouldShowTikTokWelcomeGate(settings = {}) {
       if (!tiktokInAppBrowser()) return false;
-      if (settings.tiktok_welcome_enabled === false) return false;
+      const enabled = settings.tiktok_welcome_gate_enabled !== undefined ? settings.tiktok_welcome_gate_enabled : settings.tiktok_welcome_enabled;
+      if (enabled === false) return false;
       try {
         return sessionStorage.getItem(tiktokWelcomeKey) !== "continued";
       } catch (error) {
@@ -2907,11 +2921,12 @@
       const openButton = $("tiktokWelcomeOpenBrowser");
       const continueButton = $("tiktokWelcomeContinue");
       const copyButton = $("tiktokWelcomeCopy");
-      if (avatar) avatar.src = profileImage(settings);
-      if (title) title.textContent = textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_title);
-      if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_message));
-      if (openButton) openButton.textContent = textSetting(settings, "tiktok_welcome_primary_label", fallback.tiktok_welcome_primary_label);
-      if (continueButton) continueButton.textContent = textSetting(settings, "tiktok_welcome_secondary_label", fallback.tiktok_welcome_secondary_label);
+      if (avatar) avatar.src = profileImage(settings) || heroImage(settings);
+      if (title) title.textContent = textSetting(settings, "tiktok_welcome_gate_title", textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_gate_title));
+      if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_gate_message", textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_gate_message)));
+      if (openButton) openButton.textContent = textSetting(settings, "tiktok_welcome_gate_primary_label", textSetting(settings, "tiktok_welcome_primary_label", fallback.tiktok_welcome_gate_primary_label));
+      if (continueButton) continueButton.textContent = textSetting(settings, "tiktok_welcome_gate_secondary_label", textSetting(settings, "tiktok_welcome_secondary_label", fallback.tiktok_welcome_gate_secondary_label));
+      if (copyButton) copyButton.textContent = textSetting(settings, "tiktok_welcome_gate_copy_label", fallback.tiktok_welcome_gate_copy_label);
       gate.hidden = false;
       requestAnimationFrame(() => gate.classList.add("is-visible"));
       if (!gate.dataset.bound) {

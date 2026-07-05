@@ -39,6 +39,7 @@ const BASE_CREATOR_FIELDS = [
   "location",
   "avatar_url",
   "banner_url",
+  "hero_image_url",
   "hero_video_url",
   "music_enabled",
   "music_url",
@@ -166,7 +167,13 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
   "tiktok_welcome_title",
   "tiktok_welcome_message",
   "tiktok_welcome_primary_label",
-  "tiktok_welcome_secondary_label"
+  "tiktok_welcome_secondary_label",
+  "tiktok_welcome_gate_enabled",
+  "tiktok_welcome_gate_title",
+  "tiktok_welcome_gate_message",
+  "tiktok_welcome_gate_primary_label",
+  "tiktok_welcome_gate_secondary_label",
+  "tiktok_welcome_gate_copy_label"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME = BASE_CREATOR_FIELDS.concat(
@@ -238,6 +245,7 @@ const DEFAULT_MINA_SETTINGS = {
   location: "Chicago 🇺🇸",
   avatar_url: "",
   banner_url: "",
+  hero_image_url: "",
   hero_video_url: "",
   tiktok_url: "https://www.tiktok.com/@mosyaamosya",
   discord_url: "https://discord.gg/GGE7WsUZR",
@@ -276,6 +284,12 @@ const DEFAULT_MINA_SETTINGS = {
   tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
   tiktok_welcome_primary_label: "Open in Browser",
   tiktok_welcome_secondary_label: "Continue in TikTok",
+  tiktok_welcome_gate_enabled: true,
+  tiktok_welcome_gate_title: "Hey, Mina here! 👋",
+  tiktok_welcome_gate_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose Open in browser.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+  tiktok_welcome_gate_primary_label: "Open My Page",
+  tiktok_welcome_gate_secondary_label: "Continue in TikTok",
+  tiktok_welcome_gate_copy_label: "Copy Link",
   welcome_intro_enabled: true,
   background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
   ambient_mode_enabled: true,
@@ -1092,6 +1106,10 @@ function normalizeHeroVideoMimeType(mimeType, fallbackName = "") {
   return isHeroVideoUpload(mimeType, fallbackName) ? "video/mp4" : "";
 }
 
+function normalizeHeroImageMimeType(mimeType, fallbackName = "") {
+  return normalizeProfilePhotoMimeType(mimeType, fallbackName);
+}
+
 function isHeroVideoUrl(value = "") {
   const input = clean(value);
   if (!input) return false;
@@ -1099,6 +1117,17 @@ function isHeroVideoUrl(value = "") {
     return new URL(input).pathname.toLowerCase().endsWith(".mp4");
   } catch (error) {
     return /\.mp4(?:[?#].*)?$/i.test(input);
+  }
+}
+
+function isHeroImageUrl(value = "") {
+  const input = clean(value);
+  if (!input) return false;
+  try {
+    const path = new URL(input).pathname.toLowerCase();
+    return /\.(png|jpe?g)$/.test(path);
+  } catch (error) {
+    return /\.(png|jpe?g)(?:[?#].*)?$/i.test(input);
   }
 }
 
@@ -1137,7 +1166,7 @@ async function uploadCreatorMedia(input = {}) {
   const isVideo = parsed.mimeType.startsWith("video/");
   const isGenericMedia = GENERIC_UPLOAD_MIME_TYPES.has(parsed.mimeType);
   const isIntroAudio = isIntroAudioFile(parsed.mimeType, file.name);
-  const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : kind === "profile" ? normalizeProfilePhotoMimeType(parsed.mimeType, file.name) : kind === "hero" ? normalizeHeroVideoMimeType(parsed.mimeType, file.name) : parsed.mimeType;
+  const uploadMimeType = kind === "intro-audio" ? normalizeIntroAudioMimeType(parsed.mimeType, file.name) : kind === "profile" ? normalizeProfilePhotoMimeType(parsed.mimeType, file.name) : kind === "hero-image" ? normalizeHeroImageMimeType(parsed.mimeType, file.name) : kind === "hero" ? normalizeHeroVideoMimeType(parsed.mimeType, file.name) : parsed.mimeType;
   if (kind === "profile" && ((!isImage && !isGenericMedia) || !isProfilePhotoUpload(parsed.mimeType, file.name) || !uploadMimeType)) {
     const error = new Error("Profile Photos support static PNG and JPG images only.");
     error.statusCode = 400;
@@ -1146,6 +1175,12 @@ async function uploadCreatorMedia(input = {}) {
   }
   if (kind === "hero" && ((!isVideo && !isGenericMedia) || !isHeroVideoUpload(parsed.mimeType, file.name) || !uploadMimeType)) {
     const error = new Error("Hero Media supports MP4 only.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
+  if (kind === "hero-image" && ((!isImage && !isGenericMedia) || !isProfilePhotoUpload(parsed.mimeType, file.name) || !uploadMimeType)) {
+    const error = new Error("Hero Image supports static PNG and JPG images only.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
@@ -1162,7 +1197,7 @@ async function uploadCreatorMedia(input = {}) {
     error.code = "INVALID_MEDIA_TYPE";
     throw error;
   }
-  if (!["profile", "hero", "intro-audio"].includes(kind)) {
+  if (!["profile", "hero", "hero-image", "intro-audio"].includes(kind)) {
     const error = new Error("Unsupported media upload type.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_KIND";
@@ -1233,6 +1268,15 @@ async function uploadCreatorMedia(input = {}) {
 
 function normalizeCreator(row = {}) {
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
+  const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(row, "hero_image_url");
+  const legacyGateMessage = clean(row.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(row.tiktok_welcome_message);
+  const legacyGatePrimary = clean(row.tiktok_welcome_primary_label) === DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label ? "" : clean(row.tiktok_welcome_primary_label);
+  const gateEnabled = Object.prototype.hasOwnProperty.call(row, "tiktok_welcome_gate_enabled") ? row.tiktok_welcome_gate_enabled : row.tiktok_welcome_enabled;
+  const gateTitle = clean(row.tiktok_welcome_gate_title) || clean(row.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title;
+  const gateMessage = clean(row.tiktok_welcome_gate_message) || legacyGateMessage || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message;
+  const gatePrimary = clean(row.tiktok_welcome_gate_primary_label) || legacyGatePrimary || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label;
+  const gateSecondary = clean(row.tiktok_welcome_gate_secondary_label) || clean(row.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label;
+  const gateCopy = clean(row.tiktok_welcome_gate_copy_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label;
   return {
     ...DEFAULT_MINA_SETTINGS,
     ...row,
@@ -1244,6 +1288,7 @@ function normalizeCreator(row = {}) {
     location: clean(row.location),
     avatar_url: clean(row.avatar_url),
     banner_url: clean(row.banner_url),
+    hero_image_url: hasHeroImageUrl && isHeroImageUrl(row.hero_image_url) ? clean(row.hero_image_url) : DEFAULT_MINA_SETTINGS.hero_image_url,
     hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(row.hero_video_url) ? clean(row.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(row.music_enabled, false),
     music_url: clean(row.music_url),
@@ -1254,11 +1299,17 @@ function normalizeCreator(row = {}) {
     intro_audio_volume: Math.max(0, Math.min(1, number(row.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
     intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(row.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
     intro_audio_stop_after: Math.max(1, Math.min(30, number(row.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
-    tiktok_welcome_enabled: bool(row.tiktok_welcome_enabled, true),
-    tiktok_welcome_title: clean(row.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_title,
-    tiktok_welcome_message: clean(row.tiktok_welcome_message) || DEFAULT_MINA_SETTINGS.tiktok_welcome_message,
-    tiktok_welcome_primary_label: clean(row.tiktok_welcome_primary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label,
-    tiktok_welcome_secondary_label: clean(row.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label,
+    tiktok_welcome_enabled: bool(gateEnabled, true),
+    tiktok_welcome_title: gateTitle,
+    tiktok_welcome_message: gateMessage,
+    tiktok_welcome_primary_label: gatePrimary,
+    tiktok_welcome_secondary_label: gateSecondary,
+    tiktok_welcome_gate_enabled: bool(gateEnabled, true),
+    tiktok_welcome_gate_title: gateTitle,
+    tiktok_welcome_gate_message: gateMessage,
+    tiktok_welcome_gate_primary_label: gatePrimary,
+    tiktok_welcome_gate_secondary_label: gateSecondary,
+    tiktok_welcome_gate_copy_label: gateCopy,
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
     background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
@@ -1440,6 +1491,15 @@ function creatorPayload(input = {}) {
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
+  const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(input, "hero_image_url");
+  const legacyGateMessage = clean(input.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(input.tiktok_welcome_message);
+  const legacyGatePrimary = clean(input.tiktok_welcome_primary_label) === DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label ? "" : clean(input.tiktok_welcome_primary_label);
+  const gateEnabled = Object.prototype.hasOwnProperty.call(input, "tiktok_welcome_gate_enabled") ? input.tiktok_welcome_gate_enabled : input.tiktok_welcome_enabled;
+  const gateTitle = clean(input.tiktok_welcome_gate_title) || clean(input.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title;
+  const gateMessage = clean(input.tiktok_welcome_gate_message) || legacyGateMessage || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message;
+  const gatePrimary = clean(input.tiktok_welcome_gate_primary_label) || legacyGatePrimary || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label;
+  const gateSecondary = clean(input.tiktok_welcome_gate_secondary_label) || clean(input.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label;
+  const gateCopy = clean(input.tiktok_welcome_gate_copy_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label;
   if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
     const error = new Error("Creator Signature is enabled, but no valid direct audio URL is saved.");
     error.statusCode = 400;
@@ -1455,6 +1515,7 @@ function creatorPayload(input = {}) {
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
+    hero_image_url: hasHeroImageUrl && isHeroImageUrl(input.hero_image_url) ? clean(input.hero_image_url) : DEFAULT_MINA_SETTINGS.hero_image_url,
     hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(input.hero_video_url) ? clean(input.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
     music_enabled: bool(input.music_enabled, false),
     music_url: clean(input.music_url),
@@ -1465,11 +1526,17 @@ function creatorPayload(input = {}) {
     intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
     intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
     intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
-    tiktok_welcome_enabled: bool(input.tiktok_welcome_enabled, true),
-    tiktok_welcome_title: clean(input.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_title,
-    tiktok_welcome_message: clean(input.tiktok_welcome_message) || DEFAULT_MINA_SETTINGS.tiktok_welcome_message,
-    tiktok_welcome_primary_label: clean(input.tiktok_welcome_primary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label,
-    tiktok_welcome_secondary_label: clean(input.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label,
+    tiktok_welcome_enabled: bool(gateEnabled, true),
+    tiktok_welcome_title: gateTitle,
+    tiktok_welcome_message: gateMessage,
+    tiktok_welcome_primary_label: gatePrimary,
+    tiktok_welcome_secondary_label: gateSecondary,
+    tiktok_welcome_gate_enabled: bool(gateEnabled, true),
+    tiktok_welcome_gate_title: gateTitle,
+    tiktok_welcome_gate_message: gateMessage,
+    tiktok_welcome_gate_primary_label: gatePrimary,
+    tiktok_welcome_gate_secondary_label: gateSecondary,
+    tiktok_welcome_gate_copy_label: gateCopy,
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
     background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
