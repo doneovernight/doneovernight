@@ -341,8 +341,24 @@ begin
   end if;
 end $$;
 
+do $$
+begin
+  if not exists (select 1 from public.creators where slug = 'preview-creator')
+     and exists (select 1 from public.creators where username = 'preview-creator') then
+    update public.creators
+       set slug = 'preview-creator',
+           display_name = coalesce(nullif(display_name, ''), 'Preview Creator'),
+           bio = coalesce(nullif(bio, ''), 'Preview-only Creator OS test account.'),
+           location = coalesce(nullif(location, ''), 'Preview'),
+           timezone = coalesce(nullif(timezone, ''), 'UTC'),
+           tiktok_live_username = coalesce(nullif(tiktok_live_username, ''), 'preview-creator'),
+           community_state = coalesce(nullif(community_state, ''), 'open'),
+           updated_at = now()
+     where username = 'preview-creator';
+  end if;
+end $$;
+
 insert into public.creators (
-  id,
   display_name,
   username,
   slug,
@@ -354,7 +370,6 @@ insert into public.creators (
   public_page_order,
   updated_at
 ) values (
-  '22222222-2222-4222-8222-222222222222',
   'Preview Creator',
   'preview-creator',
   'preview-creator',
@@ -366,20 +381,46 @@ insert into public.creators (
   '["community","tiktok","prepare","support","business","newsletter","countdown","share"]'::jsonb,
   now()
 ) on conflict (slug) do update set
-  display_name = excluded.display_name,
-  username = excluded.username,
-  bio = excluded.bio,
-  location = excluded.location,
-  timezone = excluded.timezone,
-  tiktok_live_username = excluded.tiktok_live_username,
-  updated_at = now();
+  display_name = coalesce(nullif(public.creators.display_name, ''), excluded.display_name),
+  username = case
+    when public.creators.username = ''
+      and not exists (
+        select 1
+          from public.creators existing_creator
+         where existing_creator.username = 'preview-creator'
+           and existing_creator.id <> public.creators.id
+      )
+    then excluded.username
+    else public.creators.username
+  end,
+  bio = coalesce(nullif(public.creators.bio, ''), excluded.bio),
+  location = coalesce(nullif(public.creators.location, ''), excluded.location),
+  timezone = coalesce(nullif(public.creators.timezone, ''), excluded.timezone),
+  tiktok_live_username = coalesce(nullif(public.creators.tiktok_live_username, ''), excluded.tiktok_live_username),
+  community_state = coalesce(nullif(public.creators.community_state, ''), excluded.community_state),
+  public_page_order = case
+    when public.creators.public_page_order = '[]'::jsonb then excluded.public_page_order
+    else public.creators.public_page_order
+  end,
+  updated_at = case
+    when public.creators.display_name = ''
+      or public.creators.username = ''
+      or public.creators.bio = ''
+      or public.creators.location = ''
+      or public.creators.timezone = ''
+      or public.creators.tiktok_live_username = ''
+      or public.creators.community_state = ''
+      or public.creators.public_page_order = '[]'::jsonb
+    then now()
+    else public.creators.updated_at
+  end;
 
 insert into public.creator_auth (
   creator_id,
   password_hash,
   updated_at
 ) values (
-  '22222222-2222-4222-8222-222222222222',
+  (select id from public.creators where slug = 'preview-creator'),
   'pbkdf2$120000$M9EBnWCk4_70NUT5F80qQQ$sReLYHMXy_0Hin4tXfVqTlWX1M3dGgugVf666kCVQ6w',
   now()
 ) on conflict (creator_id) do update set
@@ -400,7 +441,7 @@ insert into public.creator_live_runtime (
   updated_at
 ) values (
   'preview-creator',
-  '22222222-2222-4222-8222-222222222222',
+  (select id from public.creators where slug = 'preview-creator'),
   'preview-creator',
   false,
   true,
