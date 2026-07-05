@@ -61,7 +61,16 @@
           details
         });
       };
-      if (isTikTok) document.documentElement.classList.add("tiktok-in-app-browser");
+      if (isTikTok) {
+        document.documentElement.classList.add("tiktok-in-app-browser");
+        try {
+          if (sessionStorage.getItem("creator_tiktok_welcome_mosyaamosya_v1") !== "continued") {
+            document.documentElement.classList.add("tiktok-gate-pending");
+          }
+        } catch (error) {
+          document.documentElement.classList.add("tiktok-gate-pending");
+        }
+      }
     })();
   </script>
   <style>
@@ -161,6 +170,7 @@
       transition: opacity .35s ease;
     }
     .intro-pending .shell { opacity: 0; }
+    .tiktok-gate-pending .shell { opacity: 0; }
     .shell::before {
       content: "";
       position: absolute;
@@ -1156,6 +1166,176 @@
       border-color: rgba(255,211,223,.22);
       color: var(--pink);
     }
+    .tiktok-welcome-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: calc(28px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255,211,223,.18), transparent 17rem),
+        radial-gradient(circle at 16% 86%, rgba(139,95,74,.18), transparent 20rem),
+        linear-gradient(160deg, #050302 0%, #100706 48%, #030202 100%);
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .34s ease;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      isolation: isolate;
+    }
+    .tiktok-welcome-gate.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .tiktok-welcome-gate[hidden] { display: none; }
+    .tiktok-welcome-gate::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background:
+        linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px),
+        radial-gradient(circle at 50% 35%, rgba(255,211,223,.12), transparent 16rem);
+      background-size: 100% 34px, auto;
+      opacity: .46;
+      mask-image: linear-gradient(to bottom, transparent, black 18%, black 78%, transparent);
+      pointer-events: none;
+    }
+    .tiktok-welcome-card {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 420px);
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+      text-align: center;
+    }
+    .tiktok-welcome-avatar-wrap {
+      position: relative;
+      width: 104px;
+      height: 104px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,245,247,.075);
+      border: 1px solid rgba(255,211,223,.2);
+      box-shadow: 0 24px 80px rgba(255,159,189,.12), 0 18px 60px rgba(0,0,0,.44);
+    }
+    .tiktok-welcome-avatar-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -18px;
+      border-radius: inherit;
+      background: radial-gradient(circle, rgba(255,211,223,.22), transparent 62%);
+      filter: blur(12px);
+      opacity: .8;
+      z-index: -1;
+    }
+    .tiktok-welcome-avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 999px;
+      object-fit: cover;
+      background: var(--creator-theme-poster);
+      border: 1px solid rgba(255,245,247,.18);
+      box-shadow: inset 0 1px rgba(255,255,255,.2);
+    }
+    .tiktok-welcome-card h2 {
+      margin: 5px 0 0;
+      font-size: clamp(30px, 10vw, 52px);
+      line-height: .98;
+      letter-spacing: 0;
+    }
+    .tiktok-welcome-message {
+      margin: 0;
+      display: grid;
+      gap: 12px;
+      color: rgba(255,245,247,.76);
+      font-size: 14px;
+      line-height: 1.56;
+      font-weight: 650;
+    }
+    .tiktok-welcome-message p {
+      margin: 0;
+    }
+    .tiktok-welcome-message strong {
+      color: var(--pink);
+      font-weight: 950;
+    }
+    .tiktok-welcome-actions {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .tiktok-welcome-actions button {
+      min-height: 52px;
+      border: 1px solid rgba(255,245,247,.14);
+      border-radius: 18px;
+      background: rgba(255,255,255,.065);
+      color: rgba(255,245,247,.88);
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 14px 44px rgba(0,0,0,.18);
+    }
+    .tiktok-welcome-actions button.primary {
+      border: 0;
+      background: linear-gradient(135deg, var(--pink), var(--pink-strong));
+      color: #28110e;
+      box-shadow: 0 18px 54px rgba(255,159,189,.22);
+    }
+    .tiktok-welcome-actions button.text {
+      min-height: 34px;
+      border: 0;
+      background: transparent;
+      color: rgba(255,245,247,.55);
+      box-shadow: none;
+      font-size: 12px;
+    }
+    .tiktok-welcome-status {
+      min-height: 18px;
+      color: rgba(255,211,223,.74);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    @media (max-height: 760px) {
+      .tiktok-welcome-gate {
+        padding: calc(16px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
+      }
+      .tiktok-welcome-card {
+        gap: 12px;
+      }
+      .tiktok-welcome-avatar-wrap {
+        width: 84px;
+        height: 84px;
+      }
+      .tiktok-welcome-avatar {
+        width: 72px;
+        height: 72px;
+      }
+      .tiktok-welcome-card h2 {
+        font-size: clamp(28px, 8vw, 40px);
+      }
+      .tiktok-welcome-message {
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.42;
+      }
+      .tiktok-welcome-actions {
+        gap: 8px;
+      }
+      .tiktok-welcome-actions button {
+        min-height: 46px;
+        border-radius: 16px;
+      }
+      .tiktok-welcome-actions button.text {
+        min-height: 30px;
+      }
+    }
     .intro {
       position: fixed;
       inset: 0;
@@ -1398,6 +1578,22 @@
     </div>
   </section>
 
+  <section class="tiktok-welcome-gate" id="tiktokWelcomeGate" aria-labelledby="tiktokWelcomeTitle" hidden>
+    <div class="tiktok-welcome-card">
+      <div class="tiktok-welcome-avatar-wrap" aria-hidden="true">
+        <img class="tiktok-welcome-avatar" id="tiktokWelcomeAvatar" alt="">
+      </div>
+      <h2 id="tiktokWelcomeTitle">Hey, Mina here! 👋</h2>
+      <div class="tiktok-welcome-message" id="tiktokWelcomeMessage"></div>
+      <div class="tiktok-welcome-actions">
+        <button class="primary" id="tiktokWelcomeOpenBrowser" type="button">Open in Browser</button>
+        <button id="tiktokWelcomeContinue" type="button">Continue in TikTok</button>
+        <button class="text" id="tiktokWelcomeCopy" type="button">Copy Link</button>
+      </div>
+      <div class="tiktok-welcome-status" id="tiktokWelcomeStatus" aria-live="polite"></div>
+    </div>
+  </section>
+
   <section class="intro" id="intro" aria-label="Welcome intro">
     <div class="intro-poster" id="introPoster" aria-hidden="true"></div>
     <div class="intro-copy">
@@ -1567,6 +1763,11 @@
       intro_audio_volume: 0.35,
       intro_audio_fade_out_duration: 2,
       intro_audio_stop_after: 4,
+      tiktok_welcome_enabled: true,
+      tiktok_welcome_title: "Hey, Mina here! 👋",
+      tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+      tiktok_welcome_primary_label: "Open in Browser",
+      tiktok_welcome_secondary_label: "Continue in TikTok",
       ambient_mode_enabled: true,
       timezone: "America/Chicago",
       seasonal_effects_enabled: true,
@@ -1687,6 +1888,7 @@
     };
     const $ = (id) => document.getElementById(id);
     const introKey = "creator_intro_mosyaamosya_v1";
+    const tiktokWelcomeKey = "creator_tiktok_welcome_mosyaamosya_v1";
     const liveRuntimePollMs = 2500;
     let countdownTimer = null;
     let countdownZeroChecked = false;
@@ -1697,6 +1899,7 @@
     let creatorSettingsInFlight = false;
     let lastCreatorSettingsRefreshAt = 0;
     let currentSettings = { ...fallback };
+    let tiktokWelcomeGateActive = false;
     let latestPublicLiveState = null;
     let activePageEngineHost = null;
     let pageEngineSignature = "";
@@ -1857,6 +2060,7 @@
         panel.style.cssText = "position:fixed;z-index:99999;left:10px;right:10px;bottom:10px;max-height:42vh;overflow:auto;margin:0;padding:12px;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(8,5,4,.92);color:#fff5f7;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;text-align:left;";
         document.body.appendChild(panel);
       }
+      panel.style.display = tiktokWelcomeGateActive ? "none" : "block";
       panel.textContent = JSON.stringify(debug, null, 2);
       if (!creatorMediaDebugReported) {
         creatorMediaDebugReported = true;
@@ -2622,6 +2826,179 @@
         '"': "&quot;",
         "'": "&#39;"
       }[char]));
+    }
+
+    function formatTikTokWelcomeMessage(value) {
+      const paragraphs = String(value || fallback.tiktok_welcome_message || "")
+        .split(/\n{2,}/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return (paragraphs.length ? paragraphs : [fallback.tiktok_welcome_message])
+        .map((part) => {
+          const escaped = escapeHtml(part).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+          return "<p>" + escaped.replace(/\n/g, "<br>") + "</p>";
+        })
+        .join("");
+    }
+
+    function browserExperienceUrl() {
+      const url = new URL(window.location.href);
+      ["tiktok_in_app", "debug_media", "creator_debug", "preview", "verify", "refresh"].forEach((key) => url.searchParams.delete(key));
+      url.searchParams.set("experience", "1");
+      return url.href;
+    }
+
+    function setTikTokGateStatus(message) {
+      const status = $("tiktokWelcomeStatus");
+      if (status) status.textContent = message || "";
+    }
+
+    async function copyBrowserExperienceUrl() {
+      const url = browserExperienceUrl();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+          setTikTokGateStatus("Link copied.");
+          return true;
+        }
+      } catch (error) {}
+      setTikTokGateStatus("Copy the page link from TikTok's menu.");
+      return false;
+    }
+
+    function consumeGateEvent(event) {
+      if (!event) return;
+      if (typeof event.preventDefault === "function" && event.cancelable) event.preventDefault();
+      if (typeof event.stopPropagation === "function") event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation();
+    }
+
+    function shouldShowTikTokWelcomeGate(settings = {}) {
+      if (!tiktokInAppBrowser()) return false;
+      if (settings.tiktok_welcome_enabled === false) return false;
+      try {
+        return sessionStorage.getItem(tiktokWelcomeKey) !== "continued";
+      } catch (error) {
+        return true;
+      }
+    }
+
+    function hideTikTokWelcomeGate() {
+      const gate = $("tiktokWelcomeGate");
+      tiktokWelcomeGateActive = false;
+      document.documentElement.classList.remove("tiktok-gate-pending");
+      if (!gate) return;
+      gate.classList.remove("is-visible");
+      window.setTimeout(() => { gate.hidden = true; }, 260);
+    }
+
+    function setupTikTokWelcomeGate(settings = {}) {
+      const gate = $("tiktokWelcomeGate");
+      if (!gate) return false;
+      const shouldShow = shouldShowTikTokWelcomeGate(settings);
+      if (!shouldShow) {
+        hideTikTokWelcomeGate();
+        return false;
+      }
+      tiktokWelcomeGateActive = true;
+      const avatar = $("tiktokWelcomeAvatar");
+      const title = $("tiktokWelcomeTitle");
+      const message = $("tiktokWelcomeMessage");
+      const openButton = $("tiktokWelcomeOpenBrowser");
+      const continueButton = $("tiktokWelcomeContinue");
+      const copyButton = $("tiktokWelcomeCopy");
+      if (avatar) avatar.src = profileImage(settings);
+      if (title) title.textContent = textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_title);
+      if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_message));
+      if (openButton) openButton.textContent = textSetting(settings, "tiktok_welcome_primary_label", fallback.tiktok_welcome_primary_label);
+      if (continueButton) continueButton.textContent = textSetting(settings, "tiktok_welcome_secondary_label", fallback.tiktok_welcome_secondary_label);
+      gate.hidden = false;
+      requestAnimationFrame(() => gate.classList.add("is-visible"));
+      if (!gate.dataset.bound) {
+        gate.dataset.bound = "true";
+        const continueInTikTok = (event) => {
+          consumeGateEvent(event);
+          try { sessionStorage.setItem(tiktokWelcomeKey, "continued"); } catch (error) {}
+          try { localStorage.setItem(introKey, "done"); } catch (error) {}
+          hideTikTokWelcomeGate();
+          $("intro").hidden = true;
+          revealPage();
+        };
+        const handleGateButton = async (event) => {
+          const target = event.target;
+          const button = target && typeof target.closest === "function" ? target.closest("button") : null;
+          if (!button || !gate.contains(button)) return false;
+          consumeGateEvent(event);
+          const now = Date.now();
+          const lastActionAt = Number(gate.dataset.lastActionAt || 0);
+          if (now - lastActionAt < 480) return true;
+          gate.dataset.lastActionAt = String(now);
+          if (button.id === "tiktokWelcomeContinue") {
+            continueInTikTok(event);
+            return true;
+          }
+          if (button.id === "tiktokWelcomeCopy") {
+            await copyBrowserExperienceUrl();
+            return true;
+          }
+          if (button.id === "tiktokWelcomeOpenBrowser") {
+            await copyBrowserExperienceUrl();
+            try {
+              window.open(browserExperienceUrl(), "_blank", "noopener,noreferrer");
+              setTikTokGateStatus("If TikTok stays here, use ••• and choose Open in browser.");
+            } catch (error) {
+              setTikTokGateStatus("Use ••• and choose Open in browser.");
+            }
+            return true;
+          }
+          return true;
+        };
+        ["pointerdown", "touchstart"].forEach((type) => {
+          gate.addEventListener(type, (event) => {
+            const target = event.target;
+            if (target && typeof target.closest === "function" && target.closest("button")) return;
+            consumeGateEvent(event);
+          }, { capture: true, passive: false });
+        });
+        ["pointerup", "touchend", "click"].forEach((type) => {
+          gate.addEventListener(type, async (event) => {
+            const handled = await handleGateButton(event);
+            if (!handled) consumeGateEvent(event);
+          }, { capture: true, passive: false });
+        });
+      }
+      if (openButton && !openButton.dataset.bound) {
+        openButton.dataset.bound = "true";
+        openButton.addEventListener("click", async (event) => {
+          consumeGateEvent(event);
+          await copyBrowserExperienceUrl();
+          try {
+            window.open(browserExperienceUrl(), "_blank", "noopener,noreferrer");
+            setTikTokGateStatus("If TikTok stays here, use ••• and choose Open in browser.");
+          } catch (error) {
+            setTikTokGateStatus("Use ••• and choose Open in browser.");
+          }
+        }, { capture: true });
+      }
+      if (continueButton && !continueButton.dataset.bound) {
+        continueButton.dataset.bound = "true";
+        continueButton.addEventListener("click", (event) => {
+          consumeGateEvent(event);
+          try { sessionStorage.setItem(tiktokWelcomeKey, "continued"); } catch (error) {}
+          try { localStorage.setItem(introKey, "done"); } catch (error) {}
+          hideTikTokWelcomeGate();
+          $("intro").hidden = true;
+          revealPage();
+        }, { capture: true });
+      }
+      if (copyButton && !copyButton.dataset.bound) {
+        copyButton.dataset.bound = "true";
+        copyButton.addEventListener("click", async (event) => {
+          consumeGateEvent(event);
+          await copyBrowserExperienceUrl();
+        }, { capture: true });
+      }
+      return true;
     }
 
     function normalizeCustomLinks(value) {
@@ -3775,6 +4152,10 @@
 
     function setupIntro(settings) {
       const intro = $("intro");
+      if (tiktokWelcomeGateActive) {
+        intro.hidden = true;
+        return;
+      }
       if (!shouldShowWelcomeIntro(settings)) {
         intro.hidden = true;
         revealPage();
@@ -3904,6 +4285,7 @@
       setupLiveRuntime(settings);
       setupMusic(settings);
       setupTikTokBrowserHelper(settings);
+      setupTikTokWelcomeGate(settings);
       setupIntro(settings);
       renderCreatorMediaDebug(settings, settings.__creator_server_media_debug || null);
       if (!pageViewTracked) {

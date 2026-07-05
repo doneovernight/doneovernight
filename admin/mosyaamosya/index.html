@@ -1643,6 +1643,26 @@
           </div>
         </section>
 
+        <section class="panel tab-panel" data-admin-panel="experience" hidden>
+          <h2>TikTok Welcome</h2>
+          <div class="section-note">This message is only shown when visitors open your page inside the TikTok app.</div>
+          <div style="height:12px"></div>
+          <div class="fields">
+            <div class="span-2 switch-row">
+              <div><strong>TikTok Welcome Enabled</strong><span>Ask TikTok visitors to open the page in their browser for the full experience.</span></div>
+              <label class="switch" aria-label="TikTok welcome enabled"><input name="tiktok_welcome_enabled" type="checkbox"><span class="track"></span></label>
+            </div>
+            <label class="span-2">Title<input name="tiktok_welcome_title" placeholder="Hey, Mina here! 👋"></label>
+            <label class="span-2">Message<textarea name="tiktok_welcome_message" rows="7" placeholder="For the best experience, please open my page in your browser."></textarea></label>
+            <label>Primary Button Label<input name="tiktok_welcome_primary_label" placeholder="Open in Browser"></label>
+            <label>Secondary Button Label<input name="tiktok_welcome_secondary_label" placeholder="Continue in TikTok"></label>
+            <div class="help-panel span-2">
+              Recommended copy invites visitors to tap the three dots in TikTok and choose Open in browser. Normal browsers never see this gate.
+            </div>
+            <button class="button span-2" id="resetTikTokWelcomeCopy" type="button">Reset to Recommended</button>
+          </div>
+        </section>
+
         <section class="panel tab-panel" data-admin-panel="media" hidden>
           <h2>Creator Signature</h2>
           <div class="section-note">A short welcome sound that plays only after visitors tap to enter.</div>
@@ -1920,6 +1940,12 @@
       avatar: {},
       hero: {},
       signature: {}
+    };
+    const recommendedTikTokWelcome = {
+      title: "Hey, Mina here! 👋",
+      message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+      primary: "Open in Browser",
+      secondary: "Continue in TikTok"
     };
     const form = document.getElementById("settingsForm");
     const $ = (id) => document.getElementById(id);
@@ -3073,6 +3099,11 @@
         custom_links: readCustomLinks(),
         public_page_order: normalizePublicPageOrder(readPublicPageOrder(), readCustomLinks()),
         welcome_intro_enabled: boolField("welcome_intro_enabled", true),
+        tiktok_welcome_enabled: boolField("tiktok_welcome_enabled", true),
+        tiktok_welcome_title: String(data.get("tiktok_welcome_title") || "").trim(),
+        tiktok_welcome_message: String(data.get("tiktok_welcome_message") || "").trim(),
+        tiktok_welcome_primary_label: String(data.get("tiktok_welcome_primary_label") || "").trim(),
+        tiktok_welcome_secondary_label: String(data.get("tiktok_welcome_secondary_label") || "").trim(),
         intro_audio_enabled: boolField("intro_audio_enabled"),
         intro_audio_url: String(data.get("intro_audio_url") || "").trim(),
         intro_audio_volume: clampVolume(data.get("intro_audio_volume")),
@@ -3106,12 +3137,13 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
       if (settings.poll_enabled === undefined) setBoolField("poll_enabled", false);
+      if (settings.tiktok_welcome_enabled === undefined) setBoolField("tiktok_welcome_enabled", true);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
       if (settings.intro_audio_enabled === undefined) setBoolField("intro_audio_enabled", false);
       if (settings.ambient_mode_enabled === undefined) setBoolField("ambient_mode_enabled", true);
@@ -3149,6 +3181,14 @@
       updateRuntimeUi();
       updateOverview(settings.updated_at);
       updatePreviewFrame(false);
+    }
+    function resetTikTokWelcomeCopy() {
+      setBoolField("tiktok_welcome_enabled", true);
+      if (form.elements.tiktok_welcome_title) form.elements.tiktok_welcome_title.value = recommendedTikTokWelcome.title;
+      if (form.elements.tiktok_welcome_message) form.elements.tiktok_welcome_message.value = recommendedTikTokWelcome.message;
+      if (form.elements.tiktok_welcome_primary_label) form.elements.tiktok_welcome_primary_label.value = recommendedTikTokWelcome.primary;
+      if (form.elements.tiktok_welcome_secondary_label) form.elements.tiktok_welcome_secondary_label.value = recommendedTikTokWelcome.secondary;
+      setStatus("TikTok Welcome copy restored. Save page to publish.");
     }
     function syncLinkCompatibilityFields() {
       if (!form) return;
@@ -4493,6 +4533,7 @@
     });
     $("addCustomLink").addEventListener("click", addCustomLink);
     $("addFaqItem").addEventListener("click", addFaqItem);
+    $("resetTikTokWelcomeCopy").addEventListener("click", resetTikTokWelcomeCopy);
     $("addPollOption").addEventListener("click", addPollOption);
     $("refreshResponses").addEventListener("click", loadResponses);
     $("resetPollResults").addEventListener("click", resetPollResults);

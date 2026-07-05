@@ -161,7 +161,23 @@ const INTRO_AUDIO_CREATOR_FIELDS = [
   "intro_audio_fade_out_duration",
   "intro_audio_stop_after"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS).join(",");
+const TIKTOK_WELCOME_CREATOR_FIELDS = [
+  "tiktok_welcome_enabled",
+  "tiktok_welcome_title",
+  "tiktok_welcome_message",
+  "tiktok_welcome_primary_label",
+  "tiktok_welcome_secondary_label"
+];
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME = BASE_CREATOR_FIELDS.concat(
+  AMBIENT_CREATOR_FIELDS,
+  PHASE_1_4_CREATOR_FIELDS,
+  PHASE_2_CREATOR_FIELDS,
+  PHASE_3_CREATOR_FIELDS,
+  POLL_CREATOR_FIELDS,
+  LINK_BLOCK_CREATOR_FIELDS,
+  INTRO_AUDIO_CREATOR_FIELDS
+).join(",");
 const CREATOR_FIELDS_WITHOUT_SUPPORT = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
   PHASE_1_4_CREATOR_FIELDS,
@@ -169,7 +185,8 @@ const CREATOR_FIELDS_WITHOUT_SUPPORT = BASE_CREATOR_FIELDS.concat(
   PHASE_3_CREATOR_FIELDS,
   POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => !SUPPORT_CREATOR_FIELDS.includes(field)),
-  INTRO_AUDIO_CREATOR_FIELDS
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
 const CREATOR_FIELDS_WITHOUT_PAGE_ORDER = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
@@ -178,7 +195,8 @@ const CREATOR_FIELDS_WITHOUT_PAGE_ORDER = BASE_CREATOR_FIELDS.concat(
   PHASE_3_CREATOR_FIELDS,
   POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "public_page_order"),
-  INTRO_AUDIO_CREATOR_FIELDS
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
 const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
@@ -187,7 +205,8 @@ const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY = BASE_CREATOR_FIELDS.concat(
   PHASE_3_CREATOR_FIELDS,
   POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible"),
-  INTRO_AUDIO_CREATOR_FIELDS
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
 const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
@@ -196,7 +215,8 @@ const CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY_OR_FAQ_ITEMS = BASE_CREATOR_FIELDS.
   PHASE_3_CREATOR_FIELDS,
   POLL_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "share_link_visible" && field !== "faq_items"),
-  INTRO_AUDIO_CREATOR_FIELDS
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
 const CREATOR_FIELDS_WITHOUT_POLL = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
@@ -204,7 +224,8 @@ const CREATOR_FIELDS_WITHOUT_POLL = BASE_CREATOR_FIELDS.concat(
   PHASE_2_CREATOR_FIELDS,
   PHASE_3_CREATOR_FIELDS,
   LINK_BLOCK_CREATOR_FIELDS.filter((field) => field !== "faq_items"),
-  INTRO_AUDIO_CREATOR_FIELDS
+  INTRO_AUDIO_CREATOR_FIELDS,
+  TIKTOK_WELCOME_CREATOR_FIELDS
 ).join(",");
 const BASE_CREATOR_SELECT = BASE_CREATOR_FIELDS.join(",");
 
@@ -250,6 +271,11 @@ const DEFAULT_MINA_SETTINGS = {
   intro_audio_volume: 0.35,
   intro_audio_fade_out_duration: 2,
   intro_audio_stop_after: 4,
+  tiktok_welcome_enabled: true,
+  tiktok_welcome_title: "Hey, Mina here! 👋",
+  tiktok_welcome_message: "For the best experience, please open my page in your browser.\n\nTap the three dots in the top-right corner of TikTok and choose **Open in browser**.\n\nIt really helps me, and you'll get the full experience exactly as it was designed.",
+  tiktok_welcome_primary_label: "Open in Browser",
+  tiktok_welcome_secondary_label: "Continue in TikTok",
   welcome_intro_enabled: true,
   background_gradient: "radial-gradient(circle at 18% -10%, rgba(255,211,223,.22), transparent 30rem), radial-gradient(circle at 105% 8%, rgba(139,95,74,.24), transparent 28rem), linear-gradient(155deg, #080504 0%, #160b09 42%, #050403 100%)",
   ambient_mode_enabled: true,
@@ -1228,6 +1254,11 @@ function normalizeCreator(row = {}) {
     intro_audio_volume: Math.max(0, Math.min(1, number(row.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
     intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(row.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
     intro_audio_stop_after: Math.max(1, Math.min(30, number(row.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
+    tiktok_welcome_enabled: bool(row.tiktok_welcome_enabled, true),
+    tiktok_welcome_title: clean(row.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_title,
+    tiktok_welcome_message: clean(row.tiktok_welcome_message) || DEFAULT_MINA_SETTINGS.tiktok_welcome_message,
+    tiktok_welcome_primary_label: clean(row.tiktok_welcome_primary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label,
+    tiktok_welcome_secondary_label: clean(row.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label,
     welcome_intro_enabled: bool(row.welcome_intro_enabled, true),
     background_gradient: clean(row.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(row.ambient_mode_enabled, true),
@@ -1322,6 +1353,7 @@ async function fetchCreatorFromTable(slug = "mosyaamosya") {
   let rows;
   const selectAttempts = [
     CREATOR_FIELDS,
+    CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME,
     CREATOR_FIELDS_WITHOUT_SUPPORT,
     CREATOR_FIELDS_WITHOUT_PAGE_ORDER,
     CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY,
@@ -1433,6 +1465,11 @@ function creatorPayload(input = {}) {
     intro_audio_volume: Math.max(0, Math.min(1, number(input.intro_audio_volume, DEFAULT_MINA_SETTINGS.intro_audio_volume))),
     intro_audio_fade_out_duration: Math.max(0, Math.min(10, number(input.intro_audio_fade_out_duration, DEFAULT_MINA_SETTINGS.intro_audio_fade_out_duration))),
     intro_audio_stop_after: Math.max(1, Math.min(30, number(input.intro_audio_stop_after, DEFAULT_MINA_SETTINGS.intro_audio_stop_after))),
+    tiktok_welcome_enabled: bool(input.tiktok_welcome_enabled, true),
+    tiktok_welcome_title: clean(input.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_title,
+    tiktok_welcome_message: clean(input.tiktok_welcome_message) || DEFAULT_MINA_SETTINGS.tiktok_welcome_message,
+    tiktok_welcome_primary_label: clean(input.tiktok_welcome_primary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label,
+    tiktok_welcome_secondary_label: clean(input.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label,
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
     background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
     ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
@@ -1525,6 +1562,10 @@ function creatorPayload(input = {}) {
 
 async function saveCreatorToTable(payload) {
   let rows;
+  const withoutTikTokWelcomePayload = { ...payload };
+  TIKTOK_WELCOME_CREATOR_FIELDS.forEach((field) => {
+    delete withoutTikTokWelcomePayload[field];
+  });
   const withoutSupportPayload = { ...payload };
   SUPPORT_CREATOR_FIELDS.forEach((field) => {
     delete withoutSupportPayload[field];
@@ -1534,6 +1575,7 @@ async function saveCreatorToTable(payload) {
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
+    { fields: CREATOR_FIELDS_WITHOUT_TIKTOK_WELCOME, payload: withoutTikTokWelcomePayload },
     { fields: CREATOR_FIELDS_WITHOUT_SUPPORT, payload: withoutSupportPayload },
     { fields: CREATOR_FIELDS_WITHOUT_PAGE_ORDER, payload: withoutPageOrderPayload },
     { fields: CREATOR_FIELDS_WITHOUT_TRUE_VISIBILITY, payload: legacyVisibilityPayload },
