@@ -1856,8 +1856,22 @@
     (() => {
       const endpoint = "/api/creator-health";
       const rateWindow = 5 * 60 * 1000;
+      const creatorSessionFlag = "doneovernight_creator_mosyaamosya";
+      const creatorSessionKey = "doneovernight_creator_mosyaamosya_session";
       function text(value, limit) {
         return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
+      }
+      function hasExpectedCreatorSession() {
+        try {
+          return sessionStorage.getItem(creatorSessionFlag) === "true" && Boolean(sessionStorage.getItem(creatorSessionKey));
+        } catch (error) {
+          return false;
+        }
+      }
+      function isExpectedLockedFetch(response, url) {
+        return response && response.status === 401 &&
+          url.includes("/api/creator-settings") &&
+          !hasExpectedCreatorSession();
       }
       function fingerprint(area, action, error) {
         return btoa(unescape(encodeURIComponent([area, action, error].join("|")))).slice(0, 96);
@@ -1908,6 +1922,7 @@
           try {
             const response = await originalFetch(...args);
             if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              if (isExpectedLockedFetch(response, url)) return response;
               report("Admin", "Fetch " + response.status, url, { suggested_check: "Check Creator OS API response and Vercel logs." });
             }
             return response;
