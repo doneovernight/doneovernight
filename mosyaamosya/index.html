@@ -1228,41 +1228,12 @@
       width: min(100%, 420px);
       display: grid;
       justify-items: center;
-      gap: 18px;
+      gap: 20px;
+      padding-top: 18px;
       text-align: center;
     }
-    .tiktok-welcome-avatar-wrap {
-      position: relative;
-      width: 104px;
-      height: 104px;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
-      background: rgba(255,245,247,.075);
-      border: 1px solid rgba(255,211,223,.2);
-      box-shadow: 0 24px 80px rgba(255,159,189,.12), 0 18px 60px rgba(0,0,0,.44);
-    }
-    .tiktok-welcome-avatar-wrap::before {
-      content: "";
-      position: absolute;
-      inset: -18px;
-      border-radius: inherit;
-      background: radial-gradient(circle, rgba(255,211,223,.22), transparent 62%);
-      filter: blur(12px);
-      opacity: .8;
-      z-index: -1;
-    }
-    .tiktok-welcome-avatar {
-      width: 88px;
-      height: 88px;
-      border-radius: 999px;
-      object-fit: cover;
-      background: var(--creator-theme-poster);
-      border: 1px solid rgba(255,245,247,.18);
-      box-shadow: inset 0 1px rgba(255,255,255,.2);
-    }
     .tiktok-welcome-card h2 {
-      margin: 5px 0 0;
+      margin: 0;
       font-size: clamp(30px, 10vw, 52px);
       line-height: .98;
       letter-spacing: 0;
@@ -1324,19 +1295,12 @@
         padding: calc(16px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
       }
       .tiktok-welcome-card {
-        gap: 12px;
+        gap: 14px;
+        padding-top: 12px;
       }
       .tiktok-welcome-arrow {
         width: min(30vw, 128px);
         opacity: .76;
-      }
-      .tiktok-welcome-avatar-wrap {
-        width: 84px;
-        height: 84px;
-      }
-      .tiktok-welcome-avatar {
-        width: 72px;
-        height: 72px;
       }
       .tiktok-welcome-card h2 {
         font-size: clamp(28px, 8vw, 40px);
@@ -1602,9 +1566,6 @@
   <section class="tiktok-welcome-gate" id="tiktokWelcomeGate" aria-labelledby="tiktokWelcomeTitle" hidden>
     <img class="tiktok-welcome-arrow" id="tiktokWelcomeArrow" alt="" aria-hidden="true" loading="eager" decoding="async">
     <div class="tiktok-welcome-card">
-      <div class="tiktok-welcome-avatar-wrap" aria-hidden="true">
-        <img class="tiktok-welcome-avatar" id="tiktokWelcomeAvatar" alt="">
-      </div>
       <h2 id="tiktokWelcomeTitle">Hey, Mina here! 👋</h2>
       <div class="tiktok-welcome-message" id="tiktokWelcomeMessage"></div>
       <div class="tiktok-welcome-actions">
@@ -2960,12 +2921,10 @@
         return false;
       }
       tiktokWelcomeGateActive = true;
-      const avatar = $("tiktokWelcomeAvatar");
       const title = $("tiktokWelcomeTitle");
       const message = $("tiktokWelcomeMessage");
       const arrow = $("tiktokWelcomeArrow");
       const continueButton = $("tiktokWelcomeContinue");
-      if (avatar) avatar.src = profileImage(settings) || heroImage(settings);
       if (arrow && !arrow.getAttribute("src")) arrow.src = "/assets/mosyaamosya/tiktok-three-dots-arrow.png";
       if (title) title.textContent = textSetting(settings, "tiktok_welcome_gate_title", textSetting(settings, "tiktok_welcome_title", fallback.tiktok_welcome_gate_title));
       if (message) message.innerHTML = formatTikTokWelcomeMessage(textSetting(settings, "tiktok_welcome_gate_message", textSetting(settings, "tiktok_welcome_message", fallback.tiktok_welcome_gate_message)));
