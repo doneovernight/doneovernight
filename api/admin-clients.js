@@ -5,6 +5,7 @@ const DEFAULT_CREATOR_SLUG = "mosyaamosya";
 const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const { reportCreatorError, runCreatorHealth } = require("../lib/creator-watchtower");
+const { creatorOsEnvironment, getSupabaseRuntimeConfig } = require("../lib/creator-os-environment");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
@@ -759,15 +760,7 @@ function safeDebugValue(value, depth = 0) {
 }
 
 function getSupabaseConfig(context = "Admin clients") {
-  const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  if (!url || !serviceRoleKey) {
-    const error = new Error(context + " are not configured");
-    error.code = "SUPABASE_NOT_CONFIGURED";
-    error.statusCode = 503;
-    throw error;
-  }
-  return { url, serviceRoleKey };
+  return getSupabaseRuntimeConfig(context);
 }
 
 function parseBody(req) {
@@ -3231,7 +3224,8 @@ module.exports = async function handler(req, res) {
       return send(res, error.statusCode || 500, {
         success: false,
         error: error.message || "Creator health request failed",
-        code: error.code || "CREATOR_HEALTH_FAILED"
+        code: error.code || "CREATOR_HEALTH_FAILED",
+        environment: error.environment || creatorOsEnvironment()
       });
     }
   }
@@ -3261,7 +3255,8 @@ module.exports = async function handler(req, res) {
       return send(res, error.statusCode || 500, {
         success: false,
         error: error.message || "Could not save creator settings",
-        code: error.code || "CREATOR_SETTINGS_FAILED"
+        code: error.code || "CREATOR_SETTINGS_FAILED",
+        environment: error.environment || creatorOsEnvironment()
       });
     }
   }
