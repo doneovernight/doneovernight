@@ -421,7 +421,7 @@ insert into public.creator_auth (
   updated_at
 ) values (
   (select id from public.creators where slug = 'preview-creator'),
-  'pbkdf2$120000$M9EBnWCk4_70NUT5F80qQQ$sReLYHMXy_0Hin4tXfVqTlWX1M3dGgugVf666kCVQ6w',
+  'pbkdf2_sha256$120000$preview_creator_seed$j_0xTHz4ZPe0XxAYiaqjR_LkRFHuuxCnKbY-d6IW34c',
   now()
 ) on conflict (creator_id) do update set
   password_hash = excluded.password_hash,
