@@ -116,6 +116,7 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { background: #120807; }
     body {
       min-height: 100vh;
@@ -1837,6 +1838,15 @@
       battle_link_title: "Prepare for Battle",
       battle_link_subtitle: "Get your TikTok Coins before the battle begins.",
       battle_link_cta_label: "Prepare",
+      live_enabled: true,
+      battle_enabled: true,
+      countdown_enabled: true,
+      announcements_enabled: true,
+      events_enabled: false,
+      portfolio_enabled: false,
+      support_enabled: true,
+      community_enabled: true,
+      newsletter_enabled: true,
       support_link_visible: false,
       support_link_title: "Support Me",
       support_link_subtitle: "Every contribution helps me create more content.",
@@ -1887,6 +1897,15 @@
       fallback.tiktok_coins_url = "";
       fallback.business_email = "";
       fallback.discord_invite_url = "";
+      fallback.live_enabled = false;
+      fallback.battle_enabled = false;
+      fallback.countdown_enabled = true;
+      fallback.announcements_enabled = true;
+      fallback.events_enabled = true;
+      fallback.portfolio_enabled = true;
+      fallback.support_enabled = false;
+      fallback.community_enabled = false;
+      fallback.newsletter_enabled = true;
     }
     const TIKTOK_BROWSER_HELPER_ENABLED = true;
     const forceExperience = params.get("experience") === "1";
@@ -2688,6 +2707,22 @@
       const refreshRuntimeBlocks = () => {
         renderPageEngine(settings);
       };
+      if (!capabilityOn(settings, "live_enabled", true)) {
+        document.body.classList.remove("is-live");
+        if ($("statusPill")) $("statusPill").hidden = true;
+        if ($("liveCard")) {
+          $("liveCard").hidden = true;
+          $("liveCard").setAttribute("aria-hidden", "true");
+        }
+        setLiveMeta([]);
+        refreshRuntimeBlocks();
+        return;
+      }
+      if ($("statusPill")) $("statusPill").hidden = false;
+      if ($("liveCard")) {
+        $("liveCard").hidden = false;
+        $("liveCard").setAttribute("aria-hidden", "false");
+      }
       const source = String(liveState && liveState.source || "");
       const loadingStatus = source === "loading";
       const confirmed = liveState && (liveState.confirmed === true || confirmedLiveSource(source));
@@ -2696,7 +2731,7 @@
       const manualLive = !confirmed && source === "manual-fallback" && liveState.manualMode === true && isLive;
       const manualOffline = !confirmed && source === "manual-fallback" && !isLive;
       const capabilities = liveState && liveState.capabilities ? liveState.capabilities : {};
-      const hasBattleMode = liveState && liveState.battleActive === true && featureOn(settings, "battle_link_visible", true);
+      const hasBattleMode = battleCapabilityOn(settings) && liveState && liveState.battleActive === true && featureOn(settings, "battle_link_visible", true);
       const battleCopy = battleSupportCopy(settings);
       const displayLive = (confirmed && isLive) || (explicitRuntime && isLive) || manualLive || hasBattleMode;
       const confirmedOffline = (confirmed || explicitRuntime || manualOffline) && !isLive && !hasBattleMode;
@@ -2813,6 +2848,7 @@
     }
 
     async function refreshLiveRuntime(settings, options = {}) {
+      if (!capabilityOn(settings, "live_enabled", true)) return;
       if (liveRuntimeInFlight) return;
       liveRuntimeInFlight = true;
       try {
@@ -2847,6 +2883,10 @@
       if (liveRuntimeTimer) clearInterval(liveRuntimeTimer);
       if (liveVisibilityHandler) document.removeEventListener("visibilitychange", liveVisibilityHandler);
       if (liveMessageHandler) window.removeEventListener("message", liveMessageHandler);
+      liveRuntimeTimer = null;
+      liveVisibilityHandler = null;
+      liveMessageHandler = null;
+      if (!capabilityOn(settings, "live_enabled", true)) return;
       refreshLiveRuntime(settings, { forceSettings: true });
       liveRuntimeTimer = window.setInterval(() => {
         if (!document.hidden) refreshLiveRuntime(currentSettings);
@@ -3271,6 +3311,14 @@
       return settings[key] === undefined ? fallbackValue : settings[key] === true;
     }
 
+    function capabilityOn(settings, key, fallbackValue = true) {
+      return settings[key] === undefined ? fallbackValue : settings[key] === true;
+    }
+
+    function battleCapabilityOn(settings) {
+      return capabilityOn(settings, "live_enabled", true) && capabilityOn(settings, "battle_enabled", true);
+    }
+
     async function creatorApi(payload) {
       const response = await fetch("/api/creator-settings", {
         method: "POST",
@@ -3520,7 +3568,7 @@
 
     function communityEnabled(settings) {
       const state = String(settings.community_state || "open").toLowerCase();
-      return featureOn(settings, "community_link_visible", true) && state !== "hidden";
+      return capabilityOn(settings, "community_enabled", true) && featureOn(settings, "community_link_visible", true) && state !== "hidden";
     }
 
     function discordEnabled(settings) {
@@ -3528,7 +3576,8 @@
     }
 
     function battleModeActive(settings, liveState = latestPublicLiveState) {
-      return featureOn(settings, "battle_link_visible", true) &&
+      return battleCapabilityOn(settings) &&
+        featureOn(settings, "battle_link_visible", true) &&
         Boolean(safeUrl(settings.tiktok_coins_url)) &&
         (Boolean(liveState && liveState.battleActive === true) || settings.battle_mode_enabled === true);
     }
@@ -3543,16 +3592,23 @@
       };
     }
 
+    function customLinkCapabilityVisible(settings, link) {
+      const id = String(link && link.id || "").toLowerCase();
+      if (id.includes("event")) return capabilityOn(settings, "events_enabled", true);
+      if (id.includes("portfolio") || id.includes("work")) return capabilityOn(settings, "portfolio_enabled", true);
+      return true;
+    }
+
     function pageActionDefinitions(settings) {
       const battleCopy = battleSupportCopy(settings);
       return [
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
-        { key: "prepare", visible: featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
-        { key: "support", visible: featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
+        { key: "prepare", visible: battleCapabilityOn(settings) && featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
+        { key: "support", visible: capabilityOn(settings, "support_enabled", true) && featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
         { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
         { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
-      ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).map((link) => ({
+      ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).filter((link) => customLinkCapabilityVisible(settings, link)).map((link) => ({
         key: customPageBlockKey(link),
         visible: true,
         title: link.title,
@@ -3885,6 +3941,8 @@
 
     function createRuntimeTextBlock(settings, key) {
       const block = String(key || "").toLowerCase();
+      if (block === "announcement" && !capabilityOn(settings, "announcements_enabled", true)) return null;
+      if (block === "countdown" && !capabilityOn(settings, "countdown_enabled", true)) return null;
       if (block === "countdown" && liveStatusCountdownVisible(settings)) return null;
       const announcement = String(settings.quick_announcement || "").trim();
       const nextDate = nextLiveDate(settings);
@@ -3911,6 +3969,7 @@
     }
 
     function liveStatusCountdownVisible(settings) {
+      if (!capabilityOn(settings, "live_enabled", true) || !capabilityOn(settings, "countdown_enabled", true)) return false;
       const nextDate = nextLiveDate(settings);
       if (!nextDate || nextDate.getTime() <= Date.now() || settings.live_status) return false;
       const liveCard = $("liveCard");
@@ -3954,6 +4013,13 @@
           tiktok_link_visible: settings.tiktok_link_visible,
           tiktok_url: settings.tiktok_url,
           battle_link_visible: settings.battle_link_visible,
+          live_enabled: settings.live_enabled,
+          battle_enabled: settings.battle_enabled,
+          countdown_enabled: settings.countdown_enabled,
+          announcements_enabled: settings.announcements_enabled,
+          support_enabled: settings.support_enabled,
+          community_enabled: settings.community_enabled,
+          newsletter_enabled: settings.newsletter_enabled,
           tiktok_coins_url: settings.tiktok_coins_url,
           battle_mode_enabled: settings.battle_mode_enabled,
           support_link_visible: settings.support_link_visible,
@@ -4042,7 +4108,7 @@
       key: "prepare",
       version: 1,
       capabilities: { link: true, runtimeOverlay: true, destination: true },
-      enabled: (settings) => featureOn(settings, "battle_link_visible", true),
+      enabled: (settings) => battleCapabilityOn(settings) && featureOn(settings, "battle_link_visible", true),
       visible: (settings) => Boolean(safeUrl(settings.tiktok_coins_url)),
       configuration: { visibilityField: "battle_link_visible", destinationField: "tiktok_coins_url" },
       renderer: ({ settings }) => createActionBlock(settings, "prepare")
@@ -4051,7 +4117,7 @@
       key: "support",
       version: 1,
       capabilities: { link: true, destination: true, sticker: true },
-      enabled: (settings) => featureOn(settings, "support_link_visible", false),
+      enabled: (settings) => capabilityOn(settings, "support_enabled", true) && featureOn(settings, "support_link_visible", false),
       visible: (settings) => Boolean(externalUrl(settings.support_link_url)),
       configuration: { visibilityField: "support_link_visible", destinationField: "support_link_url" },
       renderer: ({ settings }) => createActionBlock(settings, "support")
@@ -4069,8 +4135,8 @@
       key: "newsletter",
       version: 1,
       capabilities: { form: true, analytics: true },
-      enabled: (settings) => featureOn(settings, "subscribe_popup_enabled", true),
-      visible: (settings) => featureOn(settings, "subscribe_popup_enabled", true),
+      enabled: (settings) => capabilityOn(settings, "newsletter_enabled", true) && featureOn(settings, "subscribe_popup_enabled", true),
+      visible: (settings) => capabilityOn(settings, "newsletter_enabled", true) && featureOn(settings, "subscribe_popup_enabled", true),
       configuration: { visibilityField: "subscribe_popup_enabled" },
       renderer: ({ settings }) => {
         renderNewsletter(settings);
@@ -4081,8 +4147,8 @@
       key: "announcement",
       version: 1,
       capabilities: { runtimeOverlay: true },
-      enabled: () => true,
-      visible: (settings) => Boolean(String(settings.quick_announcement || "").trim()),
+      enabled: (settings) => capabilityOn(settings, "announcements_enabled", true),
+      visible: (settings) => capabilityOn(settings, "announcements_enabled", true) && Boolean(String(settings.quick_announcement || "").trim()),
       configuration: { runtimeField: "quick_announcement" },
       renderer: ({ settings }) => createRuntimeTextBlock(settings, "announcement")
     });
@@ -4090,8 +4156,8 @@
       key: "countdown",
       version: 1,
       capabilities: { runtimeOverlay: true, time: true },
-      enabled: () => true,
-      visible: (settings) => Boolean(nextLiveDate(settings)) && !liveStatusCountdownVisible(settings),
+      enabled: (settings) => capabilityOn(settings, "countdown_enabled", true),
+      visible: (settings) => capabilityOn(settings, "countdown_enabled", true) && Boolean(nextLiveDate(settings)) && !liveStatusCountdownVisible(settings),
       configuration: { runtimeField: "next_live_datetime" },
       renderer: ({ settings }) => createRuntimeTextBlock(settings, "countdown")
     });
@@ -4403,7 +4469,7 @@
       currentSettings = settings;
       updateDecorativePoster(settings);
       $("previewBadge").hidden = !previewMode;
-      document.body.classList.toggle("is-live", Boolean(settings.live_status));
+      document.body.classList.toggle("is-live", capabilityOn(settings, "live_enabled", true) && Boolean(settings.live_status));
       applyTheme(settings);
       applyAmbient(settings);
       setText("displayName", settings.display_name || "Mina Mosya");
@@ -4446,7 +4512,7 @@
         countdownTimer = null;
       }
       countdownZeroChecked = false;
-      if (!settings.live_status && nextDate) {
+      if (capabilityOn(settings, "live_enabled", true) && capabilityOn(settings, "countdown_enabled", true) && !settings.live_status && nextDate) {
         const renderCountdown = () => {
           if (nextDate.getTime() <= Date.now()) {
             if (!countdownZeroChecked) {

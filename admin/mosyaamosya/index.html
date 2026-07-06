@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mina Mosya</title>
+  <title>Creator OS</title>
   <meta name="robots" content="noindex">
   <link rel="icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +33,7 @@
       font-family: var(--sans);
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html { overflow-x: hidden; }
     body {
       margin: 0;
@@ -1067,7 +1068,7 @@
   <div class="gate" id="gate">
     <form class="gate-card" id="loginForm" data-unlock-state="idle">
       <div class="eyebrow">CREATOR ACCESS</div>
-      <h1 id="gateCreatorName">Mina Mosya</h1>
+      <h1 id="gateCreatorName">Creator OS</h1>
       <p class="muted">Enter your creator password.</p>
       <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
       <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
@@ -1091,7 +1092,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <h1 id="adminCreatorName">Mina Mosya</h1>
+        <h1 id="adminCreatorName">Creator OS</h1>
       </div>
       <div class="actions">
         <a class="button" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Experience My Page</a>
@@ -1107,7 +1108,7 @@
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="experience" data-admin-group="setup">Experience</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="connections" data-admin-group="setup">Connections</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="links" data-admin-group="live">Links</button>
-      <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="runtime" data-admin-group="live">Live Runtime</button>
+      <button class="admin-tab" id="runtimeTabButton" type="button" role="tab" aria-selected="false" data-admin-tab="runtime" data-admin-group="live">Live Runtime</button>
       <button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="analytics" data-admin-group="live">Analytics</button>
     </nav>
 
@@ -1118,9 +1119,9 @@
           <div class="section-note">How is my page performing?</div>
           <div style="height:12px"></div>
           <div class="overview-grid">
-            <div class="stat-card"><span>Live Status</span><strong id="overviewLiveStatus">Checking</strong></div>
-            <div class="stat-card"><span>Battle</span><strong id="overviewBattleStatus">Inactive</strong></div>
-            <div class="stat-card"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
+            <div class="stat-card" data-admin-capability="live"><span>Live Status</span><strong id="overviewLiveStatus">Checking</strong></div>
+            <div class="stat-card" data-admin-capability="battle"><span>Battle</span><strong id="overviewBattleStatus">Inactive</strong></div>
+            <div class="stat-card" data-admin-capability="battle"><span>Win Streak</span><strong id="overviewWinStreak">0</strong></div>
             <div class="stat-card"><span>Last Save</span><strong id="overviewLastSave">Not yet</strong></div>
           </div>
         </section>
@@ -1148,7 +1149,7 @@
             <div class="connection-head">
               <div class="connection-title">
                 <strong>TikTok</strong>
-                <span id="tiktokConnectionCopy">Connect your TikTok account to enable live features.</span>
+                <span id="tiktokConnectionCopy">Connect your TikTok account for creator integrations.</span>
               </div>
               <span class="connection-status not_connected" id="tiktokConnectionStatus">Not connected</span>
             </div>
@@ -1163,7 +1164,7 @@
             </div>
             <div class="connection-grid" id="tiktokConnectionDetails" hidden>
               <div class="connection-metric"><span>Username</span><strong id="tiktokConnectionUsername">@mosyaamosya</strong></div>
-              <div class="connection-metric"><span>Live Runtime</span><strong id="tiktokConnectionRuntime">Unknown</strong></div>
+              <div class="connection-metric" data-admin-capability="live"><span>Live Runtime</span><strong id="tiktokConnectionRuntime">Unknown</strong></div>
               <div class="connection-metric"><span>Last sync</span><strong id="tiktokConnectionLastSync">Never</strong></div>
               <div class="connection-metric connection-dev-only"><span>Internal diagnostics</span><strong id="tiktokConnectionError">None</strong></div>
             </div>
@@ -1184,7 +1185,7 @@
               <summary>Internal beta runtime access</summary>
               <div class="fields">
                 <label class="span-2">TikTok session cookie<textarea id="tiktokSessionCookie" autocomplete="off" spellcheck="false" placeholder="Paste only while configuring the beta runtime"></textarea></label>
-                <div class="switch-row span-2">
+                <div class="switch-row span-2" data-admin-capability="live">
                   <div><strong>Live Runtime enabled</strong><span>Uses server-side runtime only. Secrets are never exposed publicly.</span></div>
                   <label class="switch" aria-label="TikTok runtime enabled"><input id="tiktokRuntimeEnabled" type="checkbox" checked><span class="track"></span></label>
                 </div>
@@ -1214,7 +1215,7 @@
           <div class="media-manager-grid">
             <section class="media-asset-card">
               <div class="media-asset-head">
-                <div class="media-asset-title"><strong>Media Health</strong><span>Simple readiness for Mina's public page.</span></div>
+                <div class="media-asset-title"><strong>Media Health</strong><span>Simple readiness for the public page.</span></div>
                 <span class="media-health-pill ready" id="mediaOverallHealth">Checking</span>
               </div>
               <div class="media-health-grid">
@@ -1349,7 +1350,7 @@
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="prepare">
+            <section class="link-card" data-page-block-key="prepare" data-admin-capability="battle">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Prepare for Battle / TikTok Coins</strong><span>Support block before battles.</span></div>
                 <label class="switch" aria-label="Battle link visible"><input name="battle_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1423,19 +1424,19 @@
 
             <section class="link-card" data-page-block-key="announcement">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Announcement</strong><span>Configured in Live Runtime.</span></div>
+                <div class="link-card-title"><strong>Announcement</strong><span>Configured in Updates.</span></div>
               </div>
             </section>
 
             <section class="link-card" data-page-block-key="countdown">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Countdown</strong><span>Configured in Live Runtime.</span></div>
+                <div class="link-card-title"><strong>Countdown</strong><span>Configured in Updates.</span></div>
               </div>
             </section>
 
             <section class="link-card" data-page-block-key="poll">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Poll</strong><span>Configured in Live Runtime.</span></div>
+                <div class="link-card-title"><strong>Poll</strong><span>Configured in Updates.</span></div>
               </div>
             </section>
 
@@ -1454,7 +1455,7 @@
 
             <section class="link-card" data-page-block-key="faq">
               <div class="link-card-head">
-                <div class="link-card-title"><strong>Frequently Asked on Stream</strong><span>Answers Mina can point viewers to during livestreams.</span></div>
+                <div class="link-card-title"><strong>Frequently Asked</strong><span>Reusable answers for public page visitors.</span></div>
                 <label class="switch" aria-label="FAQ visible"><input name="faq_link_visible" type="checkbox"><span class="track"></span></label>
               </div>
               <div class="link-card-fields">
@@ -1498,17 +1499,26 @@
           <div class="links-section-head">Creator-defined blocks<span>Custom Page Blocks</span></div>
           <button class="button" id="addCustomLink" type="button">Add Link</button>
           <input name="custom_links" type="hidden" value="[]">
+          <input name="live_enabled" type="hidden" value="true">
+          <input name="battle_enabled" type="hidden" value="true">
+          <input name="countdown_enabled" type="hidden" value="true">
+          <input name="announcements_enabled" type="hidden" value="true">
+          <input name="events_enabled" type="hidden" value="false">
+          <input name="portfolio_enabled" type="hidden" value="false">
+          <input name="support_enabled" type="hidden" value="true">
+          <input name="community_enabled" type="hidden" value="true">
+          <input name="newsletter_enabled" type="hidden" value="true">
           <input name="discord_url" type="hidden">
           <input name="discord_server_id" type="hidden">
           <input name="community_state" type="hidden" value="open">
         </section>
 
         <section class="panel tab-panel" data-admin-panel="runtime" hidden>
-          <h2>Live Runtime</h2>
-          <div class="section-note">What is happening right now?</div>
+          <h2 id="runtimePanelTitle">Live Runtime</h2>
+          <div class="section-note" id="runtimePanelNote">What is happening right now?</div>
           <div style="height:12px"></div>
           <div class="runtime-board">
-            <div class="runtime-status-panel" aria-live="polite">
+            <div class="runtime-status-panel" data-admin-capability="live" aria-live="polite">
               <div class="runtime-current">
                 <div><span>Current Status</span><strong id="runtimeCurrentStatus">⚪ Offline</strong></div>
                 <button class="button primary" id="liveToggleButton" type="button" data-runtime-action="toggle-live">Start Live</button>
@@ -1520,7 +1530,7 @@
                 <div><span>Pinned block</span><strong id="runtimePinnedLabel">None</strong></div>
               </div>
             </div>
-            <div class="runtime-section">
+            <div class="runtime-section" data-admin-capability="live">
               <h3>Live</h3>
               <input name="live_url" type="hidden">
               <input name="live_button_text" type="hidden">
@@ -1534,7 +1544,7 @@
               </div>
             </div>
 
-            <div class="runtime-section">
+            <div class="runtime-section" data-admin-capability="battle">
               <h3>Battle</h3>
               <div class="runtime-actions">
                 <button class="button primary" type="button" data-battle-action="start">Battle Mode ON</button>
@@ -1554,7 +1564,7 @@
               <div class="battle-summary" id="battleSummary"></div>
             </div>
 
-            <div class="runtime-section">
+            <div class="runtime-section" data-admin-capability="battle">
               <h3>Statistics</h3>
               <div class="runtime-actions two">
                 <button class="button" type="button" data-runtime-action="reset-streak">Reset Win Streak</button>
@@ -1566,7 +1576,7 @@
               <h3>Pinned Block</h3>
               <div class="segmented" id="pinnedBlockControls">
                 <button class="segment" type="button" data-pinned-block="">None</button>
-                <button class="segment" type="button" data-pinned-block="prepare">Prepare for Battle</button>
+                <button class="segment" type="button" data-pinned-block="prepare" data-admin-capability="battle">Prepare for Battle</button>
                 <button class="segment" type="button" data-pinned-block="faq">Frequently Asked on Stream</button>
                 <button class="segment" type="button" data-pinned-block="poll">Poll</button>
                 <button class="segment" type="button" data-pinned-block="announcement">Announcement</button>
@@ -1578,7 +1588,7 @@
               <div class="runtime-note">Pinned blocks are saved immediately and prepared for public page modules.</div>
             </div>
 
-            <div class="runtime-section">
+            <div class="runtime-section" data-admin-capability="countdown">
               <h3>Countdown</h3>
               <label>Next live datetime<input name="next_live_datetime" type="datetime-local"></label>
               <label>Countdown Message<input name="countdown_message" placeholder="Important battle!!"><span>Optional text shown with the next stream countdown.</span></label>
@@ -1588,7 +1598,7 @@
               </div>
             </div>
 
-            <div class="runtime-section">
+            <div class="runtime-section" data-admin-capability="announcements">
               <h3>Announcements</h3>
               <label>Quick announcement field<textarea name="quick_announcement" placeholder="Short update for the public page"></textarea></label>
               <button class="button primary" type="button" data-runtime-action="push-announcement">Push to public page</button>
@@ -1684,7 +1694,7 @@
               <div><strong>Enabled</strong><span>Shown only inside TikTok when enabled.</span></div>
               <label class="switch" aria-label="TikTok welcome gate enabled"><input name="tiktok_welcome_gate_enabled" type="checkbox"><span class="track"></span></label>
             </div>
-            <label class="span-2">Title<input name="tiktok_welcome_gate_title" placeholder="Hey, Mina here! 💖"></label>
+            <label class="span-2">Title<input name="tiktok_welcome_gate_title" placeholder="Hey, welcome in."></label>
             <label class="span-2">Message<textarea name="tiktok_welcome_gate_message" rows="7" placeholder="For the best experience, please open my page in your browser."></textarea></label>
             <label class="span-2">Button Label<input name="tiktok_welcome_gate_secondary_label" placeholder="Continue in TikTok"></label>
             <div class="help-panel span-2">
@@ -1779,7 +1789,7 @@
           <div class="fields">
             <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
             <div class="span-2 switch-row">
-              <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to Mina's local time.</span></div>
+              <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to the creator's local time.</span></div>
               <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
             </div>
             <div class="span-2 switch-row">
@@ -1817,7 +1827,7 @@
             <div class="span-2 help-panel">
               <strong>Quick Access</strong><br>
               Add to Home Screen for a faster creator dashboard feel.<br>
-              Preview icon: DONEOVERNIGHT wordmark. Mina can choose an icon theme; changing it later may require reinstalling.
+              Preview icon: DONEOVERNIGHT wordmark. The creator can choose an icon theme; changing it later may require reinstalling.
             </div>
             <a class="button span-2" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Open Quick Access</a>
             <details class="advanced-box span-2">
@@ -1968,6 +1978,20 @@
     ];
     let activeTheme = "mina";
     let activeDna = "streamer";
+    let currentAdminSettings = {
+      display_name: currentCreatorSlug === "mosyaamosya" ? "Mina Mosya" : "Creator",
+      username: currentCreatorSlug,
+      slug: currentCreatorSlug,
+      live_enabled: currentCreatorSlug === "mosyaamosya",
+      battle_enabled: currentCreatorSlug === "mosyaamosya",
+      countdown_enabled: true,
+      announcements_enabled: true,
+      events_enabled: currentCreatorSlug !== "mosyaamosya",
+      portfolio_enabled: currentCreatorSlug !== "mosyaamosya",
+      support_enabled: currentCreatorSlug === "mosyaamosya",
+      community_enabled: currentCreatorSlug === "mosyaamosya",
+      newsletter_enabled: true
+    };
     let saving = false;
     let saveResetTimer = 0;
     let saveFadeTimer = 0;
@@ -1984,7 +2008,7 @@
       signature: {}
     };
     const recommendedTikTokWelcome = {
-      title: "Hey, Mina here! 💖",
+      title: "Hey, welcome in.",
       message: "For the best experience, please open my page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.\n\nIt really helps me, and you'll get the full experience.",
       button: "Continue in TikTok"
     };
@@ -2513,6 +2537,16 @@
       if (element.type === "checkbox") return element.checked;
       return String(element.value || "").toLowerCase() === "true";
     }
+    function capabilityOn(settings, key, fallback = true) {
+      const source = settings || currentAdminSettings || {};
+      return source[key] === undefined ? fallback : source[key] === true;
+    }
+    function liveEnabled(settings = currentAdminSettings) {
+      return capabilityOn(settings, "live_enabled", true);
+    }
+    function battleEnabled(settings = currentAdminSettings) {
+      return liveEnabled(settings) && capabilityOn(settings, "battle_enabled", true);
+    }
     function setBoolField(name, value) {
       const element = form.elements[name];
       if (!element) return;
@@ -2746,7 +2780,7 @@
         '</div>',
         '<div class="link-card-fields">',
           '<label class="wide">Question<input data-faq-question placeholder="What do viewers ask on stream?"></label>',
-          '<label class="wide">Answer<textarea class="faq-answer" data-faq-answer placeholder="Short answer Mina can send viewers to."></textarea></label>',
+          '<label class="wide">Answer<textarea class="faq-answer" data-faq-answer placeholder="Short answer visitors can read."></textarea></label>',
         '</div>',
         '<div class="link-card-actions">',
           '<button class="button" data-duplicate-faq-item type="button">Duplicate</button>',
@@ -2966,7 +3000,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "mina-newsletter-signups.csv";
+      link.download = currentCreatorSlug + "-newsletter-signups.csv";
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
@@ -3083,6 +3117,15 @@
         auto_live_detection_enabled: boolField("auto_live_detection_enabled", true),
         manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
         battle_mode_enabled: boolField("battle_mode_enabled"),
+        live_enabled: boolField("live_enabled", true),
+        battle_enabled: boolField("battle_enabled", true),
+        countdown_enabled: boolField("countdown_enabled", true),
+        announcements_enabled: boolField("announcements_enabled", true),
+        events_enabled: boolField("events_enabled", false),
+        portfolio_enabled: boolField("portfolio_enabled", false),
+        support_enabled: boolField("support_enabled", true),
+        community_enabled: boolField("community_enabled", true),
+        newsletter_enabled: boolField("newsletter_enabled", true),
         battle_opponent: String(data.get("battle_opponent") || "").trim(),
         battle_result: String(data.get("battle_result") || "").trim(),
         battle_win_streak: Math.max(0, Math.floor(Number(data.get("battle_win_streak")) || 0)),
@@ -3180,11 +3223,20 @@
         if (!element || element.type === "checkbox") return;
         element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
       });
-      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "community_sticker_enabled", "share_link_visible"].forEach((key) => {
+      ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "live_enabled", "battle_enabled", "countdown_enabled", "announcements_enabled", "events_enabled", "portfolio_enabled", "support_enabled", "community_enabled", "newsletter_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "community_sticker_enabled", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
+      if (settings.live_enabled === undefined) setBoolField("live_enabled", (settings.creator_dna || activeDna) === "streamer");
+      if (settings.battle_enabled === undefined) setBoolField("battle_enabled", (settings.creator_dna || activeDna) === "streamer");
+      if (settings.countdown_enabled === undefined) setBoolField("countdown_enabled", true);
+      if (settings.announcements_enabled === undefined) setBoolField("announcements_enabled", true);
+      if (settings.events_enabled === undefined) setBoolField("events_enabled", (settings.creator_dna || activeDna) === "editorial" || (settings.creator_dna || activeDna) === "founder");
+      if (settings.portfolio_enabled === undefined) setBoolField("portfolio_enabled", (settings.creator_dna || activeDna) === "editorial" || (settings.creator_dna || activeDna) === "founder");
+      if (settings.support_enabled === undefined) setBoolField("support_enabled", (settings.creator_dna || activeDna) === "streamer");
+      if (settings.community_enabled === undefined) setBoolField("community_enabled", (settings.creator_dna || activeDna) === "streamer");
+      if (settings.newsletter_enabled === undefined) setBoolField("newsletter_enabled", true);
       if (settings.poll_enabled === undefined) setBoolField("poll_enabled", false);
       if (settings.tiktok_welcome_gate_enabled === undefined) setBoolField("tiktok_welcome_gate_enabled", settings.tiktok_welcome_enabled !== false);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
@@ -3214,9 +3266,11 @@
       writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
-      document.title = settings.display_name || "Mina Mosya";
-      setText("gateCreatorName", settings.display_name || "Mina Mosya");
-      setText("adminCreatorName", settings.display_name || "Mina Mosya");
+      document.title = settings.display_name || currentAdminSettings.display_name || "Creator OS";
+      setText("gateCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
+      setText("adminCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
+      currentAdminSettings = { ...currentAdminSettings, ...settings };
+      applyAdminCapabilityGates(currentAdminSettings);
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroImagePreview").src = settings.hero_image_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
@@ -3243,6 +3297,33 @@
       const communityVisible = boolField("community_link_visible", true);
       if (form.elements.discord_url) form.elements.discord_url.value = discordUrl;
       if (form.elements.community_state) form.elements.community_state.value = communityVisible ? "open" : "hidden";
+    }
+    function applyAdminCapabilityGates(settings = currentAdminSettings) {
+      const live = liveEnabled(settings);
+      const battle = battleEnabled(settings);
+      const values = {
+        live,
+        battle,
+        countdown: capabilityOn(settings, "countdown_enabled", true),
+        announcements: capabilityOn(settings, "announcements_enabled", true),
+        support: capabilityOn(settings, "support_enabled", true),
+        community: capabilityOn(settings, "community_enabled", true),
+        newsletter: capabilityOn(settings, "newsletter_enabled", true)
+      };
+      document.querySelectorAll("[data-admin-capability]").forEach((element) => {
+        const key = String(element.dataset.adminCapability || "").toLowerCase();
+        element.hidden = values[key] === false;
+      });
+      setText("runtimePanelTitle", live ? "Live Runtime" : "Updates");
+      setText("runtimePanelNote", live ? "What is happening right now?" : "Plan announcements, event reminders, and featured updates.");
+      if ($("runtimeTabButton")) $("runtimeTabButton").textContent = live ? "Live Runtime" : "Updates";
+      if (form.elements.live_status && !live) setBoolField("live_status", false);
+      if (form.elements.battle_mode_enabled && !battle) setBoolField("battle_mode_enabled", false);
+      if (form.elements.battle_link_visible && !battle) setBoolField("battle_link_visible", false);
+      if (form.elements.support_link_visible && !values.support) setBoolField("support_link_visible", false);
+      if (form.elements.community_link_visible && !values.community) setBoolField("community_link_visible", false);
+      if (form.elements.subscribe_popup_enabled && !values.newsletter) setBoolField("subscribe_popup_enabled", false);
+      updatePublicPageLinks();
     }
     function normalizeBattleResult(value) {
       const result = String(value || "").toLowerCase();
@@ -3378,6 +3459,10 @@
       updateOverview();
     }
     async function applyBattleAction(action) {
+      if (!battleEnabled()) {
+        setStatus("Battle controls are disabled for this creator.", false);
+        return;
+      }
       const previous = battleSnapshot();
       const next = { ...previous, battle_updated_at: new Date().toISOString() };
       if (action === "start") {
@@ -3437,7 +3522,7 @@
     }
     function setLatestRuntimeStateFromCreator(creator, source = "admin-runtime") {
       const username = String((creator && creator.tiktok_live_username) || form.elements.tiktok_live_username.value || currentCreatorSlug).replace(/^@+/, "") || currentCreatorSlug;
-      const battleActive = Boolean(creator && creator.battle_mode_enabled);
+      const battleActive = battleEnabled(creator || currentAdminSettings) && Boolean(creator && creator.battle_mode_enabled);
       latestLiveRuntimeState = {
         isLive: Boolean(creator && creator.live_status),
         source,
@@ -3476,6 +3561,10 @@
     }
     async function applyRuntimeAction(action) {
       if (action === "toggle-live") action = boolField("live_status") ? "end-live" : "start-live";
+      if ((action === "start-live" || action === "end-live") && !liveEnabled()) {
+        setStatus("Live controls are disabled for this creator.", false);
+        return;
+      }
       if (action === "start-live") {
         setBoolField("live_status", true);
         latestLiveRuntimeState = { isLive: true, source: "admin-runtime", confidence: "manual", checkedAt: new Date().toISOString() };
@@ -3714,8 +3803,10 @@
       statusEl.className = "connection-status " + (connected ? "connected" : "not_connected");
       $("tiktokConnectionCopy").textContent = connected
         ? "TikTok is connected to this creator workspace."
-        : "Connect your TikTok account to enable live features.";
-      $("tiktokConnectionRequired").hidden = connected;
+        : liveEnabled()
+          ? "Connect your TikTok account to enable live features."
+          : "Connect your TikTok account for profile and content integrations.";
+      $("tiktokConnectionRequired").hidden = connected || !liveEnabled();
       $("tiktokConnectionDetails").hidden = !connected;
       $("tiktokConnectionRuntimeNote").hidden = !connected || !tiktok.runtime_message;
       $("tiktokConnectionRuntimeNote").textContent = tiktok.runtime_message || "";
@@ -3868,6 +3959,24 @@
       }
       setStatus("Loaded creator settings.");
     }
+    async function bootstrapCreatorIdentity() {
+      try {
+        const response = await fetch("/api/creator-settings?slug=" + encodeURIComponent(currentCreatorSlug), {
+          cache: "no-store",
+          headers: { Accept: "application/json" }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true || !data.creator) return;
+        const settings = data.creator;
+        currentAdminSettings = { ...currentAdminSettings, ...settings };
+        activeDna = settings.creator_dna || activeDna;
+        document.title = settings.display_name || currentAdminSettings.display_name || "Creator OS";
+        setText("gateCreatorName", settings.display_name || "Creator");
+        setText("adminCreatorName", settings.display_name || "Creator");
+        applyAdminCapabilityGates(currentAdminSettings);
+      } catch (error) {
+      }
+    }
     async function saveSettings() {
       if (saving) return;
       const scrollPosition = pendingSaveScroll || { x: window.scrollX, y: window.scrollY };
@@ -3904,6 +4013,11 @@
     async function loadLiveRuntime() {
       const status = $("liveRuntimeStatus");
       if (!status) return;
+      if (!liveEnabled()) {
+        latestLiveRuntimeState = null;
+        updateRuntimeUi();
+        return;
+      }
       try {
         const response = await fetch("/api/creator-live-status?slug=" + encodeURIComponent(currentCreatorSlug) + "", { cache: "no-store", headers: { Accept: "application/json" } });
         const data = await response.json();
@@ -4682,8 +4796,12 @@
         }
       });
     });
-    loadLiveRuntime();
-    window.setInterval(loadLiveRuntime, 60000);
+    applyAdminCapabilityGates(currentAdminSettings);
+    bootstrapCreatorIdentity();
+    if (liveEnabled()) loadLiveRuntime();
+    window.setInterval(() => {
+      if (liveEnabled()) loadLiveRuntime();
+    }, 60000);
     window.setInterval(() => {
       if (sessionStorage.getItem(sessionFlag) === "true" && creatorSession()) loadAnalytics();
     }, 60000);

@@ -90,6 +90,17 @@ const PHASE_2_CREATOR_FIELDS = [
   "battle_updated_at",
   "battle_undo_snapshot"
 ];
+const CAPABILITY_CREATOR_FIELDS = [
+  "live_enabled",
+  "battle_enabled",
+  "countdown_enabled",
+  "announcements_enabled",
+  "events_enabled",
+  "portfolio_enabled",
+  "support_enabled",
+  "community_enabled",
+  "newsletter_enabled"
+];
 const PHASE_3_CREATOR_FIELDS = [
   "pinned_block",
   "community_state",
@@ -184,7 +195,8 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
   "tiktok_welcome_gate_secondary_label",
   "tiktok_welcome_gate_copy_label"
 ];
-const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, CAPABILITY_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_CAPABILITIES = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER = BASE_CREATOR_FIELDS.concat(
   AMBIENT_CREATOR_FIELDS,
@@ -303,6 +315,15 @@ const DEFAULT_MINA_SETTINGS = {
   battle_win_streak: 0,
   battle_updated_at: "",
   battle_undo_snapshot: "",
+  live_enabled: true,
+  battle_enabled: true,
+  countdown_enabled: true,
+  announcements_enabled: true,
+  events_enabled: false,
+  portfolio_enabled: false,
+  support_enabled: true,
+  community_enabled: true,
+  newsletter_enabled: true,
   next_live_datetime: "",
   countdown_message: "",
   theme_preset: "mina",
@@ -461,6 +482,15 @@ function defaultCreatorForSlug(value = DEFAULT_CREATOR_SLUG) {
     business_email: "",
     live_url: "",
     live_status: false,
+    live_enabled: false,
+    battle_enabled: false,
+    countdown_enabled: true,
+    announcements_enabled: true,
+    events_enabled: true,
+    portfolio_enabled: true,
+    support_enabled: false,
+    community_enabled: false,
+    newsletter_enabled: true,
     tiktok_live_username: username,
     theme_preset: "founder",
     background_gradient: "",
@@ -514,6 +544,47 @@ function bool(value, fallback = false) {
   if (value === "true") return true;
   if (value === "false") return false;
   return fallback;
+}
+
+function capabilityDefaultsForDna(value) {
+  const dna = normalizeCreatorDna(value);
+  if (dna === "editorial" || dna === "founder") {
+    return {
+      live_enabled: false,
+      battle_enabled: false,
+      countdown_enabled: true,
+      announcements_enabled: true,
+      events_enabled: true,
+      portfolio_enabled: true,
+      support_enabled: false,
+      community_enabled: false,
+      newsletter_enabled: true
+    };
+  }
+  if (dna === "fitness") {
+    return {
+      live_enabled: false,
+      battle_enabled: false,
+      countdown_enabled: true,
+      announcements_enabled: true,
+      events_enabled: false,
+      portfolio_enabled: false,
+      support_enabled: true,
+      community_enabled: true,
+      newsletter_enabled: true
+    };
+  }
+  return {
+    live_enabled: true,
+    battle_enabled: true,
+    countdown_enabled: true,
+    announcements_enabled: true,
+    events_enabled: false,
+    portfolio_enabled: false,
+    support_enabled: true,
+    community_enabled: true,
+    newsletter_enabled: true
+  };
 }
 
 function isDirectIntroAudioUrl(value) {
@@ -1390,6 +1461,8 @@ async function uploadCreatorMedia(input = {}) {
 
 function normalizeCreator(row = {}) {
   const defaults = defaultCreatorForSlug(row.slug || row.username || DEFAULT_CREATOR_SLUG);
+  const dna = normalizeCreatorDna(row.creator_dna || defaults.creator_dna);
+  const capabilityDefaults = capabilityDefaultsForDna(dna);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
   const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(row, "hero_image_url");
   const legacyGateMessage = clean(row.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(row.tiktok_welcome_message);
@@ -1457,6 +1530,15 @@ function normalizeCreator(row = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(row.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(row.battle_updated_at),
     battle_undo_snapshot: clean(row.battle_undo_snapshot),
+    live_enabled: bool(row.live_enabled, capabilityDefaults.live_enabled),
+    battle_enabled: bool(row.battle_enabled, capabilityDefaults.battle_enabled),
+    countdown_enabled: bool(row.countdown_enabled, capabilityDefaults.countdown_enabled),
+    announcements_enabled: bool(row.announcements_enabled, capabilityDefaults.announcements_enabled),
+    events_enabled: bool(row.events_enabled, capabilityDefaults.events_enabled),
+    portfolio_enabled: bool(row.portfolio_enabled, capabilityDefaults.portfolio_enabled),
+    support_enabled: bool(row.support_enabled, capabilityDefaults.support_enabled),
+    community_enabled: bool(row.community_enabled, capabilityDefaults.community_enabled),
+    newsletter_enabled: bool(row.newsletter_enabled, capabilityDefaults.newsletter_enabled),
     pinned_block: normalizePinnedBlock(row.pinned_block),
     community_state: normalizeCommunityState(row.community_state),
     quick_announcement: clean(row.quick_announcement),
@@ -1515,7 +1597,7 @@ function normalizeCreator(row = {}) {
     next_live_datetime: normalizeDateTime(row.next_live_datetime),
     countdown_message: clean(row.countdown_message),
     theme_preset: normalizeTheme(row.theme_preset),
-    creator_dna: normalizeCreatorDna(row.creator_dna),
+    creator_dna: dna,
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(row.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
     subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
@@ -1529,6 +1611,7 @@ async function fetchCreatorFromTable(slug = DEFAULT_CREATOR_SLUG) {
   let rows;
   const selectAttempts = [
     CREATOR_FIELDS,
+    CREATOR_FIELDS_WITHOUT_CAPABILITIES,
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
     CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER,
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER,
@@ -1622,6 +1705,8 @@ function sanitizeCreatorForSurface(creator = {}, surface = "web") {
 function creatorPayload(input = {}) {
   const slug = normalizeSlug(input.slug || input.username || DEFAULT_CREATOR_SLUG);
   const defaults = defaultCreatorForSlug(slug);
+  const dna = normalizeCreatorDna(input.creator_dna || defaults.creator_dna);
+  const capabilityDefaults = capabilityDefaultsForDna(dna);
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
@@ -1695,6 +1780,15 @@ function creatorPayload(input = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(input.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(input.battle_updated_at) || null,
     battle_undo_snapshot: clean(input.battle_undo_snapshot),
+    live_enabled: bool(input.live_enabled, capabilityDefaults.live_enabled),
+    battle_enabled: bool(input.battle_enabled, capabilityDefaults.battle_enabled),
+    countdown_enabled: bool(input.countdown_enabled, capabilityDefaults.countdown_enabled),
+    announcements_enabled: bool(input.announcements_enabled, capabilityDefaults.announcements_enabled),
+    events_enabled: bool(input.events_enabled, capabilityDefaults.events_enabled),
+    portfolio_enabled: bool(input.portfolio_enabled, capabilityDefaults.portfolio_enabled),
+    support_enabled: bool(input.support_enabled, capabilityDefaults.support_enabled),
+    community_enabled: bool(input.community_enabled, capabilityDefaults.community_enabled),
+    newsletter_enabled: bool(input.newsletter_enabled, capabilityDefaults.newsletter_enabled),
     pinned_block: normalizePinnedBlock(input.pinned_block),
     community_state: normalizeCommunityState(input.community_state),
     quick_announcement: clean(input.quick_announcement),
@@ -1753,7 +1847,7 @@ function creatorPayload(input = {}) {
     next_live_datetime: normalizeDateTime(input.next_live_datetime) || null,
     countdown_message: clean(input.countdown_message),
     theme_preset: normalizeTheme(input.theme_preset),
-    creator_dna: normalizeCreatorDna(input.creator_dna),
+    creator_dna: dna,
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
     subscribe_popup_title: clean(input.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
     subscribe_popup_copy: clean(input.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
@@ -1779,6 +1873,10 @@ async function saveCreatorToTable(payload) {
   COMMUNITY_STICKER_CREATOR_FIELDS.forEach((field) => {
     delete withoutCommunityStickerPayload[field];
   });
+  const withoutCapabilitiesPayload = { ...payload };
+  CAPABILITY_CREATOR_FIELDS.forEach((field) => {
+    delete withoutCapabilitiesPayload[field];
+  });
   const { countdown_message, ...withoutCountdownMessagePayload } = payload;
   const { countdown_message: countdownMessage, ...withoutCountdownMessageOrCommunityStickerPayload } = withoutCommunityStickerPayload;
   const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
@@ -1786,6 +1884,7 @@ async function saveCreatorToTable(payload) {
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
+    { fields: CREATOR_FIELDS_WITHOUT_CAPABILITIES, payload: withoutCapabilitiesPayload },
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, payload: withoutCountdownMessagePayload },
     { fields: CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER, payload: withoutCommunityStickerPayload },
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER, payload: withoutCountdownMessageOrCommunityStickerPayload },

@@ -1,10 +1,15 @@
 -- Creator OS Preview/Staging setup.
 -- Safe for a fresh Supabase project. Do not run this against production.
--- Seeds only a neutral test creator:
+-- Seeds neutral Preview test fixtures:
 --   slug: preview-creator
 --   username: preview-creator
 --   display_name: Preview Creator
 -- Test-only creator password: previewpreview
+-- Preview-only Mina fixture, used only when the Preview database has no Mina row:
+--   slug: mosyaamosya
+--   username: mosyaamosya
+--   display_name: Mina Mosya
+-- Test-only Mina password on missing auth rows: previewpreview
 -- Preview-only creative founder test creator:
 --   slug: lara
 --   username: larajadev
@@ -77,6 +82,15 @@ create table if not exists public.creators (
   battle_win_streak integer not null default 0,
   battle_updated_at timestamptz,
   battle_undo_snapshot text not null default '',
+  live_enabled boolean not null default true,
+  battle_enabled boolean not null default true,
+  countdown_enabled boolean not null default true,
+  announcements_enabled boolean not null default true,
+  events_enabled boolean not null default false,
+  portfolio_enabled boolean not null default false,
+  support_enabled boolean not null default true,
+  community_enabled boolean not null default true,
+  newsletter_enabled boolean not null default true,
   pinned_block text not null default '',
   community_state text not null default 'open',
   quick_announcement text not null default '',
@@ -139,6 +153,17 @@ create table if not exists public.creators (
 create unique index if not exists creators_slug_key on public.creators (slug);
 create unique index if not exists creators_username_key on public.creators (username);
 create index if not exists creators_updated_at_idx on public.creators (updated_at desc);
+
+alter table public.creators
+  add column if not exists live_enabled boolean not null default true,
+  add column if not exists battle_enabled boolean not null default true,
+  add column if not exists countdown_enabled boolean not null default true,
+  add column if not exists announcements_enabled boolean not null default true,
+  add column if not exists events_enabled boolean not null default false,
+  add column if not exists portfolio_enabled boolean not null default false,
+  add column if not exists support_enabled boolean not null default true,
+  add column if not exists community_enabled boolean not null default true,
+  add column if not exists newsletter_enabled boolean not null default true;
 
 create table if not exists public.creator_auth (
   creator_id uuid primary key references public.creators(id) on delete cascade,
@@ -346,6 +371,226 @@ begin
   end if;
 end $$;
 
+update public.creators
+   set live_enabled = true,
+       battle_enabled = true,
+       countdown_enabled = true,
+       announcements_enabled = true,
+       support_enabled = true,
+       community_enabled = true,
+       newsletter_enabled = true,
+       events_enabled = false,
+       portfolio_enabled = false
+ where slug in ('mosyaamosya', 'mina');
+
+do $$
+begin
+  if not exists (select 1 from public.creators where slug = 'mosyaamosya')
+     and exists (select 1 from public.creators where username = 'mosyaamosya') then
+    update public.creators
+       set slug = 'mosyaamosya',
+           display_name = coalesce(nullif(display_name, ''), 'Mina Mosya'),
+           bio = coalesce(nullif(bio, ''), 'Daily livestreams, community, and creator updates.'),
+           location = coalesce(nullif(location, ''), 'Chicago'),
+           timezone = coalesce(nullif(timezone, ''), 'America/Chicago'),
+           theme_preset = coalesce(nullif(theme_preset, ''), 'mina'),
+           creator_dna = coalesce(nullif(creator_dna, ''), 'streamer'),
+           tiktok_live_username = coalesce(nullif(tiktok_live_username, ''), 'mosyaamosya'),
+           community_state = coalesce(nullif(community_state, ''), 'open'),
+           updated_at = now()
+     where username = 'mosyaamosya';
+  end if;
+end $$;
+
+insert into public.creators (
+  display_name,
+  username,
+  slug,
+  bio,
+  location,
+  timezone,
+  tiktok_url,
+  discord_url,
+  tiktok_coins_url,
+  business_email,
+  live_button_text,
+  theme_preset,
+  creator_dna,
+  tiktok_live_username,
+  auto_live_detection_enabled,
+  manual_live_fallback_enabled,
+  live_enabled,
+  battle_enabled,
+  countdown_enabled,
+  announcements_enabled,
+  events_enabled,
+  portfolio_enabled,
+  support_enabled,
+  community_enabled,
+  newsletter_enabled,
+  community_state,
+  faq_visible,
+  discord_visible,
+  creator_passport_visible,
+  discord_link_visible,
+  discord_link_title,
+  discord_link_subtitle,
+  discord_link_cta_label,
+  tiktok_link_visible,
+  tiktok_link_title,
+  tiktok_link_subtitle,
+  tiktok_link_cta_label,
+  battle_link_visible,
+  battle_link_title,
+  battle_link_subtitle,
+  battle_link_cta_label,
+  support_link_visible,
+  support_link_title,
+  support_link_subtitle,
+  support_link_cta_label,
+  business_link_visible,
+  business_link_title,
+  business_link_subtitle,
+  business_link_cta_label,
+  community_link_visible,
+  community_link_title,
+  community_link_subtitle,
+  community_link_cta_label,
+  community_link_url,
+  share_link_visible,
+  public_page_order,
+  updated_at
+) values (
+  'Mina Mosya',
+  'mosyaamosya',
+  'mosyaamosya',
+  'Daily livestreams, community, and creator updates.',
+  'Chicago',
+  'America/Chicago',
+  'https://www.tiktok.com/@mosyaamosya',
+  'https://discord.gg/GGE7WsUZR',
+  'https://www.tiktok.com/coin',
+  'mina@doneovernight.com',
+  'Join Live',
+  'mina',
+  'streamer',
+  'mosyaamosya',
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  false,
+  false,
+  true,
+  true,
+  true,
+  'open',
+  true,
+  true,
+  true,
+  true,
+  'Discord',
+  'Community',
+  'Join',
+  true,
+  'TikTok',
+  '@mosyaamosya',
+  'Watch',
+  true,
+  'Prepare for Battle',
+  'Get your TikTok Coins before the battle begins.',
+  'Prepare',
+  false,
+  'Support Me',
+  'Every contribution helps me create more content.',
+  'Support',
+  true,
+  'Business',
+  'Booking and collabs',
+  'Email',
+  true,
+  'Community',
+  'Join Mina''s Discord for stream updates and community drops.',
+  'Join Discord',
+  'https://discord.gg/GGE7WsUZR',
+  true,
+  '["community","discord","tiktok","prepare","support","business","music","faq","poll","newsletter","announcement","countdown","share"]'::jsonb,
+  now()
+) on conflict (slug) do update set
+  display_name = coalesce(nullif(public.creators.display_name, ''), excluded.display_name),
+  username = case
+    when public.creators.username = ''
+      and not exists (
+        select 1
+          from public.creators existing_creator
+         where existing_creator.username = 'mosyaamosya'
+           and existing_creator.id <> public.creators.id
+      )
+    then excluded.username
+    else public.creators.username
+  end,
+  bio = coalesce(nullif(public.creators.bio, ''), excluded.bio),
+  location = coalesce(nullif(public.creators.location, ''), excluded.location),
+  timezone = coalesce(nullif(public.creators.timezone, ''), excluded.timezone),
+  tiktok_url = coalesce(nullif(public.creators.tiktok_url, ''), excluded.tiktok_url),
+  discord_url = coalesce(nullif(public.creators.discord_url, ''), excluded.discord_url),
+  tiktok_coins_url = coalesce(nullif(public.creators.tiktok_coins_url, ''), excluded.tiktok_coins_url),
+  business_email = coalesce(nullif(public.creators.business_email, ''), excluded.business_email),
+  live_button_text = coalesce(nullif(public.creators.live_button_text, ''), excluded.live_button_text),
+  theme_preset = coalesce(nullif(public.creators.theme_preset, ''), excluded.theme_preset),
+  creator_dna = coalesce(nullif(public.creators.creator_dna, ''), excluded.creator_dna),
+  tiktok_live_username = coalesce(nullif(public.creators.tiktok_live_username, ''), excluded.tiktok_live_username),
+  auto_live_detection_enabled = excluded.auto_live_detection_enabled,
+  manual_live_fallback_enabled = excluded.manual_live_fallback_enabled,
+  live_enabled = true,
+  battle_enabled = true,
+  countdown_enabled = true,
+  announcements_enabled = true,
+  events_enabled = false,
+  portfolio_enabled = false,
+  support_enabled = true,
+  community_enabled = true,
+  newsletter_enabled = true,
+  community_state = coalesce(nullif(public.creators.community_state, ''), excluded.community_state),
+  faq_visible = true,
+  discord_visible = true,
+  creator_passport_visible = true,
+  discord_link_visible = true,
+  tiktok_link_visible = true,
+  battle_link_visible = true,
+  support_link_visible = public.creators.support_link_visible,
+  business_link_visible = public.creators.business_link_visible,
+  community_link_visible = true,
+  share_link_visible = true,
+  public_page_order = case
+    when public.creators.public_page_order = '[]'::jsonb then excluded.public_page_order
+    else public.creators.public_page_order
+  end,
+  updated_at = case
+    when public.creators.display_name = ''
+      or public.creators.username = ''
+      or public.creators.bio = ''
+      or public.creators.location = ''
+      or public.creators.timezone = ''
+      or public.creators.tiktok_live_username = ''
+      or public.creators.community_state = ''
+      or public.creators.public_page_order = '[]'::jsonb
+    then now()
+    else public.creators.updated_at
+  end;
+
+insert into public.creator_auth (
+  creator_id,
+  password_hash,
+  updated_at
+) values (
+  (select id from public.creators where slug = 'mosyaamosya'),
+  'pbkdf2_sha256$120000$preview_creator_seed$j_0xTHz4ZPe0XxAYiaqjR_LkRFHuuxCnKbY-d6IW34c',
+  now()
+) on conflict (creator_id) do nothing;
+
 do $$
 begin
   if not exists (select 1 from public.creators where slug = 'preview-creator')
@@ -372,6 +617,15 @@ insert into public.creators (
   timezone,
   tiktok_live_username,
   community_state,
+  live_enabled,
+  battle_enabled,
+  countdown_enabled,
+  announcements_enabled,
+  events_enabled,
+  portfolio_enabled,
+  support_enabled,
+  community_enabled,
+  newsletter_enabled,
   public_page_order,
   updated_at
 ) values (
@@ -383,6 +637,15 @@ insert into public.creators (
   'UTC',
   'preview-creator',
   'open',
+  true,
+  true,
+  true,
+  true,
+  false,
+  false,
+  true,
+  true,
+  true,
   '["community","tiktok","prepare","support","business","newsletter","countdown","share"]'::jsonb,
   now()
 ) on conflict (slug) do update set
@@ -403,6 +666,15 @@ insert into public.creators (
   timezone = coalesce(nullif(public.creators.timezone, ''), excluded.timezone),
   tiktok_live_username = coalesce(nullif(public.creators.tiktok_live_username, ''), excluded.tiktok_live_username),
   community_state = coalesce(nullif(public.creators.community_state, ''), excluded.community_state),
+  live_enabled = excluded.live_enabled,
+  battle_enabled = excluded.battle_enabled,
+  countdown_enabled = excluded.countdown_enabled,
+  announcements_enabled = excluded.announcements_enabled,
+  events_enabled = excluded.events_enabled,
+  portfolio_enabled = excluded.portfolio_enabled,
+  support_enabled = excluded.support_enabled,
+  community_enabled = excluded.community_enabled,
+  newsletter_enabled = excluded.newsletter_enabled,
   public_page_order = case
     when public.creators.public_page_order = '[]'::jsonb then excluded.public_page_order
     else public.creators.public_page_order
@@ -453,6 +725,15 @@ insert into public.creators (
   tiktok_live_username,
   auto_live_detection_enabled,
   manual_live_fallback_enabled,
+  live_enabled,
+  battle_enabled,
+  countdown_enabled,
+  announcements_enabled,
+  events_enabled,
+  portfolio_enabled,
+  support_enabled,
+  community_enabled,
+  newsletter_enabled,
   community_state,
   quick_announcement,
   faq_visible,
@@ -494,6 +775,15 @@ insert into public.creators (
   'editorial',
   'editorial',
   'larajadev',
+  false,
+  true,
+  false,
+  false,
+  true,
+  true,
+  true,
+  true,
+  false,
   false,
   true,
   'hidden',
@@ -618,6 +908,15 @@ insert into public.creators (
   tiktok_live_username = excluded.tiktok_live_username,
   auto_live_detection_enabled = excluded.auto_live_detection_enabled,
   manual_live_fallback_enabled = excluded.manual_live_fallback_enabled,
+  live_enabled = excluded.live_enabled,
+  battle_enabled = excluded.battle_enabled,
+  countdown_enabled = excluded.countdown_enabled,
+  announcements_enabled = excluded.announcements_enabled,
+  events_enabled = excluded.events_enabled,
+  portfolio_enabled = excluded.portfolio_enabled,
+  support_enabled = excluded.support_enabled,
+  community_enabled = excluded.community_enabled,
+  newsletter_enabled = excluded.newsletter_enabled,
   community_state = excluded.community_state,
   faq_visible = excluded.faq_visible,
   discord_visible = excluded.discord_visible,
