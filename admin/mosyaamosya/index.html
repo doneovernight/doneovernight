@@ -1927,7 +1927,7 @@
       const rateWindow = 5 * 60 * 1000;
       const creatorSessionFlag = "doneovernight_creator_mosyaamosya";
       const creatorSessionKey = "doneovernight_creator_mosyaamosya_session";
-      const watchtowerVersion = "admin-auth-state-v2";
+      const watchtowerVersion = "admin-auth-state-v3";
       window.__creatorAdminAuthState = window.__creatorAdminAuthState || "locked";
       function text(value, limit) {
         return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
@@ -1946,11 +1946,29 @@
           return false;
         }
       }
-      function isExpectedAuthFetch(response, url) {
-        const state = authState();
+      function isCreatorSettingsUrl(url) {
+        return String(url || "").includes("/api/creator-settings");
+      }
+      function requestBody(input) {
+        const candidate = input && input[1] && input[1].body;
+        if (typeof candidate === "string") return candidate;
+        if (input && input[0] && typeof input[0].body === "string") return input[0].body;
+        return "";
+      }
+      function authenticatedUserAction(input) {
+        try {
+          const body = requestBody(input);
+          if (!body) return false;
+          const parsed = JSON.parse(body);
+          return parsed && parsed.authenticated_user_action === true;
+        } catch (error) {
+          return false;
+        }
+      }
+      function isSuppressedCreatorSettings401(response, url, input) {
         return response && response.status === 401 &&
-          url.includes("/api/creator-settings") &&
-          (state === "locked" || state === "validating_session" || !hasExpectedCreatorSession());
+          isCreatorSettingsUrl(url) &&
+          !authenticatedUserAction(input);
       }
       window.__setCreatorAdminAuthState = setAuthState;
       function fingerprint(area, action, error) {
@@ -1985,6 +2003,7 @@
               source: "production",
               auth_state: authState(),
               session_present: hasExpectedCreatorSession(),
+              authenticated_user_action: Boolean(extra && extra.authenticated_user_action),
               watchtower_version: watchtowerVersion,
               suggested_check: extra && extra.suggested_check
             })
@@ -2005,8 +2024,11 @@
           try {
             const response = await originalFetch(...args);
             if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
-              if (isExpectedAuthFetch(response, url)) return response;
-              report("Admin", "Fetch " + response.status, url, { suggested_check: "Check Creator OS API response and Vercel logs." });
+              if (isSuppressedCreatorSettings401(response, url, args)) return response;
+              report("Admin", "Fetch " + response.status, url, {
+                authenticated_user_action: authenticatedUserAction(args),
+                suggested_check: "Check Creator OS API response and Vercel logs."
+              });
             }
             return response;
           } catch (error) {
@@ -3796,7 +3818,10 @@
     }
     function reportAdminWatchtower(area, action, error, hint) {
       if (window.creatorWatchtowerReport) {
-        window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, { suggested_check: hint || "Check Creator OS admin action and Vercel logs." });
+        window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, {
+          authenticated_user_action: true,
+          suggested_check: hint || "Check Creator OS admin action and Vercel logs."
+        });
       }
     }
     function formatConnectionDate(value) {
