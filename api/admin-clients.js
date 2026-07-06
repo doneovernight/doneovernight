@@ -10,6 +10,7 @@ const CreatorCapabilities = require("../lib/creator-capabilities");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
+const MIN_HERO_VIDEO_BYTES = 1024;
 const MAX_INTRO_AUDIO_BYTES = 2_000_000;
 const CREATOR_MEDIA_BUCKET = process.env.CREATOR_MEDIA_BUCKET || "creator-media";
 const AUDIO_UPLOAD_MIME_TYPES = new Set([
@@ -1383,6 +1384,11 @@ function parseDataUrl(value, fallbackMimeType = "") {
   };
 }
 
+function hasMp4FileSignature(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return false;
+  return buffer.subarray(4, Math.min(buffer.length, 48)).includes(Buffer.from("ftyp"));
+}
+
 async function uploadCreatorMedia(input = {}) {
   const kind = clean(input.kind);
   const slug = normalizeSlug(input.slug || input.creator_slug || DEFAULT_CREATOR_SLUG);
@@ -1409,6 +1415,12 @@ async function uploadCreatorMedia(input = {}) {
     const error = new Error("Hero Media supports MP4 only.");
     error.statusCode = 400;
     error.code = "INVALID_MEDIA_TYPE";
+    throw error;
+  }
+  if (kind === "hero" && (parsed.buffer.length < MIN_HERO_VIDEO_BYTES || !hasMp4FileSignature(parsed.buffer))) {
+    const error = new Error("Hero Video must be a valid playable MP4 file. This upload looks empty or unsupported.");
+    error.statusCode = 400;
+    error.code = "INVALID_MEDIA_FILE";
     throw error;
   }
   if (kind === "hero-image" && ((!isImage && !isGenericMedia) || !isProfilePhotoUpload(parsed.mimeType, file.name) || !uploadMimeType)) {

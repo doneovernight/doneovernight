@@ -4318,7 +4318,9 @@
       if (kind === "hero") {
         const mime = String(info.mime || "").toLowerCase();
         const ext = mediaUrlExtension(info.url);
-        if ((ext && ext !== "mp4") || (!ext && mime && !mime.includes("mp4"))) return { label: "Needs Optimization", className: "warn" };
+        if ((ext && ext !== "mp4") || (!ext && mime && !mime.includes("mp4"))) return { label: "Unsupported video", className: "warn" };
+        if (info.size && info.size < 1024) return { label: "Invalid video", className: "warn" };
+        if (info.unreadable) return { label: "Invalid video", className: "warn" };
         if (info.duration && info.duration > 16) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 8_000_000) return { label: "Needs Optimization", className: "warn" };
         if (info.width && info.height && info.width > info.height) return { label: "Needs Optimization", className: "warn" };
@@ -4383,7 +4385,7 @@
         video.muted = true;
         video.playsInline = true;
         video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration });
-        video.onerror = () => resolve({});
+        video.onerror = () => resolve({ unreadable: true });
         video.src = url;
       });
     }
