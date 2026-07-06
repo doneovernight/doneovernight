@@ -3087,6 +3087,10 @@ async function handleCreatorHealth(req, res) {
         error: input.error || input.message,
         url: input.url,
         source: input.source || "production",
+        environment: input.environment || input.env || input.source || "production",
+        severity: input.severity || input.watchtower_severity || input.level,
+        force_alert: input.force_alert,
+        dedupe_key: input.dedupe_key,
         auth_state: input.auth_state,
         session_present: input.session_present,
         authenticated_user_action: input.authenticated_user_action,
@@ -3150,6 +3154,8 @@ module.exports = async function handler(req, res) {
         action: "Creator settings API",
         error: error.detail || error.message || "Could not save creator settings",
         url: "/api/creator-settings",
+        severity: "error",
+        authenticated_user_action: true,
         suggested_check: "Check public.creators, saveCreator(), and Vercel function logs."
       }).catch(() => null);
       return send(res, error.statusCode || 500, {

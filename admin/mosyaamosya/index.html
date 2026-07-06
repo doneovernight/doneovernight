@@ -1927,7 +1927,7 @@
       const rateWindow = 5 * 60 * 1000;
       const creatorSessionFlag = "doneovernight_creator_mosyaamosya";
       const creatorSessionKey = "doneovernight_creator_mosyaamosya_session";
-      const watchtowerVersion = "admin-auth-state-v3";
+      const watchtowerVersion = "severity-model-v1";
       window.__creatorAdminAuthState = window.__creatorAdminAuthState || "locked";
       function text(value, limit) {
         return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
@@ -1970,6 +1970,12 @@
           isCreatorSettingsUrl(url) &&
           !authenticatedUserAction(input);
       }
+      function severityForFetchStatus(status, authenticated) {
+        if (authenticated) return "error";
+        if (Number(status) >= 500) return "error";
+        if (Number(status) === 401) return "info";
+        return "warning";
+      }
       window.__setCreatorAdminAuthState = setAuthState;
       function fingerprint(area, action, error) {
         return btoa(unescape(encodeURIComponent([area, action, error].join("|")))).slice(0, 96);
@@ -2001,6 +2007,10 @@
               error: message,
               url: location.href,
               source: "production",
+              environment: "production",
+              severity: text(extra && extra.severity || "error", 20),
+              force_alert: Boolean(extra && extra.force_alert),
+              dedupe_key: extra && extra.dedupe_key,
               auth_state: authState(),
               session_present: hasExpectedCreatorSession(),
               authenticated_user_action: Boolean(extra && extra.authenticated_user_action),
@@ -2025,15 +2035,22 @@
             const response = await originalFetch(...args);
             if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
               if (isSuppressedCreatorSettings401(response, url, args)) return response;
+              const authenticated = authenticatedUserAction(args);
               report("Admin", "Fetch " + response.status, url, {
-                authenticated_user_action: authenticatedUserAction(args),
+                authenticated_user_action: authenticated,
+                severity: severityForFetchStatus(response.status, authenticated),
                 suggested_check: "Check Creator OS API response and Vercel logs."
               });
             }
             return response;
           } catch (error) {
             if (url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
-              report("Admin", "Fetch failed", error);
+              const authenticated = authenticatedUserAction(args);
+              report("Admin", "Fetch failed", error, {
+                authenticated_user_action: authenticated,
+                severity: authenticated ? "error" : "warning",
+                suggested_check: "Check Creator OS API response and Vercel logs."
+              });
             }
             throw error;
           }
@@ -3820,6 +3837,7 @@
       if (window.creatorWatchtowerReport) {
         window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, {
           authenticated_user_action: true,
+          severity: "error",
           suggested_check: hint || "Check Creator OS admin action and Vercel logs."
         });
       }
