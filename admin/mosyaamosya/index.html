@@ -1975,6 +1975,12 @@
           !authenticatedUserAction(input) &&
           (authState() !== "authenticated" || hasExpectedCreatorSession());
       }
+      function isExpectedLockedAdminFetchNoise(url, input) {
+        return String(url || "").includes("/api/creator-") &&
+          !String(url || "").includes("/api/creator-health") &&
+          !authenticatedUserAction(input) &&
+          authState() !== "authenticated";
+      }
       function severityForFetchStatus(status, authenticated) {
         if (authenticated) return "error";
         if (Number(status) >= 500) return "error";
@@ -2039,6 +2045,7 @@
           try {
             const response = await originalFetch(...args);
             if (!response.ok && url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              if (isExpectedLockedAdminFetchNoise(url, args)) return response;
               if (isSuppressedCreatorSettings401(response, url, args)) return response;
               const authenticated = authenticatedUserAction(args);
               report("Admin", "Fetch " + response.status, url, {
@@ -2050,6 +2057,7 @@
             return response;
           } catch (error) {
             if (url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              if (isExpectedLockedAdminFetchNoise(url, args)) throw error;
               if (isExpectedCreatorSettingsAuthNoise(url, args)) throw error;
               const authenticated = authenticatedUserAction(args);
               report("Admin", "Fetch failed", error, {
