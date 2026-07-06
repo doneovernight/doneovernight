@@ -2033,6 +2033,7 @@
     let runtimePreviewHoldUntil = 0;
     let runtimeAutosaveTimer = 0;
     const mediaState = {
+      slug: currentCreatorSlug,
       avatar: {},
       hero: {},
       heroImage: {},
@@ -3348,9 +3349,17 @@
         redirect_mina_enabled: boolField("redirect_mina_enabled", true)
       };
     }
+    function resetMediaStateFromSettings(settings = {}) {
+      mediaState.slug = normalizeSlug(settings.slug || currentCreatorSlug);
+      mediaState.avatar = { url: String(settings.avatar_url || "").trim() };
+      mediaState.hero = { url: String(settings.hero_video_url || "").trim() };
+      mediaState.heroImage = { url: String(settings.hero_image_url || "").trim() };
+      mediaState.signature = { url: String(settings.intro_audio_url || "").trim() };
+    }
     function fillForm(settings) {
       const capabilities = normalizeCapabilitiesForAdmin(settings || {});
       settings = { ...(settings || {}), capabilities, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {}) };
+      resetMediaStateFromSettings(settings);
       Object.entries(settings || {}).forEach(([key, value]) => {
         const element = form.elements[key];
         if (!element || element.type === "checkbox") return;
@@ -4318,9 +4327,12 @@
       if (kind === "hero") {
         const mime = String(info.mime || "").toLowerCase();
         const ext = mediaUrlExtension(info.url);
+        if (info.fetchFailed) return { label: "Storage fetch failed", className: "warn" };
+        if (info.sizeKnown && info.size === 0) return { label: "Zero bytes", className: "warn" };
         if ((ext && ext !== "mp4") || (!ext && mime && !mime.includes("mp4"))) return { label: "Unsupported video", className: "warn" };
-        if (info.size && info.size < 1024) return { label: "Invalid video", className: "warn" };
-        if (info.unreadable) return { label: "Invalid video", className: "warn" };
+        if (info.sizeKnown && info.size < 1024) return { label: "Invalid file", className: "warn" };
+        if (info.unreadable && mime && mime.includes("mp4") && info.size && info.size >= 1024) return { label: "Unsupported codec", className: "warn" };
+        if (info.unreadable) return { label: "Metadata unreadable", className: "warn" };
         if (info.duration && info.duration > 16) return { label: "Needs Optimization", className: "warn" };
         if (info.size && info.size > 8_000_000) return { label: "Needs Optimization", className: "warn" };
         if (info.width && info.height && info.width > info.height) return { label: "Needs Optimization", className: "warn" };
@@ -4358,14 +4370,16 @@
       if (String(url).startsWith("blob:")) return {};
       try {
         const response = await fetch(url, { method: "HEAD", cache: "no-store" });
-        if (!response.ok) return {};
+        if (!response.ok) return { fetchFailed: true, fetchStatus: response.status };
+        const sizeHeader = response.headers.get("content-length");
         return {
-          size: Number(response.headers.get("content-length")) || 0,
+          size: Number(sizeHeader) || 0,
+          sizeKnown: sizeHeader !== null,
           mime: response.headers.get("content-type") || "",
           updated: response.headers.get("last-modified") || ""
         };
       } catch {
-        return {};
+        return { fetchFailed: true };
       }
     }
     function loadImageMetadata(url) {
@@ -4439,10 +4453,11 @@
       applyHealthPill("mediaOverallHealth", [avatarHealth, heroHealth, heroImageHealth, signatureHealth].some((item) => item.className === "warn") ? { label: "Needs Optimization", className: "warn" } : { label: "Ready", className: "ready" });
     }
     async function refreshMediaMetadata() {
-      const avatarUrl = String(form.elements.avatar_url?.value || mediaState.avatar?.url || "").trim();
-      const heroImageUrl = String(form.elements.hero_image_url?.value || mediaState.heroImage?.url || "").trim();
-      const heroUrl = String(form.elements.hero_video_url?.value || mediaState.hero?.url || "").trim();
-      const signatureUrl = String(form.elements.intro_audio_url?.value || mediaState.signature?.url || "").trim();
+      if (mediaState.slug !== currentCreatorSlug) resetMediaStateFromSettings({ slug: currentCreatorSlug });
+      const avatarUrl = String(form.elements.avatar_url?.value || "").trim();
+      const heroImageUrl = String(form.elements.hero_image_url?.value || "").trim();
+      const heroUrl = String(form.elements.hero_video_url?.value || "").trim();
+      const signatureUrl = String(form.elements.intro_audio_url?.value || "").trim();
       const [avatarHead, heroImageHead, heroHead, signatureHead, avatarMeta, heroImageMeta, heroMeta, signatureMeta] = await Promise.all([
         headMedia(avatarUrl),
         headMedia(heroImageUrl),
@@ -4490,8 +4505,7 @@
     }
     function openMediaPreview(kind) {
       const field = kind === "avatar" ? "avatar_url" : kind === "hero-image" ? "hero_image_url" : kind === "signature" ? "intro_audio_url" : "hero_video_url";
-      const stateKey = kind === "signature" ? "signature" : kind === "hero-image" ? "heroImage" : kind;
-      const url = String(form.elements[field]?.value || mediaState[stateKey]?.url || "").trim();
+      const url = String(form.elements[field]?.value || "").trim();
       if (!url) {
         setStatus("No media asset to preview.", true);
         return;
