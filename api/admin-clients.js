@@ -556,6 +556,7 @@ function defaultCreatorForSlug(value = DEFAULT_CREATOR_SLUG) {
     business_link_title: "Business",
     business_link_subtitle: "Partnerships and collaborations.",
     business_link_cta_label: "Contact",
+    music_link_subtitle: "Creator soundtrack",
     community_link_visible: false,
     community_link_title: "Community",
     community_link_subtitle: "Join the community.",
