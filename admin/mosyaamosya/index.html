@@ -3593,13 +3593,18 @@
       document.documentElement.style.setProperty("--admin-bg-a", vars[2]);
       document.documentElement.style.setProperty("--admin-bg-b", vars[3]);
     }
+    function creatorPublicOrigin() {
+      const host = window.location.hostname || "";
+      if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".vercel.app")) return window.location.origin;
+      return "https://doneovernight.com";
+    }
     function previewUrl() {
-      const url = new URL("https://doneovernight.com/" + currentCreatorSlug + "");
+      const url = new URL("/" + currentCreatorSlug, creatorPublicOrigin());
       url.searchParams.set("preview", "1");
       return url;
     }
     function publicExperienceUrl() {
-      const url = new URL("https://doneovernight.com/" + currentCreatorSlug);
+      const url = new URL("/" + currentCreatorSlug, creatorPublicOrigin());
       url.searchParams.set("experience", "1");
       url.searchParams.set("preview", "1");
       return url.href;
@@ -3612,7 +3617,7 @@
     function refreshPreviewLiveRuntime() {
       const frame = $("previewFrame");
       if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type: "creator-live-refresh" }, "https://doneovernight.com");
+        frame.contentWindow.postMessage({ type: "creator-live-refresh" }, creatorPublicOrigin());
       }
     }
     function updatePreviewFrame(refresh = true) {
