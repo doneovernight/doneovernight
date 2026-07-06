@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Mina Mosya | DONEOVERNIGHT Creator OS</title>
-  <meta name="description" content="Mina Mosya's premium creator hub for livestreams, community, and support.">
+  <title>Loading creator... | DONEOVERNIGHT Creator OS</title>
+  <meta name="description" content="A DONEOVERNIGHT Creator OS page.">
   <link rel="icon" href="/favicon.ico">
   <link rel="preload" as="image" href="/assets/mosyaamosya/prepare-battle-discount.png" fetchpriority="high">
   <link rel="preload" as="image" href="/assets/mosyaamosya/support-money-bag.png" fetchpriority="low">
@@ -1516,7 +1516,7 @@
     <section class="hero" id="hero">
       <div class="hero-video hero-poster" id="heroPoster" aria-hidden="true"></div>
       <div class="hero-top">
-        <a class="mini-pill" id="location" href="https://www.google.com/maps/search/?api=1&query=Chicago%2C%20IL" target="_blank" rel="noreferrer" aria-label="Open Chicago on maps">Chicago 🇺🇸</a>
+        <a class="mini-pill" id="location" href="#" aria-disabled="true" aria-label="Loading creator location">Loading</a>
         <div class="hero-actions">
           <span class="status-pill" id="statusPill"><span class="live-dot"></span><span>Loading</span></span>
         </div>
@@ -1525,26 +1525,26 @@
         <div class="identity">
           <div class="avatar is-placeholder"><img id="avatarImage" alt="" hidden></div>
           <div>
-            <h1 id="displayName">Mina Mosya</h1>
-            <div class="handle" id="handle">@mosyaamosya</div>
+            <h1 id="displayName">Loading creator...</h1>
+            <div class="handle" id="handle"></div>
           </div>
-          <p class="bio" id="bio">Daily livestreams, community, yapping, and soft chaos from Chicago.</p>
+          <p class="bio" id="bio"></p>
         </div>
-        <section class="live-card" id="liveCard">
+        <section class="live-card" id="liveCard" hidden aria-hidden="true">
           <div class="live-copy">
             <div>
-              <strong id="liveTitle">⚫ Offline</strong>
-              <span id="liveCopy">See you at the next stream.</span>
+              <strong id="liveTitle">Loading</strong>
+              <span id="liveCopy"></span>
             </div>
           </div>
-          <a class="primary" id="primaryCta" href="#" aria-disabled="true">Join Live</a>
+          <a class="primary" id="primaryCta" href="#" aria-disabled="true">Loading...</a>
           <div class="live-meta" id="liveMeta" aria-live="polite"></div>
           <div class="countdown" id="countdown"></div>
         </section>
       </div>
     </section>
 
-    <section class="button-grid" id="buttonGrid" aria-label="Mina content blocks"></section>
+    <section class="button-grid" id="buttonGrid" aria-label="Creator content blocks"></section>
 
     <nav class="footer-nav" id="footerNav" aria-label="Creator OS links">
       <a href="#privacy" data-open-sheet="privacySheet">Privacy</a>
@@ -1904,9 +1904,22 @@
       public_page_order: []
     };
     const params = new URLSearchParams(window.location.search);
+    function routeCreatorDisplayName(slug = currentCreatorSlug) {
+      const safeSlug = String(slug || "").replace(/^-+|-+$/g, "");
+      if (!safeSlug) return "Creator";
+      if (safeSlug === "mosyaamosya" || safeSlug === "mina") return "Mina Mosya";
+      return safeSlug
+        .split("-")
+        .filter(Boolean)
+        .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+        .join(" ") || "Creator";
+    }
+    function creatorDisplayName(settings = {}) {
+      return String(settings.display_name || "").trim() || routeCreatorDisplayName(settings.slug || settings.username || currentCreatorSlug);
+    }
     if (currentCreatorSlug !== "mosyaamosya") {
       fallback.id = "";
-      fallback.display_name = "Creator";
+      fallback.display_name = routeCreatorDisplayName(currentCreatorSlug);
       fallback.username = currentCreatorSlug;
       fallback.slug = currentCreatorSlug;
       fallback.bio = "";
@@ -2072,6 +2085,24 @@
       return "";
     }
     function setText(id, value) { $(id).textContent = value || ""; }
+    function applyLocationLink(settings) {
+      const link = $("location");
+      if (!link) return;
+      const location = String(settings.location || "").trim();
+      if (!location) {
+        link.href = "#";
+        link.setAttribute("aria-disabled", "true");
+        link.setAttribute("aria-label", "Creator location unavailable");
+        link.removeAttribute("target");
+        link.removeAttribute("rel");
+        return;
+      }
+      link.href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(location);
+      link.setAttribute("aria-label", "Open " + location + " on maps");
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noreferrer");
+      link.removeAttribute("aria-disabled");
+    }
     function profileImage(settings) { return safeUrl(settings.avatar_url); }
     function heroImage(settings) { return safeUrl(settings.hero_image_url); }
     function isMp4Url(value) {
@@ -2469,7 +2500,7 @@
         return;
       }
       updateDecorativePoster(settings);
-      document.title = (settings.display_name || "Mina Mosya") + " | DONEOVERNIGHT Creator OS";
+      document.title = creatorDisplayName(settings) + " | DONEOVERNIGHT Creator OS";
       const source = heroVideo(settings);
       if (source) {
         prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), source);
@@ -2639,9 +2670,9 @@
       if (!start) return null;
       const end = new Date(start.getTime() + 60 * 60 * 1000);
       const timezone = settings.timezone || fallback.timezone;
-      const title = countdownMessage(settings) || "Mina Mosya is live";
+      const title = countdownMessage(settings) || creatorDisplayName(settings) + " update";
       const pageUrl = "https://doneovernight.com/" + currentCreatorSlug + "";
-      const description = "Join Mina’s livestream: " + pageUrl;
+      const description = "Open " + creatorDisplayName(settings) + " on Creator OS: " + pageUrl;
       return [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
@@ -2680,7 +2711,7 @@
         URL.revokeObjectURL(url);
         link.remove();
       }, 800);
-      trackCreatorEvent("countdown_calendar_click", { block_key: "countdown", block_title: countdownMessage(settings) || "Mina Mosya is live" });
+      trackCreatorEvent("countdown_calendar_click", { block_key: "countdown", block_title: countdownMessage(settings) || creatorDisplayName(settings) + " update" });
       return true;
     }
     function countdownMarkup(settings, date) {
@@ -2693,7 +2724,7 @@
       if (!element) return;
       element.setAttribute("role", "button");
       element.setAttribute("tabindex", "0");
-      element.setAttribute("aria-label", "Add Mina's next stream to calendar");
+      element.setAttribute("aria-label", "Add " + creatorDisplayName(settings) + " reminder to calendar");
       element.onclick = (event) => {
         event.preventDefault();
         downloadCountdownCalendar(settings);
@@ -2792,7 +2823,7 @@
       } else if (hasRealViewerCount) {
         setText("liveCopy", Number(liveState.viewerCount).toLocaleString() + " watching");
       } else {
-        setText("liveCopy", displayLive ? "" : (loadingStatus ? "" : (unknownStatus ? "Watch Mina on TikTok." : "Live soon")));
+        setText("liveCopy", displayLive ? "" : (loadingStatus ? "" : (unknownStatus ? "Watch on TikTok." : "Live soon")));
       }
       setLiveMeta([
         hasRealLikeCount && confirmed ? compactNumber(liveState.likeCount) + " likes" : "",
@@ -3710,7 +3741,7 @@
         { key: "prepare", visible: battleCapabilityOn(settings) && featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
         { key: "support", visible: capabilityOn(settings, "support") && featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
         { key: "business", visible: capabilityOn(settings, "business") && featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
-        { key: "music", visible: capabilityOn(settings, "music") && featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
+        { key: "music", visible: capabilityOn(settings, "music") && featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Creator soundtrack"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).filter((link) => customLinkCapabilityVisible(settings, link)).map((link) => ({
         key: customPageBlockKey(link),
         visible: true,
@@ -3941,7 +3972,7 @@
       if (!featureOn(settings, "share_link_visible", true)) return;
       const heroActions = document.querySelector(".hero-actions");
       if (!heroActions) return;
-      const shareDisplayName = settings.display_name || "Mina Mosya";
+      const shareDisplayName = creatorDisplayName(settings);
       const trigger = document.createElement("button");
       trigger.className = "mini-pill share-trigger";
       trigger.id = "shareButton";
@@ -3996,19 +4027,19 @@
       if (communityEnabled(settings)) {
         shareItems.splice(4, 0, [
           textSetting(settings, "community_link_title", "Community"),
-          textSetting(settings, "community_link_subtitle", "Open Mina's community"),
+          textSetting(settings, "community_link_subtitle", "Open the creator community"),
           communityUrl(settings)
         ]);
       }
       if (discordEnabled(settings)) {
         shareItems.splice(4, 0, [
           textSetting(settings, "discord_link_title", "Discord"),
-          textSetting(settings, "discord_link_subtitle", "Open Mina's Discord"),
+          textSetting(settings, "discord_link_subtitle", "Open Discord"),
           safeUrl(settings.discord_invite_url || settings.discord_url)
         ]);
       }
       if (featureOn(settings, "music_link_visible", false) && externalUrl(settings.music_url)) {
-        shareItems.push(["Music", textSetting(settings, "music_link_subtitle", "Mina's current sound"), externalUrl(settings.music_url)]);
+        shareItems.push(["Music", textSetting(settings, "music_link_subtitle", "Creator soundtrack"), externalUrl(settings.music_url)]);
       }
       if (navigator.share) {
         shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
@@ -4493,7 +4524,7 @@
       sheet.id = "passportSheet";
       sheet.setAttribute("aria-label", "Creator Passport");
       sheet.setAttribute("aria-hidden", "true");
-      const displayName = escapeHtml(settings.display_name || "Mina Mosya");
+      const displayName = escapeHtml(creatorDisplayName(settings));
       const dna = escapeHtml(String(settings.creator_dna || "streamer").replace(/^\w/, (letter) => letter.toUpperCase()));
       const timezone = escapeHtml((settings.timezone || fallback.timezone).replace("America/", ""));
       sheet.innerHTML =
@@ -4575,10 +4606,11 @@
       document.body.classList.toggle("is-live", capabilityOn(settings, "live") && Boolean(settings.live_status));
       applyTheme(settings);
       applyAmbient(settings);
-      setText("displayName", settings.display_name || "Mina Mosya");
-      setText("handle", "@" + (settings.username || settings.slug || "mosyaamosya"));
+      setText("displayName", creatorDisplayName(settings));
+      setText("handle", "@" + (settings.username || settings.slug || currentCreatorSlug));
       setText("bio", settings.bio || fallback.bio);
       setText("location", settings.location || fallback.location);
+      applyLocationLink(settings);
       renderIntroCopy(settings);
       const reportMailLink = $("reportMailLink");
       if (reportMailLink) {
@@ -4590,7 +4622,7 @@
       if (avatarUrl) {
         avatarImage.hidden = false;
         avatarImage.src = avatarUrl;
-        avatarImage.alt = (settings.display_name || "Mina Mosya") + " profile photo";
+        avatarImage.alt = creatorDisplayName(settings) + " profile photo";
       } else {
         avatarImage.hidden = true;
         avatarImage.removeAttribute("src");
@@ -4664,7 +4696,7 @@
       renderCreatorMediaDebug(settings, settings.__creator_server_media_debug || null);
       if (!pageViewTracked) {
         pageViewTracked = true;
-        trackCreatorEvent("page_view", { block_key: "page", block_title: settings.display_name || "Mina Mosya" });
+        trackCreatorEvent("page_view", { block_key: "page", block_title: creatorDisplayName(settings) });
       }
     }
 

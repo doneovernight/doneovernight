@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Creator OS</title>
+  <title>Creator Access</title>
   <meta name="robots" content="noindex">
   <link rel="icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1086,7 +1086,7 @@
   <div class="gate" id="gate">
     <form class="gate-card" id="loginForm" data-unlock-state="idle">
       <div class="eyebrow">CREATOR ACCESS</div>
-      <h1 id="gateCreatorName">Creator OS</h1>
+      <h1 id="gateCreatorName">Creator Access</h1>
       <p class="muted">Enter your creator password.</p>
       <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
       <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
@@ -1110,7 +1110,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <h1 id="adminCreatorName">Creator OS</h1>
+        <h1 id="adminCreatorName">Creator Access</h1>
       </div>
       <div class="actions">
         <a class="button" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Experience My Page</a>
@@ -1813,7 +1813,7 @@
         <section class="panel tab-panel" data-admin-panel="experience" hidden>
           <h2>Ambient mode</h2>
           <div class="fields">
-            <label class="span-2">Timezone<input name="timezone" placeholder="America/Chicago"></label>
+            <label class="span-2">Timezone<input name="timezone" placeholder="Creator timezone"></label>
             <div class="span-2 switch-row">
               <div><strong>Ambient mode enabled</strong><span>Adapts atmosphere to the creator's local time.</span></div>
               <label class="switch" aria-label="Ambient mode enabled"><input name="ambient_mode_enabled" type="checkbox"><span class="track"></span></label>
@@ -1966,6 +1966,21 @@
 
   <script>
     const currentCreatorSlug = String(window.__creatorSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
+    function routeAdminDisplayName(slug = currentCreatorSlug) {
+      const safeSlug = String(slug || "").replace(/^-+|-+$/g, "");
+      if (!safeSlug || safeSlug === "mosyaamosya" || safeSlug === "mina") return "Creator Access";
+      return safeSlug
+        .split("-")
+        .filter(Boolean)
+        .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+        .join(" ") || "Creator Access";
+    }
+    const initialAdminDisplayName = routeAdminDisplayName(currentCreatorSlug);
+    document.title = initialAdminDisplayName;
+    ["gateCreatorName", "adminCreatorName"].forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = initialAdminDisplayName;
+    });
     const capabilityEngine = window.CreatorCapabilities || null;
     const capabilityRegistry = capabilityEngine ? capabilityEngine.registry : [];
     const sessionFlag = "doneovernight_creator_" + currentCreatorSlug;
@@ -2011,7 +2026,7 @@
       ? capabilityEngine.normalizeCapabilities({ creator_dna: "blank" })
       : {};
     let currentAdminSettings = {
-      display_name: "Creator",
+      display_name: initialAdminDisplayName,
       username: currentCreatorSlug,
       slug: currentCreatorSlug,
       capabilities: initialCapabilities,
@@ -3328,7 +3343,7 @@
         creator_dna: activeDna,
         background_gradient: String(data.get("background_gradient") || "").trim(),
         ambient_mode_enabled: boolField("ambient_mode_enabled", true),
-        timezone: String(data.get("timezone") || "").trim() || "America/Chicago",
+        timezone: String(data.get("timezone") || "").trim() || currentAdminSettings.timezone || "UTC",
         seasonal_effects_enabled: boolField("seasonal_effects_enabled", true),
         holiday_effects_enabled: boolField("holiday_effects_enabled", true),
         discord_invite_url: String(data.get("discord_invite_url") || "").trim(),
@@ -3385,9 +3400,9 @@
       writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
-      document.title = settings.display_name || currentAdminSettings.display_name || "Creator OS";
-      setText("gateCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
-      setText("adminCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
+      document.title = settings.display_name || currentAdminSettings.display_name || initialAdminDisplayName;
+      setText("gateCreatorName", settings.display_name || currentAdminSettings.display_name || initialAdminDisplayName);
+      setText("adminCreatorName", settings.display_name || currentAdminSettings.display_name || initialAdminDisplayName);
       currentAdminSettings = { ...currentAdminSettings, ...settings };
       renderCreatorFeatures(currentAdminSettings);
       applyAdminCapabilityGates(currentAdminSettings);
@@ -4096,9 +4111,9 @@
         const settings = { ...data.creator, capabilities, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {}) };
         currentAdminSettings = { ...currentAdminSettings, ...settings };
         activeDna = settings.creator_dna || activeDna;
-        document.title = settings.display_name || currentAdminSettings.display_name || "Creator OS";
-        setText("gateCreatorName", settings.display_name || "Creator");
-        setText("adminCreatorName", settings.display_name || "Creator");
+        document.title = settings.display_name || currentAdminSettings.display_name || initialAdminDisplayName;
+        setText("gateCreatorName", settings.display_name || initialAdminDisplayName);
+        setText("adminCreatorName", settings.display_name || initialAdminDisplayName);
         renderCreatorFeatures(currentAdminSettings);
         applyAdminCapabilityGates(currentAdminSettings);
       } catch (error) {
