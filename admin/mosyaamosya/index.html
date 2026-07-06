@@ -1970,6 +1970,11 @@
           isCreatorSettingsUrl(url) &&
           !authenticatedUserAction(input);
       }
+      function isExpectedCreatorSettingsAuthNoise(url, input) {
+        return isCreatorSettingsUrl(url) &&
+          !authenticatedUserAction(input) &&
+          (authState() !== "authenticated" || hasExpectedCreatorSession());
+      }
       function severityForFetchStatus(status, authenticated) {
         if (authenticated) return "error";
         if (Number(status) >= 500) return "error";
@@ -2045,6 +2050,7 @@
             return response;
           } catch (error) {
             if (url.includes("/api/creator-") && !url.includes("/api/creator-health")) {
+              if (isExpectedCreatorSettingsAuthNoise(url, args)) throw error;
               const authenticated = authenticatedUserAction(args);
               report("Admin", "Fetch failed", error, {
                 authenticated_user_action: authenticated,
