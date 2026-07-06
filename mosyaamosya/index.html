@@ -1576,11 +1576,11 @@
         <button class="icon-button" type="button" data-close-sheet="privacySheet" aria-label="Close privacy">&times;</button>
       </div>
       <div class="sheet-copy">
-        <p>This page is designed to keep Mina's creator experience focused and lightweight.</p>
+        <p>This page is designed to keep the creator experience focused and lightweight.</p>
         <ul class="sheet-list">
           <li>Creator links open directly to the services shown.</li>
           <li>Poll votes are stored as aggregate responses with a browser/device dedupe signal.</li>
-          <li>Newsletter interactions store the email you enter and the creator page source for Mina's private admin inbox.</li>
+          <li>Newsletter interactions store the email you enter and the creator page source for the creator's private admin inbox.</li>
           <li>Live metadata is only shown when confirmed by Creator OS runtime capabilities.</li>
         </ul>
       </div>
@@ -1596,7 +1596,7 @@
       </div>
       <div class="sheet-copy">
         <p>Reports are reviewed by DONEOVERNIGHT. Include the creator URL and a short description of the issue.</p>
-        <p><a href="mailto:support@doneovernight.com?subject=Report%20Creator%20OS%20page%20-%20Mina%20Mosya">support@doneovernight.com</a></p>
+        <p><a id="reportMailLink" href="mailto:support@doneovernight.com?subject=Report%20Creator%20OS%20page">support@doneovernight.com</a></p>
       </div>
     </div>
   </section>
@@ -1609,7 +1609,7 @@
         <button class="icon-button" type="button" data-close-sheet="aboutCreatorOsSheet" aria-label="Close About Creator OS">&times;</button>
       </div>
       <div class="sheet-copy">
-        <p>Creator OS is a premium operating layer for creators: profile, live runtime, community, support, and newsletter.</p>
+        <p>Creator OS is a premium operating layer for creators, powered by enabled features like profile, updates, community, support, and newsletter.</p>
         <p>The creator stays first. The system appears only when a visitor asks for it.</p>
       </div>
     </div>
@@ -1630,12 +1630,12 @@
   <section class="intro" id="intro" aria-label="Welcome intro">
     <div class="intro-poster" id="introPoster" aria-hidden="true"></div>
     <div class="intro-copy">
-      <span>Welcome.</span>
-      <span>Meet Mina.</span>
-      <span>Chicago.</span>
-      <span>Daily livestreams.</span>
-      <span>Community.</span>
-      <span>Yapping.</span>
+      <span id="introLineWelcome">Welcome.</span>
+      <span id="introLineName">Meet the creator.</span>
+      <span id="introLineLocation">Creator OS.</span>
+      <span id="introLineBio">Tap in.</span>
+      <span id="introLineFeatureOne">Updates.</span>
+      <span id="introLineFeatureTwo">Community.</span>
       <small>Tap anywhere to enter.</small>
     </div>
   </section>
@@ -3667,6 +3667,7 @@
 
     function customLinkCapabilityVisible(settings, link) {
       const id = String(link && link.id || "").toLowerCase();
+      if (id.includes("pretty-girls-like-trap-music") || id.includes("pgltm") || id.includes("nightlife")) return capabilityOn(settings, "events");
       if (id.includes("event")) return capabilityOn(settings, "events");
       if (id.includes("portfolio") || id.includes("work")) return capabilityOn(settings, "portfolio");
       if (id.includes("business") || id.includes("collab") || id.includes("contact")) return capabilityOn(settings, "business");
@@ -3679,6 +3680,26 @@
       if (id.includes("testimonial") || id.includes("review")) return capabilityOn(settings, "testimonials");
       if (id.includes("wishlist")) return capabilityOn(settings, "wishlist");
       return true;
+    }
+
+    function introFeatureLabels(settings) {
+      if (capabilityOn(settings, "live") || capabilityOn(settings, "battle")) return ["Daily livestreams.", "Community."];
+      if (capabilityOn(settings, "events") || capabilityOn(settings, "portfolio")) return ["Culture.", "Studio notes."];
+      if (capabilityOn(settings, "shop")) return ["Favorites.", "Resources."];
+      return ["Updates.", "Community."];
+    }
+
+    function renderIntroCopy(settings) {
+      const displayName = settings.display_name || "the creator";
+      const location = settings.location || "Creator OS";
+      const bioParts = String(settings.bio || "").split(/[,.]/).map((part) => part.trim()).filter(Boolean);
+      const features = introFeatureLabels(settings);
+      setText("introLineWelcome", "Welcome.");
+      setText("introLineName", "Meet " + displayName + ".");
+      setText("introLineLocation", location.endsWith(".") ? location : location + ".");
+      setText("introLineBio", (bioParts[0] || "Tap in") + ".");
+      setText("introLineFeatureOne", features[0]);
+      setText("introLineFeatureTwo", features[1]);
     }
 
     function pageActionDefinitions(settings) {
@@ -4558,6 +4579,11 @@
       setText("handle", "@" + (settings.username || settings.slug || "mosyaamosya"));
       setText("bio", settings.bio || fallback.bio);
       setText("location", settings.location || fallback.location);
+      renderIntroCopy(settings);
+      const reportMailLink = $("reportMailLink");
+      if (reportMailLink) {
+        reportMailLink.href = "mailto:support@doneovernight.com?subject=" + encodeURIComponent("Report Creator OS page - " + (settings.display_name || settings.slug || "creator"));
+      }
       const avatarUrl = profileImage(settings);
       const avatarImage = $("avatarImage");
       const avatarFrame = avatarImage && avatarImage.closest(".avatar");
