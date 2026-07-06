@@ -1067,7 +1067,7 @@
   <div class="gate" id="gate">
     <form class="gate-card" id="loginForm" data-unlock-state="idle">
       <div class="eyebrow">CREATOR ACCESS</div>
-      <h1>Mina Mosya</h1>
+      <h1 id="gateCreatorName">Mina Mosya</h1>
       <p class="muted">Enter your creator password.</p>
       <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
       <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
@@ -1091,7 +1091,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <h1>Mina Mosya</h1>
+        <h1 id="adminCreatorName">Mina Mosya</h1>
       </div>
       <div class="actions">
         <a class="button" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Experience My Page</a>
@@ -3214,6 +3214,9 @@
       writePollOptions(settings.poll_options || ["Yes", "No"]);
       activeTheme = settings.theme_preset || "mina";
       activeDna = settings.creator_dna || "streamer";
+      document.title = settings.display_name || "Mina Mosya";
+      setText("gateCreatorName", settings.display_name || "Mina Mosya");
+      setText("adminCreatorName", settings.display_name || "Mina Mosya");
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroImagePreview").src = settings.hero_image_url || "";
       $("heroPreview").src = settings.hero_video_url || "";

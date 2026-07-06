@@ -2414,6 +2414,7 @@
         return;
       }
       updateDecorativePoster(settings);
+      document.title = (settings.display_name || "Mina Mosya") + " | DONEOVERNIGHT Creator OS";
       const source = heroVideo(settings);
       if (source) {
         prepareMutedLoopVideo(ensureDecorativeVideo("heroVideo", "hero-video", "heroPoster", "hero"), source);
@@ -3781,29 +3782,31 @@
       if (!featureOn(settings, "share_link_visible", true)) return;
       const heroActions = document.querySelector(".hero-actions");
       if (!heroActions) return;
+      const shareDisplayName = settings.display_name || "Mina Mosya";
       const trigger = document.createElement("button");
       trigger.className = "mini-pill share-trigger";
       trigger.id = "shareButton";
       trigger.type = "button";
-      trigger.setAttribute("aria-label", "Share Mina");
+      trigger.setAttribute("aria-label", "Share " + shareDisplayName);
       trigger.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.6 6.8-4.2"/><path d="m8.6 13.4 6.8 4.2"/></svg>';
       heroActions.appendChild(trigger);
 
       const sheet = document.createElement("section");
       sheet.className = "sheet";
       sheet.id = "shareSheet";
-      sheet.setAttribute("aria-label", "Share Mina Mosya");
+      sheet.setAttribute("aria-label", "Share " + shareDisplayName);
       sheet.setAttribute("aria-hidden", "true");
       sheet.innerHTML =
         '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">' +
-        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="shareTitle">Share Mina</strong><span>Creator card and quick links</span></div>' +
+        '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="shareTitle">Share</strong><span>Creator card and quick links</span></div>' +
         '<button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button></div>' +
         '<div class="creator-share-card"><img id="shareAvatar" alt="" hidden><div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div></div>' +
         '<div class="share-grid" id="shareGrid"></div></div>';
       document.body.insertBefore(sheet, $("privacySheet"));
 
       const pageUrl = "https://doneovernight.com/" + (settings.slug || "mosyaamosya");
-      $("shareName").textContent = settings.display_name || "Mina Mosya";
+      $("shareTitle").textContent = "Share " + shareDisplayName;
+      $("shareName").textContent = shareDisplayName;
       $("shareHandle").textContent = "@" + (settings.username || settings.slug || "mosyaamosya");
       const shareAvatarUrl = profileImage(settings);
       if (shareAvatarUrl) {
@@ -3813,11 +3816,11 @@
         $("shareAvatar").hidden = true;
         $("shareAvatar").removeAttribute("src");
       }
-      const text = "Meet " + (settings.display_name || "Mina Mosya") + " on DONEOVERNIGHT Creator OS";
+      const text = "Meet " + shareDisplayName + " on DONEOVERNIGHT Creator OS";
       const encodedUrl = encodeURIComponent(pageUrl);
       const encodedText = encodeURIComponent(text + " " + pageUrl);
       const shareItems = [
-        ["Copy Link", "Save Mina's Creator OS URL", "#", async (event) => {
+        ["Copy Link", "Save " + shareDisplayName + "'s Creator OS URL", "#", async (event) => {
           event.preventDefault();
           try {
             await navigator.clipboard.writeText(pageUrl);
@@ -3829,7 +3832,7 @@
         ["WhatsApp", "Send to a chat", "https://wa.me/?text=" + encodedText],
         ["Messages", "Open SMS", "sms:?&body=" + encodedText],
         ["Instagram", "Open Instagram", "https://www.instagram.com/direct/inbox/"],
-        ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent("Mina Mosya") + "&body=" + encodedText]
+        ["Mail", "Send by email", "mailto:?subject=" + encodeURIComponent(shareDisplayName) + "&body=" + encodedText]
       ];
       if (communityEnabled(settings)) {
         shareItems.splice(4, 0, [
@@ -3851,7 +3854,7 @@
       if (navigator.share) {
         shareItems.unshift(["Native Share", "Use your device share sheet", "#", async (event) => {
           event.preventDefault();
-          await navigator.share({ title: "Mina Mosya", text, url: pageUrl }).catch(() => {});
+          await navigator.share({ title: shareDisplayName, text, url: pageUrl }).catch(() => {});
         }]);
       }
       const grid = $("shareGrid");
