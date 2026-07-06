@@ -959,13 +959,13 @@ function normalizeUsername(value) {
 }
 
 function normalizeTheme(value) {
-  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder"]);
+  const allowed = new Set(["mina", "rose", "chocolate", "onyx", "ocean", "matcha", "solar", "violet", "neon", "founder", "editorial"]);
   const preset = clean(value || DEFAULT_MINA_SETTINGS.theme_preset).toLowerCase();
   return allowed.has(preset) ? preset : DEFAULT_MINA_SETTINGS.theme_preset;
 }
 
 function normalizeCreatorDna(value) {
-  const allowed = new Set(["artist", "streamer", "influencer", "founder", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
+  const allowed = new Set(["artist", "streamer", "influencer", "founder", "editorial", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
   const dna = clean(value || DEFAULT_MINA_SETTINGS.creator_dna).toLowerCase();
   return allowed.has(dna) ? dna : DEFAULT_MINA_SETTINGS.creator_dna;
 }

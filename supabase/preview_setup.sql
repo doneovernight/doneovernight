@@ -5,6 +5,11 @@
 --   username: preview-creator
 --   display_name: Preview Creator
 -- Test-only creator password: previewpreview
+-- Preview-only creative founder test creator:
+--   slug: lara
+--   username: larajadev
+--   display_name: Lara Jade
+-- Test-only Lara password: laralara
 
 create extension if not exists pgcrypto;
 
@@ -427,6 +432,226 @@ insert into public.creator_auth (
   password_hash = excluded.password_hash,
   updated_at = now();
 
+insert into public.creators (
+  display_name,
+  username,
+  slug,
+  bio,
+  location,
+  timezone,
+  avatar_url,
+  banner_url,
+  hero_image_url,
+  hero_video_url,
+  instagram_url,
+  business_email,
+  live_url,
+  live_status,
+  live_button_text,
+  theme_preset,
+  creator_dna,
+  tiktok_live_username,
+  auto_live_detection_enabled,
+  manual_live_fallback_enabled,
+  community_state,
+  quick_announcement,
+  faq_visible,
+  discord_visible,
+  creator_passport_visible,
+  discord_link_visible,
+  tiktok_link_visible,
+  battle_link_visible,
+  support_link_visible,
+  business_link_visible,
+  music_link_visible,
+  faq_link_visible,
+  community_link_visible,
+  share_link_visible,
+  subscribe_popup_enabled,
+  subscribe_popup_title,
+  subscribe_popup_copy,
+  newsletter_cta_label,
+  newsletter_destination,
+  custom_links,
+  public_page_order,
+  updated_at
+) values (
+  'Lara Jade',
+  'larajadev',
+  'lara',
+  'Creative founder, culture builder, and curator.',
+  'Amsterdam',
+  'Europe/Amsterdam',
+  '',
+  '',
+  '',
+  '',
+  'https://www.instagram.com/larajadev/',
+  '',
+  '',
+  false,
+  'Explore',
+  'editorial',
+  'editorial',
+  'larajadev',
+  false,
+  true,
+  'hidden',
+  '',
+  false,
+  false,
+  true,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  true,
+  'Studio Notes',
+  'Dispatches from the brands, rooms, and ideas Lara is building.',
+  'Join Newsletter',
+  '',
+  '[
+    {
+      "id": "currently-building",
+      "visible": true,
+      "title": "Currently Building",
+      "subtitle": "Pretty Girl World, Pretty Girls Like Trap Music, Provoke Labs.",
+      "cta_label": "Explore",
+      "url": "https://prettygirlworld.nl"
+    },
+    {
+      "id": "pretty-girl-world",
+      "visible": true,
+      "title": "Pretty Girl World",
+      "subtitle": "The women-centered playground for culture and change.",
+      "cta_label": "Enter World",
+      "url": "https://prettygirlworld.nl"
+    },
+    {
+      "id": "pretty-girls-like-trap-music",
+      "visible": true,
+      "title": "Pretty Girls Like Trap Music",
+      "subtitle": "Events, nightlife, and cultural moments.",
+      "cta_label": "View Events",
+      "url": "https://linktr.ee/pgltm"
+    },
+    {
+      "id": "provoke-labs",
+      "visible": true,
+      "title": "Provoke Labs",
+      "subtitle": "Creative research lab and production studio.",
+      "cta_label": "Visit Studio",
+      "url": "https://www.provokelabs.com"
+    },
+    {
+      "id": "events",
+      "visible": true,
+      "title": "Events",
+      "subtitle": "Nightlife, rooms, and cultural moments.",
+      "cta_label": "View Events",
+      "url": "https://linktr.ee/pgltm"
+    },
+    {
+      "id": "portfolio-work",
+      "visible": true,
+      "title": "Portfolio / Work",
+      "subtitle": "Creative direction, campaigns, and cultural production.",
+      "cta_label": "View Work",
+      "url": "https://www.provokelabs.com"
+    },
+    {
+      "id": "business-collaborations",
+      "visible": true,
+      "title": "Business / Collaborations",
+      "subtitle": "Partnerships, creative direction, campaigns, and collaborations.",
+      "cta_label": "Work With Me",
+      "url": "https://www.instagram.com/larajadev/"
+    },
+    {
+      "id": "instagram",
+      "visible": true,
+      "title": "Instagram",
+      "subtitle": "@larajadev",
+      "cta_label": "Follow",
+      "url": "https://www.instagram.com/larajadev/"
+    },
+    {
+      "id": "contact",
+      "visible": true,
+      "title": "Contact",
+      "subtitle": "Brand, press, and creative inquiries.",
+      "cta_label": "Contact",
+      "url": "https://www.instagram.com/larajadev/"
+    }
+  ]'::jsonb,
+  '[
+    "hero",
+    "custom:currently-building",
+    "custom:pretty-girl-world",
+    "custom:pretty-girls-like-trap-music",
+    "custom:provoke-labs",
+    "custom:events",
+    "custom:portfolio-work",
+    "newsletter",
+    "custom:business-collaborations",
+    "custom:instagram",
+    "custom:contact",
+    "share"
+  ]'::jsonb,
+  now()
+) on conflict (slug) do update set
+  display_name = excluded.display_name,
+  username = excluded.username,
+  bio = excluded.bio,
+  location = excluded.location,
+  timezone = excluded.timezone,
+  instagram_url = excluded.instagram_url,
+  live_status = excluded.live_status,
+  live_button_text = excluded.live_button_text,
+  theme_preset = excluded.theme_preset,
+  creator_dna = excluded.creator_dna,
+  tiktok_live_username = excluded.tiktok_live_username,
+  auto_live_detection_enabled = excluded.auto_live_detection_enabled,
+  manual_live_fallback_enabled = excluded.manual_live_fallback_enabled,
+  community_state = excluded.community_state,
+  faq_visible = excluded.faq_visible,
+  discord_visible = excluded.discord_visible,
+  creator_passport_visible = excluded.creator_passport_visible,
+  discord_link_visible = excluded.discord_link_visible,
+  tiktok_link_visible = excluded.tiktok_link_visible,
+  battle_link_visible = excluded.battle_link_visible,
+  support_link_visible = excluded.support_link_visible,
+  business_link_visible = excluded.business_link_visible,
+  music_link_visible = excluded.music_link_visible,
+  faq_link_visible = excluded.faq_link_visible,
+  community_link_visible = excluded.community_link_visible,
+  share_link_visible = excluded.share_link_visible,
+  subscribe_popup_enabled = excluded.subscribe_popup_enabled,
+  subscribe_popup_title = excluded.subscribe_popup_title,
+  subscribe_popup_copy = excluded.subscribe_popup_copy,
+  newsletter_cta_label = excluded.newsletter_cta_label,
+  newsletter_destination = excluded.newsletter_destination,
+  custom_links = excluded.custom_links,
+  public_page_order = excluded.public_page_order,
+  updated_at = now();
+
+insert into public.creator_auth (
+  creator_id,
+  password_hash,
+  updated_at
+) values (
+  (select id from public.creators where slug = 'lara'),
+  'pbkdf2_sha256$120000$lara_preview_seed$mo_gvgkib2T9KAmVgyAx_i4so6t87At9rJzTQvSIvJM',
+  now()
+) on conflict (creator_id) do update set
+  password_hash = excluded.password_hash,
+  updated_at = now();
+
 insert into public.creator_live_runtime (
   creator_slug,
   creator_id,
@@ -443,6 +668,42 @@ insert into public.creator_live_runtime (
   'preview-creator',
   (select id from public.creators where slug = 'preview-creator'),
   'preview-creator',
+  false,
+  true,
+  'preview',
+  'preview',
+  now(),
+  false,
+  now() + interval '75 seconds',
+  now()
+) on conflict (creator_slug) do update set
+  creator_id = excluded.creator_id,
+  username = excluded.username,
+  is_live = excluded.is_live,
+  confirmed = excluded.confirmed,
+  confidence = excluded.confidence,
+  source = excluded.source,
+  checked_at = now(),
+  stale = false,
+  stale_after = now() + interval '75 seconds',
+  updated_at = now();
+
+insert into public.creator_live_runtime (
+  creator_slug,
+  creator_id,
+  username,
+  is_live,
+  confirmed,
+  confidence,
+  source,
+  checked_at,
+  stale,
+  stale_after,
+  updated_at
+) values (
+  'lara',
+  (select id from public.creators where slug = 'lara'),
+  'larajadev',
   false,
   true,
   'preview',
