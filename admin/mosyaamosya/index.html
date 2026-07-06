@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Creator Access</title>
+  <title>Creator OS</title>
   <meta name="robots" content="noindex">
   <link rel="icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1086,7 +1086,7 @@
   <div class="gate" id="gate">
     <form class="gate-card" id="loginForm" data-unlock-state="idle">
       <div class="eyebrow">CREATOR ACCESS</div>
-      <h1 id="gateCreatorName">Creator Access</h1>
+      <h1 id="gateCreatorName">Creator OS</h1>
       <p class="muted">Enter your creator password.</p>
       <label>Password<input id="creatorPassword" type="password" autocomplete="current-password" required></label>
       <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
@@ -1110,7 +1110,7 @@
   <main class="shell" id="app" hidden>
     <header class="topbar">
       <div class="brand">
-        <h1 id="adminCreatorName">Creator Access</h1>
+        <h1 id="adminCreatorName">Creator OS</h1>
       </div>
       <div class="actions">
         <a class="button" href="#" data-public-page-link="experience" target="_blank" rel="noreferrer">Experience My Page</a>
@@ -1966,16 +1966,7 @@
 
   <script>
     const currentCreatorSlug = String(window.__creatorSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
-    function routeAdminDisplayName(slug = currentCreatorSlug) {
-      const safeSlug = String(slug || "").replace(/^-+|-+$/g, "");
-      if (!safeSlug || safeSlug === "mosyaamosya" || safeSlug === "mina") return "Creator Access";
-      return safeSlug
-        .split("-")
-        .filter(Boolean)
-        .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-        .join(" ") || "Creator Access";
-    }
-    const initialAdminDisplayName = routeAdminDisplayName(currentCreatorSlug);
+    const initialAdminDisplayName = "Creator OS";
     document.title = initialAdminDisplayName;
     ["gateCreatorName", "adminCreatorName"].forEach((id) => {
       const element = document.getElementById(id);
