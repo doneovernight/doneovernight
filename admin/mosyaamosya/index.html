@@ -3356,6 +3356,21 @@
       mediaState.heroImage = { url: String(settings.hero_image_url || "").trim() };
       mediaState.signature = { url: String(settings.intro_audio_url || "").trim() };
     }
+    function setImagePreviewSource(image, url) {
+      if (!image) return;
+      if (url) image.src = url;
+      else image.removeAttribute("src");
+    }
+    function setVideoPreviewSource(video, url) {
+      if (!video) return;
+      if (url) {
+        video.src = url;
+      } else {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    }
     function fillForm(settings) {
       const capabilities = normalizeCapabilitiesForAdmin(settings || {});
       settings = { ...(settings || {}), capabilities, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {}) };
@@ -3407,9 +3422,9 @@
       renderCreatorFeatures(currentAdminSettings);
       applyAdminCapabilityGates(currentAdminSettings);
       writePreviewDraft();
-      $("avatarPreview").src = settings.avatar_url || "";
-      $("heroImagePreview").src = settings.hero_image_url || "";
-      $("heroPreview").src = settings.hero_video_url || "";
+      setImagePreviewSource($("avatarPreview"), settings.avatar_url || "");
+      setImagePreviewSource($("heroImagePreview"), settings.hero_image_url || "");
+      setVideoPreviewSource($("heroPreview"), settings.hero_video_url || "");
       setIntroAudioPreview(settings.intro_audio_url || "", { loadingMessage: "Loading saved audio preview..." });
       refreshMediaMetadata();
       renderThemes();
