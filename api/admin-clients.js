@@ -1605,17 +1605,18 @@ async function fetchCreator(slug = DEFAULT_CREATOR_SLUG) {
 
 function creatorSurface(input = {}) {
   const value = clean(input.surface || input.creator_surface || input.creatorSurface).toLowerCase();
+  const tiktokFlag = clean(input.tiktok_in_app || input.tiktokInApp || input.tiktok).toLowerCase();
+  if (["1", "true", "yes", "tiktok", "tiktok_in_app"].includes(tiktokFlag)) return "tiktok";
   return value === "tiktok" || value === "tiktok_in_app" ? "tiktok" : "web";
 }
 
 function sanitizeCreatorForSurface(creator = {}, surface = "web") {
   const safeCreator = normalizeCreator(creator);
   if (surface !== "tiktok") return safeCreator;
-  return {
-    ...safeCreator,
-    hero_video_url: "",
-    banner_url: ""
-  };
+  const tiktokCreator = { ...safeCreator };
+  delete tiktokCreator.hero_video_url;
+  delete tiktokCreator.banner_url;
+  return tiktokCreator;
 }
 
 function creatorPayload(input = {}) {
