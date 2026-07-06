@@ -1037,7 +1037,16 @@ update public.creators
        portfolio_enabled = true,
        support_enabled = false,
        community_enabled = false,
-       newsletter_enabled = true
+       newsletter_enabled = true,
+       tiktok_welcome_title = 'Open in browser',
+       tiktok_welcome_message = 'For the best experience, please open this page in your browser.' || E'\n\n' || 'Tap the ⋯ in the top-right corner and choose Open in browser.',
+       tiktok_welcome_primary_label = 'Continue in TikTok',
+       tiktok_welcome_secondary_label = 'Continue in TikTok',
+       tiktok_welcome_gate_title = 'Open in browser',
+       tiktok_welcome_gate_message = 'For the best experience, please open this page in your browser.' || E'\n\n' || 'Tap the ⋯ in the top-right corner and choose Open in browser.',
+       tiktok_welcome_gate_primary_label = 'Continue in TikTok',
+       tiktok_welcome_gate_secondary_label = 'Continue in TikTok',
+       tiktok_welcome_gate_copy_label = 'Copy Link'
  where slug = 'lara';
 
 insert into public.creator_live_runtime (

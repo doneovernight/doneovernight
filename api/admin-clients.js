@@ -442,6 +442,20 @@ const DEFAULT_MINA_SETTINGS = {
   updated_at: new Date(0).toISOString()
 };
 
+const DEFAULT_CREATOR_TIKTOK_WELCOME = {
+  tiktok_welcome_enabled: true,
+  tiktok_welcome_title: "Open in browser",
+  tiktok_welcome_message: "For the best experience, please open this page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.",
+  tiktok_welcome_primary_label: "Continue in TikTok",
+  tiktok_welcome_secondary_label: "Continue in TikTok",
+  tiktok_welcome_gate_enabled: true,
+  tiktok_welcome_gate_title: "Open in browser",
+  tiktok_welcome_gate_message: "For the best experience, please open this page in your browser.\n\nTap the ⋯ in the top-right corner and choose Open in browser.",
+  tiktok_welcome_gate_primary_label: "Continue in TikTok",
+  tiktok_welcome_gate_secondary_label: "Continue in TikTok",
+  tiktok_welcome_gate_copy_label: "Copy Link"
+};
+
 function send(res, statusCode, payload, contentType = "application/json") {
   res.statusCode = statusCode;
   res.setHeader("Content-Type", contentType);
@@ -519,17 +533,42 @@ function defaultCreatorForSlug(value = DEFAULT_CREATOR_SLUG) {
     tiktok_live_username: username,
     theme_preset: "founder",
     background_gradient: "",
+    ...DEFAULT_CREATOR_TIKTOK_WELCOME,
     discord_invite_url: "",
     community_state: "hidden",
     faq_visible: false,
     discord_visible: false,
     discord_link_visible: false,
+    discord_link_title: "Community",
+    discord_link_subtitle: "Updates and conversation",
+    discord_link_cta_label: "Join",
     tiktok_link_visible: false,
+    tiktok_link_subtitle: "@" + username,
     battle_link_visible: false,
+    battle_link_title: "Prepare",
+    battle_link_subtitle: "Get ready before the moment begins.",
+    battle_link_cta_label: "Open",
     support_link_visible: false,
+    support_link_title: "Support",
+    support_link_subtitle: "Support this creator.",
+    support_link_cta_label: "Support",
     business_link_visible: false,
+    business_link_title: "Business",
+    business_link_subtitle: "Partnerships and collaborations.",
+    business_link_cta_label: "Contact",
     community_link_visible: false,
+    community_link_title: "Community",
+    community_link_subtitle: "Join the community.",
+    community_link_cta_label: "Join",
+    community_link_url: "",
+    newsletter_cta_label: "Join Newsletter",
+    newsletter_destination: "",
+    faq_link_title: "FAQ",
+    faq_link_subtitle: "Frequently asked questions.",
+    faq_link_cta_label: "Read",
     subscribe_popup_enabled: false,
+    subscribe_popup_title: "",
+    subscribe_popup_copy: "",
     redirect_mina_enabled: false,
     updated_at: new Date(0).toISOString()
   };
@@ -569,6 +608,13 @@ function bool(value, fallback = false) {
   if (value === "true") return true;
   if (value === "false") return false;
   return fallback;
+}
+
+function creatorGateText(value, minaDefault, fallback = "") {
+  const text = clean(value);
+  if (!text) return "";
+  if (text === minaDefault && clean(fallback) !== minaDefault) return "";
+  return text;
 }
 
 function capabilityDefaultsForDna(value) {
@@ -1460,14 +1506,23 @@ function normalizeCreator(row = {}) {
   const capabilityFields = CreatorCapabilities.mirrorLegacyFields({ creator_dna: dna }, capabilities);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
   const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(row, "hero_image_url");
-  const legacyGateMessage = clean(row.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(row.tiktok_welcome_message);
-  const legacyGatePrimary = clean(row.tiktok_welcome_primary_label) === DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label ? "" : clean(row.tiktok_welcome_primary_label);
+  const legacyGateMessage = creatorGateText(row.tiktok_welcome_message, DEFAULT_MINA_SETTINGS.tiktok_welcome_message, defaults.tiktok_welcome_message);
+  const legacyGatePrimary = creatorGateText(row.tiktok_welcome_primary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label, defaults.tiktok_welcome_primary_label);
   const gateEnabled = Object.prototype.hasOwnProperty.call(row, "tiktok_welcome_gate_enabled") ? row.tiktok_welcome_gate_enabled : row.tiktok_welcome_enabled;
-  const gateTitle = clean(row.tiktok_welcome_gate_title) || clean(row.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title;
-  const gateMessage = clean(row.tiktok_welcome_gate_message) || legacyGateMessage || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message;
-  const gatePrimary = clean(row.tiktok_welcome_gate_primary_label) || legacyGatePrimary || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label;
-  const gateSecondary = clean(row.tiktok_welcome_gate_secondary_label) || clean(row.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label;
-  const gateCopy = clean(row.tiktok_welcome_gate_copy_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label;
+  const gateTitle = creatorGateText(row.tiktok_welcome_gate_title, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title, defaults.tiktok_welcome_gate_title) ||
+    creatorGateText(row.tiktok_welcome_title, DEFAULT_MINA_SETTINGS.tiktok_welcome_title, defaults.tiktok_welcome_title) ||
+    defaults.tiktok_welcome_gate_title;
+  const gateMessage = creatorGateText(row.tiktok_welcome_gate_message, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message, defaults.tiktok_welcome_gate_message) ||
+    legacyGateMessage ||
+    defaults.tiktok_welcome_gate_message;
+  const gatePrimary = creatorGateText(row.tiktok_welcome_gate_primary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label, defaults.tiktok_welcome_gate_primary_label) ||
+    legacyGatePrimary ||
+    defaults.tiktok_welcome_gate_primary_label;
+  const gateSecondary = creatorGateText(row.tiktok_welcome_gate_secondary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label, defaults.tiktok_welcome_gate_secondary_label) ||
+    creatorGateText(row.tiktok_welcome_secondary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label, defaults.tiktok_welcome_secondary_label) ||
+    defaults.tiktok_welcome_gate_secondary_label;
+  const gateCopy = creatorGateText(row.tiktok_welcome_gate_copy_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label, defaults.tiktok_welcome_gate_copy_label) ||
+    defaults.tiktok_welcome_gate_copy_label;
   return {
     ...defaults,
     ...row,
@@ -1515,7 +1570,7 @@ function normalizeCreator(row = {}) {
     business_email: clean(row.business_email),
     live_url: clean(row.live_url),
     live_status: bool(row.live_status, false),
-    live_button_text: clean(row.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
+    live_button_text: clean(row.live_button_text) || defaults.live_button_text,
     tiktok_live_username: normalizeUsername(row.tiktok_live_username || row.username || defaults.tiktok_live_username),
     auto_live_detection_enabled: bool(row.auto_live_detection_enabled, true),
     manual_live_fallback_enabled: bool(row.manual_live_fallback_enabled, defaults.manual_live_fallback_enabled),
@@ -1538,46 +1593,46 @@ function normalizeCreator(row = {}) {
     discord_visible: bool(row.discord_visible, true),
     creator_passport_visible: bool(row.creator_passport_visible, true),
     discord_link_visible: bool(row.discord_link_visible, true),
-    discord_link_title: clean(row.discord_link_title) || DEFAULT_MINA_SETTINGS.discord_link_title,
-    discord_link_subtitle: clean(row.discord_link_subtitle) || DEFAULT_MINA_SETTINGS.discord_link_subtitle,
-    discord_link_cta_label: clean(row.discord_link_cta_label) || DEFAULT_MINA_SETTINGS.discord_link_cta_label,
+    discord_link_title: clean(row.discord_link_title) || defaults.discord_link_title,
+    discord_link_subtitle: clean(row.discord_link_subtitle) || defaults.discord_link_subtitle,
+    discord_link_cta_label: clean(row.discord_link_cta_label) || defaults.discord_link_cta_label,
     tiktok_link_visible: bool(row.tiktok_link_visible, true),
-    tiktok_link_title: clean(row.tiktok_link_title) || DEFAULT_MINA_SETTINGS.tiktok_link_title,
-    tiktok_link_subtitle: clean(row.tiktok_link_subtitle) || DEFAULT_MINA_SETTINGS.tiktok_link_subtitle,
-    tiktok_link_cta_label: clean(row.tiktok_link_cta_label) || DEFAULT_MINA_SETTINGS.tiktok_link_cta_label,
+    tiktok_link_title: clean(row.tiktok_link_title) || defaults.tiktok_link_title,
+    tiktok_link_subtitle: clean(row.tiktok_link_subtitle) || defaults.tiktok_link_subtitle,
+    tiktok_link_cta_label: clean(row.tiktok_link_cta_label) || defaults.tiktok_link_cta_label,
     battle_link_visible: bool(row.battle_link_visible, true),
-    battle_link_title: clean(row.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
-    battle_link_subtitle: clean(row.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
-    battle_link_cta_label: clean(row.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    battle_link_title: clean(row.battle_link_title) || defaults.battle_link_title,
+    battle_link_subtitle: clean(row.battle_link_subtitle) || defaults.battle_link_subtitle,
+    battle_link_cta_label: clean(row.battle_link_cta_label) || defaults.battle_link_cta_label,
     support_link_visible: bool(row.support_link_visible, false),
-    support_link_title: clean(row.support_link_title) || DEFAULT_MINA_SETTINGS.support_link_title,
-    support_link_subtitle: clean(row.support_link_subtitle) || DEFAULT_MINA_SETTINGS.support_link_subtitle,
-    support_link_cta_label: clean(row.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
+    support_link_title: clean(row.support_link_title) || defaults.support_link_title,
+    support_link_subtitle: clean(row.support_link_subtitle) || defaults.support_link_subtitle,
+    support_link_cta_label: clean(row.support_link_cta_label) || defaults.support_link_cta_label,
     support_link_provider: normalizeSupportProvider(row.support_link_provider),
     support_link_url: clean(row.support_link_url),
     support_sticker_enabled: bool(row.support_sticker_enabled, true),
     support_sticker_animation_enabled: bool(row.support_sticker_animation_enabled, true),
     business_link_visible: bool(row.business_link_visible, true),
-    business_link_title: clean(row.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
-    business_link_subtitle: clean(row.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
-    business_link_cta_label: clean(row.business_link_cta_label) || DEFAULT_MINA_SETTINGS.business_link_cta_label,
+    business_link_title: clean(row.business_link_title) || defaults.business_link_title,
+    business_link_subtitle: clean(row.business_link_subtitle) || defaults.business_link_subtitle,
+    business_link_cta_label: clean(row.business_link_cta_label) || defaults.business_link_cta_label,
     music_link_visible: bool(row.music_link_visible, false),
-    music_link_title: clean(row.music_link_title) || DEFAULT_MINA_SETTINGS.music_link_title,
-    music_link_subtitle: clean(row.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
-    music_link_cta_label: clean(row.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
-    newsletter_cta_label: clean(row.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    music_link_title: clean(row.music_link_title) || defaults.music_link_title,
+    music_link_subtitle: clean(row.music_link_subtitle) || defaults.music_link_subtitle,
+    music_link_cta_label: clean(row.music_link_cta_label) || defaults.music_link_cta_label,
+    newsletter_cta_label: clean(row.newsletter_cta_label) || defaults.newsletter_cta_label,
     newsletter_destination: clean(row.newsletter_destination),
     faq_link_visible: bool(row.faq_link_visible, false),
-    faq_link_title: clean(row.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
-    faq_link_subtitle: clean(row.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
-    faq_link_cta_label: clean(row.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_title: clean(row.faq_link_title) || defaults.faq_link_title,
+    faq_link_subtitle: clean(row.faq_link_subtitle) || defaults.faq_link_subtitle,
+    faq_link_cta_label: clean(row.faq_link_cta_label) || defaults.faq_link_cta_label,
     faq_link_url: clean(row.faq_link_url),
     faq_items: normalizeFaqItems(row.faq_items),
     community_link_visible: bool(row.community_link_visible, true),
-    community_link_title: clean(row.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
-    community_link_subtitle: clean(row.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
-    community_link_cta_label: clean(row.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
-    community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_link_title: clean(row.community_link_title) || defaults.community_link_title,
+    community_link_subtitle: clean(row.community_link_subtitle) || defaults.community_link_subtitle,
+    community_link_cta_label: clean(row.community_link_cta_label) || defaults.community_link_cta_label,
+    community_link_url: clean(row.community_link_url) || clean(row.discord_invite_url) || clean(row.discord_url) || defaults.community_link_url,
     community_sticker_enabled: bool(row.community_sticker_enabled, true),
     share_link_visible: bool(row.share_link_visible, true),
     custom_links: normalizeCustomLinks(row.custom_links),
@@ -1587,9 +1642,9 @@ function normalizeCreator(row = {}) {
     theme_preset: normalizeTheme(row.theme_preset),
     creator_dna: dna,
     subscribe_popup_enabled: bool(row.subscribe_popup_enabled, true),
-    subscribe_popup_title: clean(row.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
-    subscribe_popup_copy: clean(row.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
-    discord_invite_url: clean(row.discord_invite_url) || clean(row.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    subscribe_popup_title: clean(row.subscribe_popup_title) || defaults.subscribe_popup_title,
+    subscribe_popup_copy: clean(row.subscribe_popup_copy) || defaults.subscribe_popup_copy,
+    discord_invite_url: clean(row.discord_invite_url) || clean(row.discord_url) || defaults.discord_invite_url,
     discord_server_id: clean(row.discord_server_id)
   };
 }
@@ -1707,14 +1762,23 @@ function creatorPayload(input = {}) {
   const introAudioUrl = clean(input.intro_audio_url);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
   const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(input, "hero_image_url");
-  const legacyGateMessage = clean(input.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(input.tiktok_welcome_message);
-  const legacyGatePrimary = clean(input.tiktok_welcome_primary_label) === DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label ? "" : clean(input.tiktok_welcome_primary_label);
+  const legacyGateMessage = creatorGateText(input.tiktok_welcome_message, DEFAULT_MINA_SETTINGS.tiktok_welcome_message, defaults.tiktok_welcome_message);
+  const legacyGatePrimary = creatorGateText(input.tiktok_welcome_primary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_primary_label, defaults.tiktok_welcome_primary_label);
   const gateEnabled = Object.prototype.hasOwnProperty.call(input, "tiktok_welcome_gate_enabled") ? input.tiktok_welcome_gate_enabled : input.tiktok_welcome_enabled;
-  const gateTitle = clean(input.tiktok_welcome_gate_title) || clean(input.tiktok_welcome_title) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title;
-  const gateMessage = clean(input.tiktok_welcome_gate_message) || legacyGateMessage || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message;
-  const gatePrimary = clean(input.tiktok_welcome_gate_primary_label) || legacyGatePrimary || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label;
-  const gateSecondary = clean(input.tiktok_welcome_gate_secondary_label) || clean(input.tiktok_welcome_secondary_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label;
-  const gateCopy = clean(input.tiktok_welcome_gate_copy_label) || DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label;
+  const gateTitle = creatorGateText(input.tiktok_welcome_gate_title, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_title, defaults.tiktok_welcome_gate_title) ||
+    creatorGateText(input.tiktok_welcome_title, DEFAULT_MINA_SETTINGS.tiktok_welcome_title, defaults.tiktok_welcome_title) ||
+    defaults.tiktok_welcome_gate_title;
+  const gateMessage = creatorGateText(input.tiktok_welcome_gate_message, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_message, defaults.tiktok_welcome_gate_message) ||
+    legacyGateMessage ||
+    defaults.tiktok_welcome_gate_message;
+  const gatePrimary = creatorGateText(input.tiktok_welcome_gate_primary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_primary_label, defaults.tiktok_welcome_gate_primary_label) ||
+    legacyGatePrimary ||
+    defaults.tiktok_welcome_gate_primary_label;
+  const gateSecondary = creatorGateText(input.tiktok_welcome_gate_secondary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_secondary_label, defaults.tiktok_welcome_gate_secondary_label) ||
+    creatorGateText(input.tiktok_welcome_secondary_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_secondary_label, defaults.tiktok_welcome_secondary_label) ||
+    defaults.tiktok_welcome_gate_secondary_label;
+  const gateCopy = creatorGateText(input.tiktok_welcome_gate_copy_label, DEFAULT_MINA_SETTINGS.tiktok_welcome_gate_copy_label, defaults.tiktok_welcome_gate_copy_label) ||
+    defaults.tiktok_welcome_gate_copy_label;
   if (introAudioEnabled && !isDirectIntroAudioUrl(introAudioUrl)) {
     const error = new Error("Creator Signature is enabled, but no valid direct audio URL is saved.");
     error.statusCode = 400;
@@ -1730,8 +1794,8 @@ function creatorPayload(input = {}) {
     location: clean(input.location),
     avatar_url: clean(input.avatar_url),
     banner_url: clean(input.banner_url),
-    hero_image_url: hasHeroImageUrl && isHeroImageUrl(input.hero_image_url) ? clean(input.hero_image_url) : DEFAULT_MINA_SETTINGS.hero_image_url,
-    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(input.hero_video_url) ? clean(input.hero_video_url) : DEFAULT_MINA_SETTINGS.hero_video_url,
+    hero_image_url: hasHeroImageUrl && isHeroImageUrl(input.hero_image_url) ? clean(input.hero_image_url) : defaults.hero_image_url,
+    hero_video_url: hasHeroVideoUrl && isHeroVideoUrl(input.hero_video_url) ? clean(input.hero_video_url) : defaults.hero_video_url,
     music_enabled: bool(input.music_enabled, false),
     music_url: clean(input.music_url),
     music_volume: Math.max(0, Math.min(1, number(input.music_volume, DEFAULT_MINA_SETTINGS.music_volume))),
@@ -1753,23 +1817,23 @@ function creatorPayload(input = {}) {
     tiktok_welcome_gate_secondary_label: gateSecondary,
     tiktok_welcome_gate_copy_label: gateCopy,
     welcome_intro_enabled: bool(input.welcome_intro_enabled, true),
-    background_gradient: clean(input.background_gradient) || DEFAULT_MINA_SETTINGS.background_gradient,
+    background_gradient: clean(input.background_gradient) || defaults.background_gradient,
     ambient_mode_enabled: bool(input.ambient_mode_enabled, true),
-    timezone: clean(input.timezone) || DEFAULT_MINA_SETTINGS.timezone,
+    timezone: clean(input.timezone) || defaults.timezone,
     seasonal_effects_enabled: bool(input.seasonal_effects_enabled, true),
     holiday_effects_enabled: bool(input.holiday_effects_enabled, true),
     redirect_mina_enabled: bool(input.redirect_mina_enabled, defaults.redirect_mina_enabled),
     tiktok_url: clean(input.tiktok_url),
-    discord_url: clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_url,
+    discord_url: clean(input.discord_url) || defaults.discord_url,
     instagram_url: clean(input.instagram_url),
     tiktok_coins_url: clean(input.tiktok_coins_url),
     business_email: clean(input.business_email),
     live_url: clean(input.live_url),
     live_status: bool(input.live_status, false),
-    live_button_text: clean(input.live_button_text) || DEFAULT_MINA_SETTINGS.live_button_text,
-    tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || DEFAULT_MINA_SETTINGS.tiktok_live_username),
+    live_button_text: clean(input.live_button_text) || defaults.live_button_text,
+    tiktok_live_username: normalizeUsername(input.tiktok_live_username || input.username || defaults.tiktok_live_username),
     auto_live_detection_enabled: bool(input.auto_live_detection_enabled, true),
-    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, DEFAULT_MINA_SETTINGS.manual_live_fallback_enabled),
+    manual_live_fallback_enabled: bool(input.manual_live_fallback_enabled, defaults.manual_live_fallback_enabled),
     battle_mode_enabled: bool(input.battle_mode_enabled, false),
     battle_opponent: clean(input.battle_opponent),
     battle_result: normalizeBattleResult(input.battle_result),
@@ -1789,46 +1853,46 @@ function creatorPayload(input = {}) {
     discord_visible: bool(input.discord_visible, true),
     creator_passport_visible: bool(input.creator_passport_visible, true),
     discord_link_visible: bool(input.discord_link_visible, true),
-    discord_link_title: clean(input.discord_link_title) || DEFAULT_MINA_SETTINGS.discord_link_title,
-    discord_link_subtitle: clean(input.discord_link_subtitle) || DEFAULT_MINA_SETTINGS.discord_link_subtitle,
-    discord_link_cta_label: clean(input.discord_link_cta_label) || DEFAULT_MINA_SETTINGS.discord_link_cta_label,
+    discord_link_title: clean(input.discord_link_title) || defaults.discord_link_title,
+    discord_link_subtitle: clean(input.discord_link_subtitle) || defaults.discord_link_subtitle,
+    discord_link_cta_label: clean(input.discord_link_cta_label) || defaults.discord_link_cta_label,
     tiktok_link_visible: bool(input.tiktok_link_visible, true),
-    tiktok_link_title: clean(input.tiktok_link_title) || DEFAULT_MINA_SETTINGS.tiktok_link_title,
-    tiktok_link_subtitle: clean(input.tiktok_link_subtitle) || DEFAULT_MINA_SETTINGS.tiktok_link_subtitle,
-    tiktok_link_cta_label: clean(input.tiktok_link_cta_label) || DEFAULT_MINA_SETTINGS.tiktok_link_cta_label,
+    tiktok_link_title: clean(input.tiktok_link_title) || defaults.tiktok_link_title,
+    tiktok_link_subtitle: clean(input.tiktok_link_subtitle) || defaults.tiktok_link_subtitle,
+    tiktok_link_cta_label: clean(input.tiktok_link_cta_label) || defaults.tiktok_link_cta_label,
     battle_link_visible: bool(input.battle_link_visible, true),
-    battle_link_title: clean(input.battle_link_title) || DEFAULT_MINA_SETTINGS.battle_link_title,
-    battle_link_subtitle: clean(input.battle_link_subtitle) || DEFAULT_MINA_SETTINGS.battle_link_subtitle,
-    battle_link_cta_label: clean(input.battle_link_cta_label) || DEFAULT_MINA_SETTINGS.battle_link_cta_label,
+    battle_link_title: clean(input.battle_link_title) || defaults.battle_link_title,
+    battle_link_subtitle: clean(input.battle_link_subtitle) || defaults.battle_link_subtitle,
+    battle_link_cta_label: clean(input.battle_link_cta_label) || defaults.battle_link_cta_label,
     support_link_visible: bool(input.support_link_visible, false),
-    support_link_title: clean(input.support_link_title) || DEFAULT_MINA_SETTINGS.support_link_title,
-    support_link_subtitle: clean(input.support_link_subtitle) || DEFAULT_MINA_SETTINGS.support_link_subtitle,
-    support_link_cta_label: clean(input.support_link_cta_label) || DEFAULT_MINA_SETTINGS.support_link_cta_label,
+    support_link_title: clean(input.support_link_title) || defaults.support_link_title,
+    support_link_subtitle: clean(input.support_link_subtitle) || defaults.support_link_subtitle,
+    support_link_cta_label: clean(input.support_link_cta_label) || defaults.support_link_cta_label,
     support_link_provider: normalizeSupportProvider(input.support_link_provider),
     support_link_url: clean(input.support_link_url),
     support_sticker_enabled: bool(input.support_sticker_enabled, true),
     support_sticker_animation_enabled: bool(input.support_sticker_animation_enabled, true),
     business_link_visible: bool(input.business_link_visible, true),
-    business_link_title: clean(input.business_link_title) || DEFAULT_MINA_SETTINGS.business_link_title,
-    business_link_subtitle: clean(input.business_link_subtitle) || DEFAULT_MINA_SETTINGS.business_link_subtitle,
-    business_link_cta_label: clean(input.business_link_cta_label) || DEFAULT_MINA_SETTINGS.business_link_cta_label,
+    business_link_title: clean(input.business_link_title) || defaults.business_link_title,
+    business_link_subtitle: clean(input.business_link_subtitle) || defaults.business_link_subtitle,
+    business_link_cta_label: clean(input.business_link_cta_label) || defaults.business_link_cta_label,
     music_link_visible: bool(input.music_link_visible, false),
-    music_link_title: clean(input.music_link_title) || DEFAULT_MINA_SETTINGS.music_link_title,
-    music_link_subtitle: clean(input.music_link_subtitle) || DEFAULT_MINA_SETTINGS.music_link_subtitle,
-    music_link_cta_label: clean(input.music_link_cta_label) || DEFAULT_MINA_SETTINGS.music_link_cta_label,
-    newsletter_cta_label: clean(input.newsletter_cta_label) || DEFAULT_MINA_SETTINGS.newsletter_cta_label,
+    music_link_title: clean(input.music_link_title) || defaults.music_link_title,
+    music_link_subtitle: clean(input.music_link_subtitle) || defaults.music_link_subtitle,
+    music_link_cta_label: clean(input.music_link_cta_label) || defaults.music_link_cta_label,
+    newsletter_cta_label: clean(input.newsletter_cta_label) || defaults.newsletter_cta_label,
     newsletter_destination: clean(input.newsletter_destination),
     faq_link_visible: bool(input.faq_link_visible, false),
-    faq_link_title: clean(input.faq_link_title) || DEFAULT_MINA_SETTINGS.faq_link_title,
-    faq_link_subtitle: clean(input.faq_link_subtitle) || DEFAULT_MINA_SETTINGS.faq_link_subtitle,
-    faq_link_cta_label: clean(input.faq_link_cta_label) || DEFAULT_MINA_SETTINGS.faq_link_cta_label,
+    faq_link_title: clean(input.faq_link_title) || defaults.faq_link_title,
+    faq_link_subtitle: clean(input.faq_link_subtitle) || defaults.faq_link_subtitle,
+    faq_link_cta_label: clean(input.faq_link_cta_label) || defaults.faq_link_cta_label,
     faq_link_url: clean(input.faq_link_url),
     faq_items: normalizeFaqItems(input.faq_items),
     community_link_visible: bool(input.community_link_visible, true),
-    community_link_title: clean(input.community_link_title) || DEFAULT_MINA_SETTINGS.community_link_title,
-    community_link_subtitle: clean(input.community_link_subtitle) || DEFAULT_MINA_SETTINGS.community_link_subtitle,
-    community_link_cta_label: clean(input.community_link_cta_label) || DEFAULT_MINA_SETTINGS.community_link_cta_label,
-    community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.community_link_url,
+    community_link_title: clean(input.community_link_title) || defaults.community_link_title,
+    community_link_subtitle: clean(input.community_link_subtitle) || defaults.community_link_subtitle,
+    community_link_cta_label: clean(input.community_link_cta_label) || defaults.community_link_cta_label,
+    community_link_url: clean(input.community_link_url) || clean(input.discord_invite_url) || clean(input.discord_url) || defaults.community_link_url,
     community_sticker_enabled: bool(input.community_sticker_enabled, true),
     share_link_visible: bool(input.share_link_visible, true),
     custom_links: normalizeCustomLinks(input.custom_links),
@@ -1838,9 +1902,9 @@ function creatorPayload(input = {}) {
     theme_preset: normalizeTheme(input.theme_preset),
     creator_dna: dna,
     subscribe_popup_enabled: bool(input.subscribe_popup_enabled, true),
-    subscribe_popup_title: clean(input.subscribe_popup_title) || DEFAULT_MINA_SETTINGS.subscribe_popup_title,
-    subscribe_popup_copy: clean(input.subscribe_popup_copy) || DEFAULT_MINA_SETTINGS.subscribe_popup_copy,
-    discord_invite_url: clean(input.discord_invite_url) || clean(input.discord_url) || DEFAULT_MINA_SETTINGS.discord_invite_url,
+    subscribe_popup_title: clean(input.subscribe_popup_title) || defaults.subscribe_popup_title,
+    subscribe_popup_copy: clean(input.subscribe_popup_copy) || defaults.subscribe_popup_copy,
+    discord_invite_url: clean(input.discord_invite_url) || clean(input.discord_url) || defaults.discord_invite_url,
     discord_server_id: clean(input.discord_server_id),
     updated_at: new Date().toISOString()
   };
