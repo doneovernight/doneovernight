@@ -397,11 +397,11 @@ const DEFAULT_MINA_SETTINGS = {
   updated_at: new Date(0).toISOString()
 };
 
-function send(res, statusCode, payload) {
+function send(res, statusCode, payload, contentType = "application/json") {
   res.statusCode = statusCode;
-  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Type", contentType);
   res.setHeader("Cache-Control", "no-store");
-  res.end(JSON.stringify(payload));
+  res.end(contentType.includes("application/json") ? JSON.stringify(payload) : String(payload ?? ""));
 }
 
 function clean(value) {
