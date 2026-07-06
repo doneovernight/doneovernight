@@ -82,6 +82,7 @@ create table if not exists public.creators (
   battle_win_streak integer not null default 0,
   battle_updated_at timestamptz,
   battle_undo_snapshot text not null default '',
+  capabilities jsonb not null default '{}'::jsonb,
   live_enabled boolean not null default true,
   battle_enabled boolean not null default true,
   countdown_enabled boolean not null default true,
@@ -155,6 +156,7 @@ create unique index if not exists creators_username_key on public.creators (user
 create index if not exists creators_updated_at_idx on public.creators (updated_at desc);
 
 alter table public.creators
+  add column if not exists capabilities jsonb not null default '{}'::jsonb,
   add column if not exists live_enabled boolean not null default true,
   add column if not exists battle_enabled boolean not null default true,
   add column if not exists countdown_enabled boolean not null default true,
@@ -372,7 +374,28 @@ begin
 end $$;
 
 update public.creators
-   set live_enabled = true,
+   set capabilities = jsonb_build_object(
+         'live', true,
+         'battle', true,
+         'countdown', true,
+         'announcements', true,
+         'events', false,
+         'portfolio', false,
+         'business', true,
+         'newsletter', true,
+         'community', true,
+         'support', true,
+         'shop', false,
+         'music', false,
+         'ai_assistant', false,
+         'timeline', false,
+         'featured_project', false,
+         'resources', false,
+         'gallery', false,
+         'testimonials', false,
+         'wishlist', false
+       ),
+       live_enabled = true,
        battle_enabled = true,
        countdown_enabled = true,
        announcements_enabled = true,
@@ -950,6 +973,72 @@ insert into public.creator_auth (
 ) on conflict (creator_id) do update set
   password_hash = excluded.password_hash,
   updated_at = now();
+
+update public.creators
+   set capabilities = jsonb_build_object(
+         'live', true,
+         'battle', true,
+         'countdown', true,
+         'announcements', true,
+         'events', false,
+         'portfolio', false,
+         'business', false,
+         'newsletter', true,
+         'community', true,
+         'support', true,
+         'shop', false,
+         'music', false,
+         'ai_assistant', false,
+         'timeline', false,
+         'featured_project', false,
+         'resources', false,
+         'gallery', false,
+         'testimonials', false,
+         'wishlist', false
+       ),
+       live_enabled = true,
+       battle_enabled = true,
+       countdown_enabled = true,
+       announcements_enabled = true,
+       events_enabled = false,
+       portfolio_enabled = false,
+       support_enabled = true,
+       community_enabled = true,
+       newsletter_enabled = true
+ where slug = 'preview-creator';
+
+update public.creators
+   set capabilities = jsonb_build_object(
+         'live', false,
+         'battle', false,
+         'countdown', false,
+         'announcements', true,
+         'events', true,
+         'portfolio', true,
+         'business', true,
+         'newsletter', true,
+         'community', false,
+         'support', false,
+         'shop', false,
+         'music', false,
+         'ai_assistant', false,
+         'timeline', true,
+         'featured_project', true,
+         'resources', false,
+         'gallery', false,
+         'testimonials', false,
+         'wishlist', false
+       ),
+       live_enabled = false,
+       battle_enabled = false,
+       countdown_enabled = false,
+       announcements_enabled = true,
+       events_enabled = true,
+       portfolio_enabled = true,
+       support_enabled = false,
+       community_enabled = false,
+       newsletter_enabled = true
+ where slug = 'lara';
 
 insert into public.creator_live_runtime (
   creator_slug,

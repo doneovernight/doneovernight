@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <script src="/lib/creator-capabilities.js"></script>
   <style>
     :root {
       --bg: #090504;
@@ -287,6 +288,22 @@
     .panel { padding: 20px; }
     .panel h2 { margin: 0 0 14px; font-size: 18px; }
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .feature-group { display: grid; gap: 10px; margin-top: 16px; }
+    .feature-group-title { margin: 4px 0 0; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .feature-toggle {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.045);
+    }
+    .feature-toggle strong { font-size: 13px; }
+    .feature-toggle span { color: var(--muted); font-size: 11px; }
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 850; }
     input, textarea, select {
       width: 100%;
@@ -1031,6 +1048,7 @@
       .topbar { margin-bottom: 12px; }
       .stack { gap: 12px; }
       .fields { grid-template-columns: 1fr; }
+      .feature-grid { grid-template-columns: 1fr; }
       .link-card-fields { grid-template-columns: 1fr; }
       .link-card-fields .wide { grid-column: auto; }
       .overview-grid, .connection-grid, .runtime-status-grid, .runtime-actions, .runtime-actions.two, .segmented, .pulse-grid, .analytics-actions { grid-template-columns: 1fr; }
@@ -1163,7 +1181,7 @@
               </div>
             </div>
             <div class="connection-grid" id="tiktokConnectionDetails" hidden>
-              <div class="connection-metric"><span>Username</span><strong id="tiktokConnectionUsername">@mosyaamosya</strong></div>
+              <div class="connection-metric"><span>Username</span><strong id="tiktokConnectionUsername">@creator</strong></div>
               <div class="connection-metric" data-admin-capability="live"><span>Live Runtime</span><strong id="tiktokConnectionRuntime">Unknown</strong></div>
               <div class="connection-metric"><span>Last sync</span><strong id="tiktokConnectionLastSync">Never</strong></div>
               <div class="connection-metric connection-dev-only"><span>Internal diagnostics</span><strong id="tiktokConnectionError">None</strong></div>
@@ -1206,6 +1224,14 @@
             <label class="span-2">Bio<textarea name="bio"></textarea></label>
             <label>Location<input name="location"></label>
           </div>
+          <div class="feature-group" aria-label="Creator Features">
+            <div>
+              <h2>Creator Features</h2>
+              <div class="section-note">Capabilities define which Creator OS systems exist for this creator.</div>
+            </div>
+            <div id="creatorFeatures"></div>
+          </div>
+          <input name="capabilities" type="hidden" value="{}">
         </section>
 
         <section class="panel tab-panel" data-admin-panel="media" hidden>
@@ -1363,7 +1389,7 @@
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="support">
+            <section class="link-card" data-page-block-key="support" data-admin-capability="support">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Support</strong><span>Premium creator support destination.</span></div>
                 <label class="switch" aria-label="Support visible"><input name="support_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1396,7 +1422,7 @@
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="business">
+            <section class="link-card" data-page-block-key="business" data-admin-capability="business">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Business Email</strong><span>Booking and collaboration contact.</span></div>
                 <label class="switch" aria-label="Business email visible"><input name="business_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1409,7 +1435,7 @@
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="newsletter">
+            <section class="link-card" data-page-block-key="newsletter" data-admin-capability="newsletter">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Newsletter</strong><span>Compact mailing list interaction.</span></div>
                 <label class="switch" aria-label="Newsletter enabled"><input name="subscribe_popup_enabled" type="checkbox"><span class="track"></span></label>
@@ -1417,18 +1443,18 @@
               <div class="link-card-fields">
                 <label>Title<input name="subscribe_popup_title" placeholder="Mailing list"></label>
                 <label>CTA<input name="newsletter_cta_label"></label>
-                <label class="wide">Subtitle<input name="subscribe_popup_copy" placeholder="Get updates from Mina"></label>
+                <label class="wide">Subtitle<input name="subscribe_popup_copy" placeholder="Get creator updates"></label>
                 <label class="wide">Destination<input name="newsletter_destination" placeholder="In-page email signup"></label>
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="announcement">
+            <section class="link-card" data-page-block-key="announcement" data-admin-capability="announcements">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Announcement</strong><span>Configured in Updates.</span></div>
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="countdown">
+            <section class="link-card" data-page-block-key="countdown" data-admin-capability="countdown">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Countdown</strong><span>Configured in Updates.</span></div>
               </div>
@@ -1440,7 +1466,7 @@
               </div>
             </section>
 
-            <section class="link-card" data-page-block-key="music">
+            <section class="link-card" data-page-block-key="music" data-admin-capability="music">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Music</strong><span>External music platform block.</span></div>
                 <label class="switch" aria-label="Music link visible"><input name="music_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1472,7 +1498,7 @@
               <input name="faq_link_url" type="hidden" value="">
             </section>
 
-            <section class="link-card" data-page-block-key="community">
+            <section class="link-card" data-page-block-key="community" data-admin-capability="community">
               <div class="link-card-head">
                 <div class="link-card-title"><strong>Community</strong><span>Public community block and visitor destination.</span></div>
                 <label class="switch" aria-label="Community visible"><input name="community_link_visible" type="checkbox"><span class="track"></span></label>
@@ -1940,6 +1966,8 @@
 
   <script>
     const currentCreatorSlug = String(window.__creatorSlug || "mosyaamosya").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "mosyaamosya";
+    const capabilityEngine = window.CreatorCapabilities || null;
+    const capabilityRegistry = capabilityEngine ? capabilityEngine.registry : [];
     const sessionFlag = "doneovernight_creator_" + currentCreatorSlug;
     const sessionKey = "doneovernight_creator_" + currentCreatorSlug + "_session";
     const themes = [
@@ -1967,6 +1995,7 @@
       ["influencer", "Influencer", "Social proof, collabs, and platform links first."],
       ["founder", "Founder", "Business CTA, launches, waitlists, credibility blocks."],
       ["editorial", "Editorial", "Premium cultural brand, studio, and portfolio blocks."],
+      ["fitness", "Fitness", "Training, live reminders, community, and support blocks."],
       ["artist", "Artist", "Visual-first layout, softer drops, expressive intro prompts."],
       ["musician", "Musician", "Audio, releases, shows, and fan membership prompts."],
       ["podcaster", "Podcaster", "Episode cadence, audio-first prompts, guest CTAs."],
@@ -1978,19 +2007,15 @@
     ];
     let activeTheme = "mina";
     let activeDna = "streamer";
+    const initialCapabilities = capabilityEngine
+      ? capabilityEngine.normalizeCapabilities({ creator_dna: "blank" })
+      : {};
     let currentAdminSettings = {
-      display_name: currentCreatorSlug === "mosyaamosya" ? "Mina Mosya" : "Creator",
+      display_name: "Creator",
       username: currentCreatorSlug,
       slug: currentCreatorSlug,
-      live_enabled: currentCreatorSlug === "mosyaamosya",
-      battle_enabled: currentCreatorSlug === "mosyaamosya",
-      countdown_enabled: true,
-      announcements_enabled: true,
-      events_enabled: currentCreatorSlug !== "mosyaamosya",
-      portfolio_enabled: currentCreatorSlug !== "mosyaamosya",
-      support_enabled: currentCreatorSlug === "mosyaamosya",
-      community_enabled: currentCreatorSlug === "mosyaamosya",
-      newsletter_enabled: true
+      capabilities: initialCapabilities,
+      ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({ capabilities: initialCapabilities }, initialCapabilities) : {})
     };
     let saving = false;
     let saveResetTimer = 0;
@@ -2537,15 +2562,38 @@
       if (element.type === "checkbox") return element.checked;
       return String(element.value || "").toLowerCase() === "true";
     }
-    function capabilityOn(settings, key, fallback = true) {
+    function capabilityKey(key) {
+      return String(key || "").toLowerCase().replace(/_enabled$/, "").replace(/[^a-z0-9_]+/g, "_");
+    }
+    function normalizeCapabilitiesForAdmin(settings = currentAdminSettings) {
+      if (capabilityEngine) return capabilityEngine.normalizeCapabilities(settings || {});
+      const source = settings || {};
+      return {
+        live: source.live_enabled === true,
+        battle: source.live_enabled === true && source.battle_enabled === true,
+        countdown: source.countdown_enabled !== false,
+        announcements: source.announcements_enabled !== false,
+        events: source.events_enabled === true,
+        portfolio: source.portfolio_enabled === true,
+        business: source.business_link_visible !== false,
+        newsletter: source.newsletter_enabled !== false,
+        community: source.community_enabled === true,
+        support: source.support_enabled === true
+      };
+    }
+    function capabilityOn(settings, key, fallback = false) {
+      const capabilities = normalizeCapabilitiesForAdmin(settings);
+      const normalized = capabilityKey(key);
+      if (capabilities[normalized] !== undefined) return capabilities[normalized] === true;
       const source = settings || currentAdminSettings || {};
-      return source[key] === undefined ? fallback : source[key] === true;
+      const legacyField = normalized + "_enabled";
+      return source[legacyField] === undefined ? fallback : source[legacyField] === true;
     }
     function liveEnabled(settings = currentAdminSettings) {
-      return capabilityOn(settings, "live_enabled", true);
+      return capabilityOn(settings, "live");
     }
     function battleEnabled(settings = currentAdminSettings) {
-      return liveEnabled(settings) && capabilityOn(settings, "battle_enabled", true);
+      return liveEnabled(settings) && capabilityOn(settings, "battle");
     }
     function setBoolField(name, value) {
       const element = form.elements[name];
@@ -2555,6 +2603,81 @@
       } else {
         element.value = Boolean(value) ? "true" : "false";
       }
+    }
+    function syncCapabilityLegacyFields(capabilities = normalizeCapabilitiesForAdmin()) {
+      const mirrored = capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {};
+      Object.entries(mirrored).forEach(([key, value]) => {
+        if (key === "capabilities") return;
+        setBoolField(key, value === true);
+      });
+      if (form.elements.capabilities) form.elements.capabilities.value = JSON.stringify(capabilities);
+      return capabilities;
+    }
+    function capabilityGroupOrder(group) {
+      return ["Runtime", "Growth", "Community", "Commerce", "Media", "Story", "Advanced"].indexOf(group);
+    }
+    function renderCreatorFeatures(settings = currentAdminSettings) {
+      const host = $("creatorFeatures");
+      if (!host) return;
+      const capabilities = normalizeCapabilitiesForAdmin(settings);
+      const groups = {};
+      (capabilityRegistry || []).forEach((capability) => {
+        if (!capability || !capability.key || capability.controls?.admin === false) return;
+        const group = capability.group || "Features";
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(capability);
+      });
+      host.innerHTML = "";
+      Object.keys(groups).sort((a, b) => capabilityGroupOrder(a) - capabilityGroupOrder(b) || a.localeCompare(b)).forEach((group) => {
+        const title = document.createElement("div");
+        title.className = "feature-group-title";
+        title.textContent = group;
+        host.appendChild(title);
+        const grid = document.createElement("div");
+        grid.className = "feature-grid";
+        groups[group].forEach((capability) => {
+          const row = document.createElement("label");
+          row.className = "feature-toggle";
+          row.innerHTML =
+            '<span><strong>' + escapeAdmin(capability.label || capability.key) + '</strong><span>' +
+            escapeAdmin((capability.controls && capability.controls.runtime) ? "Runtime + page" : "Page + admin") +
+            '</span></span>' +
+            '<span class="switch"><input type="checkbox" data-capability-toggle="' + escapeAdmin(capability.key) + '"><span class="track"></span></span>';
+          const input = row.querySelector("input");
+          input.checked = capabilities[capability.key] === true;
+          input.addEventListener("change", () => {
+            const next = readFeatureCapabilities();
+            if (next.battle && !next.live) {
+              next.battle = false;
+              const battleInput = host.querySelector('[data-capability-toggle="battle"]');
+              if (battleInput) battleInput.checked = false;
+            }
+            writeFeatureCapabilities(next);
+            currentAdminSettings = { ...currentAdminSettings, capabilities: next, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, next) : {}) };
+            applyAdminCapabilityGates(currentAdminSettings);
+            writePreviewDraft();
+            updatePreviewFrame();
+            setStatus("Feature toggles updated in preview. Save page to publish.");
+          });
+          grid.appendChild(row);
+        });
+        host.appendChild(grid);
+      });
+      syncCapabilityLegacyFields(capabilities);
+    }
+    function readFeatureCapabilities() {
+      const capabilities = normalizeCapabilitiesForAdmin(currentAdminSettings);
+      document.querySelectorAll("[data-capability-toggle]").forEach((input) => {
+        capabilities[capabilityKey(input.dataset.capabilityToggle)] = input.checked === true;
+      });
+      if (capabilities.battle && !capabilities.live) capabilities.battle = false;
+      return capabilities;
+    }
+    function writeFeatureCapabilities(capabilities = normalizeCapabilitiesForAdmin()) {
+      document.querySelectorAll("[data-capability-toggle]").forEach((input) => {
+        input.checked = capabilities[capabilityKey(input.dataset.capabilityToggle)] === true;
+      });
+      syncCapabilityLegacyFields(capabilities);
     }
     const pageBlockRegistry = [
       { key: "community", label: "Community", version: 1, capabilities: { reorderable: true, configurable: true, runtimeOverlay: true } },
@@ -3096,6 +3219,7 @@
     function valuesFromForm() {
       syncLinkCompatibilityFields();
       syncPollOptionsField();
+      const capabilities = syncCapabilityLegacyFields(readFeatureCapabilities());
       const data = new FormData(form);
       return {
         display_name: String(data.get("display_name") || "").trim(),
@@ -3117,6 +3241,7 @@
         auto_live_detection_enabled: boolField("auto_live_detection_enabled", true),
         manual_live_fallback_enabled: boolField("manual_live_fallback_enabled", true),
         battle_mode_enabled: boolField("battle_mode_enabled"),
+        capabilities,
         live_enabled: boolField("live_enabled", true),
         battle_enabled: boolField("battle_enabled", true),
         countdown_enabled: boolField("countdown_enabled", true),
@@ -3218,25 +3343,19 @@
       };
     }
     function fillForm(settings) {
+      const capabilities = normalizeCapabilitiesForAdmin(settings || {});
+      settings = { ...(settings || {}), capabilities, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {}) };
       Object.entries(settings || {}).forEach(([key, value]) => {
         const element = form.elements[key];
         if (!element || element.type === "checkbox") return;
-        element.value = key === "next_live_datetime" ? inputDateTime(value) : (value ?? "");
+        element.value = key === "next_live_datetime" ? inputDateTime(value) : (key === "capabilities" ? JSON.stringify(value || {}) : (value ?? ""));
       });
       ["live_status", "auto_live_detection_enabled", "manual_live_fallback_enabled", "battle_mode_enabled", "live_enabled", "battle_enabled", "countdown_enabled", "announcements_enabled", "events_enabled", "portfolio_enabled", "support_enabled", "community_enabled", "newsletter_enabled", "poll_enabled", "welcome_intro_enabled", "tiktok_welcome_gate_enabled", "intro_audio_enabled", "music_enabled", "music_loop", "ambient_mode_enabled", "seasonal_effects_enabled", "holiday_effects_enabled", "subscribe_popup_enabled", "creator_passport_visible", "redirect_mina_enabled", "discord_link_visible", "tiktok_link_visible", "battle_link_visible", "support_link_visible", "support_sticker_enabled", "support_sticker_animation_enabled", "business_link_visible", "music_link_visible", "faq_link_visible", "community_link_visible", "community_sticker_enabled", "share_link_visible"].forEach((key) => {
         if (form.elements[key]) setBoolField(key, settings[key] !== false && Boolean(settings[key]));
       });
       if (settings.auto_live_detection_enabled === undefined) setBoolField("auto_live_detection_enabled", true);
       if (settings.manual_live_fallback_enabled === undefined) setBoolField("manual_live_fallback_enabled", true);
-      if (settings.live_enabled === undefined) setBoolField("live_enabled", (settings.creator_dna || activeDna) === "streamer");
-      if (settings.battle_enabled === undefined) setBoolField("battle_enabled", (settings.creator_dna || activeDna) === "streamer");
-      if (settings.countdown_enabled === undefined) setBoolField("countdown_enabled", true);
-      if (settings.announcements_enabled === undefined) setBoolField("announcements_enabled", true);
-      if (settings.events_enabled === undefined) setBoolField("events_enabled", (settings.creator_dna || activeDna) === "editorial" || (settings.creator_dna || activeDna) === "founder");
-      if (settings.portfolio_enabled === undefined) setBoolField("portfolio_enabled", (settings.creator_dna || activeDna) === "editorial" || (settings.creator_dna || activeDna) === "founder");
-      if (settings.support_enabled === undefined) setBoolField("support_enabled", (settings.creator_dna || activeDna) === "streamer");
-      if (settings.community_enabled === undefined) setBoolField("community_enabled", (settings.creator_dna || activeDna) === "streamer");
-      if (settings.newsletter_enabled === undefined) setBoolField("newsletter_enabled", true);
+      syncCapabilityLegacyFields(capabilities);
       if (settings.poll_enabled === undefined) setBoolField("poll_enabled", false);
       if (settings.tiktok_welcome_gate_enabled === undefined) setBoolField("tiktok_welcome_gate_enabled", settings.tiktok_welcome_enabled !== false);
       if (settings.music_loop === undefined) setBoolField("music_loop", true);
@@ -3270,7 +3389,9 @@
       setText("gateCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
       setText("adminCreatorName", settings.display_name || currentAdminSettings.display_name || "Creator OS");
       currentAdminSettings = { ...currentAdminSettings, ...settings };
+      renderCreatorFeatures(currentAdminSettings);
       applyAdminCapabilityGates(currentAdminSettings);
+      writePreviewDraft();
       $("avatarPreview").src = settings.avatar_url || "";
       $("heroImagePreview").src = settings.hero_image_url || "";
       $("heroPreview").src = settings.hero_video_url || "";
@@ -3299,17 +3420,10 @@
       if (form.elements.community_state) form.elements.community_state.value = communityVisible ? "open" : "hidden";
     }
     function applyAdminCapabilityGates(settings = currentAdminSettings) {
+      const capabilities = normalizeCapabilitiesForAdmin(settings);
       const live = liveEnabled(settings);
       const battle = battleEnabled(settings);
-      const values = {
-        live,
-        battle,
-        countdown: capabilityOn(settings, "countdown_enabled", true),
-        announcements: capabilityOn(settings, "announcements_enabled", true),
-        support: capabilityOn(settings, "support_enabled", true),
-        community: capabilityOn(settings, "community_enabled", true),
-        newsletter: capabilityOn(settings, "newsletter_enabled", true)
-      };
+      const values = { ...capabilities, live, battle };
       document.querySelectorAll("[data-admin-capability]").forEach((element) => {
         const key = String(element.dataset.adminCapability || "").toLowerCase();
         element.hidden = values[key] === false;
@@ -3323,6 +3437,8 @@
       if (form.elements.support_link_visible && !values.support) setBoolField("support_link_visible", false);
       if (form.elements.community_link_visible && !values.community) setBoolField("community_link_visible", false);
       if (form.elements.subscribe_popup_enabled && !values.newsletter) setBoolField("subscribe_popup_enabled", false);
+      if (form.elements.business_link_visible && !values.business) setBoolField("business_link_visible", false);
+      if (form.elements.music_link_visible && !values.music) setBoolField("music_link_visible", false);
       updatePublicPageLinks();
     }
     function normalizeBattleResult(value) {
@@ -3715,6 +3831,15 @@
         frame.contentWindow.postMessage({ type: "creator-live-refresh" }, creatorPublicOrigin());
       }
     }
+    function previewDraftKey() {
+      return "creator_preview_draft_" + currentCreatorSlug;
+    }
+    function writePreviewDraft() {
+      try {
+        const draft = valuesFromForm();
+        sessionStorage.setItem(previewDraftKey(), JSON.stringify(draft));
+      } catch (error) {}
+    }
     function updatePreviewFrame(refresh = true) {
       const url = previewUrl();
       if (refresh) url.searchParams.set("refresh", Date.now());
@@ -3967,12 +4092,14 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || data.success !== true || !data.creator) return;
-        const settings = data.creator;
+        const capabilities = normalizeCapabilitiesForAdmin(data.creator);
+        const settings = { ...data.creator, capabilities, ...(capabilityEngine ? capabilityEngine.mirrorLegacyFields({}, capabilities) : {}) };
         currentAdminSettings = { ...currentAdminSettings, ...settings };
         activeDna = settings.creator_dna || activeDna;
         document.title = settings.display_name || currentAdminSettings.display_name || "Creator OS";
         setText("gateCreatorName", settings.display_name || "Creator");
         setText("adminCreatorName", settings.display_name || "Creator");
+        renderCreatorFeatures(currentAdminSettings);
         applyAdminCapabilityGates(currentAdminSettings);
       } catch (error) {
       }
@@ -4686,6 +4813,7 @@
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(sessionFlag);
       sessionStorage.removeItem(sessionKey);
+      sessionStorage.removeItem(previewDraftKey());
       closeApp();
     });
     $("uploadAvatar").addEventListener("click", () => uploadMedia("profile"));
@@ -4796,6 +4924,7 @@
         }
       });
     });
+    renderCreatorFeatures(currentAdminSettings);
     applyAdminCapabilityGates(currentAdminSettings);
     bootstrapCreatorIdentity();
     if (liveEnabled()) loadLiveRuntime();

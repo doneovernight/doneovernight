@@ -10,6 +10,7 @@
   <link rel="preload" as="image" href="/assets/mosyaamosya/support-money-bag.png" fetchpriority="low">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <script src="/lib/creator-capabilities.js"></script>
   <script>
     (() => {
       const parts = window.location.pathname.split("/").filter(Boolean);
@@ -1838,6 +1839,27 @@
       battle_link_title: "Prepare for Battle",
       battle_link_subtitle: "Get your TikTok Coins before the battle begins.",
       battle_link_cta_label: "Prepare",
+      capabilities: {
+        live: true,
+        battle: true,
+        countdown: true,
+        announcements: true,
+        events: false,
+        portfolio: false,
+        business: true,
+        newsletter: true,
+        community: true,
+        support: true,
+        shop: false,
+        music: false,
+        ai_assistant: false,
+        timeline: false,
+        featured_project: false,
+        resources: false,
+        gallery: false,
+        testimonials: false,
+        wishlist: false
+      },
       live_enabled: true,
       battle_enabled: true,
       countdown_enabled: true,
@@ -1897,6 +1919,20 @@
       fallback.tiktok_coins_url = "";
       fallback.business_email = "";
       fallback.discord_invite_url = "";
+      fallback.capabilities = window.CreatorCapabilities ? window.CreatorCapabilities.normalizeCapabilities({ creator_dna: "editorial" }) : {
+        live: false,
+        battle: false,
+        countdown: true,
+        announcements: true,
+        events: true,
+        portfolio: true,
+        business: true,
+        newsletter: true,
+        community: false,
+        support: false,
+        featured_project: true,
+        timeline: true
+      };
       fallback.live_enabled = false;
       fallback.battle_enabled = false;
       fallback.countdown_enabled = true;
@@ -2521,6 +2557,14 @@
       window.setTimeout(() => fadeOutIntroAudio(settings), fadeStart);
     }
     function previewSettings(settings) {
+      if (!previewMode) return settings;
+      try {
+        const key = "creator_preview_draft_" + (window.__creatorSlug || settings.slug || "mosyaamosya");
+        const draft = JSON.parse(sessionStorage.getItem(key) || "{}");
+        if (draft && typeof draft === "object") {
+          return { ...settings, ...draft };
+        }
+      } catch (error) {}
       return settings;
     }
     function hexToRgba(hex, alpha) {
@@ -2707,7 +2751,7 @@
       const refreshRuntimeBlocks = () => {
         renderPageEngine(settings);
       };
-      if (!capabilityOn(settings, "live_enabled", true)) {
+      if (!capabilityOn(settings, "live")) {
         document.body.classList.remove("is-live");
         if ($("statusPill")) $("statusPill").hidden = true;
         if ($("liveCard")) {
@@ -2848,7 +2892,7 @@
     }
 
     async function refreshLiveRuntime(settings, options = {}) {
-      if (!capabilityOn(settings, "live_enabled", true)) return;
+      if (!capabilityOn(settings, "live")) return;
       if (liveRuntimeInFlight) return;
       liveRuntimeInFlight = true;
       try {
@@ -2886,7 +2930,7 @@
       liveRuntimeTimer = null;
       liveVisibilityHandler = null;
       liveMessageHandler = null;
-      if (!capabilityOn(settings, "live_enabled", true)) return;
+      if (!capabilityOn(settings, "live")) return;
       refreshLiveRuntime(settings, { forceSettings: true });
       liveRuntimeTimer = window.setInterval(() => {
         if (!document.hidden) refreshLiveRuntime(currentSettings);
@@ -3311,12 +3355,41 @@
       return settings[key] === undefined ? fallbackValue : settings[key] === true;
     }
 
-    function capabilityOn(settings, key, fallbackValue = true) {
-      return settings[key] === undefined ? fallbackValue : settings[key] === true;
+    function capabilityKey(key) {
+      return String(key || "").toLowerCase().replace(/_enabled$/, "").replace(/[^a-z0-9_]+/g, "_");
+    }
+
+    function creatorCapabilities(settings) {
+      if (window.CreatorCapabilities && typeof window.CreatorCapabilities.normalizeCapabilities === "function") {
+        return window.CreatorCapabilities.normalizeCapabilities(settings || {});
+      }
+      const source = settings || {};
+      return {
+        live: source.live_enabled !== false,
+        battle: source.live_enabled !== false && source.battle_enabled !== false,
+        countdown: source.countdown_enabled !== false,
+        announcements: source.announcements_enabled !== false,
+        events: source.events_enabled === true,
+        portfolio: source.portfolio_enabled === true,
+        business: source.business_link_visible !== false,
+        newsletter: source.newsletter_enabled !== false,
+        community: source.community_enabled !== false,
+        support: source.support_enabled !== false,
+        music: source.music_link_visible === true
+      };
+    }
+
+    function capabilityOn(settings, key, fallbackValue = false) {
+      const source = settings || {};
+      const normalized = capabilityKey(key);
+      const capabilities = creatorCapabilities(source);
+      if (capabilities[normalized] !== undefined) return capabilities[normalized] === true;
+      const legacyField = normalized + "_enabled";
+      return source[legacyField] === undefined ? fallbackValue : source[legacyField] === true;
     }
 
     function battleCapabilityOn(settings) {
-      return capabilityOn(settings, "live_enabled", true) && capabilityOn(settings, "battle_enabled", true);
+      return capabilityOn(settings, "live") && capabilityOn(settings, "battle");
     }
 
     async function creatorApi(payload) {
@@ -3568,7 +3641,7 @@
 
     function communityEnabled(settings) {
       const state = String(settings.community_state || "open").toLowerCase();
-      return capabilityOn(settings, "community_enabled", true) && featureOn(settings, "community_link_visible", true) && state !== "hidden";
+      return capabilityOn(settings, "community") && featureOn(settings, "community_link_visible", true) && state !== "hidden";
     }
 
     function discordEnabled(settings) {
@@ -3594,8 +3667,17 @@
 
     function customLinkCapabilityVisible(settings, link) {
       const id = String(link && link.id || "").toLowerCase();
-      if (id.includes("event")) return capabilityOn(settings, "events_enabled", true);
-      if (id.includes("portfolio") || id.includes("work")) return capabilityOn(settings, "portfolio_enabled", true);
+      if (id.includes("event")) return capabilityOn(settings, "events");
+      if (id.includes("portfolio") || id.includes("work")) return capabilityOn(settings, "portfolio");
+      if (id.includes("business") || id.includes("collab") || id.includes("contact")) return capabilityOn(settings, "business");
+      if (id.includes("shop") || id.includes("store")) return capabilityOn(settings, "shop");
+      if (id.includes("music") || id.includes("playlist")) return capabilityOn(settings, "music");
+      if (id.includes("timeline")) return capabilityOn(settings, "timeline");
+      if (id.includes("project") || id.includes("building") || id.includes("studio")) return capabilityOn(settings, "featured_project");
+      if (id.includes("resource") || id.includes("setup")) return capabilityOn(settings, "resources");
+      if (id.includes("gallery") || id.includes("photo")) return capabilityOn(settings, "gallery");
+      if (id.includes("testimonial") || id.includes("review")) return capabilityOn(settings, "testimonials");
+      if (id.includes("wishlist")) return capabilityOn(settings, "wishlist");
       return true;
     }
 
@@ -3605,9 +3687,9 @@
         { key: "discord", visible: discordEnabled(settings), title: textSetting(settings, "discord_link_title", "Discord"), sub: textSetting(settings, "discord_link_subtitle", "Community"), field: "discord_invite_url", label: textSetting(settings, "discord_link_cta_label", "Join"), icon: icons.discord },
         { key: "tiktok", visible: featureOn(settings, "tiktok_link_visible", true), title: textSetting(settings, "tiktok_link_title", "TikTok"), sub: textSetting(settings, "tiktok_link_subtitle", "@" + (settings.username || "mosyaamosya")), field: "tiktok_url", label: textSetting(settings, "tiktok_link_cta_label", "Watch"), icon: icons.tiktok },
         { key: "prepare", visible: battleCapabilityOn(settings) && featureOn(settings, "battle_link_visible", true), title: battleCopy.title, sub: battleCopy.sub, field: "tiktok_coins_url", label: battleCopy.label, icon: icons.heart, battleActive: battleCopy.active },
-        { key: "support", visible: capabilityOn(settings, "support_enabled", true) && featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
-        { key: "business", visible: featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
-        { key: "music", visible: featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
+        { key: "support", visible: capabilityOn(settings, "support") && featureOn(settings, "support_link_visible", false) && Boolean(externalUrl(settings.support_link_url)), title: textSetting(settings, "support_link_title", "Support Me"), sub: textSetting(settings, "support_link_subtitle", "Every contribution helps me create more content."), field: "support_link_url", label: textSetting(settings, "support_link_cta_label", "Support"), icon: icons.heart, supportSticker: settings.support_sticker_enabled !== false, supportStickerAnimated: settings.support_sticker_animation_enabled !== false },
+        { key: "business", visible: capabilityOn(settings, "business") && featureOn(settings, "business_link_visible", true), title: textSetting(settings, "business_link_title", "Business"), sub: textSetting(settings, "business_link_subtitle", settings.business_email || "Booking and collabs"), field: "business_email", label: textSetting(settings, "business_link_cta_label", "Email"), icon: icons.mail },
+        { key: "music", visible: capabilityOn(settings, "music") && featureOn(settings, "music_link_visible", false) && Boolean(externalUrl(settings.music_url)), title: textSetting(settings, "music_link_title", "Music"), sub: textSetting(settings, "music_link_subtitle", "Mina's current sound"), field: "music_url", label: textSetting(settings, "music_link_cta_label", "Open"), icon: icons.sound }
       ].filter((action) => action.visible).concat(normalizeCustomLinks(settings.custom_links).filter((link) => customLinkCapabilityVisible(settings, link)).map((link) => ({
         key: customPageBlockKey(link),
         visible: true,
@@ -3856,7 +3938,7 @@
         '<div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="shareTitle">' +
         '<div class="sheet-handle"></div><div class="sheet-head"><div class="sheet-title"><strong id="shareTitle">Share</strong><span>Creator card and quick links</span></div>' +
         '<button class="icon-button" type="button" data-close-sheet="shareSheet" aria-label="Close share sheet">&times;</button></div>' +
-        '<div class="creator-share-card"><img id="shareAvatar" alt="" hidden><div><strong id="shareName">Mina Mosya</strong><span class="muted" id="shareHandle">@mosyaamosya</span></div></div>' +
+        '<div class="creator-share-card"><img id="shareAvatar" alt="" hidden><div><strong id="shareName">Creator</strong><span class="muted" id="shareHandle">@creator</span></div></div>' +
         '<div class="share-grid" id="shareGrid"></div></div>';
       document.body.insertBefore(sheet, $("privacySheet"));
 
@@ -3941,8 +4023,8 @@
 
     function createRuntimeTextBlock(settings, key) {
       const block = String(key || "").toLowerCase();
-      if (block === "announcement" && !capabilityOn(settings, "announcements_enabled", true)) return null;
-      if (block === "countdown" && !capabilityOn(settings, "countdown_enabled", true)) return null;
+      if (block === "announcement" && !capabilityOn(settings, "announcements")) return null;
+      if (block === "countdown" && !capabilityOn(settings, "countdown")) return null;
       if (block === "countdown" && liveStatusCountdownVisible(settings)) return null;
       const announcement = String(settings.quick_announcement || "").trim();
       const nextDate = nextLiveDate(settings);
@@ -3969,7 +4051,7 @@
     }
 
     function liveStatusCountdownVisible(settings) {
-      if (!capabilityOn(settings, "live_enabled", true) || !capabilityOn(settings, "countdown_enabled", true)) return false;
+      if (!capabilityOn(settings, "live") || !capabilityOn(settings, "countdown")) return false;
       const nextDate = nextLiveDate(settings);
       if (!nextDate || nextDate.getTime() <= Date.now() || settings.live_status) return false;
       const liveCard = $("liveCard");
@@ -4008,6 +4090,7 @@
           isLive: latestPublicLiveState && latestPublicLiveState.isLive
         },
         fields: {
+          capabilities: creatorCapabilities(settings),
           discord_link_visible: settings.discord_link_visible,
           discord_invite_url: settings.discord_invite_url,
           tiktok_link_visible: settings.tiktok_link_visible,
@@ -4117,7 +4200,7 @@
       key: "support",
       version: 1,
       capabilities: { link: true, destination: true, sticker: true },
-      enabled: (settings) => capabilityOn(settings, "support_enabled", true) && featureOn(settings, "support_link_visible", false),
+      enabled: (settings) => capabilityOn(settings, "support") && featureOn(settings, "support_link_visible", false),
       visible: (settings) => Boolean(externalUrl(settings.support_link_url)),
       configuration: { visibilityField: "support_link_visible", destinationField: "support_link_url" },
       renderer: ({ settings }) => createActionBlock(settings, "support")
@@ -4126,7 +4209,7 @@
       key: "business",
       version: 1,
       capabilities: { link: true, destination: true },
-      enabled: (settings) => featureOn(settings, "business_link_visible", true),
+      enabled: (settings) => capabilityOn(settings, "business") && featureOn(settings, "business_link_visible", true),
       visible: (settings) => Boolean(settings.business_email),
       configuration: { visibilityField: "business_link_visible", destinationField: "business_email" },
       renderer: ({ settings }) => createActionBlock(settings, "business")
@@ -4135,8 +4218,8 @@
       key: "newsletter",
       version: 1,
       capabilities: { form: true, analytics: true },
-      enabled: (settings) => capabilityOn(settings, "newsletter_enabled", true) && featureOn(settings, "subscribe_popup_enabled", true),
-      visible: (settings) => capabilityOn(settings, "newsletter_enabled", true) && featureOn(settings, "subscribe_popup_enabled", true),
+      enabled: (settings) => capabilityOn(settings, "newsletter") && featureOn(settings, "subscribe_popup_enabled", true),
+      visible: (settings) => capabilityOn(settings, "newsletter") && featureOn(settings, "subscribe_popup_enabled", true),
       configuration: { visibilityField: "subscribe_popup_enabled" },
       renderer: ({ settings }) => {
         renderNewsletter(settings);
@@ -4147,8 +4230,8 @@
       key: "announcement",
       version: 1,
       capabilities: { runtimeOverlay: true },
-      enabled: (settings) => capabilityOn(settings, "announcements_enabled", true),
-      visible: (settings) => capabilityOn(settings, "announcements_enabled", true) && Boolean(String(settings.quick_announcement || "").trim()),
+      enabled: (settings) => capabilityOn(settings, "announcements"),
+      visible: (settings) => capabilityOn(settings, "announcements") && Boolean(String(settings.quick_announcement || "").trim()),
       configuration: { runtimeField: "quick_announcement" },
       renderer: ({ settings }) => createRuntimeTextBlock(settings, "announcement")
     });
@@ -4156,8 +4239,8 @@
       key: "countdown",
       version: 1,
       capabilities: { runtimeOverlay: true, time: true },
-      enabled: (settings) => capabilityOn(settings, "countdown_enabled", true),
-      visible: (settings) => capabilityOn(settings, "countdown_enabled", true) && Boolean(nextLiveDate(settings)) && !liveStatusCountdownVisible(settings),
+      enabled: (settings) => capabilityOn(settings, "countdown"),
+      visible: (settings) => capabilityOn(settings, "countdown") && Boolean(nextLiveDate(settings)) && !liveStatusCountdownVisible(settings),
       configuration: { runtimeField: "next_live_datetime" },
       renderer: ({ settings }) => createRuntimeTextBlock(settings, "countdown")
     });
@@ -4177,7 +4260,7 @@
       key: "music",
       version: 1,
       capabilities: { link: true, destination: true },
-      enabled: (settings) => featureOn(settings, "music_link_visible", false),
+      enabled: (settings) => capabilityOn(settings, "music") && featureOn(settings, "music_link_visible", false),
       visible: (settings) => Boolean(externalUrl(settings.music_url)),
       configuration: { visibilityField: "music_link_visible", destinationField: "music_url" },
       renderer: ({ settings }) => createActionBlock(settings, "music")
@@ -4198,7 +4281,7 @@
       key: "community",
       version: 1,
       capabilities: { link: true, previewState: true },
-      enabled: (settings) => featureOn(settings, "community_link_visible", true),
+      enabled: (settings) => capabilityOn(settings, "community") && featureOn(settings, "community_link_visible", true),
       visible: (settings) => communityEnabled(settings),
       configuration: { visibilityField: "community_link_visible", destinationField: "community_link_url" },
       renderer: ({ settings }) => {
@@ -4320,11 +4403,10 @@
 
     function setupTikTokBrowserHelper(settings) {
       removeElement("tiktokBrowserHelper");
-      const isMina = String(settings.slug || "mosyaamosya").toLowerCase() === "mosyaamosya";
       const key = "creator_tiktok_video_helper_dismissed_" + (settings.slug || "mosyaamosya");
       let dismissed = false;
       try { dismissed = localStorage.getItem(key) === "true"; } catch (error) {}
-      if (!TIKTOK_BROWSER_HELPER_ENABLED || !isMina || dismissed || !looksLikeTikTokBrowser()) return;
+      if (!TIKTOK_BROWSER_HELPER_ENABLED || dismissed || !looksLikeTikTokBrowser() || !heroVideo(settings)) return;
 
       const helper = document.createElement("aside");
       helper.className = "tiktok-browser-helper";
@@ -4469,7 +4551,7 @@
       currentSettings = settings;
       updateDecorativePoster(settings);
       $("previewBadge").hidden = !previewMode;
-      document.body.classList.toggle("is-live", capabilityOn(settings, "live_enabled", true) && Boolean(settings.live_status));
+      document.body.classList.toggle("is-live", capabilityOn(settings, "live") && Boolean(settings.live_status));
       applyTheme(settings);
       applyAmbient(settings);
       setText("displayName", settings.display_name || "Mina Mosya");
@@ -4512,7 +4594,7 @@
         countdownTimer = null;
       }
       countdownZeroChecked = false;
-      if (capabilityOn(settings, "live_enabled", true) && capabilityOn(settings, "countdown_enabled", true) && !settings.live_status && nextDate) {
+      if (capabilityOn(settings, "live") && capabilityOn(settings, "countdown") && !settings.live_status && nextDate) {
         const renderCountdown = () => {
           if (nextDate.getTime() <= Date.now()) {
             if (!countdownZeroChecked) {

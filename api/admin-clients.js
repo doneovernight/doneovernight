@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const { reportCreatorError, runCreatorHealth } = require("../lib/creator-watchtower");
 const { creatorOsEnvironment, getSupabaseRuntimeConfig } = require("../lib/creator-os-environment");
+const CreatorCapabilities = require("../lib/creator-capabilities");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
@@ -91,6 +92,7 @@ const PHASE_2_CREATOR_FIELDS = [
   "battle_undo_snapshot"
 ];
 const CAPABILITY_CREATOR_FIELDS = [
+  "capabilities",
   "live_enabled",
   "battle_enabled",
   "countdown_enabled",
@@ -196,6 +198,7 @@ const TIKTOK_WELCOME_CREATOR_FIELDS = [
   "tiktok_welcome_gate_copy_label"
 ];
 const CREATOR_FIELDS = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, CAPABILITY_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
+const CREATOR_FIELDS_WITHOUT_CAPABILITY_JSON = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, CAPABILITY_CREATOR_FIELDS.filter((field) => field !== "capabilities"), PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_CAPABILITIES = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE = BASE_CREATOR_FIELDS.concat(AMBIENT_CREATOR_FIELDS, PHASE_1_4_CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, PHASE_2_CREATOR_FIELDS, PHASE_3_CREATOR_FIELDS, POLL_CREATOR_FIELDS, LINK_BLOCK_CREATOR_FIELDS, INTRO_AUDIO_CREATOR_FIELDS, TIKTOK_WELCOME_CREATOR_FIELDS).join(",");
 const CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE_OR_COMMUNITY_STICKER = BASE_CREATOR_FIELDS.concat(
@@ -315,6 +318,27 @@ const DEFAULT_MINA_SETTINGS = {
   battle_win_streak: 0,
   battle_updated_at: "",
   battle_undo_snapshot: "",
+  capabilities: {
+    live: true,
+    battle: true,
+    countdown: true,
+    announcements: true,
+    events: false,
+    portfolio: false,
+    business: true,
+    newsletter: true,
+    community: true,
+    support: true,
+    shop: false,
+    music: false,
+    ai_assistant: false,
+    timeline: false,
+    featured_project: false,
+    resources: false,
+    gallery: false,
+    testimonials: false,
+    wishlist: false
+  },
   live_enabled: true,
   battle_enabled: true,
   countdown_enabled: true,
@@ -482,6 +506,7 @@ function defaultCreatorForSlug(value = DEFAULT_CREATOR_SLUG) {
     business_email: "",
     live_url: "",
     live_status: false,
+    capabilities: CreatorCapabilities.normalizeCapabilities({ creator_dna: "editorial" }),
     live_enabled: false,
     battle_enabled: false,
     countdown_enabled: true,
@@ -547,44 +572,7 @@ function bool(value, fallback = false) {
 }
 
 function capabilityDefaultsForDna(value) {
-  const dna = normalizeCreatorDna(value);
-  if (dna === "editorial" || dna === "founder") {
-    return {
-      live_enabled: false,
-      battle_enabled: false,
-      countdown_enabled: true,
-      announcements_enabled: true,
-      events_enabled: true,
-      portfolio_enabled: true,
-      support_enabled: false,
-      community_enabled: false,
-      newsletter_enabled: true
-    };
-  }
-  if (dna === "fitness") {
-    return {
-      live_enabled: false,
-      battle_enabled: false,
-      countdown_enabled: true,
-      announcements_enabled: true,
-      events_enabled: false,
-      portfolio_enabled: false,
-      support_enabled: true,
-      community_enabled: true,
-      newsletter_enabled: true
-    };
-  }
-  return {
-    live_enabled: true,
-    battle_enabled: true,
-    countdown_enabled: true,
-    announcements_enabled: true,
-    events_enabled: false,
-    portfolio_enabled: false,
-    support_enabled: true,
-    community_enabled: true,
-    newsletter_enabled: true
-  };
+  return CreatorCapabilities.mirrorLegacyFields({ creator_dna: normalizeCreatorDna(value) });
 }
 
 function isDirectIntroAudioUrl(value) {
@@ -1036,7 +1024,7 @@ function normalizeTheme(value) {
 }
 
 function normalizeCreatorDna(value) {
-  const allowed = new Set(["artist", "streamer", "influencer", "founder", "editorial", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
+  const allowed = new Set(["artist", "streamer", "influencer", "founder", "editorial", "fitness", "musician", "podcaster", "gamer", "realtor", "coach", "restaurant", "business"]);
   const dna = clean(value || DEFAULT_MINA_SETTINGS.creator_dna).toLowerCase();
   return allowed.has(dna) ? dna : DEFAULT_MINA_SETTINGS.creator_dna;
 }
@@ -1463,6 +1451,13 @@ function normalizeCreator(row = {}) {
   const defaults = defaultCreatorForSlug(row.slug || row.username || DEFAULT_CREATOR_SLUG);
   const dna = normalizeCreatorDna(row.creator_dna || defaults.creator_dna);
   const capabilityDefaults = capabilityDefaultsForDna(dna);
+  const capabilities = CreatorCapabilities.normalizeCapabilities({
+    ...capabilityDefaults,
+    ...defaults,
+    ...row,
+    creator_dna: dna
+  });
+  const capabilityFields = CreatorCapabilities.mirrorLegacyFields({ creator_dna: dna }, capabilities);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(row, "hero_video_url");
   const hasHeroImageUrl = Object.prototype.hasOwnProperty.call(row, "hero_image_url");
   const legacyGateMessage = clean(row.tiktok_welcome_message) === DEFAULT_MINA_SETTINGS.tiktok_welcome_message ? "" : clean(row.tiktok_welcome_message);
@@ -1530,15 +1525,8 @@ function normalizeCreator(row = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(row.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(row.battle_updated_at),
     battle_undo_snapshot: clean(row.battle_undo_snapshot),
-    live_enabled: bool(row.live_enabled, capabilityDefaults.live_enabled),
-    battle_enabled: bool(row.battle_enabled, capabilityDefaults.battle_enabled),
-    countdown_enabled: bool(row.countdown_enabled, capabilityDefaults.countdown_enabled),
-    announcements_enabled: bool(row.announcements_enabled, capabilityDefaults.announcements_enabled),
-    events_enabled: bool(row.events_enabled, capabilityDefaults.events_enabled),
-    portfolio_enabled: bool(row.portfolio_enabled, capabilityDefaults.portfolio_enabled),
-    support_enabled: bool(row.support_enabled, capabilityDefaults.support_enabled),
-    community_enabled: bool(row.community_enabled, capabilityDefaults.community_enabled),
-    newsletter_enabled: bool(row.newsletter_enabled, capabilityDefaults.newsletter_enabled),
+    capabilities,
+    ...capabilityFields,
     pinned_block: normalizePinnedBlock(row.pinned_block),
     community_state: normalizeCommunityState(row.community_state),
     quick_announcement: clean(row.quick_announcement),
@@ -1611,6 +1599,7 @@ async function fetchCreatorFromTable(slug = DEFAULT_CREATOR_SLUG) {
   let rows;
   const selectAttempts = [
     CREATOR_FIELDS,
+    CREATOR_FIELDS_WITHOUT_CAPABILITY_JSON,
     CREATOR_FIELDS_WITHOUT_CAPABILITIES,
     CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE,
     CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER,
@@ -1707,6 +1696,13 @@ function creatorPayload(input = {}) {
   const defaults = defaultCreatorForSlug(slug);
   const dna = normalizeCreatorDna(input.creator_dna || defaults.creator_dna);
   const capabilityDefaults = capabilityDefaultsForDna(dna);
+  const capabilities = CreatorCapabilities.normalizeCapabilities({
+    ...capabilityDefaults,
+    ...defaults,
+    ...input,
+    creator_dna: dna
+  });
+  const capabilityFields = CreatorCapabilities.mirrorLegacyFields({ creator_dna: dna }, capabilities);
   const introAudioEnabled = bool(input.intro_audio_enabled, false);
   const introAudioUrl = clean(input.intro_audio_url);
   const hasHeroVideoUrl = Object.prototype.hasOwnProperty.call(input, "hero_video_url");
@@ -1780,15 +1776,8 @@ function creatorPayload(input = {}) {
     battle_win_streak: Math.max(0, Math.floor(number(input.battle_win_streak, 0))),
     battle_updated_at: normalizeDateTime(input.battle_updated_at) || null,
     battle_undo_snapshot: clean(input.battle_undo_snapshot),
-    live_enabled: bool(input.live_enabled, capabilityDefaults.live_enabled),
-    battle_enabled: bool(input.battle_enabled, capabilityDefaults.battle_enabled),
-    countdown_enabled: bool(input.countdown_enabled, capabilityDefaults.countdown_enabled),
-    announcements_enabled: bool(input.announcements_enabled, capabilityDefaults.announcements_enabled),
-    events_enabled: bool(input.events_enabled, capabilityDefaults.events_enabled),
-    portfolio_enabled: bool(input.portfolio_enabled, capabilityDefaults.portfolio_enabled),
-    support_enabled: bool(input.support_enabled, capabilityDefaults.support_enabled),
-    community_enabled: bool(input.community_enabled, capabilityDefaults.community_enabled),
-    newsletter_enabled: bool(input.newsletter_enabled, capabilityDefaults.newsletter_enabled),
+    capabilities,
+    ...capabilityFields,
     pinned_block: normalizePinnedBlock(input.pinned_block),
     community_state: normalizeCommunityState(input.community_state),
     quick_announcement: clean(input.quick_announcement),
@@ -1877,6 +1866,8 @@ async function saveCreatorToTable(payload) {
   CAPABILITY_CREATOR_FIELDS.forEach((field) => {
     delete withoutCapabilitiesPayload[field];
   });
+  const withoutCapabilityJsonPayload = { ...payload };
+  delete withoutCapabilityJsonPayload.capabilities;
   const { countdown_message, ...withoutCountdownMessagePayload } = payload;
   const { countdown_message: countdownMessage, ...withoutCountdownMessageOrCommunityStickerPayload } = withoutCommunityStickerPayload;
   const { public_page_order, ...withoutPageOrderPayload } = withoutSupportPayload;
@@ -1884,6 +1875,7 @@ async function saveCreatorToTable(payload) {
   const { faq_items, ...legacyFaqPayload } = legacyVisibilityPayload;
   const saveAttempts = [
     { fields: CREATOR_FIELDS, payload },
+    { fields: CREATOR_FIELDS_WITHOUT_CAPABILITY_JSON, payload: withoutCapabilityJsonPayload },
     { fields: CREATOR_FIELDS_WITHOUT_CAPABILITIES, payload: withoutCapabilitiesPayload },
     { fields: CREATOR_FIELDS_WITHOUT_COUNTDOWN_MESSAGE, payload: withoutCountdownMessagePayload },
     { fields: CREATOR_FIELDS_WITHOUT_COMMUNITY_STICKER, payload: withoutCommunityStickerPayload },
