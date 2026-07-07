@@ -1,0 +1,2429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMMONPL4CE Website OS</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/common-place/final/cp-favicon-32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <style>
+    :root {
+      --bg: #060606;
+      --panel: rgba(237, 230, 216, .055);
+      --panel-strong: rgba(237, 230, 216, .09);
+      --line: rgba(237, 230, 216, .16);
+      --line-strong: rgba(237, 230, 216, .28);
+      --text: #f1eadc;
+      --muted: rgba(241, 234, 220, .62);
+      --dim: rgba(241, 234, 220, .42);
+      --accent: #ede6d8;
+      --accent-2: #bfa171;
+      --ink: #ede6d8;
+      --danger: #d8a38d;
+      --success: #c6d7ba;
+      --admin-bg-a: rgba(237, 230, 216, .18);
+      --admin-bg-b: rgba(139, 95, 74, .2);
+      --glass-panel: linear-gradient(140deg, rgba(255,255,255,.14), rgba(255,255,255,.055));
+      --serif: "Instrument Serif", "Times New Roman", serif;
+      --sans: "Manrope", system-ui, sans-serif;
+      --mono: "JetBrains Mono", monospace;
+      color-scheme: dark;
+      font-family: var(--sans);
+    }
+
+    * { box-sizing: border-box; }
+    html { overflow-x: hidden; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% -8%, var(--admin-bg-a), transparent 30rem),
+        radial-gradient(circle at 100% 0%, var(--admin-bg-b), transparent 28rem),
+        #060606;
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .075;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled, input:disabled, textarea:disabled { cursor: not-allowed; opacity: .58; }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(241,234,220,.075);
+      color: var(--text);
+      padding: 0 14px;
+      font-weight: 900;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .button.primary {
+      border: 0;
+      background: linear-gradient(135deg, var(--accent), #bfa171);
+      color: #24100e;
+      box-shadow: 0 16px 42px rgba(191,161,113,.22);
+    }
+
+    .button.ghost {
+      background: transparent;
+      color: rgba(241,234,220,.72);
+    }
+
+    .button.small {
+      min-height: 34px;
+      border-radius: 9px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .button[disabled] { cursor: not-allowed; opacity: .5; box-shadow: none; }
+
+    .gate {
+      min-height: 100svh;
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding: clamp(22px, 5vw, 56px) 18px 0;
+      overflow: hidden;
+      isolation: isolate;
+      transition: opacity .5s ease, transform .5s ease, filter .5s ease;
+      z-index: 2;
+    }
+
+    .gate::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(237,230,216,.13), transparent 32rem),
+        radial-gradient(circle at 20% 88%, rgba(139,95,74,.16), transparent 28rem);
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .gate.is-exiting { opacity: 0; transform: scale(.992); filter: blur(8px); pointer-events: none; }
+
+    .gate-card,
+    .os-panel,
+    .booking-row,
+    .template-row {
+      border: 1px solid var(--line);
+      background: var(--glass-panel);
+      box-shadow: 0 18px 56px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.14);
+      backdrop-filter: blur(18px) saturate(1.12);
+    }
+
+    .gate-card {
+      width: min(460px, 100%);
+      padding: clamp(30px, 5vw, 44px);
+      border-radius: 34px;
+      display: grid;
+      gap: 20px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.052)),
+        rgba(18,9,8,.54);
+      box-shadow:
+        0 34px 90px rgba(0,0,0,.36),
+        0 1px 0 rgba(255,255,255,.16) inset,
+        0 -1px 0 rgba(255,255,255,.05) inset;
+      position: relative;
+      z-index: 2;
+    }
+
+    .commonplace-gate-logo {
+      width: min(100%, 360px);
+      height: auto;
+      display: block;
+      margin: 0;
+      filter: drop-shadow(0 18px 42px rgba(191,161,113,.18));
+    }
+
+    .gate-card .muted {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.55;
+      color: rgba(241,234,220,.66);
+    }
+
+    .gate-card label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .02em;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 13px 14px;
+      outline: none;
+    }
+
+    textarea { min-height: 126px; resize: vertical; line-height: 1.55; }
+    select { appearance: none; }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(237,230,216,.62);
+      box-shadow: 0 0 0 3px rgba(237,230,216,.1);
+    }
+
+    .gate-card input {
+      min-height: 54px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.2);
+    }
+
+    .gate-card .button.primary {
+      min-height: 54px;
+      border-radius: 18px;
+      width: 100%;
+      position: relative;
+      display: grid;
+      place-items: center;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .gate-card .button.primary:active { transform: scale(.992); }
+    .gate-card .status { min-height: 18px; color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .unlock-button-content {
+      min-width: 86px;
+      display: contents;
+      white-space: nowrap;
+    }
+
+    #unlockButtonLabel {
+      grid-area: 1 / 1;
+    }
+
+    .unlock-spinner,
+    .unlock-check {
+      position: absolute;
+      left: calc(50% - 54px);
+      top: 50%;
+      width: 15px;
+      height: 15px;
+      opacity: 0;
+      transform: translateY(-50%) scale(.82);
+      transition: opacity .16s ease, transform .16s ease;
+    }
+
+    .unlock-spinner {
+      border: 2px solid rgba(36,16,14,.2);
+      border-top-color: rgba(36,16,14,.78);
+      border-radius: 999px;
+    }
+
+    .unlock-check {
+      display: grid;
+      place-items: center;
+      color: #24100e;
+      font-size: 15px;
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .gate-card[data-unlock-state="unlocking"] .unlock-spinner {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+      animation: unlockSpin .82s linear infinite;
+    }
+
+    .gate-card[data-unlock-state="welcome"] .unlock-check { opacity: 1; transform: translateY(-50%) scale(1); }
+    .gate-card[data-unlock-state="failed"] .button.primary {
+      background: linear-gradient(135deg, #e8dcc8, #bfa171);
+      color: #2a080d;
+    }
+
+    @keyframes unlockSpin {
+      from { transform: translateY(-50%) rotate(0deg) scale(1); }
+      to { transform: translateY(-50%) rotate(360deg) scale(1); }
+    }
+
+    @keyframes saveSpin { to { transform: rotate(360deg); } }
+
+    .gate-footer {
+      position: absolute;
+      inset: auto 0 0;
+      min-height: 190px;
+      display: grid;
+      place-items: end center;
+      padding: 82px 6vw 34px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .gate .doneovernight-footer-watermark { color: #ede6d8; }
+
+    .gate-powered {
+      position: relative;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      color: rgba(245,241,234,.44);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+
+    .gate-powered img { width: 112px; opacity: .48; }
+
+    .app {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      padding-bottom: 86px;
+      display: none;
+    }
+
+    body.is-unlocked .gate { display: none; }
+    body.is-unlocked .app { display: block; }
+
+    .os-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid rgba(237,230,216,.12);
+      background: rgba(6,6,6,.84);
+      backdrop-filter: blur(20px) saturate(1.1);
+    }
+
+    .os-header-inner {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      min-height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .os-brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .os-brand img {
+      width: clamp(168px, 18vw, 284px);
+      height: auto;
+    }
+
+    .os-brand-meta {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      padding-left: 16px;
+      border-left: 1px solid rgba(237,230,216,.16);
+    }
+
+    .os-brand-meta span {
+      color: rgba(241,234,220,.44);
+      font: 700 10px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .os-brand-meta strong {
+      color: rgba(241,234,220,.82);
+      font-size: 13px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .os-header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sync-state {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 999px;
+      padding: 0 11px;
+      color: rgba(241,234,220,.62);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .sync-state::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent-2);
+      box-shadow: 0 0 20px rgba(191,161,113,.5);
+    }
+
+    .os-layout {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: var(--sidebar-width, 248px) minmax(0, 1fr);
+      gap: 24px;
+      padding: 24px 0 80px;
+      align-items: start;
+    }
+
+    .os-nav {
+      position: sticky;
+      top: 106px;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 18px;
+      background: rgba(6,6,6,.5);
+      backdrop-filter: blur(18px);
+    }
+
+    .os-nav-toggle {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 9px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 10px;
+      background: rgba(237,230,216,.06);
+      color: rgba(241,234,220,.54);
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .toggle-mark {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(237,230,216,.08);
+      color: rgba(241,234,220,.72);
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .os-nav button:not(.os-nav-toggle) {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      color: rgba(241,234,220,.62);
+      padding: 0 11px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .os-nav button:not(.os-nav-toggle)::before {
+      content: attr(data-nav-icon);
+      width: 24px;
+      height: 24px;
+      display: none;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(237,230,216,.08);
+      color: rgba(241,234,220,.72);
+      font: 900 10px var(--mono);
+      letter-spacing: .02em;
+    }
+
+    .nav-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .os-nav button:not(.os-nav-toggle)[aria-selected="true"] {
+      border-color: rgba(237,230,216,.18);
+      background: rgba(237,230,216,.09);
+      color: var(--text);
+      box-shadow: inset 0 1px rgba(255,255,255,.1);
+    }
+
+    .nav-count {
+      min-width: 22px;
+      min-height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(237,230,216,.1);
+      color: rgba(241,234,220,.76);
+      font-size: 11px;
+    }
+
+    @media (min-width: 1081px) {
+      .app[data-sidebar="collapsed"] { --sidebar-width: 76px; }
+      .app[data-sidebar="collapsed"] .os-nav {
+        padding: 8px;
+        justify-items: stretch;
+      }
+      .app[data-sidebar="collapsed"] .os-nav-toggle,
+      .app[data-sidebar="collapsed"] .os-nav button:not(.os-nav-toggle) {
+        justify-content: center;
+        padding-inline: 8px;
+      }
+      .app[data-sidebar="collapsed"] .toggle-label,
+      .app[data-sidebar="collapsed"] .nav-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .app[data-sidebar="collapsed"] .toggle-mark { transform: rotate(180deg); }
+      .app[data-sidebar="collapsed"] .os-nav button:not(.os-nav-toggle)::before { display: grid; }
+      .app[data-sidebar="collapsed"] .nav-count {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        min-width: 16px;
+        min-height: 16px;
+        font-size: 9px;
+      }
+    }
+
+    .os-main { min-width: 0; display: grid; gap: 18px; }
+
+    .view { display: none; gap: 18px; }
+    .view.is-active { display: grid; }
+
+    .view-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      min-width: 0;
+      padding: 6px 0 8px;
+    }
+
+    .view-title { display: grid; gap: 8px; min-width: 0; }
+    .view-title h1 {
+      margin: 0;
+      font-family: var(--sans);
+      font-size: clamp(32px, 4.8vw, 68px);
+      font-weight: 850;
+      line-height: .9;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+    }
+
+    .view-title p {
+      margin: 0;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .os-panel {
+      border-radius: 8px;
+      padding: clamp(18px, 2vw, 24px);
+      background:
+        linear-gradient(145deg, rgba(237,230,216,.085), rgba(237,230,216,.028)),
+        rgba(0,0,0,.22);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .panel-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      min-height: 132px;
+      display: grid;
+      align-content: space-between;
+      gap: 20px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(0,0,0,.18);
+    }
+
+    .metric span {
+      color: rgba(241,234,220,.5);
+      font: 850 10px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+
+    .metric strong {
+      font-family: var(--sans);
+      font-size: clamp(30px, 4vw, 48px);
+      font-weight: 850;
+      line-height: .92;
+      letter-spacing: -.03em;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .booking-list,
+    .activity-list,
+    .template-list,
+    .client-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .booking-row,
+    .template-row,
+    .client-row,
+    .activity-row {
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(237,230,216,.12);
+      box-shadow: none;
+    }
+
+    .booking-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 190px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .booking-primary { display: grid; gap: 12px; min-width: 0; }
+    .booking-title {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .booking-title strong {
+      font-size: 17px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .booking-title span {
+      color: rgba(241,234,220,.48);
+      font: 800 11px var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .detail {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding-top: 8px;
+    }
+
+    .detail span {
+      color: rgba(241,234,220,.42);
+      font: 850 10px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .detail strong {
+      min-width: 0;
+      color: rgba(241,234,220,.84);
+      font-size: 13px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .booking-notes {
+      color: rgba(241,234,220,.68);
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .booking-actions { display: grid; gap: 10px; }
+    .status-pill {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(237,230,216,.16);
+      border-radius: 999px;
+      padding: 0 10px;
+      color: rgba(241,234,220,.78);
+      background: rgba(237,230,216,.07);
+      font-size: 11px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .status-pill.new { color: #f1eadc; border-color: rgba(237,230,216,.34); }
+    .status-pill.contacted { color: #e6d0a6; }
+    .status-pill.confirmed { color: var(--success); }
+    .status-pill.completed { color: #d5ddcf; }
+    .status-pill.archived { color: rgba(241,234,220,.42); }
+
+    .phase-note,
+    .empty-state,
+    .form-note {
+      border: 1px dashed rgba(237,230,216,.18);
+      border-radius: 8px;
+      padding: 14px;
+      color: rgba(241,234,220,.58);
+      background: rgba(0,0,0,.14);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .empty-state strong {
+      display: block;
+      color: rgba(241,234,220,.86);
+      margin-bottom: 4px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field-grid .wide { grid-column: 1 / -1; }
+
+    .website-builder {
+      margin-top: 18px;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding-top: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .builder-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .builder-head h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .builder-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .builder-state {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 999px;
+      padding: 0 10px;
+      color: rgba(241,234,220,.62);
+      background: rgba(237,230,216,.06);
+      font: 850 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .hero-gallery-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .hero-slot {
+      display: grid;
+      gap: 12px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(0,0,0,.14);
+    }
+
+    .hero-slot-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .hero-slot-head strong {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .hero-slot-head span {
+      color: rgba(241,234,220,.42);
+      font: 800 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .image-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .image-drop {
+      min-height: 122px;
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+      border: 1px dashed rgba(237,230,216,.18);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(237,230,216,.035);
+    }
+
+    .image-drop span {
+      color: rgba(241,234,220,.44);
+      font: 850 10px var(--mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .image-drop strong {
+      color: rgba(241,234,220,.78);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .image-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .section-builder {
+      display: grid;
+      grid-template-columns: minmax(240px, .55fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .section-list-panel,
+    .section-editor-panel,
+    .section-preview {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.14);
+      padding: 14px;
+    }
+
+    .section-list-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .section-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .section-item {
+      min-height: 46px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 8px;
+      background: rgba(237,230,216,.045);
+      color: rgba(241,234,220,.72);
+      padding: 10px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+    }
+
+    .section-item[aria-selected="true"] {
+      border-color: rgba(237,230,216,.28);
+      background: rgba(237,230,216,.09);
+      color: var(--text);
+    }
+
+    .section-item strong {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .section-item span {
+      color: rgba(241,234,220,.44);
+      font: 850 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .add-section-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .section-editor-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .section-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .section-editor-grid .wide { grid-column: 1 / -1; }
+
+    .section-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .section-preview {
+      display: grid;
+      gap: 10px;
+      min-height: 190px;
+    }
+
+    .section-preview-kicker {
+      color: rgba(241,234,220,.5);
+      font: 850 10px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .section-preview h3 {
+      margin: 0;
+      max-width: 780px;
+      font-size: clamp(28px, 4vw, 52px);
+      line-height: .9;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+    }
+
+    .section-preview p {
+      margin: 0;
+      max-width: 680px;
+      color: rgba(241,234,220,.66);
+      font-family: var(--serif);
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    .preview-media {
+      min-height: 86px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(237,230,216,.16);
+      border-radius: 8px;
+      color: rgba(241,234,220,.42);
+      background: rgba(237,230,216,.035);
+      font: 850 10px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    label.field {
+      display: grid;
+      gap: 7px;
+      color: rgba(241,234,220,.58);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    label.field span {
+      color: rgba(241,234,220,.48);
+      font: 850 10px var(--mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .reply-workspace {
+      display: grid;
+      grid-template-columns: 290px minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .booking-picker {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .picker-button {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      color: rgba(241,234,220,.76);
+      padding: 12px;
+      text-align: left;
+      display: grid;
+      gap: 5px;
+    }
+
+    .picker-button[aria-pressed="true"] {
+      border-color: rgba(237,230,216,.34);
+      background: rgba(237,230,216,.09);
+      color: var(--text);
+    }
+
+    .picker-button strong { font-size: 13px; overflow-wrap: anywhere; }
+    .picker-button span { color: rgba(241,234,220,.46); font-size: 12px; }
+
+    .draft-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .draft-preview {
+      white-space: pre-wrap;
+      min-height: 180px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(0,0,0,.2);
+      color: rgba(241,234,220,.78);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .template-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr);
+      gap: 16px;
+    }
+
+    .template-row h3,
+    .client-row h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+
+    .template-row p,
+    .client-row p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .client-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, .4fr);
+      gap: 14px;
+    }
+
+    .settings-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .setting-row {
+      display: grid;
+      grid-template-columns: minmax(180px, .4fr) minmax(0, 1fr) 150px;
+      gap: 14px;
+      align-items: center;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding-top: 12px;
+    }
+
+    .setting-row:first-child { border-top: 0; padding-top: 0; }
+    .setting-row strong { font-size: 13px; }
+    .setting-row span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .activity-row {
+      display: grid;
+      gap: 5px;
+      color: rgba(241,234,220,.72);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .activity-row span {
+      color: rgba(241,234,220,.42);
+      font: 800 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .os-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      padding: 18px 16px 22px;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .powered {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: rgba(241,234,220,.56);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .powered img { width: 118px; opacity: .66; }
+
+    @media (max-width: 1080px) {
+      .os-layout { grid-template-columns: 1fr; }
+      .os-nav {
+        position: static;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .os-nav-toggle { grid-column: 1 / -1; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .split, .reply-workspace, .section-builder { grid-template-columns: 1fr; }
+      .booking-row, .template-row, .client-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .os-header-inner {
+        min-height: 0;
+        padding: 16px 0;
+        align-items: start;
+        flex-direction: column;
+      }
+      .os-brand { flex-direction: column; align-items: start; gap: 12px; }
+      .os-brand-meta { padding-left: 0; border-left: 0; }
+      .os-header-actions { width: 100%; justify-content: space-between; }
+      .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric-grid, .detail-grid, .field-grid, .image-slot-grid { grid-template-columns: 1fr; }
+      .view-head { align-items: start; flex-direction: column; }
+      .builder-head { flex-direction: column; }
+      .setting-row { grid-template-columns: 1fr; }
+      .gate { padding-inline: 14px; }
+      .gate-card { border-radius: 28px; padding: 28px; }
+      .gate-footer { min-height: 150px; padding-bottom: 24px; }
+      .gate-powered img { width: 98px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="gate" id="gate">
+    <form class="gate-card" id="loginForm" data-unlock-state="idle">
+      <div class="eyebrow">WEBSITE ACCESS</div>
+      <img class="commonplace-gate-logo" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+      <p class="muted">Enter your website password.</p>
+      <label>Password<input id="websitePassword" type="password" autocomplete="current-password" required></label>
+      <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
+        <span class="unlock-button-content">
+          <span class="unlock-spinner" aria-hidden="true"></span>
+          <span class="unlock-check" aria-hidden="true">✓</span>
+          <span id="unlockButtonLabel">Unlock</span>
+        </span>
+      </button>
+      <div class="status" id="loginStatus" aria-live="polite"></div>
+    </form>
+    <div class="gate-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
+      <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
+      <div class="gate-powered">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </div>
+    </div>
+  </div>
+
+  <main class="app" id="app">
+    <header class="os-header">
+      <div class="os-header-inner">
+        <div class="os-brand">
+          <img src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+          <div class="os-brand-meta">
+            <span>Website OS</span>
+            <strong id="workspaceDomain">doneovernight.com/cp</strong>
+          </div>
+        </div>
+        <div class="os-header-actions">
+          <div class="sync-state" id="syncState">Loading bookings</div>
+          <a class="button ghost small" href="https://doneovernight.com/cp" target="_blank" rel="noreferrer">Open website</a>
+          <button class="button ghost small" id="refreshButton" type="button">Refresh</button>
+          <button class="button ghost small" id="logoutButton" type="button">Log out</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="os-layout">
+      <aside class="os-nav" aria-label="Website OS navigation">
+        <button class="os-nav-toggle" id="sidebarToggle" type="button" aria-expanded="true" aria-label="Collapse sidebar">
+          <span class="toggle-label">Collapse</span>
+          <span class="toggle-mark" aria-hidden="true">‹</span>
+        </button>
+        <button type="button" data-view-target="overview" data-nav-icon="OV" aria-selected="true"><span class="nav-label">Overview</span> <span class="nav-count" id="navOverviewCount">0</span></button>
+        <button type="button" data-view-target="bookings" data-nav-icon="BK"><span class="nav-label">Bookings</span> <span class="nav-count" id="navBookingsCount">0</span></button>
+        <button type="button" data-view-target="messages" data-nav-icon="MS"><span class="nav-label">Messages</span> <span class="nav-count" id="navMessagesCount">0</span></button>
+        <button type="button" data-view-target="emails" data-nav-icon="EM"><span class="nav-label">Branded Emails</span></button>
+        <button type="button" data-view-target="website" data-nav-icon="WB"><span class="nav-label">Website</span></button>
+        <button type="button" data-view-target="portfolio" data-nav-icon="PF"><span class="nav-label">Portfolio</span></button>
+        <button type="button" data-view-target="clients" data-nav-icon="CL"><span class="nav-label">Clients</span> <span class="nav-count" id="navClientsCount">0</span></button>
+        <button type="button" data-view-target="analytics" data-nav-icon="AN"><span class="nav-label">Analytics</span></button>
+        <button type="button" data-view-target="settings" data-nav-icon="ST"><span class="nav-label">Settings</span></button>
+      </aside>
+
+      <section class="os-main">
+        <section class="view is-active" id="view-overview" data-view="overview">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Overview</div>
+              <h1>Website pulse.</h1>
+              <p>A calm operating layer for bookings, replies, client context and publication readiness.</p>
+            </div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>New booking requests</span><strong id="metricNew">0</strong></div>
+            <div class="metric"><span>Pending replies</span><strong id="metricPending">0</strong></div>
+            <div class="metric"><span>Published portfolio status</span><strong id="metricPortfolio">Live</strong></div>
+            <div class="metric"><span>Known clients</span><strong id="metricClients">0</strong></div>
+          </div>
+          <div class="split">
+            <section class="os-panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Latest booking requests</h2>
+                  <p>Incoming requests from the public COMMONPL4CE booker.</p>
+                </div>
+                <button class="button small" type="button" data-view-jump="bookings">View all</button>
+              </div>
+              <div class="booking-list" id="overviewBookings"></div>
+            </section>
+            <section class="os-panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Latest activity</h2>
+                  <p>Real activity is derived from booking records and local drafts.</p>
+                </div>
+              </div>
+              <div class="activity-list" id="activityList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-bookings" data-view="bookings">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Bookings</div>
+              <h1>Requests.</h1>
+              <p>Connected to the existing COMMONPL4CE intake source used by the public booking form.</p>
+            </div>
+            <button class="button small" id="reloadBookingsButton" type="button">Reload requests</button>
+          </div>
+          <section class="os-panel">
+            <div class="panel-head">
+              <div>
+                <h2>Incoming booking requests</h2>
+                <p>Status updates write through the existing DONEOVERNIGHT task update API when available.</p>
+              </div>
+            </div>
+            <div class="booking-list" id="bookingsList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="view-messages" data-view="messages">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Messages / Replies</div>
+              <h1>Reply room.</h1>
+              <p>Draft responses in a COMMONPL4CE tone. Sending is intentionally disabled until mail delivery is wired to the existing infrastructure.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="reply-workspace">
+              <div>
+                <div class="panel-head">
+                  <div>
+                    <h2>Bookings</h2>
+                    <p>Choose a request to draft against.</p>
+                  </div>
+                </div>
+                <div class="booking-picker" id="bookingPicker"></div>
+              </div>
+              <div>
+                <div class="panel-head">
+                  <div>
+                    <h2>Draft response</h2>
+                    <p id="replyContext">Select a booking to prepare a reply.</p>
+                  </div>
+                </div>
+                <label class="field wide">
+                  <span>Subject</span>
+                  <input id="draftSubject" type="text" disabled>
+                </label>
+                <label class="field wide" style="margin-top:12px">
+                  <span>Message</span>
+                  <textarea id="draftBody" disabled></textarea>
+                </label>
+                <div class="draft-tools">
+                  <button class="button small" id="draftReceived" type="button" disabled>Booking received</button>
+                  <button class="button small" id="draftMoreInfo" type="button" disabled>More info needed</button>
+                  <button class="button small" id="saveDraft" type="button" disabled>Save draft locally</button>
+                  <button class="button small" id="copyDraft" type="button" disabled>Copy draft</button>
+                  <button class="button small" type="button" disabled>Send</button>
+                </div>
+                <p class="form-note" id="draftNote">Send will be connected in the next phase.</p>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-emails" data-view="emails">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Branded Emails</div>
+              <h1>Email language.</h1>
+              <p>COMMONPL4CE templates prepared for the existing DONEOVERNIGHT mail layer. Real sending is disabled in Phase 1.</p>
+            </div>
+          </div>
+          <div class="template-list" id="emailTemplates"></div>
+        </section>
+
+        <section class="view" id="view-website" data-view="website">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Website</div>
+              <h1>Public content.</h1>
+              <p>Website-facing fields are exposed as a publish-ready model. Publishing connects in the next phase.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="field-grid" id="websiteFields"></div>
+            <div class="website-builder" aria-label="Website builder">
+              <div class="builder-head">
+                <div>
+                  <h2>Website builder</h2>
+                  <p>Public /cp content staging for the hero image gallery. Images stay read-only until publishing is connected.</p>
+                </div>
+                <span class="builder-state">Draft / read-only</span>
+              </div>
+              <div class="hero-gallery-grid">
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 01</strong><span>Opening frame</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 02</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 03</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 04</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 05</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 06</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+                <article class="hero-slot">
+                  <div class="hero-slot-head"><strong>Hero image 07</strong><span>Gallery slot</span></div>
+                  <div class="image-slot-grid">
+                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+                  </div>
+                </article>
+              </div>
+              <p class="form-note">Publishing connects in the next phase.</p>
+              <div class="section-builder" aria-label="Draft section builder">
+                <div class="section-list-panel">
+                  <div class="builder-head">
+                    <div>
+                      <h2>Sections</h2>
+                      <p>Current editable website sections and local drafts.</p>
+                    </div>
+                  </div>
+                  <div class="section-list" id="sectionList"></div>
+                  <div class="add-section-row">
+                    <select id="sectionType">
+                      <option value="Text block">Text block</option>
+                      <option value="Image block">Image block</option>
+                      <option value="Image gallery">Image gallery</option>
+                      <option value="Campaign/project block">Campaign/project block</option>
+                      <option value="Testimonial">Testimonial</option>
+                      <option value="Booking CTA">Booking CTA</option>
+                      <option value="Spacer / Divider">Spacer / Divider</option>
+                    </select>
+                    <button class="button small" id="addSectionButton" type="button">Add section</button>
+                  </div>
+                  <p class="form-note">Sections are saved as drafts. Publishing connects in the next phase.</p>
+                  <p class="form-note">Drafts are stored locally on this device until publishing is connected.</p>
+                </div>
+                <div class="section-editor-panel">
+                  <div class="builder-head">
+                    <div>
+                      <h2>Section editor</h2>
+                      <p id="sectionEditorNote">Select a section to edit draft fields.</p>
+                    </div>
+                    <span class="builder-state" id="sectionStorageState">Local draft</span>
+                  </div>
+                  <div class="section-editor-grid">
+                    <label class="field"><span>Title</span><input id="sectionTitle" type="text" data-section-field="title"></label>
+                    <label class="field"><span>Label / kicker</span><input id="sectionKicker" type="text" data-section-field="kicker"></label>
+                    <label class="field wide"><span>Body text</span><textarea id="sectionBody" data-section-field="body"></textarea></label>
+                    <label class="field"><span>Desktop image</span><input id="sectionDesktopImage" type="text" data-section-field="desktopImage" placeholder="Draft image path or note"></label>
+                    <label class="field"><span>Mobile image</span><input id="sectionMobileImage" type="text" data-section-field="mobileImage" placeholder="Draft image path or note"></label>
+                    <label class="field"><span>CTA label</span><input id="sectionCtaLabel" type="text" data-section-field="ctaLabel"></label>
+                    <label class="field"><span>CTA link</span><input id="sectionCtaLink" type="text" data-section-field="ctaLink"></label>
+                    <label class="field"><span>Visibility</span><select id="sectionVisibility" data-section-field="visibility"><option>draft</option><option>hidden</option><option>ready</option></select></label>
+                  </div>
+                  <div class="section-actions">
+                    <button class="button small" id="moveSectionUp" type="button">Move up</button>
+                    <button class="button small" id="moveSectionDown" type="button">Move down</button>
+                    <button class="button small" id="removeSectionButton" type="button">Remove draft</button>
+                  </div>
+                  <p class="form-note">Ordering is local only until persistence is connected.</p>
+                  <div class="section-preview" id="sectionPreview"></div>
+                </div>
+              </div>
+            </div>
+            <p class="form-note" style="margin-top:14px">Publishing connects in the next phase. The public /cp website was not changed.</p>
+          </section>
+        </section>
+
+        <section class="view" id="view-portfolio" data-view="portfolio">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Portfolio</div>
+              <h1>Projects.</h1>
+              <p>Prepared for project title, description, images, category, draft/published status and ordering.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="empty-state">
+              <strong>No editable portfolio records are connected yet.</strong>
+              The public COMMONPL4CE page is live. Project management and publishing controls will connect in the next phase.
+            </div>
+            <div class="field-grid" style="margin-top:14px">
+              <label class="field"><span>Project title</span><input value="" placeholder="Project title" disabled></label>
+              <label class="field"><span>Category</span><input value="" placeholder="Campaign / Editorial / Travel" disabled></label>
+              <label class="field wide"><span>Description</span><textarea placeholder="Project description" disabled></textarea></label>
+              <label class="field"><span>Status</span><select disabled><option>Draft</option><option>Published</option></select></label>
+              <label class="field"><span>Ordering</span><input value="" placeholder="Position" disabled></label>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-clients" data-view="clients">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Clients</div>
+              <h1>Client memory.</h1>
+              <p>Light CRM generated only from real booking requests.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="client-list" id="clientsList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="view-analytics" data-view="analytics">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Analytics</div>
+              <h1>Signals.</h1>
+              <p>No fake numbers. This section stays quiet until analytics collection is connected.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="empty-state">
+              <strong>No analytics collected yet.</strong>
+              Future metrics: visitors, booking conversion, most viewed project, inquiries this month, average response time.
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-settings" data-view="settings">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Settings</div>
+              <h1>Workspace.</h1>
+              <p>Only working settings are editable. Everything else is locked until persistence is connected.</p>
+            </div>
+          </div>
+          <section class="os-panel">
+            <div class="settings-list" id="settingsList"></div>
+          </section>
+        </section>
+      </section>
+    </div>
+
+    <footer class="os-footer">
+      <div class="powered">
+        <span>Powered by</span>
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT">
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+    const ADMIN_TASKS_ENDPOINT = "/api/admin-tasks";
+    const ADMIN_UPDATE_TASK_ENDPOINT = "/api/admin-update-task";
+    const SESSION_FLAG = "doneovernight_admin";
+    const SESSION_KEY = "doneovernight_admin_key";
+    const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
+    const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
+    const SECTION_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_section_drafts";
+    const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign/project block", "Testimonial", "Booking CTA", "Spacer / Divider"];
+
+    const WEBSITE_OS_WORKSPACES = {
+      commonpl4ce: {
+        slug: "commonpl4ce",
+        brand: "COMMONPL4CE",
+        publicPath: "/cp",
+        publicUrl: "https://doneovernight.com/cp",
+        domain: "doneovernight.com/cp",
+        email: "book@commonpl4ce.com",
+        instagram: "https://instagram.com/commonpl4ce",
+        bookingSource: "commonpl4ce_booker",
+        intakeVersion: "commonpl4ce_booker_v1",
+        logo: "/assets/common-place/final/wordmark-intro-commonpl4ce.png",
+        doneovernightWordmark: "/assets/doneovernight-wordmark.svg",
+        websiteContent: {
+          heroLine: "Available for campaigns, editorials and selected brand projects.",
+          aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
+          behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
+          socials: "Instagram: @commonpl4ce",
+          contact: "book@commonpl4ce.com",
+          availability: "Available worldwide",
+          bookingCta: "Start your project"
+        }
+      }
+    };
+
+    const workspace = WEBSITE_OS_WORKSPACES.commonpl4ce;
+    const state = {
+      tasks: [],
+      bookings: [],
+      clients: [],
+      selectedBookingId: "",
+      drafts: readDrafts(),
+      websiteSections: readSectionDrafts(),
+      selectedSectionId: ""
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const clean = (value) => String(value ?? "").trim();
+    const lower = (value) => clean(value).toLowerCase();
+    const escapeHTML = (value) => clean(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+    function readDrafts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function saveDrafts() {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(state.drafts));
+    }
+
+    function defaultSections() {
+      return [
+        sectionDraft("Hero gallery", "Image gallery", {
+          kicker: "Opening archive",
+          title: "Hero gallery",
+          body: "Seven hero frames prepared for desktop and mobile.",
+          visibility: "ready",
+          system: true
+        }),
+        sectionDraft("About / Behind the film", "Text block", {
+          kicker: "Behind the film",
+          title: "About / Behind the film",
+          body: `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`,
+          visibility: "ready",
+          system: true
+        }),
+        sectionDraft("Portfolio preview", "Campaign/project block", {
+          kicker: "Selected work",
+          title: "Portfolio preview",
+          body: "A calm preview of campaign, editorial and travel stories.",
+          visibility: "draft",
+          system: true
+        }),
+        sectionDraft("Booking CTA", "Booking CTA", {
+          kicker: "Start your project",
+          title: "Booking CTA",
+          body: "Invite the next request without changing the public page yet.",
+          ctaLabel: workspace.websiteContent.bookingCta,
+          ctaLink: workspace.publicPath,
+          visibility: "ready",
+          system: true
+        }),
+        sectionDraft("Footer", "Text block", {
+          kicker: "End note",
+          title: "Footer",
+          body: "COMMONPL4CE contact, socials and DONEOVERNIGHT powered-by stay prepared here.",
+          visibility: "ready",
+          system: true
+        })
+      ];
+    }
+
+    function sectionDraft(title, type, overrides = {}) {
+      return {
+        id: overrides.id || `section_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        title,
+        type,
+        kicker: overrides.kicker || "",
+        body: overrides.body || "",
+        desktopImage: overrides.desktopImage || "",
+        mobileImage: overrides.mobileImage || "",
+        ctaLabel: overrides.ctaLabel || "",
+        ctaLink: overrides.ctaLink || "",
+        visibility: overrides.visibility || "draft",
+        system: Boolean(overrides.system)
+      };
+    }
+
+    function readSectionDrafts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(SECTION_DRAFT_KEY) || "null");
+        return Array.isArray(parsed) && parsed.length ? parsed : defaultSections();
+      } catch (error) {
+        return defaultSections();
+      }
+    }
+
+    function saveSectionDrafts() {
+      localStorage.setItem(SECTION_DRAFT_KEY, JSON.stringify(state.websiteSections));
+    }
+
+    function setSidebarCollapsed(collapsed, persist = true) {
+      const app = $("app");
+      const toggle = $("sidebarToggle");
+      if (!app || !toggle) return;
+      app.dataset.sidebar = collapsed ? "collapsed" : "expanded";
+      toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      toggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+      const label = toggle.querySelector(".toggle-label");
+      if (label) label.textContent = collapsed ? "Expand" : "Collapse";
+      if (persist) localStorage.setItem(SIDEBAR_KEY, collapsed ? "collapsed" : "expanded");
+    }
+
+    function initSidebarPreference() {
+      setSidebarCollapsed(localStorage.getItem(SIDEBAR_KEY) === "collapsed", false);
+    }
+
+    function taskRef(task = {}) {
+      return clean(task.task_id || task.taskId || task.id || task.raw_payload?.task_id || "");
+    }
+
+    function raw(task = {}) {
+      return task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+    }
+
+    function taskSource(task = {}) {
+      const data = raw(task);
+      return lower(task.source || data.source || data.intakeSource);
+    }
+
+    function isWorkspaceBooking(task = {}) {
+      const data = raw(task);
+      return taskSource(task) === workspace.bookingSource ||
+        lower(data.intakeVersion || task.intake_version || task.intakeVersion) === workspace.intakeVersion ||
+        lower(data.brand || task.brand) === lower(workspace.brand) ||
+        clean(task.task_summary || task.task_description || data.task_summary || data.task_description).includes("COMMONPL4CE booking request");
+    }
+
+    function parseLine(summary, label) {
+      const pattern = new RegExp(`${label}:\\s*([^\\n.]+(?:\\.[^\\n]+)?)`, "i");
+      const match = clean(summary).match(pattern);
+      return match ? clean(match[1]).replace(/\s+\.$/, ".").replace(/\.$/, "") : "";
+    }
+
+    function normalizeBudget(value) {
+      const text = clean(value).replace(/^EUR\s*/i, "").replace(/^€\s*/i, "");
+      if (!text) return "";
+      return text.includes("+") ? `EUR ${text}` : `EUR ${text}+`;
+    }
+
+    function normalizeBooking(task = {}) {
+      const data = raw(task);
+      const summary = clean(task.task_summary || task.task_description || data.task_summary || data.task_description || data.task || task.task);
+      const status = normalizeWebsiteStatus(task.status || data.website_status || data.status);
+      const booking = {
+        id: taskRef(task) || clean(task.id),
+        tableId: clean(task.id),
+        taskId: taskRef(task),
+        name: clean(task.name || data.name) || "Unknown client",
+        email: clean(task.email || data.email),
+        brandCompany: clean(task.company || data.company || data.brandCompany) || parseLine(summary, "COMMONPL4CE booking request for"),
+        instagram: clean(data.instagram || task.instagram) || parseLine(summary, "Instagram"),
+        projectType: clean(data.projectType || data.project_type || task.project_type) || parseLine(summary, "Project type"),
+        location: clean(data.location || task.location) || parseLine(summary, "Location"),
+        preferredDate: clean(data.preferredDate || data.preferred_date || task.deadline || data.deadline) || parseLine(summary, "Preferred date"),
+        budget: normalizeBudget(data.budgetRange || task.client_budget || data.client_budget || data.budget || parseLine(summary, "Budget range")),
+        notes: clean(data.references || data.notes || data.links) || parseLine(summary, "References / mood / notes"),
+        status,
+        taskStatus: lower(task.status || data.status || "new") || "new",
+        createdAt: clean(task.created_at || data.created_at || task.createdAt || data.createdAt),
+        updatedAt: clean(task.updated_at || data.updated_at || task.updatedAt || data.updatedAt),
+        sourceTask: task
+      };
+      if (!booking.brandCompany || lower(booking.brandCompany) === "a new project") booking.brandCompany = "New project";
+      return booking;
+    }
+
+    function normalizeWebsiteStatus(status) {
+      const value = lower(status);
+      if (["archived", "cancelled", "rejected"].includes(value)) return "Archived";
+      if (["completed", "delivered"].includes(value)) return "Completed";
+      if (["project_active", "execution_active", "workspace_active", "workspace_ready", "operators_assigned", "payment_confirmed", "awaiting_start", "confirmed"].includes(value)) return "Confirmed";
+      if (["needs_info", "under_review", "review_in_progress", "contacted", "quoted", "quote_sent", "execution_plan_ready"].includes(value)) return "Contacted";
+      return "New";
+    }
+
+    const STATUS_TO_TASK_STATUS = {
+      "New": "new",
+      "Contacted": "needs_info",
+      "Confirmed": "project_active",
+      "Completed": "completed",
+      "Archived": "archived"
+    };
+
+    function formatDate(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return clean(value);
+      return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    }
+
+    function displayValue(value, fallback = "Not provided") {
+      return clean(value) || fallback;
+    }
+
+    function setSync(message) {
+      $("syncState").textContent = message;
+    }
+
+    async function verifyAdminKey(key) {
+      const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ admin_key: key })
+      });
+      if (!response.ok) throw new Error("Admin auth failed");
+      const data = await response.json().catch(() => ({}));
+      if (data?.success !== true) throw new Error("Admin auth denied");
+      return data;
+    }
+
+    async function loadBookings({ silent = false } = {}) {
+      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
+      if (!adminKey) return;
+      if (!silent) setSync("Loading bookings");
+      const response = await fetch(ADMIN_TASKS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ admin_key: adminKey })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success !== true) {
+        throw new Error(data?.error || "Could not load admin tasks");
+      }
+      state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      state.bookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
+      state.clients = buildClients(state.bookings);
+      if (!state.selectedBookingId && state.bookings[0]) state.selectedBookingId = state.bookings[0].id;
+      renderAll();
+      setSync(state.bookings.length ? `Connected: ${state.bookings.length} bookings` : "Connected: no bookings yet");
+    }
+
+    function buildClients(bookings) {
+      const map = new Map();
+      bookings.forEach((booking) => {
+        const key = lower(booking.email) || lower(booking.name);
+        if (!key) return;
+        const current = map.get(key) || {
+          name: booking.name,
+          email: booking.email,
+          instagram: booking.instagram,
+          bookings: [],
+          revenue: "",
+          notes: ""
+        };
+        current.bookings.push(booking);
+        if (!current.instagram && booking.instagram) current.instagram = booking.instagram;
+        if (!current.notes && booking.notes) current.notes = booking.notes;
+        map.set(key, current);
+      });
+      return Array.from(map.values()).sort((a, b) => b.bookings.length - a.bookings.length);
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderBookings();
+      renderOverviewBookings();
+      renderActivity();
+      renderPicker();
+      renderClients();
+      renderTemplates();
+      renderWebsiteFields();
+      renderSettings();
+      renderDraftEditor();
+    }
+
+    function renderMetrics() {
+      const newCount = state.bookings.filter((booking) => booking.status === "New").length;
+      const pending = state.bookings.filter((booking) => ["New", "Contacted"].includes(booking.status)).length;
+      $("metricNew").textContent = String(newCount);
+      $("metricPending").textContent = String(pending);
+      $("metricClients").textContent = String(state.clients.length);
+      $("navOverviewCount").textContent = String(newCount);
+      $("navBookingsCount").textContent = String(state.bookings.length);
+      $("navMessagesCount").textContent = String(pending);
+      $("navClientsCount").textContent = String(state.clients.length);
+      $("metricPortfolio").textContent = "Live";
+    }
+
+    function bookingHTML(booking, compact = false) {
+      const statusClass = lower(booking.status);
+      const statusOptions = ["New", "Contacted", "Confirmed", "Completed", "Archived"].map((status) =>
+        `<option value="${status}"${booking.status === status ? " selected" : ""}>${status}</option>`
+      ).join("");
+      return `
+        <article class="booking-row" data-booking-id="${escapeHTML(booking.id)}">
+          <div class="booking-primary">
+            <div class="booking-title">
+              <strong>${escapeHTML(booking.name)}</strong>
+              <span>${escapeHTML(booking.taskId || "No task id")}</span>
+            </div>
+            <div class="detail-grid">
+              <div class="detail"><span>Email</span><strong>${escapeHTML(displayValue(booking.email))}</strong></div>
+              <div class="detail"><span>Brand / company</span><strong>${escapeHTML(displayValue(booking.brandCompany))}</strong></div>
+              <div class="detail"><span>Instagram</span><strong>${escapeHTML(displayValue(booking.instagram))}</strong></div>
+              <div class="detail"><span>Project type</span><strong>${escapeHTML(displayValue(booking.projectType))}</strong></div>
+              <div class="detail"><span>Location</span><strong>${escapeHTML(displayValue(booking.location))}</strong></div>
+              <div class="detail"><span>Preferred date</span><strong>${escapeHTML(displayValue(booking.preferredDate))}</strong></div>
+              <div class="detail"><span>Budget</span><strong>${escapeHTML(displayValue(booking.budget))}</strong></div>
+              <div class="detail"><span>Received</span><strong>${escapeHTML(displayValue(formatDate(booking.createdAt), "Unknown"))}</strong></div>
+              <div class="detail"><span>Status</span><strong>${escapeHTML(booking.status)}</strong></div>
+            </div>
+            ${compact ? "" : `<div class="booking-notes">${escapeHTML(displayValue(booking.notes, "No notes or references provided."))}</div>`}
+          </div>
+          <div class="booking-actions">
+            <span class="status-pill ${escapeHTML(statusClass)}">${escapeHTML(booking.status)}</span>
+            <select data-status-select="${escapeHTML(booking.id)}" aria-label="Booking status">${statusOptions}</select>
+            <button class="button small" type="button" data-draft-for="${escapeHTML(booking.id)}">Draft reply</button>
+            <div class="form-note" data-status-note="${escapeHTML(booking.id)}">Status writes to existing admin task lifecycle.</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderBookings() {
+      const target = $("bookingsList");
+      if (!state.bookings.length) {
+        target.innerHTML = `<div class="empty-state"><strong>No COMMONPL4CE booking requests yet.</strong>Requests from the public /cp form will appear here after submission.</div>`;
+        return;
+      }
+      target.innerHTML = state.bookings.map((booking) => bookingHTML(booking)).join("");
+    }
+
+    function renderOverviewBookings() {
+      const target = $("overviewBookings");
+      if (!state.bookings.length) {
+        target.innerHTML = `<div class="empty-state"><strong>No new booking requests.</strong>The Website OS is connected and waiting for real /cp submissions.</div>`;
+        return;
+      }
+      target.innerHTML = state.bookings.slice(0, 3).map((booking) => bookingHTML(booking, true)).join("");
+    }
+
+    function renderActivity() {
+      const rows = [];
+      state.bookings.slice(0, 6).forEach((booking) => {
+        rows.push({
+          label: formatDate(booking.createdAt) || "Recently",
+          text: `${booking.name} sent a ${booking.projectType || "project"} request for ${booking.brandCompany || "COMMONPL4CE"}.`
+        });
+      });
+      Object.entries(state.drafts).slice(0, 3).forEach(([id, draft]) => {
+        const booking = state.bookings.find((item) => item.id === id);
+        rows.push({
+          label: formatDate(draft.updatedAt) || "Draft",
+          text: `Draft saved${booking ? ` for ${booking.name}` : ""}.`
+        });
+      });
+      $("activityList").innerHTML = rows.length
+        ? rows.map((row) => `<div class="activity-row"><span>${escapeHTML(row.label)}</span>${escapeHTML(row.text)}</div>`).join("")
+        : `<div class="empty-state"><strong>No activity yet.</strong>Real booking and draft activity will appear here.</div>`;
+    }
+
+    function renderPicker() {
+      const target = $("bookingPicker");
+      if (!state.bookings.length) {
+        target.innerHTML = `<div class="empty-state"><strong>No bookings to reply to yet.</strong>Incoming COMMONPL4CE requests will appear here.</div>`;
+        return;
+      }
+      target.innerHTML = state.bookings.map((booking) => `
+        <button class="picker-button" type="button" data-pick-booking="${escapeHTML(booking.id)}" aria-pressed="${booking.id === state.selectedBookingId ? "true" : "false"}">
+          <strong>${escapeHTML(booking.name)}</strong>
+          <span>${escapeHTML(booking.brandCompany)} / ${escapeHTML(booking.status)}</span>
+        </button>
+      `).join("");
+    }
+
+    function selectedBooking() {
+      return state.bookings.find((booking) => booking.id === state.selectedBookingId) || state.bookings[0] || null;
+    }
+
+    function receivedTemplate(booking) {
+      const name = booking?.name || "there";
+      return {
+        subject: `COMMONPL4CE / request received`,
+        body: `Hi ${name},\n\nThank you for reaching out to COMMONPL4CE.\n\nI received your request for ${booking?.brandCompany || "your project"} and will review the mood, timing and direction carefully before replying with availability and a next step.\n\nIf there are extra references, a campaign brief or a location note you want to add, you can send them in this thread.\n\nWarmly,\nRomy\nCOMMONPL4CE`
+      };
+    }
+
+    function moreInfoTemplate(booking) {
+      const name = booking?.name || "there";
+      return {
+        subject: `COMMONPL4CE / a few details`,
+        body: `Hi ${name},\n\nThank you for your request. The project sounds like it could fit COMMONPL4CE well.\n\nBefore I confirm direction and availability, could you share a little more about:\n\n- The mood or visual references\n- The intended usage of the images\n- Timing around the preferred date\n- Any locations, styling or talent already planned\n\nOnce I have that, I can respond with a clearer next step.\n\nWarmly,\nRomy\nCOMMONPL4CE`
+      };
+    }
+
+    function renderDraftEditor() {
+      const booking = selectedBooking();
+      const subject = $("draftSubject");
+      const body = $("draftBody");
+      const enabled = Boolean(booking);
+      [subject, body, $("draftReceived"), $("draftMoreInfo"), $("saveDraft"), $("copyDraft")].forEach((element) => {
+        if (element) element.disabled = !enabled;
+      });
+      if (!booking) {
+        $("replyContext").textContent = "Select a booking to prepare a reply.";
+        subject.value = "";
+        body.value = "";
+        return;
+      }
+      $("replyContext").textContent = `${booking.name} / ${booking.brandCompany} / ${booking.email || "No email"}`;
+      const draft = state.drafts[booking.id] || receivedTemplate(booking);
+      subject.value = draft.subject || "";
+      body.value = draft.body || "";
+    }
+
+    function renderTemplates() {
+      const templates = [
+        ["booking received", "Acknowledges the inquiry and sets a calm expectation for a thoughtful reply.", receivedTemplate({ name: "Name", brandCompany: "the project" }).body],
+        ["project accepted", "Confirms fit and introduces the next step without overpromising production details.", "Hi Name,\n\nThank you for sharing the direction. I would love to move forward with this COMMONPL4CE project.\n\nThe next step is to align on timing, usage, location and the visual direction so the shoot has the right atmosphere from the start.\n\nWarmly,\nRomy"],
+        ["more info needed", "Asks for missing context before confirming availability.", moreInfoTemplate({ name: "Name" }).body],
+        ["project confirmed", "Confirms the shoot and keeps the tone editorial and precise.", "Hi Name,\n\nYour COMMONPL4CE shoot is confirmed.\n\nI will keep the direction focused on mood, texture and presence. I will send a final preparation note before the date.\n\nWarmly,\nRomy"],
+        ["thank you / completed", "Closes the project with gratitude and a clear handoff.", "Hi Name,\n\nThank you for trusting COMMONPL4CE with this project.\n\nThe final selection has been prepared with care. I hope the images carry the feeling we shaped together.\n\nWarmly,\nRomy"]
+      ];
+      $("emailTemplates").innerHTML = templates.map(([title, note, body]) => `
+        <article class="template-row">
+          <div>
+            <h3>${escapeHTML(title)}</h3>
+            <p>${escapeHTML(note)}</p>
+            <p class="form-note" style="margin-top:10px">Send will be connected in the next phase.</p>
+          </div>
+          <div class="draft-preview">${escapeHTML(body)}</div>
+        </article>
+      `).join("");
+    }
+
+    function renderWebsiteFields() {
+      const fields = [
+        ["hero line", workspace.websiteContent.heroLine],
+        ["about / behind the film", `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`],
+        ["socials", workspace.websiteContent.socials],
+        ["contact", workspace.websiteContent.contact],
+        ["availability", workspace.websiteContent.availability],
+        ["booking CTA text", workspace.websiteContent.bookingCta]
+      ];
+      $("websiteFields").innerHTML = fields.map(([label, value]) => `
+        <label class="field ${label.includes("about") ? "wide" : ""}">
+          <span>${escapeHTML(label)}</span>
+          ${label.includes("about")
+            ? `<textarea disabled>${escapeHTML(value)}</textarea>`
+            : `<input value="${escapeHTML(value)}" disabled>`}
+        </label>
+      `).join("");
+      renderSectionBuilder();
+    }
+
+    function selectedSection() {
+      if (!state.selectedSectionId && state.websiteSections.length) {
+        state.selectedSectionId = state.websiteSections[0].id;
+      }
+      return state.websiteSections.find((section) => section.id === state.selectedSectionId) || state.websiteSections[0] || null;
+    }
+
+    function renderSectionList() {
+      const list = $("sectionList");
+      if (!list) return;
+      const section = selectedSection();
+      list.innerHTML = state.websiteSections.map((item, index) => `
+        <button class="section-item" type="button" data-section-id="${escapeHTML(item.id)}" aria-selected="${item.id === section?.id ? "true" : "false"}">
+          <strong>${escapeHTML(item.title || item.type)}</strong>
+          <span>${escapeHTML(`${index + 1}. ${item.type} / ${item.visibility}`)}</span>
+        </button>
+      `).join("");
+    }
+
+    function renderSectionBuilder() {
+      const section = selectedSection();
+      renderSectionList();
+      renderSectionEditor(section);
+      renderSectionPreview(section);
+    }
+
+    function renderSectionEditor(section) {
+      const fields = {
+        sectionTitle: "title",
+        sectionKicker: "kicker",
+        sectionBody: "body",
+        sectionDesktopImage: "desktopImage",
+        sectionMobileImage: "mobileImage",
+        sectionCtaLabel: "ctaLabel",
+        sectionCtaLink: "ctaLink",
+        sectionVisibility: "visibility"
+      };
+      Object.entries(fields).forEach(([id, key]) => {
+        const element = $(id);
+        if (element) {
+          element.disabled = !section;
+          element.value = section ? section[key] || "" : "";
+        }
+      });
+      const note = $("sectionEditorNote");
+      if (note) note.textContent = section ? `${section.type} / ${section.system ? "current section" : "new local draft"}` : "Add or select a section to edit draft fields.";
+      const index = section ? state.websiteSections.findIndex((item) => item.id === section.id) : -1;
+      const moveUp = $("moveSectionUp");
+      const moveDown = $("moveSectionDown");
+      const remove = $("removeSectionButton");
+      if (moveUp) moveUp.disabled = index <= 0;
+      if (moveDown) moveDown.disabled = index < 0 || index >= state.websiteSections.length - 1;
+      if (remove) remove.disabled = !section || section.system;
+    }
+
+    function renderSectionPreview(section) {
+      const target = $("sectionPreview");
+      if (!target) return;
+      if (!section) {
+        target.innerHTML = `<div class="empty-state"><strong>No section selected.</strong>Add a draft section to preview it here.</div>`;
+        return;
+      }
+      const mediaText = section.desktopImage || section.mobileImage
+        ? `Desktop: ${section.desktopImage || "empty"} / Mobile: ${section.mobileImage || "empty"}`
+        : "No image connected";
+      target.innerHTML = `
+        <span class="section-preview-kicker">${escapeHTML(section.kicker || section.type)}</span>
+        <h3>${escapeHTML(section.title || section.type)}</h3>
+        <p>${escapeHTML(section.body || "Draft body text will appear here.")}</p>
+        <div class="preview-media">${escapeHTML(mediaText)}</div>
+        ${section.ctaLabel ? `<button class="button small" type="button" disabled>${escapeHTML(section.ctaLabel)}</button>` : ""}
+        <span class="builder-state">${escapeHTML(section.visibility)} / local only</span>
+      `;
+    }
+
+    function updateSelectedSection(field, value) {
+      const section = selectedSection();
+      if (!section) return;
+      section[field] = value;
+      saveSectionDrafts();
+      renderSectionList();
+      renderSectionPreview(section);
+    }
+
+    function addSection() {
+      const type = $("sectionType")?.value || SECTION_TYPES[0];
+      const next = sectionDraft(type, type, {
+        kicker: "Draft section",
+        body: "Prepare copy, imagery and visibility here before publishing is connected.",
+        visibility: "draft"
+      });
+      state.websiteSections.push(next);
+      state.selectedSectionId = next.id;
+      saveSectionDrafts();
+      renderSectionBuilder();
+    }
+
+    function moveSelectedSection(direction) {
+      const section = selectedSection();
+      if (!section) return;
+      const index = state.websiteSections.findIndex((item) => item.id === section.id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= state.websiteSections.length) return;
+      const [moved] = state.websiteSections.splice(index, 1);
+      state.websiteSections.splice(nextIndex, 0, moved);
+      saveSectionDrafts();
+      renderSectionBuilder();
+    }
+
+    function removeSelectedSection() {
+      const section = selectedSection();
+      if (!section || section.system) return;
+      state.websiteSections = state.websiteSections.filter((item) => item.id !== section.id);
+      state.selectedSectionId = state.websiteSections[0]?.id || "";
+      saveSectionDrafts();
+      renderSectionBuilder();
+    }
+
+    function renderClients() {
+      const target = $("clientsList");
+      if (!state.clients.length) {
+        target.innerHTML = `<div class="empty-state"><strong>No clients yet.</strong>Clients are generated only from real booking requests.</div>`;
+        return;
+      }
+      target.innerHTML = state.clients.map((client) => `
+        <article class="client-row">
+          <div>
+            <h3>${escapeHTML(client.name || "Unknown client")}</h3>
+            <p>${escapeHTML(displayValue(client.email))}</p>
+            <p>${escapeHTML(displayValue(client.instagram, "Instagram not provided"))}</p>
+          </div>
+          <div class="detail-grid" style="grid-template-columns:1fr">
+            <div class="detail"><span>Project history</span><strong>${client.bookings.length} booking${client.bookings.length === 1 ? "" : "s"}</strong></div>
+            <div class="detail"><span>Revenue</span><strong>Not tracked yet</strong></div>
+            <div class="detail"><span>Notes</span><strong>${escapeHTML(displayValue(client.notes, "No notes"))}</strong></div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderSettings() {
+      const settings = [
+        ["COMMONPL4CE brand", "Logo and public visual identity assets are connected.", "Active"],
+        ["Domain", workspace.domain, "Active"],
+        ["Email", workspace.email, "Read-only"],
+        ["Notifications", "Booking notifications follow the existing intake configuration.", "Existing"],
+        ["DONEOVERNIGHT powered-by", "Visible in login and Website OS footer.", "Active"],
+        ["Workspace access", "Uses existing DONEOVERNIGHT admin key auth.", "Active"]
+      ];
+      $("settingsList").innerHTML = settings.map(([title, value, stateLabel]) => `
+        <div class="setting-row">
+          <strong>${escapeHTML(title)}</strong>
+          <span>${escapeHTML(value)}</span>
+          <span class="status-pill">${escapeHTML(stateLabel)}</span>
+        </div>
+      `).join("");
+    }
+
+    async function updateBookingStatus(bookingId, nextStatus) {
+      const booking = state.bookings.find((item) => item.id === bookingId);
+      if (!booking) return;
+      const note = document.querySelector(`[data-status-note="${CSS.escape(bookingId)}"]`);
+      const mappedStatus = STATUS_TO_TASK_STATUS[nextStatus];
+      if (!mappedStatus) {
+        if (note) note.textContent = "Status updates connect in the next phase.";
+        return;
+      }
+      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
+      if (!adminKey) return;
+      if (note) note.textContent = "Saving status...";
+      const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          admin_key: adminKey,
+          id: booking.tableId || booking.taskId || booking.id,
+          status: mappedStatus,
+          updated_at: new Date().toISOString()
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success !== true) {
+        if (note) note.textContent = "Status updates connect in the next phase.";
+        throw new Error(data?.error || "Status update failed");
+      }
+      booking.status = nextStatus;
+      booking.taskStatus = mappedStatus;
+      if (note) note.textContent = "Status saved.";
+      await loadBookings({ silent: true }).catch(() => renderAll());
+    }
+
+    function switchView(view) {
+      document.querySelectorAll("[data-view-target]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.viewTarget === view ? "true" : "false");
+      });
+      document.querySelectorAll(".view").forEach((section) => {
+        section.classList.toggle("is-active", section.dataset.view === view);
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function unlockApp() {
+      document.body.classList.add("is-unlocked");
+      loadBookings().catch((error) => {
+        setSync("Bookings unavailable");
+        $("overviewBookings").innerHTML = `<div class="empty-state"><strong>Could not load bookings.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
+        $("bookingsList").innerHTML = `<div class="empty-state"><strong>Could not load booking requests.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
+      });
+    }
+
+    $("loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const password = clean($("websitePassword").value);
+      if (!password) return;
+      const card = $("loginForm");
+      const status = $("loginStatus");
+      card.dataset.unlockState = "unlocking";
+      status.textContent = "";
+      $("unlockButton").disabled = true;
+      try {
+        await verifyAdminKey(password);
+        sessionStorage.setItem(SESSION_FLAG, "true");
+        sessionStorage.setItem(SESSION_KEY, password);
+        card.dataset.unlockState = "welcome";
+        $("gate").classList.add("is-exiting");
+        setTimeout(unlockApp, 260);
+      } catch (error) {
+        card.dataset.unlockState = "failed";
+        status.textContent = "Website access denied.";
+      } finally {
+        $("unlockButton").disabled = false;
+      }
+    });
+
+    $("logoutButton").addEventListener("click", () => {
+      sessionStorage.removeItem(SESSION_FLAG);
+      sessionStorage.removeItem(SESSION_KEY);
+      window.location.reload();
+    });
+
+    $("refreshButton").addEventListener("click", () => loadBookings());
+    $("reloadBookingsButton").addEventListener("click", () => loadBookings());
+    $("sidebarToggle").addEventListener("click", () => {
+      setSidebarCollapsed($("app").dataset.sidebar !== "collapsed");
+    });
+
+    document.querySelectorAll("[data-view-target]").forEach((button) => {
+      button.addEventListener("click", () => switchView(button.dataset.viewTarget));
+    });
+
+    document.addEventListener("click", (event) => {
+      const jump = event.target.closest("[data-view-jump]");
+      if (jump) switchView(jump.dataset.viewJump);
+
+      const draftButton = event.target.closest("[data-draft-for]");
+      if (draftButton) {
+        state.selectedBookingId = draftButton.dataset.draftFor;
+        switchView("messages");
+        renderPicker();
+        renderDraftEditor();
+      }
+
+      const pick = event.target.closest("[data-pick-booking]");
+      if (pick) {
+        state.selectedBookingId = pick.dataset.pickBooking;
+        renderPicker();
+        renderDraftEditor();
+      }
+
+      const sectionButton = event.target.closest("[data-section-id]");
+      if (sectionButton) {
+        state.selectedSectionId = sectionButton.dataset.sectionId;
+        renderSectionBuilder();
+      }
+    });
+
+    $("addSectionButton").addEventListener("click", addSection);
+    $("moveSectionUp").addEventListener("click", () => moveSelectedSection(-1));
+    $("moveSectionDown").addEventListener("click", () => moveSelectedSection(1));
+    $("removeSectionButton").addEventListener("click", removeSelectedSection);
+
+    document.querySelectorAll("[data-section-field]").forEach((field) => {
+      field.addEventListener("input", () => updateSelectedSection(field.dataset.sectionField, field.value));
+      field.addEventListener("change", () => updateSelectedSection(field.dataset.sectionField, field.value));
+    });
+
+    document.addEventListener("change", async (event) => {
+      const select = event.target.closest("[data-status-select]");
+      if (!select) return;
+      const previous = state.bookings.find((booking) => booking.id === select.dataset.statusSelect)?.status || "New";
+      select.disabled = true;
+      try {
+        await updateBookingStatus(select.dataset.statusSelect, select.value);
+      } catch (error) {
+        select.value = previous;
+      } finally {
+        select.disabled = false;
+      }
+    });
+
+    $("draftReceived").addEventListener("click", () => {
+      const template = receivedTemplate(selectedBooking());
+      $("draftSubject").value = template.subject;
+      $("draftBody").value = template.body;
+    });
+
+    $("draftMoreInfo").addEventListener("click", () => {
+      const template = moreInfoTemplate(selectedBooking());
+      $("draftSubject").value = template.subject;
+      $("draftBody").value = template.body;
+    });
+
+    $("saveDraft").addEventListener("click", () => {
+      const booking = selectedBooking();
+      if (!booking) return;
+      state.drafts[booking.id] = {
+        subject: $("draftSubject").value,
+        body: $("draftBody").value,
+        updatedAt: new Date().toISOString()
+      };
+      saveDrafts();
+      $("draftNote").textContent = "Draft saved locally in this browser. Send will be connected in the next phase.";
+      renderActivity();
+    });
+
+    $("copyDraft").addEventListener("click", async () => {
+      const text = `${$("draftSubject").value}\n\n${$("draftBody").value}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        $("draftNote").textContent = "Draft copied. Send will be connected in the next phase.";
+      } catch (error) {
+        $("draftNote").textContent = "Copy unavailable in this browser. Send will be connected in the next phase.";
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && sessionStorage.getItem(SESSION_FLAG) === "true") {
+        loadBookings({ silent: true }).catch(() => {});
+      }
+    });
+
+    renderTemplates();
+    renderWebsiteFields();
+    renderSettings();
+    initSidebarPreference();
+    if (sessionStorage.getItem(SESSION_FLAG) === "true" && sessionStorage.getItem(SESSION_KEY)) {
+      unlockApp();
+    } else {
+      setTimeout(() => $("websitePassword").focus(), 100);
+    }
+  </script>
+</body>
+</html>
