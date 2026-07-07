@@ -1177,6 +1177,52 @@
       display: grid;
     }
 
+    .hero-builder-v2 {
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero-builder-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .hero-order-panel,
+    .media-library,
+    .archive-preview-panel {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.14);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-order-panel h3,
+    .media-library h3,
+    .archive-preview-panel h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .hero-order-panel p,
+    .media-library p,
+    .archive-preview-panel p {
+      margin: 0;
+      color: rgba(241,234,220,.58);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .hero-slot-list.is-drop-active {
+      outline: 1px dashed rgba(237,230,216,.28);
+      outline-offset: 4px;
+    }
+
     .hero-slot-editor {
       display: grid;
       gap: 10px;
@@ -1184,6 +1230,20 @@
       border-radius: 8px;
       background: rgba(237,230,216,.035);
       padding: 12px;
+    }
+
+    .hero-slot-editor[draggable="true"] {
+      cursor: grab;
+    }
+
+    .hero-slot-editor.is-dragging {
+      opacity: .48;
+      border-color: rgba(237,230,216,.34);
+    }
+
+    .hero-slot-editor.is-media-target {
+      border-color: rgba(191,161,113,.72);
+      box-shadow: 0 0 0 3px rgba(191,161,113,.12);
     }
 
     .hero-slot-editor-head {
@@ -1201,6 +1261,132 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
+    }
+
+    .hero-preview-thumb,
+    .media-preview-thumb {
+      min-height: 94px;
+      border: 1px dashed rgba(237,230,216,.16);
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(145deg, rgba(237,230,216,.05), rgba(237,230,216,.01)),
+        rgba(0,0,0,.22);
+      display: grid;
+      place-items: center;
+      color: rgba(241,234,220,.38);
+      font: 850 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .hero-preview-thumb img,
+    .media-preview-thumb img {
+      width: 100%;
+      height: 100%;
+      min-height: 94px;
+      object-fit: cover;
+    }
+
+    .media-library-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .media-category {
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid rgba(237,230,216,.08);
+      padding-top: 10px;
+    }
+
+    .media-category:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .media-category h4 {
+      margin: 0;
+      color: rgba(241,234,220,.5);
+      font: 850 10px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .media-category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .media-asset {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(237,230,216,.035);
+      padding: 10px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .media-asset strong {
+      font-size: 12px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .media-asset span {
+      color: rgba(241,234,220,.44);
+      font: 850 9px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      line-height: 1.45;
+    }
+
+    .media-asset-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .archive-preview-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(170px, .45fr);
+      gap: 12px;
+    }
+
+    .archive-preview-stage {
+      min-height: 260px;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 8px;
+      background: #050505;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(64px, 1fr));
+    }
+
+    .archive-preview-stage.is-mobile {
+      min-height: 260px;
+      max-width: 190px;
+      grid-template-columns: 1fr;
+      justify-self: center;
+    }
+
+    .archive-preview-frame {
+      min-height: 100%;
+      background: rgba(237,230,216,.04);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-left: 1px solid rgba(237,230,216,.06);
+    }
+
+    .archive-preview-frame:first-child { border-left: 0; }
+    .archive-preview-frame img { width: 100%; height: 100%; object-fit: cover; }
+    .archive-preview-frame span {
+      color: rgba(241,234,220,.36);
+      font: 850 10px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
     }
 
     label.field {
@@ -1644,11 +1830,55 @@
                   <div class="hero-manager" id="heroManager">
                     <div class="builder-head">
                       <div>
-                        <h2>Hero image manager</h2>
-                        <p>First 7 public website images. Desktop and mobile are separate draft fields.</p>
+                        <h2>Hero Builder</h2>
+                        <p>Draft control for the current public archive playback order. Desktop and mobile are separate.</p>
                       </div>
+                      <span class="builder-state">Publishing connects in Phase 3.</span>
                     </div>
-                    <div class="hero-slot-list" id="heroSlotList"></div>
+                    <div class="hero-builder-v2">
+                      <div class="hero-builder-grid">
+                        <section class="hero-order-panel" aria-label="Desktop Hero">
+                          <div>
+                            <h3>Desktop Hero</h3>
+                            <p>Drag slots to set desktop playback order.</p>
+                          </div>
+                          <div class="hero-slot-list" id="desktopHeroSlots" data-hero-list="desktop"></div>
+                        </section>
+                        <section class="hero-order-panel" aria-label="Mobile Hero">
+                          <div>
+                            <h3>Mobile Hero</h3>
+                            <p>Drag slots to set mobile playback order. Mobile is not linked to desktop.</p>
+                          </div>
+                          <div class="hero-slot-list" id="mobileHeroSlots" data-hero-list="mobile"></div>
+                        </section>
+                      </div>
+                      <section class="media-library" aria-label="Media Library">
+                        <div class="builder-head">
+                          <div>
+                            <h3>Media Library</h3>
+                            <p>Upload later. Assets here can be assigned to draft hero slots now.</p>
+                          </div>
+                          <span class="builder-state" id="mediaTargetState">No slot selected</span>
+                        </div>
+                        <div class="media-library-grid" id="mediaLibraryGrid"></div>
+                      </section>
+                      <section class="archive-preview-panel" aria-label="Hero archive previews">
+                        <div>
+                          <h3>Archive preview</h3>
+                          <p>Draft preview only. Public hero behavior is unchanged.</p>
+                        </div>
+                        <div class="archive-preview-grid">
+                          <div>
+                            <span class="section-preview-kicker">Desktop preview</span>
+                            <div class="archive-preview-stage" id="desktopHeroPreview"></div>
+                          </div>
+                          <div>
+                            <span class="section-preview-kicker">Mobile preview</span>
+                            <div class="archive-preview-stage is-mobile" id="mobileHeroPreview"></div>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
                   </div>
                 </div>
                 <div class="builder-preview-panel">
@@ -1754,6 +1984,7 @@
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
+    const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
 
     const WEBSITE_OS_WORKSPACES = {
       commonpl4ce: {
@@ -1832,7 +2063,19 @@
       };
     }
 
-    function defaultHeroSlots() {
+    function heroSlot(id, image, format, alt, note, status = "Ready") {
+      return {
+        id,
+        mediaId: id,
+        image,
+        alt,
+        note,
+        status,
+        format
+      };
+    }
+
+    function defaultHeroSlots(format = "desktop") {
       const desktop = [
         "/assets/common-place/fullscreen/slide-01-opening.jpg",
         "/assets/common-place/fullscreen/slide-02-yellow.jpg",
@@ -1860,14 +2103,64 @@
         "Campaign image with couch and hoodie",
         "Side profile hoodie campaign image"
       ];
-      return desktop.map((desktopImage, index) => ({
-        id: `hero_${index + 1}`,
-        desktopImage,
-        mobileImage: mobile[index],
-        alt: alts[index],
-        note: index === 0 ? "Opening frame" : "Gallery frame",
-        status: "Ready"
+      const assets = format === "mobile" ? mobile : desktop;
+      return assets.map((image, index) => heroSlot(
+        `${format}_hero_${index + 1}`,
+        image,
+        format,
+        alts[index],
+        index === 0 ? "Opening frame" : "Gallery frame"
+      ));
+    }
+
+    function defaultMediaLibrary() {
+      const desktop = defaultHeroSlots("desktop").map((slot, index) => ({
+        id: slot.id,
+        category: "Hero",
+        filename: slot.image.split("/").pop(),
+        path: slot.image,
+        dimensions: "Desktop archive format",
+        format: "Desktop",
+        usedIn: `Hero ${String(index + 1).padStart(2, "0")}`
       }));
+      const mobile = defaultHeroSlots("mobile").map((slot, index) => ({
+        id: slot.id,
+        category: "Hero",
+        filename: slot.image.split("/").pop(),
+        path: slot.image,
+        dimensions: "Mobile archive format",
+        format: "Mobile",
+        usedIn: `Hero ${String(index + 1).padStart(2, "0")}`
+      }));
+      return desktop.concat(mobile, [
+        {
+          id: "behind_film_romy",
+          category: "Behind the Film",
+          filename: "romy-behind-film.jpg",
+          path: "/assets/common-place/romy/romy-behind-film.jpg",
+          dimensions: "Editorial image",
+          format: "Desktop / Mobile",
+          usedIn: "Behind the Film"
+        },
+        {
+          id: "commonpl4ce_wordmark",
+          category: "Logo",
+          filename: "wordmark-intro-commonpl4ce.png",
+          path: "/assets/common-place/final/wordmark-intro-commonpl4ce.png",
+          dimensions: "Brand asset",
+          format: "Logo",
+          usedIn: "Header / Login"
+        },
+        {
+          id: "novateur_video",
+          category: "Video",
+          filename: "novateur-campaign-film.mp4",
+          path: "/assets/common-place/novateur/novateur-campaign-film.mp4",
+          dimensions: "Campaign video",
+          format: "Video",
+          usedIn: "Novateur / Selected Client"
+        }
+      ]);
     }
 
     function defaultBuilderDraft() {
@@ -1944,7 +2237,10 @@
         selectedSectionId: sections[0].id,
         updatedAt: "",
         sections,
-        heroSlots: defaultHeroSlots()
+        heroDesktopSlots: defaultHeroSlots("desktop"),
+        heroMobileSlots: defaultHeroSlots("mobile"),
+        mediaLibrary: defaultMediaLibrary(),
+        mediaTarget: null
       };
     }
 
@@ -1952,17 +2248,39 @@
       const fallback = defaultBuilderDraft();
       if (!builder || typeof builder !== "object") return fallback;
       const sections = Array.isArray(builder.sections) && builder.sections.length ? builder.sections : fallback.sections;
-      const heroSlots = Array.isArray(builder.heroSlots) && builder.heroSlots.length ? builder.heroSlots : fallback.heroSlots;
-      const normalizedHeroSlots = heroSlots.concat(fallback.heroSlots).slice(0, 7).map((slot, index) => ({
-        ...fallback.heroSlots[index],
+      const legacySlots = Array.isArray(builder.heroSlots) ? builder.heroSlots : [];
+      const desktopSlots = Array.isArray(builder.heroDesktopSlots) && builder.heroDesktopSlots.length ? builder.heroDesktopSlots : legacySlots.map((slot, index) => ({
+        id: slot.id || `desktop_hero_${index + 1}`,
+        mediaId: slot.mediaId || slot.id || `desktop_hero_${index + 1}`,
+        image: slot.image || slot.desktopImage || fallback.heroDesktopSlots[index]?.image || "",
+        alt: slot.alt || fallback.heroDesktopSlots[index]?.alt || "",
+        note: slot.note || fallback.heroDesktopSlots[index]?.note || "",
+        status: slot.status || "Ready",
+        format: "desktop"
+      }));
+      const mobileSlots = Array.isArray(builder.heroMobileSlots) && builder.heroMobileSlots.length ? builder.heroMobileSlots : legacySlots.map((slot, index) => ({
+        id: `mobile_${slot.id || `hero_${index + 1}`}`,
+        mediaId: slot.mobileMediaId || `mobile_hero_${index + 1}`,
+        image: slot.mobileImage || fallback.heroMobileSlots[index]?.image || "",
+        alt: slot.alt || fallback.heroMobileSlots[index]?.alt || "",
+        note: slot.note || fallback.heroMobileSlots[index]?.note || "",
+        status: slot.status || "Ready",
+        format: "mobile"
+      }));
+      const normalizeSlots = (slots, fallbackSlots, format) => slots.concat(fallbackSlots).slice(0, 7).map((slot, index) => ({
+        ...fallbackSlots[index],
         ...slot,
-        status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : fallback.heroSlots[index].status
+        format,
+        status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : fallbackSlots[index].status
       }));
       return {
         selectedSectionId: builder.selectedSectionId || sections[0]?.id || "",
         updatedAt: builder.updatedAt || "",
         sections,
-        heroSlots: normalizedHeroSlots
+        heroDesktopSlots: normalizeSlots(desktopSlots, fallback.heroDesktopSlots, "desktop"),
+        heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
+        mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? builder.mediaLibrary : fallback.mediaLibrary,
+        mediaTarget: builder.mediaTarget || null
       };
     }
 
@@ -2391,34 +2709,99 @@
 
     function renderHeroManager(section) {
       const manager = $("heroManager");
-      const list = $("heroSlotList");
-      if (!manager || !list) return;
+      if (!manager) return;
       const isHero = section?.name === "Hero";
       manager.classList.toggle("is-active", Boolean(isHero));
       if (!isHero) {
-        list.innerHTML = "";
+        ["desktopHeroSlots", "mobileHeroSlots", "mediaLibraryGrid", "desktopHeroPreview", "mobileHeroPreview"].forEach((id) => {
+          const target = $(id);
+          if (target) target.innerHTML = "";
+        });
         return;
       }
-      list.innerHTML = state.builder.heroSlots.map((slot, index) => `
-        <article class="hero-slot-editor" data-hero-slot="${index}">
+      renderHeroSlotList("desktop");
+      renderHeroSlotList("mobile");
+      renderMediaLibrary();
+      renderHeroArchivePreview();
+    }
+
+    function heroSlots(kind) {
+      return kind === "mobile" ? state.builder.heroMobileSlots : state.builder.heroDesktopSlots;
+    }
+
+    function renderHeroSlotList(kind) {
+      const target = $(kind === "mobile" ? "mobileHeroSlots" : "desktopHeroSlots");
+      if (!target) return;
+      const slots = heroSlots(kind);
+      target.innerHTML = slots.map((slot, index) => `
+        <article class="hero-slot-editor${state.builder.mediaTarget?.kind === kind && state.builder.mediaTarget?.index === index ? " is-media-target" : ""}" draggable="true" data-hero-kind="${kind}" data-hero-index="${index}">
           <div class="hero-slot-editor-head">
             <strong>Slot ${String(index + 1).padStart(2, "0")}</strong>
             <span class="builder-state">${escapeHTML(slot.status || "Draft")}</span>
           </div>
+          <div class="hero-preview-thumb">${slot.image ? `<img src="${escapeHTML(slot.image)}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
           <div class="hero-field-grid">
-            <label class="field"><span>Desktop image</span><input value="${escapeHTML(slot.desktopImage)}" data-hero-index="${index}" data-hero-field="desktopImage"></label>
-            <label class="field"><span>Mobile image</span><input value="${escapeHTML(slot.mobileImage)}" data-hero-index="${index}" data-hero-field="mobileImage"></label>
-            <label class="field"><span>Alt text</span><input value="${escapeHTML(slot.alt)}" data-hero-index="${index}" data-hero-field="alt"></label>
-            <label class="field"><span>Status</span><select data-hero-index="${index}" data-hero-field="status"><option${slot.status === "Draft" ? " selected" : ""}>Draft</option><option${slot.status === "Ready" ? " selected" : ""}>Ready</option><option${slot.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
-            <label class="field wide"><span>Caption / internal note</span><textarea data-hero-index="${index}" data-hero-field="note">${escapeHTML(slot.note)}</textarea></label>
+            <label class="field wide"><span>Current preview path</span><input value="${escapeHTML(slot.image)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="image"></label>
+            <label class="field"><span>Alt text</span><input value="${escapeHTML(slot.alt)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="alt"></label>
+            <label class="field"><span>Status</span><select data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="status"><option${slot.status === "Draft" ? " selected" : ""}>Draft</option><option${slot.status === "Ready" ? " selected" : ""}>Ready</option><option${slot.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
+            <label class="field wide"><span>Internal note</span><textarea data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="note">${escapeHTML(slot.note)}</textarea></label>
           </div>
           <div class="image-actions">
             <button class="button small" type="button" disabled>Replace</button>
-            <button class="button small" type="button" data-hero-remove="${index}">Remove</button>
-            <button class="button small" type="button" data-hero-move="${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move left</button>
-            <button class="button small" type="button" data-hero-move="${index}" data-direction="1"${index === state.builder.heroSlots.length - 1 ? " disabled" : ""}>Move right</button>
+            <button class="button small" type="button" data-hero-choose="${kind}:${index}">Choose from Media Library</button>
+            <button class="button small" type="button" data-hero-remove="${kind}:${index}">Remove</button>
+            <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move Left</button>
+            <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="1"${index === slots.length - 1 ? " disabled" : ""}>Move Right</button>
           </div>
         </article>
+      `).join("");
+    }
+
+    function renderMediaLibrary() {
+      const target = $("mediaLibraryGrid");
+      if (!target) return;
+      target.innerHTML = MEDIA_CATEGORIES.map((category) => {
+        const assets = state.builder.mediaLibrary.filter((asset) => asset.category === category);
+        return `
+          <section class="media-category">
+            <h4>${escapeHTML(category)}</h4>
+            <div class="media-category-grid">
+              ${assets.length ? assets.map((asset) => `
+                <article class="media-asset">
+                  <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : `<img src="${escapeHTML(asset.path)}" alt="">`}</div>
+                  <strong>${escapeHTML(asset.filename)}</strong>
+                  <span>${escapeHTML(asset.dimensions)} / ${escapeHTML(asset.format)}</span>
+                  <span>Used in: ${escapeHTML(asset.usedIn || "Not assigned")}</span>
+                  <div class="media-asset-actions">
+                    <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}">Assign to selected slot</button>
+                    <button class="button small" type="button" disabled>Replace</button>
+                    <button class="button small" type="button" disabled>Delete</button>
+                  </div>
+                </article>
+              `).join("") : `<div class="empty-state"><strong>No ${escapeHTML(category)} assets yet.</strong>Upload connects in Phase 3.</div>`}
+            </div>
+          </section>
+        `;
+      }).join("");
+      const label = $("mediaTargetState");
+      if (label) {
+        label.textContent = state.builder.mediaTarget
+          ? `${state.builder.mediaTarget.kind} slot ${String(state.builder.mediaTarget.index + 1).padStart(2, "0")}`
+          : "No slot selected";
+      }
+    }
+
+    function renderHeroArchivePreview() {
+      renderArchivePreview("desktop", $("desktopHeroPreview"));
+      renderArchivePreview("mobile", $("mobileHeroPreview"));
+    }
+
+    function renderArchivePreview(kind, target) {
+      if (!target) return;
+      target.innerHTML = heroSlots(kind).map((slot, index) => `
+        <div class="archive-preview-frame">
+          ${slot.image && slot.status !== "Hidden" ? `<img src="${escapeHTML(slot.image)}" alt="${escapeHTML(slot.alt || `Hero ${index + 1}`)}">` : `<span>${String(index + 1).padStart(2, "0")}</span>`}
+        </div>
       `).join("");
     }
 
@@ -2430,7 +2813,7 @@
         return;
       }
       const media = section.name === "Hero"
-        ? `${state.builder.heroSlots.filter((slot) => slot.status !== "Hidden").length} hero slots prepared`
+        ? `${state.builder.heroDesktopSlots.filter((slot) => slot.status !== "Hidden").length} desktop / ${state.builder.heroMobileSlots.filter((slot) => slot.status !== "Hidden").length} mobile hero slots prepared`
         : section.desktopImage || section.mobileImage || section.galleryImages || "No visual connected";
       $("builderPreviewState").textContent = `${section.visibility} preview`;
       target.innerHTML = `
@@ -2512,19 +2895,20 @@
       renderSectionBuilder();
     }
 
-    function updateHeroSlot(index, field, value) {
-      const slot = state.builder.heroSlots[index];
+    function updateHeroSlot(kind, index, field, value) {
+      const slot = heroSlots(kind)[index];
       if (!slot) return;
       slot[field] = value;
       saveBuilderDraft();
+      renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
     }
 
-    function clearHeroSlot(index) {
-      const slot = state.builder.heroSlots[index];
+    function clearHeroSlot(kind, index) {
+      const slot = heroSlots(kind)[index];
       if (!slot) return;
-      slot.desktopImage = "";
-      slot.mobileImage = "";
+      slot.mediaId = "";
+      slot.image = "";
       slot.alt = "";
       slot.note = "";
       slot.status = "Draft";
@@ -2533,11 +2917,44 @@
       renderBuilderPreview(selectedBuilderSection());
     }
 
-    function moveHeroSlot(index, direction) {
+    function moveHeroSlot(kind, index, direction) {
+      const slots = heroSlots(kind);
       const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= state.builder.heroSlots.length) return;
-      const [slot] = state.builder.heroSlots.splice(index, 1);
-      state.builder.heroSlots.splice(nextIndex, 0, slot);
+      if (nextIndex < 0 || nextIndex >= slots.length) return;
+      const [slot] = slots.splice(index, 1);
+      slots.splice(nextIndex, 0, slot);
+      saveBuilderDraft();
+      renderHeroManager(selectedBuilderSection());
+      renderBuilderPreview(selectedBuilderSection());
+    }
+
+    function dragHeroSlot(kind, fromIndex, toIndex) {
+      const slots = heroSlots(kind);
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= slots.length || toIndex >= slots.length) return;
+      const [slot] = slots.splice(fromIndex, 1);
+      slots.splice(toIndex, 0, slot);
+      saveBuilderDraft();
+      renderHeroManager(selectedBuilderSection());
+      renderBuilderPreview(selectedBuilderSection());
+    }
+
+    function chooseHeroSlot(kind, index) {
+      state.builder.mediaTarget = { kind, index };
+      saveBuilderDraft();
+      renderHeroManager(selectedBuilderSection());
+    }
+
+    function assignMediaToTarget(assetId) {
+      const target = state.builder.mediaTarget;
+      if (!target) return;
+      const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
+      const slot = asset ? heroSlots(target.kind)[target.index] : null;
+      if (!asset || !slot) return;
+      slot.mediaId = asset.id;
+      slot.image = asset.path;
+      slot.status = "Draft";
+      asset.usedIn = `${target.kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(target.index + 1).padStart(2, "0")}`;
+      state.builder.mediaTarget = null;
       saveBuilderDraft();
       renderHeroManager(selectedBuilderSection());
       renderBuilderPreview(selectedBuilderSection());
@@ -2707,10 +3124,25 @@
       }
 
       const heroRemove = event.target.closest("[data-hero-remove]");
-      if (heroRemove) clearHeroSlot(Number(heroRemove.dataset.heroRemove));
+      if (heroRemove) {
+        const [kind, index] = heroRemove.dataset.heroRemove.split(":");
+        clearHeroSlot(kind, Number(index));
+      }
 
       const heroMove = event.target.closest("[data-hero-move]");
-      if (heroMove) moveHeroSlot(Number(heroMove.dataset.heroMove), Number(heroMove.dataset.direction));
+      if (heroMove) {
+        const [kind, index] = heroMove.dataset.heroMove.split(":");
+        moveHeroSlot(kind, Number(index), Number(heroMove.dataset.direction));
+      }
+
+      const heroChoose = event.target.closest("[data-hero-choose]");
+      if (heroChoose) {
+        const [kind, index] = heroChoose.dataset.heroChoose.split(":");
+        chooseHeroSlot(kind, Number(index));
+      }
+
+      const mediaAssign = event.target.closest("[data-media-assign]");
+      if (mediaAssign) assignMediaToTarget(mediaAssign.dataset.mediaAssign);
     });
 
     $("addBuilderSection").addEventListener("click", addBuilderSection);
@@ -2738,7 +3170,7 @@
 
       const heroField = event.target.closest("[data-hero-field]");
       if (heroField) {
-        updateHeroSlot(Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
+        updateHeroSlot(heroField.dataset.heroKind, Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
         return;
       }
 
@@ -2757,7 +3189,36 @@
 
     document.addEventListener("input", (event) => {
       const heroField = event.target.closest("[data-hero-field]");
-      if (heroField) updateHeroSlot(Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
+      if (heroField) updateHeroSlot(heroField.dataset.heroKind, Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
+    });
+
+    document.addEventListener("dragstart", (event) => {
+      const card = event.target.closest("[data-hero-kind][data-hero-index]");
+      if (!card) return;
+      card.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", `${card.dataset.heroKind}:${card.dataset.heroIndex}`);
+    });
+
+    document.addEventListener("dragend", (event) => {
+      event.target.closest(".hero-slot-editor")?.classList.remove("is-dragging");
+    });
+
+    document.addEventListener("dragover", (event) => {
+      const card = event.target.closest("[data-hero-kind][data-hero-index]");
+      if (!card) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    });
+
+    document.addEventListener("drop", (event) => {
+      const card = event.target.closest("[data-hero-kind][data-hero-index]");
+      if (!card) return;
+      event.preventDefault();
+      const [fromKind, fromIndex] = event.dataTransfer.getData("text/plain").split(":");
+      const toKind = card.dataset.heroKind;
+      if (fromKind !== toKind) return;
+      dragHeroSlot(fromKind, Number(fromIndex), Number(card.dataset.heroIndex));
     });
 
     $("draftReceived").addEventListener("click", () => {
