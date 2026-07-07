@@ -1931,6 +1931,10 @@
               error: message,
               url: location.href,
               source: "production",
+              severity: extra && extra.severity,
+              authenticated_user_action: Boolean(extra && extra.authenticated_user_action),
+              action_required: Boolean(extra && extra.action_required),
+              user_initiated: Boolean(extra && extra.user_initiated),
               suggested_check: extra && extra.suggested_check
             })
           }).catch(() => {});
@@ -3938,7 +3942,13 @@
     }
     function reportAdminWatchtower(area, action, error, hint) {
       if (window.creatorWatchtowerReport) {
-        window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, { suggested_check: hint || "Check Creator OS admin action and Vercel logs." });
+        window.creatorWatchtowerReport(area || "Admin", action || "Admin action", error, {
+          severity: "error",
+          authenticated_user_action: true,
+          action_required: true,
+          user_initiated: true,
+          suggested_check: hint || "Check Creator OS admin action and Vercel logs."
+        });
       }
     }
     function formatConnectionDate(value) {
