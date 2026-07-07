@@ -1017,6 +1017,192 @@
       text-transform: uppercase;
     }
 
+    .builder-shell {
+      display: grid;
+      gap: 14px;
+    }
+
+    .builder-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 12px;
+    }
+
+    .builder-status-bar p {
+      margin: 0;
+      color: rgba(241,234,220,.62);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .builder-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .builder-grid {
+      display: grid;
+      grid-template-columns: minmax(250px, .52fr) minmax(0, 1fr) minmax(280px, .72fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .builder-panel,
+    .builder-preview-panel,
+    .hero-manager {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.14);
+      padding: 14px;
+    }
+
+    .builder-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .builder-section-list,
+    .hero-slot-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .builder-section-item {
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 8px;
+      background: rgba(237,230,216,.045);
+      color: rgba(241,234,220,.72);
+      padding: 10px;
+      text-align: left;
+      display: grid;
+      gap: 5px;
+    }
+
+    .builder-section-item[aria-selected="true"] {
+      border-color: rgba(237,230,216,.28);
+      background: rgba(237,230,216,.09);
+      color: var(--text);
+    }
+
+    .builder-section-item strong {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .builder-section-item span {
+      color: rgba(241,234,220,.44);
+      font: 850 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .builder-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .builder-editor-grid .wide { grid-column: 1 / -1; }
+
+    .builder-preview-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .draft-preview-card {
+      min-height: 340px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background:
+        linear-gradient(145deg, rgba(237,230,216,.08), rgba(237,230,216,.02)),
+        rgba(0,0,0,.22);
+      padding: clamp(18px, 3vw, 30px);
+      display: grid;
+      align-content: center;
+      gap: 18px;
+    }
+
+    .draft-preview-card .preview-label {
+      color: rgba(241,234,220,.48);
+      font: 850 10px var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .draft-preview-card h3 {
+      margin: 0;
+      font-size: clamp(30px, 4.8vw, 64px);
+      font-weight: 850;
+      line-height: .88;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+
+    .draft-preview-card p {
+      margin: 0;
+      color: rgba(241,234,220,.7);
+      font-family: var(--serif);
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.35;
+    }
+
+    .draft-preview-media {
+      min-height: 120px;
+      border: 1px dashed rgba(237,230,216,.18);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: rgba(241,234,220,.42);
+      background: rgba(237,230,216,.035);
+      font: 850 10px var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .hero-manager {
+      display: none;
+      gap: 12px;
+    }
+
+    .hero-manager.is-active {
+      display: grid;
+    }
+
+    .hero-slot-editor {
+      display: grid;
+      gap: 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 8px;
+      background: rgba(237,230,216,.035);
+      padding: 12px;
+    }
+
+    .hero-slot-editor-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hero-slot-editor-head strong {
+      font-size: 13px;
+    }
+
+    .hero-field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
     label.field {
       display: grid;
       gap: 7px;
@@ -1174,7 +1360,7 @@
       }
       .os-nav-toggle { grid-column: 1 / -1; }
       .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .split, .reply-workspace, .section-builder { grid-template-columns: 1fr; }
+      .split, .reply-workspace, .section-builder, .builder-grid { grid-template-columns: 1fr; }
       .booking-row, .template-row, .client-row { grid-template-columns: 1fr; }
     }
 
@@ -1189,7 +1375,7 @@
       .os-brand-meta { padding-left: 0; border-left: 0; }
       .os-header-actions { width: 100%; justify-content: space-between; }
       .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-grid, .detail-grid, .field-grid, .image-slot-grid { grid-template-columns: 1fr; }
+      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid { grid-template-columns: 1fr; }
       .view-head { align-items: start; flex-direction: column; }
       .builder-head { flex-direction: column; }
       .setting-row { grid-template-columns: 1fr; }
@@ -1391,112 +1577,92 @@
               <div class="builder-head">
                 <div>
                   <h2>Website builder</h2>
-                  <p>Public /cp content staging for the hero image gallery. Images stay read-only until publishing is connected.</p>
+                  <p>Draft-based COMMONPL4CE website sections. Nothing publishes to the public site in this phase.</p>
                 </div>
-                <span class="builder-state">Draft / read-only</span>
+                <span class="builder-state">Draft builder</span>
               </div>
-              <div class="hero-gallery-grid">
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 01</strong><span>Opening frame</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
+              <div class="builder-shell">
+                <div class="builder-status-bar">
+                  <p>Drafts are stored locally on this device. Publishing connects in the next phase.</p>
+                  <div class="builder-controls">
+                    <button class="button small" id="saveBuilderDraft" type="button">Save draft locally</button>
+                    <button class="button small" id="resetBuilderDraft" type="button">Reset draft</button>
+                    <a class="button small ghost" href="https://doneovernight.com/cp" target="_blank" rel="noreferrer">Preview public website</a>
+                    <button class="button small" type="button" disabled>Publishing connects in next phase.</button>
                   </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 02</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 03</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 04</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 05</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 06</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-                <article class="hero-slot">
-                  <div class="hero-slot-head"><strong>Hero image 07</strong><span>Gallery slot</span></div>
-                  <div class="image-slot-grid">
-                    <div class="image-drop"><span>Desktop image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                    <div class="image-drop"><span>Mobile image</span><strong>No editable file connected.</strong><div class="image-actions"><button class="button small" type="button" disabled>Replace</button><button class="button small" type="button" disabled>Remove</button></div></div>
-                  </div>
-                </article>
-              </div>
-              <p class="form-note">Publishing connects in the next phase.</p>
-              <div class="section-builder" aria-label="Draft section builder">
-                <div class="section-list-panel">
+                </div>
+                <div class="builder-grid" aria-label="Draft section builder">
+                  <div class="builder-panel">
                   <div class="builder-head">
                     <div>
                       <h2>Sections</h2>
-                      <p>Current editable website sections and local drafts.</p>
+                      <p>Select, order, add, duplicate or remove local draft sections.</p>
                     </div>
                   </div>
-                  <div class="section-list" id="sectionList"></div>
+                  <div class="builder-section-list" id="builderSectionList"></div>
                   <div class="add-section-row">
-                    <select id="sectionType">
+                    <select id="builderSectionType">
                       <option value="Text block">Text block</option>
                       <option value="Image block">Image block</option>
                       <option value="Image gallery">Image gallery</option>
-                      <option value="Campaign/project block">Campaign/project block</option>
+                      <option value="Campaign / project block">Campaign / project block</option>
                       <option value="Testimonial">Testimonial</option>
                       <option value="Booking CTA">Booking CTA</option>
-                      <option value="Spacer / Divider">Spacer / Divider</option>
+                      <option value="Divider / Spacer">Divider / Spacer</option>
+                      <option value="Full-screen visual">Full-screen visual</option>
+                      <option value="Two-column story">Two-column story</option>
                     </select>
-                    <button class="button small" id="addSectionButton" type="button">Add section</button>
+                    <button class="button small" id="addBuilderSection" type="button">Add section</button>
                   </div>
-                  <p class="form-note">Sections are saved as drafts. Publishing connects in the next phase.</p>
-                  <p class="form-note">Drafts are stored locally on this device until publishing is connected.</p>
+                  <div class="section-actions">
+                    <button class="button small" id="duplicateBuilderSection" type="button">Duplicate section</button>
+                    <button class="button small" id="deleteBuilderSection" type="button">Delete draft section</button>
+                    <button class="button small" id="builderMoveUp" type="button">Move up</button>
+                    <button class="button small" id="builderMoveDown" type="button">Move down</button>
+                  </div>
                 </div>
-                <div class="section-editor-panel">
+                <div class="builder-panel">
                   <div class="builder-head">
                     <div>
                       <h2>Section editor</h2>
-                      <p id="sectionEditorNote">Select a section to edit draft fields.</p>
+                      <p id="builderEditorNote">Select a section to edit draft fields.</p>
                     </div>
-                    <span class="builder-state" id="sectionStorageState">Local draft</span>
+                    <span class="builder-state" id="builderStorageState">Local draft</span>
                   </div>
-                  <div class="section-editor-grid">
-                    <label class="field"><span>Title</span><input id="sectionTitle" type="text" data-section-field="title"></label>
-                    <label class="field"><span>Label / kicker</span><input id="sectionKicker" type="text" data-section-field="kicker"></label>
-                    <label class="field wide"><span>Body text</span><textarea id="sectionBody" data-section-field="body"></textarea></label>
-                    <label class="field"><span>Desktop image</span><input id="sectionDesktopImage" type="text" data-section-field="desktopImage" placeholder="Draft image path or note"></label>
-                    <label class="field"><span>Mobile image</span><input id="sectionMobileImage" type="text" data-section-field="mobileImage" placeholder="Draft image path or note"></label>
-                    <label class="field"><span>CTA label</span><input id="sectionCtaLabel" type="text" data-section-field="ctaLabel"></label>
-                    <label class="field"><span>CTA link</span><input id="sectionCtaLink" type="text" data-section-field="ctaLink"></label>
-                    <label class="field"><span>Visibility</span><select id="sectionVisibility" data-section-field="visibility"><option>draft</option><option>hidden</option><option>ready</option></select></label>
+                  <div class="builder-editor-grid">
+                    <label class="field"><span>Kicker / label</span><input id="builderKicker" type="text" data-builder-field="kicker"></label>
+                    <label class="field"><span>Heading</span><input id="builderHeading" type="text" data-builder-field="heading"></label>
+                    <label class="field wide"><span>Body text</span><textarea id="builderBody" data-builder-field="body"></textarea></label>
+                    <label class="field"><span>CTA label</span><input id="builderCtaLabel" type="text" data-builder-field="ctaLabel"></label>
+                    <label class="field"><span>CTA link</span><input id="builderCtaLink" type="text" data-builder-field="ctaLink"></label>
+                    <label class="field"><span>Desktop image path</span><input id="builderDesktopImage" type="text" data-builder-field="desktopImage"></label>
+                    <label class="field"><span>Mobile image path</span><input id="builderMobileImage" type="text" data-builder-field="mobileImage"></label>
+                    <label class="field wide"><span>Gallery image paths</span><textarea id="builderGalleryImages" data-builder-field="galleryImages" placeholder="One URL or path per line"></textarea></label>
+                    <label class="field"><span>Visibility status</span><select id="builderVisibility" data-builder-field="visibility"><option>Draft</option><option>Hidden</option><option>Ready</option></select></label>
+                    <label class="field wide"><span>Internal notes</span><textarea id="builderInternalNotes" data-builder-field="internalNotes"></textarea></label>
                   </div>
-                  <div class="section-actions">
-                    <button class="button small" id="moveSectionUp" type="button">Move up</button>
-                    <button class="button small" id="moveSectionDown" type="button">Move down</button>
-                    <button class="button small" id="removeSectionButton" type="button">Remove draft</button>
+                  <div class="hero-manager" id="heroManager">
+                    <div class="builder-head">
+                      <div>
+                        <h2>Hero image manager</h2>
+                        <p>First 7 public website images. Desktop and mobile are separate draft fields.</p>
+                      </div>
+                    </div>
+                    <div class="hero-slot-list" id="heroSlotList"></div>
                   </div>
-                  <p class="form-note">Ordering is local only until persistence is connected.</p>
-                  <div class="section-preview" id="sectionPreview"></div>
                 </div>
+                <div class="builder-preview-panel">
+                  <div class="builder-head">
+                    <div>
+                      <h2>Draft preview</h2>
+                      <p>This is a local preview only. It is not live on public /cp.</p>
+                    </div>
+                    <span class="builder-state" id="builderPreviewState">Draft</span>
+                  </div>
+                  <div id="builderPreview"></div>
+                </div>
+              </div>
+              <p class="form-note">Sections are saved as drafts. Publishing connects in the next phase.</p>
               </div>
             </div>
             <p class="form-note" style="margin-top:14px">Publishing connects in the next phase. The public /cp website was not changed.</p>
@@ -1586,8 +1752,8 @@
     const SESSION_KEY = "doneovernight_admin_key";
     const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
-    const SECTION_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_section_drafts";
-    const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign/project block", "Testimonial", "Booking CTA", "Spacer / Divider"];
+    const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
+    const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
 
     const WEBSITE_OS_WORKSPACES = {
       commonpl4ce: {
@@ -1621,8 +1787,7 @@
       clients: [],
       selectedBookingId: "",
       drafts: readDrafts(),
-      websiteSections: readSectionDrafts(),
-      selectedSectionId: ""
+      builder: readBuilderDraft()
     };
 
     const $ = (id) => document.getElementById(id);
@@ -1648,75 +1813,170 @@
       localStorage.setItem(DRAFT_KEY, JSON.stringify(state.drafts));
     }
 
-    function defaultSections() {
-      return [
-        sectionDraft("Hero gallery", "Image gallery", {
-          kicker: "Opening archive",
-          title: "Hero gallery",
-          body: "Seven hero frames prepared for desktop and mobile.",
-          visibility: "ready",
-          system: true
-        }),
-        sectionDraft("About / Behind the film", "Text block", {
-          kicker: "Behind the film",
-          title: "About / Behind the film",
-          body: `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`,
-          visibility: "ready",
-          system: true
-        }),
-        sectionDraft("Portfolio preview", "Campaign/project block", {
-          kicker: "Selected work",
-          title: "Portfolio preview",
-          body: "A calm preview of campaign, editorial and travel stories.",
-          visibility: "draft",
-          system: true
-        }),
-        sectionDraft("Booking CTA", "Booking CTA", {
-          kicker: "Start your project",
-          title: "Booking CTA",
-          body: "Invite the next request without changing the public page yet.",
-          ctaLabel: workspace.websiteContent.bookingCta,
-          ctaLink: workspace.publicPath,
-          visibility: "ready",
-          system: true
-        }),
-        sectionDraft("Footer", "Text block", {
-          kicker: "End note",
-          title: "Footer",
-          body: "COMMONPL4CE contact, socials and DONEOVERNIGHT powered-by stay prepared here.",
-          visibility: "ready",
-          system: true
-        })
-      ];
-    }
-
-    function sectionDraft(title, type, overrides = {}) {
+    function createBuilderSection(name, type, overrides = {}) {
       return {
         id: overrides.id || `section_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        title,
+        name,
         type,
+        heading: overrides.heading || name,
         kicker: overrides.kicker || "",
         body: overrides.body || "",
         desktopImage: overrides.desktopImage || "",
         mobileImage: overrides.mobileImage || "",
+        galleryImages: overrides.galleryImages || "",
         ctaLabel: overrides.ctaLabel || "",
         ctaLink: overrides.ctaLink || "",
-        visibility: overrides.visibility || "draft",
+        internalNotes: overrides.internalNotes || "",
+        visibility: overrides.visibility || "Draft",
         system: Boolean(overrides.system)
       };
     }
 
-    function readSectionDrafts() {
+    function defaultHeroSlots() {
+      const desktop = [
+        "/assets/common-place/fullscreen/slide-01-opening.jpg",
+        "/assets/common-place/fullscreen/slide-02-yellow.jpg",
+        "/assets/common-place/fullscreen/slide-03-hoodie-front.jpg",
+        "/assets/common-place/fullscreen/slide-04-chair.jpg",
+        "/assets/common-place/fullscreen/slide-05-duo.jpg",
+        "/assets/common-place/fullscreen/slide-06-couch.jpg",
+        "/assets/common-place/fullscreen/slide-07-profile.jpg"
+      ];
+      const mobile = [
+        "/assets/common-place/mobile/slide-01-mobile.jpg",
+        "/assets/common-place/mobile/slide-02-mobile.jpg",
+        "/assets/common-place/mobile/slide-03-mobile.jpg",
+        "/assets/common-place/mobile/slide-04-mobile.jpg",
+        "/assets/common-place/mobile/slide-05-mobile.jpg",
+        "/assets/common-place/mobile/slide-06-mobile.jpg",
+        "/assets/common-place/mobile/slide-07-mobile.jpg"
+      ];
+      const alts = [
+        "Romy standing with her back toward the camera",
+        "Yellow sweater portrait on film",
+        "Hoodie portrait seated on a bench",
+        "Editorial chair portrait on film",
+        "Duo portrait in yellow campaign styling",
+        "Campaign image with couch and hoodie",
+        "Side profile hoodie campaign image"
+      ];
+      return desktop.map((desktopImage, index) => ({
+        id: `hero_${index + 1}`,
+        desktopImage,
+        mobileImage: mobile[index],
+        alt: alts[index],
+        note: index === 0 ? "Opening frame" : "Gallery frame",
+        status: "Ready"
+      }));
+    }
+
+    function defaultBuilderDraft() {
+      const sections = [
+        createBuilderSection("Hero", "Full-screen visual", {
+          kicker: "Opening archive",
+          heading: "Hero",
+          body: workspace.websiteContent.heroLine,
+          visibility: "Ready",
+          system: true
+        }),
+        createBuilderSection("Story / Behind the Film", "Two-column story", {
+          kicker: "Behind the film",
+          heading: "Story / Behind the Film",
+          body: `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`,
+          visibility: "Ready",
+          system: true
+        }),
+        createBuilderSection("What We Create", "Text block", {
+          kicker: "Visual direction",
+          heading: "What We Create",
+          body: "Campaign, editorial, travel and lifestyle imagery shaped with mood, texture and presence.",
+          visibility: "Draft",
+          system: true
+        }),
+        createBuilderSection("Novateur / Selected Client", "Campaign / project block", {
+          kicker: "Selected client",
+          heading: "Novateur / Selected Client",
+          body: "A selected client story can be prepared here before it is connected to public publishing.",
+          visibility: "Draft",
+          system: true
+        }),
+        createBuilderSection("Process", "Text block", {
+          kicker: "Process",
+          heading: "Process",
+          body: "Calm direction before the shutter. Clear mood, timing and usage before production.",
+          visibility: "Draft",
+          system: true
+        }),
+        createBuilderSection("Who This Is For", "Text block", {
+          kicker: "For brands",
+          heading: "Who This Is For",
+          body: "For brands, founders and teams who want images that feel intentional, atmospheric and not overproduced.",
+          visibility: "Draft",
+          system: true
+        }),
+        createBuilderSection("Behind Romy", "Image block", {
+          kicker: "Behind Romy",
+          heading: "Behind Romy",
+          body: "A portrait-led section for Romy's perspective and working rhythm.",
+          desktopImage: "/assets/common-place/romy/romy-behind-film.jpg",
+          mobileImage: "/assets/common-place/romy/romy-behind-film.jpg",
+          visibility: "Draft",
+          system: true
+        }),
+        createBuilderSection("Booking", "Booking CTA", {
+          kicker: "Start your project",
+          heading: "Booking",
+          body: "Prepare the booking call-to-action without publishing it yet.",
+          ctaLabel: workspace.websiteContent.bookingCta,
+          ctaLink: workspace.publicPath,
+          visibility: "Ready",
+          system: true
+        }),
+        createBuilderSection("Footer", "Text block", {
+          kicker: "End note",
+          heading: "Footer",
+          body: "COMMONPL4CE contact, socials and DONEOVERNIGHT powered-by stay prepared here.",
+          visibility: "Ready",
+          system: true
+        })
+      ];
+      return {
+        selectedSectionId: sections[0].id,
+        updatedAt: "",
+        sections,
+        heroSlots: defaultHeroSlots()
+      };
+    }
+
+    function normalizeBuilderDraft(builder) {
+      const fallback = defaultBuilderDraft();
+      if (!builder || typeof builder !== "object") return fallback;
+      const sections = Array.isArray(builder.sections) && builder.sections.length ? builder.sections : fallback.sections;
+      const heroSlots = Array.isArray(builder.heroSlots) && builder.heroSlots.length ? builder.heroSlots : fallback.heroSlots;
+      const normalizedHeroSlots = heroSlots.concat(fallback.heroSlots).slice(0, 7).map((slot, index) => ({
+        ...fallback.heroSlots[index],
+        ...slot,
+        status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : fallback.heroSlots[index].status
+      }));
+      return {
+        selectedSectionId: builder.selectedSectionId || sections[0]?.id || "",
+        updatedAt: builder.updatedAt || "",
+        sections,
+        heroSlots: normalizedHeroSlots
+      };
+    }
+
+    function readBuilderDraft() {
       try {
-        const parsed = JSON.parse(localStorage.getItem(SECTION_DRAFT_KEY) || "null");
-        return Array.isArray(parsed) && parsed.length ? parsed : defaultSections();
+        return normalizeBuilderDraft(JSON.parse(localStorage.getItem(BUILDER_DRAFT_KEY) || "null"));
       } catch (error) {
-        return defaultSections();
+        return defaultBuilderDraft();
       }
     }
 
-    function saveSectionDrafts() {
-      localStorage.setItem(SECTION_DRAFT_KEY, JSON.stringify(state.websiteSections));
+    function saveBuilderDraft() {
+      state.builder.updatedAt = new Date().toISOString();
+      localStorage.setItem(BUILDER_DRAFT_KEY, JSON.stringify(state.builder));
     }
 
     function setSidebarCollapsed(collapsed, persist = true) {
@@ -2074,121 +2334,218 @@
       renderSectionBuilder();
     }
 
-    function selectedSection() {
-      if (!state.selectedSectionId && state.websiteSections.length) {
-        state.selectedSectionId = state.websiteSections[0].id;
-      }
-      return state.websiteSections.find((section) => section.id === state.selectedSectionId) || state.websiteSections[0] || null;
+    function selectedBuilderSection() {
+      const sections = state.builder.sections;
+      if (!state.builder.selectedSectionId && sections[0]) state.builder.selectedSectionId = sections[0].id;
+      return sections.find((section) => section.id === state.builder.selectedSectionId) || sections[0] || null;
     }
 
-    function renderSectionList() {
-      const list = $("sectionList");
+    function renderSectionBuilder() {
+      const section = selectedBuilderSection();
+      renderBuilderSectionList(section);
+      renderBuilderEditor(section);
+      renderHeroManager(section);
+      renderBuilderPreview(section);
+    }
+
+    function renderBuilderSectionList(section) {
+      const list = $("builderSectionList");
       if (!list) return;
-      const section = selectedSection();
-      list.innerHTML = state.websiteSections.map((item, index) => `
-        <button class="section-item" type="button" data-section-id="${escapeHTML(item.id)}" aria-selected="${item.id === section?.id ? "true" : "false"}">
-          <strong>${escapeHTML(item.title || item.type)}</strong>
-          <span>${escapeHTML(`${index + 1}. ${item.type} / ${item.visibility}`)}</span>
+      list.innerHTML = state.builder.sections.map((item, index) => `
+        <button class="builder-section-item" type="button" data-builder-section-id="${escapeHTML(item.id)}" aria-selected="${item.id === section?.id ? "true" : "false"}">
+          <strong>${escapeHTML(item.name || item.heading || item.type)}</strong>
+          <span>${escapeHTML(`${String(index + 1).padStart(2, "0")} / ${item.type} / ${item.visibility}`)}</span>
         </button>
       `).join("");
     }
 
-    function renderSectionBuilder() {
-      const section = selectedSection();
-      renderSectionList();
-      renderSectionEditor(section);
-      renderSectionPreview(section);
-    }
-
-    function renderSectionEditor(section) {
+    function renderBuilderEditor(section) {
       const fields = {
-        sectionTitle: "title",
-        sectionKicker: "kicker",
-        sectionBody: "body",
-        sectionDesktopImage: "desktopImage",
-        sectionMobileImage: "mobileImage",
-        sectionCtaLabel: "ctaLabel",
-        sectionCtaLink: "ctaLink",
-        sectionVisibility: "visibility"
+        builderKicker: "kicker",
+        builderHeading: "heading",
+        builderBody: "body",
+        builderCtaLabel: "ctaLabel",
+        builderCtaLink: "ctaLink",
+        builderDesktopImage: "desktopImage",
+        builderMobileImage: "mobileImage",
+        builderGalleryImages: "galleryImages",
+        builderVisibility: "visibility",
+        builderInternalNotes: "internalNotes"
       };
       Object.entries(fields).forEach(([id, key]) => {
         const element = $(id);
-        if (element) {
-          element.disabled = !section;
-          element.value = section ? section[key] || "" : "";
-        }
+        if (!element) return;
+        element.disabled = !section;
+        element.value = section ? section[key] || "" : "";
       });
-      const note = $("sectionEditorNote");
-      if (note) note.textContent = section ? `${section.type} / ${section.system ? "current section" : "new local draft"}` : "Add or select a section to edit draft fields.";
-      const index = section ? state.websiteSections.findIndex((item) => item.id === section.id) : -1;
-      const moveUp = $("moveSectionUp");
-      const moveDown = $("moveSectionDown");
-      const remove = $("removeSectionButton");
-      if (moveUp) moveUp.disabled = index <= 0;
-      if (moveDown) moveDown.disabled = index < 0 || index >= state.websiteSections.length - 1;
-      if (remove) remove.disabled = !section || section.system;
+      const note = $("builderEditorNote");
+      if (note) note.textContent = section ? `${section.name} / ${section.type} / ${section.system ? "core draft section" : "added draft section"}` : "Add or select a section to edit draft fields.";
+      const index = section ? state.builder.sections.findIndex((item) => item.id === section.id) : -1;
+      $("builderMoveUp").disabled = index <= 0;
+      $("builderMoveDown").disabled = index < 0 || index >= state.builder.sections.length - 1;
+      $("duplicateBuilderSection").disabled = !section;
+      $("deleteBuilderSection").disabled = !section || section.system;
+      const stateLabel = $("builderStorageState");
+      if (stateLabel) stateLabel.textContent = section ? `${section.visibility} / local` : "Local draft";
     }
 
-    function renderSectionPreview(section) {
-      const target = $("sectionPreview");
-      if (!target) return;
-      if (!section) {
-        target.innerHTML = `<div class="empty-state"><strong>No section selected.</strong>Add a draft section to preview it here.</div>`;
+    function renderHeroManager(section) {
+      const manager = $("heroManager");
+      const list = $("heroSlotList");
+      if (!manager || !list) return;
+      const isHero = section?.name === "Hero";
+      manager.classList.toggle("is-active", Boolean(isHero));
+      if (!isHero) {
+        list.innerHTML = "";
         return;
       }
-      const mediaText = section.desktopImage || section.mobileImage
-        ? `Desktop: ${section.desktopImage || "empty"} / Mobile: ${section.mobileImage || "empty"}`
-        : "No image connected";
+      list.innerHTML = state.builder.heroSlots.map((slot, index) => `
+        <article class="hero-slot-editor" data-hero-slot="${index}">
+          <div class="hero-slot-editor-head">
+            <strong>Slot ${String(index + 1).padStart(2, "0")}</strong>
+            <span class="builder-state">${escapeHTML(slot.status || "Draft")}</span>
+          </div>
+          <div class="hero-field-grid">
+            <label class="field"><span>Desktop image</span><input value="${escapeHTML(slot.desktopImage)}" data-hero-index="${index}" data-hero-field="desktopImage"></label>
+            <label class="field"><span>Mobile image</span><input value="${escapeHTML(slot.mobileImage)}" data-hero-index="${index}" data-hero-field="mobileImage"></label>
+            <label class="field"><span>Alt text</span><input value="${escapeHTML(slot.alt)}" data-hero-index="${index}" data-hero-field="alt"></label>
+            <label class="field"><span>Status</span><select data-hero-index="${index}" data-hero-field="status"><option${slot.status === "Draft" ? " selected" : ""}>Draft</option><option${slot.status === "Ready" ? " selected" : ""}>Ready</option><option${slot.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
+            <label class="field wide"><span>Caption / internal note</span><textarea data-hero-index="${index}" data-hero-field="note">${escapeHTML(slot.note)}</textarea></label>
+          </div>
+          <div class="image-actions">
+            <button class="button small" type="button" disabled>Replace</button>
+            <button class="button small" type="button" data-hero-remove="${index}">Remove</button>
+            <button class="button small" type="button" data-hero-move="${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move left</button>
+            <button class="button small" type="button" data-hero-move="${index}" data-direction="1"${index === state.builder.heroSlots.length - 1 ? " disabled" : ""}>Move right</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderBuilderPreview(section) {
+      const target = $("builderPreview");
+      if (!target) return;
+      if (!section) {
+        target.innerHTML = `<div class="empty-state"><strong>No section selected.</strong>Add or select a section to preview it here.</div>`;
+        return;
+      }
+      const media = section.name === "Hero"
+        ? `${state.builder.heroSlots.filter((slot) => slot.status !== "Hidden").length} hero slots prepared`
+        : section.desktopImage || section.mobileImage || section.galleryImages || "No visual connected";
+      $("builderPreviewState").textContent = `${section.visibility} preview`;
       target.innerHTML = `
-        <span class="section-preview-kicker">${escapeHTML(section.kicker || section.type)}</span>
-        <h3>${escapeHTML(section.title || section.type)}</h3>
-        <p>${escapeHTML(section.body || "Draft body text will appear here.")}</p>
-        <div class="preview-media">${escapeHTML(mediaText)}</div>
-        ${section.ctaLabel ? `<button class="button small" type="button" disabled>${escapeHTML(section.ctaLabel)}</button>` : ""}
-        <span class="builder-state">${escapeHTML(section.visibility)} / local only</span>
+        <article class="draft-preview-card">
+          <span class="preview-label">Draft preview / ${escapeHTML(section.type)}</span>
+          <span class="section-preview-kicker">${escapeHTML(section.kicker || section.name)}</span>
+          <h3>${escapeHTML(section.heading || section.name)}</h3>
+          <p>${escapeHTML(section.body || "Draft copy will appear here.")}</p>
+          <div class="draft-preview-media">${escapeHTML(media)}</div>
+          ${section.ctaLabel ? `<button class="button small" type="button" disabled>${escapeHTML(section.ctaLabel)}</button>` : ""}
+          <span class="builder-state">${escapeHTML(section.visibility)} / not live</span>
+        </article>
       `;
     }
 
-    function updateSelectedSection(field, value) {
-      const section = selectedSection();
+    function updateSelectedBuilderSection(field, value) {
+      const section = selectedBuilderSection();
       if (!section) return;
       section[field] = value;
-      saveSectionDrafts();
-      renderSectionList();
-      renderSectionPreview(section);
+      saveBuilderDraft();
+      renderBuilderSectionList(section);
+      renderBuilderPreview(section);
+      if (field === "visibility") renderBuilderEditor(section);
     }
 
-    function addSection() {
-      const type = $("sectionType")?.value || SECTION_TYPES[0];
-      const next = sectionDraft(type, type, {
+    function addBuilderSection() {
+      const type = $("builderSectionType")?.value || SECTION_TYPES[0];
+      const section = createBuilderSection(type, type, {
         kicker: "Draft section",
         body: "Prepare copy, imagery and visibility here before publishing is connected.",
-        visibility: "draft"
+        visibility: "Draft"
       });
-      state.websiteSections.push(next);
-      state.selectedSectionId = next.id;
-      saveSectionDrafts();
+      state.builder.sections.push(section);
+      state.builder.selectedSectionId = section.id;
+      saveBuilderDraft();
       renderSectionBuilder();
     }
 
-    function moveSelectedSection(direction) {
-      const section = selectedSection();
+    function duplicateBuilderSection() {
+      const section = selectedBuilderSection();
       if (!section) return;
-      const index = state.websiteSections.findIndex((item) => item.id === section.id);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= state.websiteSections.length) return;
-      const [moved] = state.websiteSections.splice(index, 1);
-      state.websiteSections.splice(nextIndex, 0, moved);
-      saveSectionDrafts();
+      const copy = createBuilderSection(`${section.name} copy`, section.type, {
+        heading: section.heading,
+        kicker: section.kicker,
+        body: section.body,
+        desktopImage: section.desktopImage,
+        mobileImage: section.mobileImage,
+        galleryImages: section.galleryImages,
+        ctaLabel: section.ctaLabel,
+        ctaLink: section.ctaLink,
+        internalNotes: section.internalNotes,
+        visibility: "Draft"
+      });
+      const index = state.builder.sections.findIndex((item) => item.id === section.id);
+      state.builder.sections.splice(index + 1, 0, copy);
+      state.builder.selectedSectionId = copy.id;
+      saveBuilderDraft();
       renderSectionBuilder();
     }
 
-    function removeSelectedSection() {
-      const section = selectedSection();
+    function deleteBuilderSection() {
+      const section = selectedBuilderSection();
       if (!section || section.system) return;
-      state.websiteSections = state.websiteSections.filter((item) => item.id !== section.id);
-      state.selectedSectionId = state.websiteSections[0]?.id || "";
-      saveSectionDrafts();
+      state.builder.sections = state.builder.sections.filter((item) => item.id !== section.id);
+      state.builder.selectedSectionId = state.builder.sections[0]?.id || "";
+      saveBuilderDraft();
+      renderSectionBuilder();
+    }
+
+    function moveBuilderSection(direction) {
+      const section = selectedBuilderSection();
+      if (!section) return;
+      const index = state.builder.sections.findIndex((item) => item.id === section.id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= state.builder.sections.length) return;
+      const [moved] = state.builder.sections.splice(index, 1);
+      state.builder.sections.splice(nextIndex, 0, moved);
+      saveBuilderDraft();
+      renderSectionBuilder();
+    }
+
+    function updateHeroSlot(index, field, value) {
+      const slot = state.builder.heroSlots[index];
+      if (!slot) return;
+      slot[field] = value;
+      saveBuilderDraft();
+      renderBuilderPreview(selectedBuilderSection());
+    }
+
+    function clearHeroSlot(index) {
+      const slot = state.builder.heroSlots[index];
+      if (!slot) return;
+      slot.desktopImage = "";
+      slot.mobileImage = "";
+      slot.alt = "";
+      slot.note = "";
+      slot.status = "Draft";
+      saveBuilderDraft();
+      renderHeroManager(selectedBuilderSection());
+      renderBuilderPreview(selectedBuilderSection());
+    }
+
+    function moveHeroSlot(index, direction) {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= state.builder.heroSlots.length) return;
+      const [slot] = state.builder.heroSlots.splice(index, 1);
+      state.builder.heroSlots.splice(nextIndex, 0, slot);
+      saveBuilderDraft();
+      renderHeroManager(selectedBuilderSection());
+      renderBuilderPreview(selectedBuilderSection());
+    }
+
+    function resetBuilderDraft() {
+      state.builder = defaultBuilderDraft();
+      saveBuilderDraft();
       renderSectionBuilder();
     }
 
@@ -2343,24 +2700,48 @@
         renderDraftEditor();
       }
 
-      const sectionButton = event.target.closest("[data-section-id]");
+      const sectionButton = event.target.closest("[data-builder-section-id]");
       if (sectionButton) {
-        state.selectedSectionId = sectionButton.dataset.sectionId;
+        state.builder.selectedSectionId = sectionButton.dataset.builderSectionId;
         renderSectionBuilder();
       }
+
+      const heroRemove = event.target.closest("[data-hero-remove]");
+      if (heroRemove) clearHeroSlot(Number(heroRemove.dataset.heroRemove));
+
+      const heroMove = event.target.closest("[data-hero-move]");
+      if (heroMove) moveHeroSlot(Number(heroMove.dataset.heroMove), Number(heroMove.dataset.direction));
     });
 
-    $("addSectionButton").addEventListener("click", addSection);
-    $("moveSectionUp").addEventListener("click", () => moveSelectedSection(-1));
-    $("moveSectionDown").addEventListener("click", () => moveSelectedSection(1));
-    $("removeSectionButton").addEventListener("click", removeSelectedSection);
+    $("addBuilderSection").addEventListener("click", addBuilderSection);
+    $("duplicateBuilderSection").addEventListener("click", duplicateBuilderSection);
+    $("deleteBuilderSection").addEventListener("click", deleteBuilderSection);
+    $("builderMoveUp").addEventListener("click", () => moveBuilderSection(-1));
+    $("builderMoveDown").addEventListener("click", () => moveBuilderSection(1));
+    $("saveBuilderDraft").addEventListener("click", () => {
+      saveBuilderDraft();
+      $("builderStorageState").textContent = "Saved locally";
+    });
+    $("resetBuilderDraft").addEventListener("click", resetBuilderDraft);
 
-    document.querySelectorAll("[data-section-field]").forEach((field) => {
-      field.addEventListener("input", () => updateSelectedSection(field.dataset.sectionField, field.value));
-      field.addEventListener("change", () => updateSelectedSection(field.dataset.sectionField, field.value));
+    document.querySelectorAll("[data-builder-field]").forEach((field) => {
+      field.addEventListener("input", () => updateSelectedBuilderSection(field.dataset.builderField, field.value));
+      field.addEventListener("change", () => updateSelectedBuilderSection(field.dataset.builderField, field.value));
     });
 
     document.addEventListener("change", async (event) => {
+      const builderField = event.target.closest("[data-builder-field]");
+      if (builderField) {
+        updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
+        return;
+      }
+
+      const heroField = event.target.closest("[data-hero-field]");
+      if (heroField) {
+        updateHeroSlot(Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
+        return;
+      }
+
       const select = event.target.closest("[data-status-select]");
       if (!select) return;
       const previous = state.bookings.find((booking) => booking.id === select.dataset.statusSelect)?.status || "New";
@@ -2372,6 +2753,11 @@
       } finally {
         select.disabled = false;
       }
+    });
+
+    document.addEventListener("input", (event) => {
+      const heroField = event.target.closest("[data-hero-field]");
+      if (heroField) updateHeroSlot(Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
     });
 
     $("draftReceived").addEventListener("click", () => {
