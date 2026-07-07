@@ -3094,6 +3094,8 @@ async function handleCreatorHealth(req, res) {
         auth_state: input.auth_state,
         session_present: input.session_present,
         authenticated_user_action: input.authenticated_user_action,
+        action_required: input.action_required,
+        user_initiated: input.user_initiated,
         watchtower_version: input.watchtower_version,
         suggested_check: input.suggested_check
       });
@@ -3156,6 +3158,8 @@ module.exports = async function handler(req, res) {
         url: "/api/creator-settings",
         severity: "error",
         authenticated_user_action: true,
+        action_required: true,
+        user_initiated: true,
         suggested_check: "Check public.creators, saveCreator(), and Vercel function logs."
       }).catch(() => null);
       return send(res, error.statusCode || 500, {
