@@ -1566,6 +1566,25 @@
       gap: 10px;
     }
 
+    .media-add-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 10px;
+    }
+
+    .media-add-row p {
+      margin: 0;
+      color: rgba(241,234,220,.58);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
     .media-filters {
       display: flex;
       flex-wrap: wrap;
@@ -1636,6 +1655,11 @@
       cursor: pointer;
     }
 
+    .media-asset.is-local-only {
+      border-color: rgba(207,190,158,.28);
+      background: rgba(207,190,158,.06);
+    }
+
     .media-asset[aria-selected="true"] {
       border-color: rgba(191,161,113,.72);
       background: rgba(191,161,113,.08);
@@ -1653,6 +1677,18 @@
       letter-spacing: .1em;
       text-transform: uppercase;
       line-height: 1.45;
+    }
+
+    .media-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .media-meta span {
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 999px;
+      padding: 3px 6px;
     }
 
     .media-asset-actions {
@@ -2289,12 +2325,16 @@
                 <div class="builder-head">
                   <div>
                     <h2>Media Library</h2>
-                    <p>Assets can be assigned to draft hero slots now. Uploads connect in Phase 3.</p>
+                    <p>Assets can be assigned to the selected hero slot. Local files stay draft-only until upload storage is connected.</p>
                   </div>
                   <span class="builder-state" id="mediaTargetState">No slot selected</span>
                 </div>
                 <div class="media-browser-grid">
                   <div class="media-tools">
+                    <div class="media-add-row">
+                      <p id="mediaUploadNote">Upload storage required before this file can go live.</p>
+                      <label class="button small hero-local-file">Add media<input id="addMediaFile" type="file" accept="image/*"></label>
+                    </div>
                     <label class="field"><span>Search assets</span><input id="mediaSearch" type="search" placeholder="Search filename, category or usage"></label>
                     <div class="media-filters" id="mediaFilters" role="group" aria-label="Media categories"></div>
                     <div class="media-library-grid" id="mediaLibraryGrid"></div>
@@ -2466,6 +2506,7 @@
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
     const HERO_LOCAL_FILE_LIMIT = 900 * 1024;
+    const MEDIA_LOCAL_FILE_LIMIT = 5 * 1024 * 1024;
     const COMMONPLACE_SITE_CONFIG_API = "/api/task-submit?commonpl4ce_site_config=1";
     const COMMONPLACE_SITE_CONFIG_URL = "/assets/common-place/config/site-content.json";
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
@@ -2546,6 +2587,7 @@
       drafts: readDrafts(),
       builder: readBuilderDraft(),
       heroFeedback: "",
+      mediaFeedback: "",
       publishStatus: "",
       publishPhase: "",
       publishError: "",
@@ -2653,6 +2695,32 @@
       return siteConfigToHeroSlots(format);
     }
 
+    function normalizeMediaAsset(asset = {}, index = 0) {
+      const safe = (value) => String(value ?? "").trim();
+      const path = safe(asset.path || asset.url || asset.src);
+      const filename = safe(asset.filename || asset.name || path.split("/").pop()) || `media-${String(index + 1).padStart(2, "0")}`;
+      const category = MEDIA_CATEGORIES.includes(asset.category) ? asset.category : "Hero";
+      const isLocal = Boolean(asset.isLocal) || /^local_/i.test(safe(asset.id)) || /^blob:/i.test(path) || /^data:/i.test(path);
+      const status = ["Draft", "Ready", "Hidden"].includes(asset.status) ? asset.status : (isLocal ? "Draft" : "Ready");
+      return {
+        id: safe(asset.id) || `${isLocal ? "local_media" : "media"}_${index + 1}`,
+        category,
+        filename,
+        path: isLocal && !/^https?:|^\//i.test(path) ? "" : path,
+        dimensions: safe(asset.dimensions) || safe(asset.format) || "Image",
+        format: safe(asset.format || asset.type) || "Image",
+        alt: safe(asset.alt) || filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
+        usedIn: safe(asset.usedIn || asset.usage) || "Not assigned",
+        status,
+        addedAt: safe(asset.addedAt || asset.added_at) || "",
+        isLocal
+      };
+    }
+
+    function normalizeMediaLibrary(library = []) {
+      return library.map(normalizeMediaAsset);
+    }
+
     function defaultMediaLibrary() {
       const desktop = defaultHeroSlots("desktop").map((slot, index) => ({
         id: slot.id,
@@ -2661,7 +2729,11 @@
         path: slot.image,
         dimensions: "Desktop archive format",
         format: "Desktop",
-        usedIn: `Hero ${String(index + 1).padStart(2, "0")}`
+        alt: slot.alt,
+        usedIn: `Desktop Hero ${String(index + 1).padStart(2, "0")}`,
+        status: "Ready",
+        addedAt: DEFAULT_SITE_CONFIG.updatedAt,
+        isLocal: false
       }));
       const mobile = defaultHeroSlots("mobile").map((slot, index) => ({
         id: slot.id,
@@ -2670,9 +2742,13 @@
         path: slot.image,
         dimensions: "Mobile archive format",
         format: "Mobile",
-        usedIn: `Hero ${String(index + 1).padStart(2, "0")}`
+        alt: slot.alt,
+        usedIn: `Mobile Hero ${String(index + 1).padStart(2, "0")}`,
+        status: "Ready",
+        addedAt: DEFAULT_SITE_CONFIG.updatedAt,
+        isLocal: false
       }));
-      return desktop.concat(mobile, [
+      return normalizeMediaLibrary(desktop.concat(mobile, [
         {
           id: "behind_film_romy",
           category: "Behind the Film",
@@ -2700,7 +2776,7 @@
           format: "Video",
           usedIn: "Novateur / Selected Client"
         }
-      ]);
+      ]));
     }
 
     function defaultBuilderDraft() {
@@ -2829,7 +2905,7 @@
         sections,
         heroDesktopSlots: normalizeSlots(desktopSlots, fallback.heroDesktopSlots, "desktop"),
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
-        mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? builder.mediaLibrary : fallback.mediaLibrary,
+        mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? normalizeMediaLibrary(builder.mediaLibrary) : fallback.mediaLibrary,
         mediaTarget: builder.mediaTarget || null,
         selectedHeroSlot: builder.selectedHeroSlot && ["desktop", "mobile"].includes(builder.selectedHeroSlot.kind)
           ? { kind: builder.selectedHeroSlot.kind, index: Math.max(0, Math.min(6, Number(builder.selectedHeroSlot.index) || 0)) }
@@ -3457,6 +3533,23 @@
       return slot?.previewImage || slot?.image || "";
     }
 
+    function mediaTargetLabel(target = state.builder.mediaTarget) {
+      if (!target) return "No slot selected";
+      return `${target.kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(Number(target.index || 0) + 1).padStart(2, "0")}`;
+    }
+
+    function isLocalOnlyMedia(asset = {}) {
+      return Boolean(asset.isLocal) || /^local_/i.test(clean(asset.id)) || /^blob:/i.test(clean(asset.path)) || /^data:/i.test(clean(asset.path));
+    }
+
+    function mediaPreviewImage(asset = {}) {
+      return asset.previewImage || asset.path || "";
+    }
+
+    function mediaTypeLabel(asset = {}) {
+      return isLocalOnlyMedia(asset) ? "Local draft" : (asset.status || "Ready");
+    }
+
     function renderHeroSlotList(kind) {
       const target = $(kind === "mobile" ? "mobileHeroSlots" : "desktopHeroSlots");
       if (!target) return;
@@ -3517,6 +3610,8 @@
     function renderMediaLibrary() {
       const target = $("mediaLibraryGrid");
       if (!target) return;
+      const uploadNote = $("mediaUploadNote");
+      if (uploadNote) uploadNote.textContent = state.mediaFeedback || "Upload storage required before this file can go live.";
       const filters = $("mediaFilters");
       if (filters) {
         filters.innerHTML = ["All"].concat(MEDIA_CATEGORIES).map((category) => `
@@ -3528,26 +3623,27 @@
       const query = lower(state.builder.mediaSearch);
       const assets = state.builder.mediaLibrary.filter((asset) => {
         const matchesFilter = state.builder.mediaFilter === "All" || asset.category === state.builder.mediaFilter;
-        const haystack = lower(`${asset.filename} ${asset.category} ${asset.format} ${asset.dimensions} ${asset.usedIn}`);
+        const haystack = lower(`${asset.filename} ${asset.category} ${asset.format} ${asset.dimensions} ${asset.usedIn} ${asset.alt} ${asset.status}`);
         return matchesFilter && (!query || haystack.includes(query));
       });
       target.innerHTML = assets.length ? `
         <div class="media-category-grid">
           ${assets.map((asset) => `
-            <button class="media-asset" type="button" data-media-select="${escapeHTML(asset.id)}" aria-selected="${state.builder.selectedMediaId === asset.id ? "true" : "false"}">
-              <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : `<img src="${escapeHTML(asset.path)}" alt="">`}</div>
+            <button class="media-asset${isLocalOnlyMedia(asset) ? " is-local-only" : ""}" type="button" data-media-select="${escapeHTML(asset.id)}" aria-selected="${state.builder.selectedMediaId === asset.id ? "true" : "false"}">
+              <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}">` : "<span>No preview</span>"}</div>
               <strong>${escapeHTML(asset.filename)}</strong>
-              <span>${escapeHTML(asset.category)} / ${escapeHTML(asset.format)}</span>
+              <div class="media-meta">
+                <span>${escapeHTML(asset.category)}</span>
+                <span>${escapeHTML(mediaTypeLabel(asset))}</span>
+              </div>
               <span>Used in: ${escapeHTML(asset.usedIn || "Not assigned")}</span>
             </button>
           `).join("")}
         </div>
-      ` : `<div class="empty-state"><strong>No matching assets.</strong>Uploads connect in Phase 3.</div>`;
+      ` : `<div class="empty-state"><strong>No matching assets.</strong>Add media creates a draft-only local asset until upload storage is connected.</div>`;
       const label = $("mediaTargetState");
       if (label) {
-        label.textContent = state.builder.mediaTarget
-          ? `${state.builder.mediaTarget.kind} slot ${String(state.builder.mediaTarget.index + 1).padStart(2, "0")}`
-          : "No slot selected";
+        label.textContent = mediaTargetLabel();
       }
       renderMediaAssetDetail();
     }
@@ -3566,21 +3662,32 @@
         return;
       }
       state.builder.selectedMediaId = asset.id;
+      const localOnly = isLocalOnlyMedia(asset);
+      const categories = MEDIA_CATEGORIES.map((category) => `<option value="${escapeHTML(category)}"${asset.category === category ? " selected" : ""}>${escapeHTML(category)}</option>`).join("");
       target.innerHTML = `
         <div class="builder-head">
           <div>
             <h2>Asset detail</h2>
-            <p>${escapeHTML(asset.filename)}</p>
+            <p>${escapeHTML(localOnly ? "Upload storage required before this file can go live." : asset.filename)}</p>
           </div>
-          <span class="builder-state">${escapeHTML(asset.category)}</span>
+          <span class="builder-state">${escapeHTML(mediaTypeLabel(asset))}</span>
         </div>
-        <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : `<img src="${escapeHTML(asset.path)}" alt="">`}</div>
+        <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}">` : "<span>No preview</span>"}</div>
+        <div class="field-grid">
+          <label class="field"><span>Filename</span><input value="${escapeHTML(asset.filename)}" data-media-field="filename"></label>
+          <label class="field"><span>Category</span><select data-media-field="category">${categories}</select></label>
+          <label class="field wide"><span>Alt text</span><input value="${escapeHTML(asset.alt || "")}" data-media-field="alt"></label>
+          <label class="field"><span>Status</span><select data-media-field="status"><option${asset.status === "Draft" ? " selected" : ""}>Draft</option><option${asset.status === "Ready" ? " selected" : ""}>Ready</option><option${asset.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
+          <label class="field"><span>Format / type</span><input value="${escapeHTML(asset.format || "")}" data-media-field="format"></label>
+          <label class="field wide"><span>Usage</span><input value="${escapeHTML(asset.usedIn || "")}" data-media-field="usedIn"></label>
+        </div>
         <div class="detail-grid" style="grid-template-columns:1fr">
-          <div class="detail"><span>Filename</span><strong>${escapeHTML(asset.filename)}</strong></div>
-          <div class="detail"><span>Type / category</span><strong>${escapeHTML(`${asset.format} / ${asset.category}`)}</strong></div>
-          <div class="detail"><span>Format / dimensions</span><strong>${escapeHTML(asset.dimensions || "Unknown")}</strong></div>
+          <div class="detail"><span>Selected target</span><strong>${escapeHTML(mediaTargetLabel())}</strong></div>
+          <div class="detail"><span>Dimensions</span><strong>${escapeHTML(asset.dimensions || "Unknown")}</strong></div>
+          <div class="detail"><span>Added date</span><strong>${escapeHTML(asset.addedAt ? formatTimestamp(asset.addedAt) : "Existing asset")}</strong></div>
           <div class="detail"><span>Used in</span><strong>${escapeHTML(asset.usedIn || "Not assigned")}</strong></div>
         </div>
+        ${localOnly ? `<div class="website-note">Upload storage required before this file can go live.</div>` : ""}
         <div class="media-asset-actions">
           <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}">Assign to selected hero slot</button>
           <button class="button small" type="button" disabled>Replace disabled</button>
@@ -3626,7 +3733,7 @@
       const connectedMedia = state.builder.mediaLibrary.filter((asset) => clean(asset.usedIn)).length;
       const diff = siteConfigDiff();
       const publishBlocker = diff.blockedAssets
-        ? `${diff.blockedAssets} local preview asset${diff.blockedAssets === 1 ? "" : "s"} need upload storage`
+        ? `${diff.blockedAssets} local-only media asset${diff.blockedAssets === 1 ? "" : "s"} need upload storage`
         : "Ready to publish server-side config";
       const isPublishing = state.publishPhase === "publishing";
       const isFailed = state.publishPhase === "failed";
@@ -3693,7 +3800,7 @@
             : isPublished
               ? `Published live. COMMONPL4CE has been updated.${state.lastPublishedAt ? ` ${formatTimestamp(state.lastPublishedAt)}.` : ""}`
               : diff.blockedAssets
-                ? "Local file previews cannot publish yet. Use Media Library assets or manual public paths until upload storage is connected."
+                ? "Upload storage required before this file can go live. Use existing Media Library assets or manual public paths until storage is connected."
                 : diff.hasChanges
                   ? "Draft changes not live yet. Publishing writes the server-side COMMONPL4CE config used by the public /cp website."
                   : "Published baseline is current. Publishing writes the server-side COMMONPL4CE config used by the public /cp website.";
@@ -3936,17 +4043,27 @@
         return;
       }
       slot.mediaId = asset.id;
-      slot.image = asset.path;
-      slot.alt = slot.alt || asset.filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+      slot.image = isLocalOnlyMedia(asset) ? "" : asset.path;
+      slot.alt = asset.alt || slot.alt || asset.filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
       slot.localFileName = "";
       slot.localFileSize = 0;
-      delete slot.previewImage;
+      if (isLocalOnlyMedia(asset)) {
+        slot.previewImage = mediaPreviewImage(asset);
+        slot.localFileName = asset.filename;
+      } else {
+        delete slot.previewImage;
+      }
       slot.status = "Draft";
       asset.usedIn = `${target.kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(target.index + 1).padStart(2, "0")}`;
       state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
       state.builder.selectedMediaId = asset.id;
       state.builder.mediaTarget = null;
-      state.heroFeedback = `${asset.filename} assigned to ${target.kind === "mobile" ? "mobile" : "desktop"} slot ${String(target.index + 1).padStart(2, "0")}.`;
+      state.heroFeedback = isLocalOnlyMedia(asset)
+        ? `${asset.filename} assigned as a local draft preview. Upload storage required before this file can go live.`
+        : `${asset.filename} assigned to ${target.kind === "mobile" ? "mobile" : "desktop"} slot ${String(target.index + 1).padStart(2, "0")}.`;
+      state.mediaFeedback = isLocalOnlyMedia(asset)
+        ? "Upload storage required before this file can go live."
+        : `${asset.filename} assigned to ${mediaTargetLabel({ kind: target.kind, index: target.index })}.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
       switchWebsiteTab("hero");
@@ -3973,6 +4090,53 @@
           asset.usedIn = "Not assigned";
         }
       });
+    }
+
+    function updateSelectedMediaAsset(field, value) {
+      const asset = selectedMediaAsset();
+      if (!asset) return;
+      asset[field] = value;
+      if (field === "filename" && !asset.alt) asset.alt = clean(value).replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+      if (field === "category" && !MEDIA_CATEGORIES.includes(asset.category)) asset.category = "Hero";
+      saveBuilderDraft();
+      renderMediaLibrary();
+      renderPublishSummary();
+    }
+
+    function handleAddMediaFile(file) {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        state.mediaFeedback = "Choose an image file for Media Library.";
+        renderMediaLibrary();
+        return;
+      }
+      if (file.size > MEDIA_LOCAL_FILE_LIMIT) {
+        state.mediaFeedback = "File is too large. Upload storage required before this file can go live.";
+        renderMediaLibrary();
+        return;
+      }
+      const id = `local_media_${Date.now()}`;
+      const asset = normalizeMediaAsset({
+        id,
+        category: "Hero",
+        filename: file.name,
+        path: "",
+        dimensions: `${Math.round(file.size / 1024)} KB local preview`,
+        format: file.type || "Image",
+        alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
+        usedIn: "Not assigned",
+        status: "Draft",
+        addedAt: new Date().toISOString(),
+        isLocal: true
+      }, state.builder.mediaLibrary.length);
+      asset.previewImage = URL.createObjectURL(file);
+      state.builder.mediaLibrary.unshift(asset);
+      state.builder.selectedMediaId = asset.id;
+      state.builder.mediaFilter = "All";
+      state.mediaFeedback = "Upload storage required before this file can go live.";
+      saveBuilderDraft();
+      renderMediaLibrary();
+      renderPublishSummary();
     }
 
     function handleHeroLocalFile(kind, index, file) {
@@ -4247,8 +4411,10 @@
       if (heroSelect) {
         const [kind, index] = heroSelect.dataset.heroSelect.split(":");
         state.builder.selectedHeroSlot = { kind, index: Number(index) };
+        state.builder.mediaTarget = { kind, index: Number(index) };
         saveBuilderDraft();
         renderHeroManager();
+        renderMediaLibrary();
       }
 
       const heroRemove = event.target.closest("[data-hero-remove]");
@@ -4275,12 +4441,8 @@
       const mediaSelect = event.target.closest("[data-media-select]");
       if (mediaSelect) {
         state.builder.selectedMediaId = mediaSelect.dataset.mediaSelect;
-        if (state.builder.mediaTarget) {
-          assignMediaToTarget(mediaSelect.dataset.mediaSelect);
-        } else {
-          saveBuilderDraft();
-          renderMediaLibrary();
-        }
+        saveBuilderDraft();
+        renderMediaLibrary();
       }
 
       const mediaFilter = event.target.closest("[data-media-filter]");
@@ -4332,6 +4494,19 @@
       const heroField = event.target.closest("[data-hero-field]");
       if (heroField) {
         updateHeroSlot(heroField.dataset.heroKind, Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
+        return;
+      }
+
+      const addMediaFile = event.target.closest("#addMediaFile");
+      if (addMediaFile) {
+        handleAddMediaFile(addMediaFile.files?.[0]);
+        addMediaFile.value = "";
+        return;
+      }
+
+      const mediaField = event.target.closest("[data-media-field]");
+      if (mediaField) {
+        updateSelectedMediaAsset(mediaField.dataset.mediaField, mediaField.value);
         return;
       }
 
