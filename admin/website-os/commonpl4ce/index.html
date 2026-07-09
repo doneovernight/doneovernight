@@ -862,6 +862,83 @@
       color: var(--text);
     }
 
+    .website-tab.has-unpublished {
+      border-color: rgba(207,190,158,.36);
+      background: rgba(207,190,158,.1);
+      color: rgba(241,234,220,.82);
+      animation: publishPulse 3s ease-in-out infinite;
+    }
+
+    .publish-tab-badge {
+      min-height: 18px;
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+      border: 1px solid rgba(237,230,216,.16);
+      border-radius: 999px;
+      padding: 0 7px;
+      color: rgba(241,234,220,.62);
+      font: 800 9px var(--mono);
+      letter-spacing: .08em;
+      vertical-align: 1px;
+    }
+
+    .website-tab.has-unpublished .publish-tab-badge,
+    .publish-state-badge.is-unpublished {
+      border-color: rgba(207,190,158,.34);
+      background: rgba(207,190,158,.1);
+      color: rgba(241,234,220,.86);
+    }
+
+    .button.primary.has-unpublished {
+      animation: publishPulse 3s ease-in-out infinite;
+    }
+
+    .publish-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .publish-state-badge {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 999px;
+      padding: 0 10px;
+      color: rgba(241,234,220,.62);
+      font: 850 10px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .publish-state-badge.is-published {
+      border-color: rgba(237,230,216,.2);
+      background: rgba(237,230,216,.07);
+      color: rgba(241,234,220,.72);
+    }
+
+    .publish-state-badge.is-failed {
+      border-color: rgba(255,170,150,.34);
+      background: rgba(255,170,150,.08);
+      color: rgba(255,214,204,.9);
+    }
+
+    @keyframes publishPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(207,190,158,.1); }
+      50% { box-shadow: 0 0 0 4px rgba(207,190,158,.08); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .website-tab.has-unpublished,
+      .button.primary.has-unpublished {
+        animation: none;
+      }
+    }
+
     .website-task { display: none; }
 
     .website-task.is-active {
@@ -2133,7 +2210,7 @@
               <button class="website-tab" type="button" role="tab" data-website-tab-target="hero" aria-selected="false">Hero</button>
               <button class="website-tab" type="button" role="tab" data-website-tab-target="media" aria-selected="false">Media</button>
               <button class="website-tab" type="button" role="tab" data-website-tab-target="preview" aria-selected="false">Preview</button>
-              <button class="website-tab" type="button" role="tab" data-website-tab-target="publish" aria-selected="false">Publish</button>
+              <button class="website-tab" type="button" role="tab" data-website-tab-target="publish" aria-selected="false">Publish <span class="publish-tab-badge" id="publishTabBadge">Published</span></button>
             </div>
 
             <div class="website-task is-active" data-website-tab="builder" role="tabpanel">
@@ -2335,9 +2412,12 @@
               <div class="builder-head">
                 <div>
                   <h2>Publishing</h2>
-                  <p>Publish hero order and website content to the live COMMONPL4CE config.</p>
+                  <p id="publishHeaderStatus">Publish hero order and website content to the live COMMONPL4CE config.</p>
                 </div>
-                <button class="button small primary" id="publishWebsiteConfig" type="button">Publish live config</button>
+                <div class="publish-actions">
+                  <span class="publish-state-badge is-published" id="publishStateBadge">Published</span>
+                  <button class="button small primary" id="publishWebsiteConfig" type="button">Publish live config</button>
+                </div>
               </div>
               <div class="publish-summary-grid" id="publishSummary"></div>
               <div class="website-note" id="publishStatusNote">Publishing writes a server-side COMMONPL4CE config. Local file previews require upload storage before they can publish.</div>
@@ -2527,6 +2607,10 @@
       builder: readBuilderDraft(),
       heroFeedback: "",
       publishStatus: "",
+      publishPhase: "",
+      publishError: "",
+      lastPublishedAt: "",
+      publishedBuilderSignature: "",
       publishedConfig: DEFAULT_SITE_CONFIG,
       publishedConfigLoaded: false
     };
@@ -2877,6 +2961,34 @@
       return clean(left) === clean(right);
     }
 
+    function builderSectionSignature(builder = state.builder) {
+      return JSON.stringify((builder.sections || []).map((section) => ({
+        name: section.name,
+        type: section.type,
+        kicker: section.kicker || "",
+        heading: section.heading || "",
+        body: section.body || "",
+        ctaLabel: section.ctaLabel || "",
+        ctaLink: section.ctaLink || "",
+        desktopImage: section.desktopImage || "",
+        mobileImage: section.mobileImage || "",
+        galleryImages: section.galleryImages || "",
+        visibility: section.visibility || "",
+        internalNotes: section.internalNotes || ""
+      })));
+    }
+
+    function publishedBuilderSignature() {
+      return state.publishedBuilderSignature || builderSectionSignature(defaultBuilderDraft());
+    }
+
+    function formatTimestamp(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return clean(value);
+      return date.toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
     function siteConfigDiff() {
       const draft = builderToSiteConfig();
       const published = normalizeSiteConfig(state.publishedConfig);
@@ -2893,7 +3005,9 @@
       const blockedAssets = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => {
         return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || /^local_/i.test(slot.mediaId || "");
       }).length;
-      return { draft, published, heroChanges, mediaPathChanges, contentChanges, blockedAssets };
+      const sectionChanges = builderSectionSignature() === publishedBuilderSignature() ? 0 : 1;
+      const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || sectionChanges > 0;
+      return { draft, published, heroChanges, mediaPathChanges, contentChanges, sectionChanges, blockedAssets, hasChanges };
     }
 
     function syncBuilderSectionsFromContent() {
@@ -2939,6 +3053,8 @@
         if (!state.builder.updatedAt) {
           state.builder = defaultBuilderDraft();
         }
+        state.publishedBuilderSignature = builderSectionSignature(defaultBuilderDraft());
+        state.lastPublishedAt = clean(config.updatedAt);
         renderWebsiteFields();
         renderSectionBuilder();
       } catch (error) {
@@ -3589,18 +3705,34 @@
       const publishBlocker = diff.blockedAssets
         ? `${diff.blockedAssets} local preview asset${diff.blockedAssets === 1 ? "" : "s"} need upload storage`
         : "Ready to publish server-side config";
+      const isPublishing = state.publishPhase === "publishing";
+      const isFailed = state.publishPhase === "failed";
+      const isPublished = state.publishPhase === "published" && !diff.hasChanges;
+      const pendingText = diff.hasChanges ? "Changes pending" : "Ready to publish";
+      const statusText = isPublishing
+        ? "Writing live config."
+        : isFailed
+          ? "Publish failed. Draft is still saved locally."
+          : isPublished
+            ? "Published live. COMMONPL4CE has been updated."
+            : diff.hasChanges
+              ? "Draft changes not live yet."
+              : "No unpublished changes.";
       const items = [
+        ["State", pendingText],
         ["Published config", state.publishedConfigLoaded ? (state.publishedConfigSource || COMMONPLACE_SITE_CONFIG_API) : "Fallback defaults loaded"],
         ["Draft changes summary", `${state.builder.sections.length} sections / 14 hero slots`],
         ["Sections ready", readySections],
         ["Sections hidden", hiddenSections],
         ["Hero slots ready", `${readyHeroSlots} of 14`],
         ["Changed hero slots", diff.heroChanges],
+        ["Changed sections", diff.sectionChanges],
         ["Changed text fields", diff.contentChanges.length ? diff.contentChanges.join(", ") : "None"],
         ["Changed media paths", diff.mediaPathChanges],
         ["Media assets connected", connectedMedia],
         ["Publish readiness", publishBlocker],
-        ["Publish status", state.publishStatus || (diff.blockedAssets ? "Blocked by local preview assets" : "Ready")]
+        ["Publish status", statusText],
+        ["Last published", state.lastPublishedAt ? formatTimestamp(state.lastPublishedAt) : "Not published in this session"]
       ];
       target.innerHTML = items.map(([label, value]) => `
         <div class="publish-summary-item">
@@ -3610,28 +3742,55 @@
       `).join("");
       const publishButton = $("publishWebsiteConfig");
       if (publishButton) {
-        const publishing = state.publishStatus === "Publishing...";
-        publishButton.disabled = diff.blockedAssets > 0 || publishing;
-        publishButton.textContent = publishing ? "Publishing..." : diff.blockedAssets ? "Upload storage required" : "Publish live config";
+        publishButton.disabled = diff.blockedAssets > 0 || isPublishing;
+        publishButton.textContent = isPublishing ? "Publishing..." : diff.blockedAssets ? "Upload storage required" : "Publish live config";
+        publishButton.classList.toggle("has-unpublished", diff.hasChanges && !isPublishing);
       }
+      const publishTab = document.querySelector('[data-website-tab-target="publish"]');
+      if (publishTab) publishTab.classList.toggle("has-unpublished", diff.hasChanges && !isPublishing);
+      const tabBadge = $("publishTabBadge");
+      if (tabBadge) tabBadge.textContent = diff.hasChanges ? "Unpublished" : "Published";
+      const stateBadge = $("publishStateBadge");
+      if (stateBadge) {
+        stateBadge.textContent = isFailed ? "Unpublished" : diff.hasChanges ? "Unpublished" : "Published";
+        stateBadge.classList.toggle("is-unpublished", diff.hasChanges || isFailed);
+        stateBadge.classList.toggle("is-published", !diff.hasChanges && !isFailed);
+        stateBadge.classList.toggle("is-failed", isFailed);
+      }
+      const headerStatus = $("publishHeaderStatus");
+      if (headerStatus) headerStatus.textContent = statusText;
+      const syncState = $("syncState");
+      if (syncState && (diff.hasChanges || isPublishing || isFailed || isPublished)) syncState.textContent = statusText;
       const note = $("publishStatusNote");
       if (note) {
-        note.textContent = diff.blockedAssets
-          ? "Local file previews cannot publish yet. Use Media Library assets or manual public paths until upload storage is connected."
-          : "Publishing writes the server-side COMMONPL4CE config used by the public /cp website.";
+        note.textContent = isPublishing
+          ? "Writing live config."
+          : isFailed
+            ? "Publish failed. Draft is still saved locally."
+            : isPublished
+              ? `Published live. COMMONPL4CE has been updated.${state.lastPublishedAt ? ` ${formatTimestamp(state.lastPublishedAt)}.` : ""}`
+              : diff.blockedAssets
+                ? "Local file previews cannot publish yet. Use Media Library assets or manual public paths until upload storage is connected."
+                : diff.hasChanges
+                  ? "Draft changes not live yet. Publishing writes the server-side COMMONPL4CE config used by the public /cp website."
+                  : "Published baseline is current. Publishing writes the server-side COMMONPL4CE config used by the public /cp website.";
       }
     }
 
     async function publishWebsiteConfig() {
       const diff = siteConfigDiff();
       if (diff.blockedAssets) {
-        state.publishStatus = "Blocked by local preview assets";
+        state.publishPhase = "failed";
+        state.publishStatus = "Publish failed. Draft is still saved locally.";
+        state.publishError = "Blocked by local preview assets";
         renderPublishSummary();
         return;
       }
       const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
       if (!adminKey) {
-        state.publishStatus = "Sign in again before publishing";
+        state.publishPhase = "failed";
+        state.publishStatus = "Publish failed. Draft is still saved locally.";
+        state.publishError = "Sign in again before publishing";
         renderPublishSummary();
         return;
       }
@@ -3640,7 +3799,9 @@
         button.disabled = true;
         button.textContent = "Publishing...";
       }
-      state.publishStatus = "Publishing...";
+      state.publishPhase = "publishing";
+      state.publishStatus = "Writing live config.";
+      state.publishError = "";
       renderPublishSummary();
       try {
         const response = await fetch(COMMONPLACE_SITE_CONFIG_API, {
@@ -3662,13 +3823,19 @@
           contact: config.content.contactEmail,
           bookingCta: config.content.bookingCtaText
         };
-        state.publishStatus = `Published ${new Date(data.publishedAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        state.publishPhase = "published";
+        state.lastPublishedAt = new Date(data.publishedAt || Date.now()).toISOString();
+        state.publishedBuilderSignature = builderSectionSignature();
+        state.publishStatus = "Published live.";
+        state.publishError = "";
         saveBuilderDraft();
         renderWebsiteFields();
         renderSectionBuilder();
         refreshPublicPreviewFrames();
       } catch (error) {
-        state.publishStatus = clean(error.message || "Publish failed");
+        state.publishPhase = "failed";
+        state.publishStatus = "Publish failed. Draft is still saved locally.";
+        state.publishError = clean(error.message || "Publish failed");
         renderPublishSummary();
       }
     }
