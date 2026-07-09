@@ -20,8 +20,6 @@
       entryKicker: "DONEOVERNIGHT",
       entryTitle: "Every business becomes software eventually.",
       entryText: "Let's show you how.",
-      archiveLabel: "Hero archive preview",
-      archiveLine: "Archive preview initializing... request -> system -> overnight execution.",
       discover: "How did you discover DONEOVERNIGHT?",
       interests: "What interests you most?",
       multiple: "Choose anything that pulls your attention.",
@@ -182,8 +180,6 @@
       entryKicker: "DONEOVERNIGHT",
       entryTitle: "Elk bedrijf wordt uiteindelijk software.",
       entryText: "Laten we laten zien hoe.",
-      archiveLabel: "Hero archive preview",
-      archiveLine: "Operator archive laden... aanvraag -> systeem -> overnight execution.",
       discover: "Hoe ontdekte je DONEOVERNIGHT?",
       interests: "Wat trekt je het meest?",
       multiple: "Kies alles wat je aandacht trekt.",
@@ -609,7 +605,6 @@
     if (!document.body.dataset.experience) return;
     normalizeProgress();
     ensureJourney();
-    mountHeroArchivePreview();
     mountChoices("discover-grid", data.discover[lang], "discover", false);
     mountChoices("interest-grid", data.interests[lang], "interests", true);
     mountStory();
@@ -834,43 +829,6 @@
 
   function industryByKey(key) {
     return industryCatalog().find((industry) => industry.key === key);
-  }
-
-  function mountHeroArchivePreview() {
-    const root = document.querySelector("[data-archive-preview]");
-    const line = root?.querySelector("[data-archive-text]");
-    if (!root || !line) return;
-    const text = copy[lang].archiveLine;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const writeLine = () => {
-      if (reducedMotion) {
-        line.textContent = text;
-        root.classList.add("is-ready");
-        return;
-      }
-      const run = `${Date.now()}:${lang}`;
-      line.dataset.archiveRun = run;
-      line.textContent = "";
-      root.classList.add("is-ready");
-      let index = 0;
-      const tick = () => {
-        if (line.dataset.archiveRun !== run) return;
-        line.textContent = text.slice(0, index);
-        index += 1;
-        if (index <= text.length) window.setTimeout(tick, index < 24 ? 34 : 22);
-      };
-      tick();
-    };
-    if (!("IntersectionObserver" in window)) {
-      writeLine();
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      observer.disconnect();
-      writeLine();
-    }, { threshold: 0.36 });
-    observer.observe(root);
   }
 
   function mountQuiz() {
@@ -2636,6 +2594,7 @@
         (memory.viewerBuilds || []).length ? `${(memory.viewerBuilds || []).length} Viewer Build${(memory.viewerBuilds || []).length === 1 ? "" : "s"}` : ""
       ].filter(Boolean)
     });
+    typeReturnVisitor(note);
   }
 
   async function hydrateReturnVisitor() {
@@ -2664,6 +2623,61 @@
         formatCount(data.resource_interest_count, copy[lang].resourcesOpened.toLowerCase(), copy[lang].resourcesOpened.toLowerCase())
       ].filter(Boolean)
     });
+    typeReturnVisitor(note);
+  }
+
+  function typeReturnVisitor(note) {
+    if (!note) return;
+    const nodes = Array.from(note.querySelectorAll("span, strong, small"));
+    if (!nodes.length) return;
+    const signature = nodes.map((node) => node.textContent || "").join("|");
+    if (note.dataset.typed === "true" && note.dataset.typedSignature === signature) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      note.dataset.typed = "true";
+      note.dataset.typedSignature = signature;
+      return;
+    }
+    const run = `${Date.now()}:${lang}`;
+    note.dataset.typeRun = run;
+    note.dataset.typed = "false";
+    note.classList.add("is-typing");
+    nodes.forEach((node) => {
+      const text = node.textContent || "";
+      node.dataset.typeText = text;
+      node.style.minWidth = `${Math.ceil(node.getBoundingClientRect().width)}px`;
+      node.textContent = "";
+    });
+    let nodeIndex = 0;
+    let charIndex = 0;
+    const tick = () => {
+      if (note.dataset.typeRun !== run) return;
+      nodes.forEach((node) => node.classList.remove("is-typing-caret"));
+      const node = nodes[nodeIndex];
+      if (!node) {
+        note.classList.remove("is-typing");
+        note.dataset.typed = "true";
+        note.dataset.typedSignature = signature;
+        nodes.forEach((item) => {
+          item.classList.remove("is-typing-caret");
+          item.style.minWidth = "";
+        });
+        return;
+      }
+      const text = node.dataset.typeText || "";
+      node.classList.add("is-typing-caret");
+      node.textContent = text.slice(0, charIndex);
+      charIndex += 1;
+      if (charIndex > text.length) {
+        node.textContent = text;
+        node.classList.remove("is-typing-caret");
+        nodeIndex += 1;
+        charIndex = 0;
+        window.setTimeout(tick, 90);
+        return;
+      }
+      window.setTimeout(tick, node.tagName === "STRONG" ? 42 : 24);
+    };
+    tick();
   }
 
   function formatCount(value, singular, plural) {
