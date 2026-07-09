@@ -1734,11 +1734,93 @@
       gap: 7px;
     }
 
-    .media-target-picker {
+    .media-target-panel {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.14);
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 12px;
       margin: 14px 0;
+      padding: 12px;
+    }
+
+    .media-target-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .media-target-panel-head strong {
+      color: rgba(241,234,220,.86);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .media-target-panel-head span,
+    .media-target-row-label {
+      color: rgba(241,234,220,.44);
+      font: 850 9px var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .media-target-rows {
+      display: grid;
+      gap: 10px;
+    }
+
+    .media-target-row {
+      display: grid;
+      gap: 7px;
+    }
+
+    .media-target-buttons {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .media-target-slot {
+      min-height: 42px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(237,230,216,.04);
+      color: rgba(241,234,220,.72);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      gap: 3px;
+      padding: 6px 4px;
+    }
+
+    .media-target-slot:hover {
+      border-color: rgba(237,230,216,.28);
+      background: rgba(237,230,216,.075);
+    }
+
+    .media-target-slot[aria-pressed="true"] {
+      border-color: rgba(191,161,113,.72);
+      background: rgba(191,161,113,.12);
+      color: var(--text);
+      box-shadow: 0 0 0 1px rgba(191,161,113,.34);
+    }
+
+    .media-target-slot strong {
+      font: 900 12px var(--sans);
+      line-height: 1;
+    }
+
+    .media-target-used {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(241,234,220,.22);
+    }
+
+    .media-target-used.is-used {
+      background: rgba(191,161,113,.8);
+      box-shadow: 0 0 0 3px rgba(191,161,113,.1);
     }
 
     .media-replace-file {
@@ -3880,24 +3962,39 @@
       return target;
     }
 
-    function heroTargetSelectOptions(kind) {
+    function heroTargetSlotButtons(kind) {
       const selected = activeMediaTarget();
-      return [`<option value="">${kind === "mobile" ? "Mobile" : "Desktop"} slot...</option>`].concat(
-        heroSlots(kind).map((slot, index) => {
-          const value = `${kind}:${index}`;
-          const isSelected = selected?.kind === kind && selected.index === index;
-          const name = `${kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(index + 1).padStart(2, "0")}`;
-          const suffix = slot.image ? ` / ${slot.image.split("/").pop()}` : "";
-          return `<option value="${escapeHTML(value)}"${isSelected ? " selected" : ""}>${escapeHTML(name + suffix)}</option>`;
-        })
-      ).join("");
+      return heroSlots(kind).map((slot, index) => {
+        const isSelected = selected?.kind === kind && selected.index === index;
+        const isUsed = Boolean(slot.image || slot.mediaId || slot.previewImage);
+        const label = `${kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(index + 1).padStart(2, "0")}`;
+        const filename = slot.image ? slot.image.split("/").pop() : "";
+        return `
+          <button class="media-target-slot" type="button" data-media-target-slot="${kind}:${index}" aria-pressed="${isSelected ? "true" : "false"}" title="${escapeHTML(filename ? `${label}: ${filename}` : label)}">
+            <strong>${String(index + 1).padStart(2, "0")}</strong>
+            <span class="media-target-used${isUsed ? " is-used" : ""}" aria-label="${isUsed ? "Slot currently used" : "Slot empty"}"></span>
+          </button>
+        `;
+      }).join("");
     }
 
     function mediaTargetPickerHTML() {
       return `
-        <div class="media-target-picker" role="group" aria-label="Hero slot assignment target">
-          <label class="field"><span>Desktop target</span><select data-media-target-picker="desktop">${heroTargetSelectOptions("desktop")}</select></label>
-          <label class="field"><span>Mobile target</span><select data-media-target-picker="mobile">${heroTargetSelectOptions("mobile")}</select></label>
+        <div class="media-target-panel" aria-label="Assign to Hero slot">
+          <div class="media-target-panel-head">
+            <strong>Assign to Hero slot</strong>
+            <span>${escapeHTML(mediaTargetLabel(activeMediaTarget()))}</span>
+          </div>
+          <div class="media-target-rows">
+            <div class="media-target-row" role="group" aria-label="Desktop Hero slots">
+              <div class="media-target-row-label">Desktop</div>
+              <div class="media-target-buttons">${heroTargetSlotButtons("desktop")}</div>
+            </div>
+            <div class="media-target-row" role="group" aria-label="Mobile Hero slots">
+              <div class="media-target-row-label">Mobile</div>
+              <div class="media-target-buttons">${heroTargetSlotButtons("mobile")}</div>
+            </div>
+          </div>
         </div>
       `;
     }
@@ -4069,7 +4166,7 @@
           </div>
           <div class="website-note">Select a media asset first.</div>
           <div class="media-asset-actions">
-            <button class="button small" type="button" disabled>Assign to selected hero slot</button>
+            <button class="button small" type="button" disabled>Assign selected asset</button>
           </div>
         `;
         return;
@@ -4111,7 +4208,7 @@
         ${assignMessage ? `<div class="website-note">${escapeHTML(assignMessage)}</div>` : ""}
         ${localOnly ? `<div class="website-note">Upload storage required before this file can go live.</div>` : ""}
         <div class="media-asset-actions">
-          <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}"${assignDisabled ? " disabled" : ""}>Assign to selected hero slot</button>
+          <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}"${assignDisabled ? " disabled" : ""}>Assign selected asset</button>
           <label class="button small media-replace-file">Replace with local file<input type="file" accept="image/*" data-media-replace-file="${escapeHTML(asset.id)}"></label>
           <button class="button small" type="button" data-media-delete="${escapeHTML(asset.id)}">Delete from draft library</button>
         </div>
@@ -5113,6 +5210,13 @@
         return;
       }
 
+      const mediaTargetSlot = event.target.closest("[data-media-target-slot]");
+      if (mediaTargetSlot) {
+        const [kind, index] = mediaTargetSlot.dataset.mediaTargetSlot.split(":");
+        setMediaTarget(kind, Number(index));
+        return;
+      }
+
       const mediaAssign = event.target.closest("[data-media-assign]");
       if (mediaAssign) {
         assignMediaToTarget(mediaAssign.dataset.mediaAssign);
@@ -5223,20 +5327,6 @@
       const mediaField = event.target.closest("[data-media-field]");
       if (mediaField) {
         updateSelectedMediaAsset(mediaField.dataset.mediaField, mediaField.value);
-        return;
-      }
-
-      const mediaTargetPicker = event.target.closest("[data-media-target-picker]");
-      if (mediaTargetPicker) {
-        const [kind, index] = clean(mediaTargetPicker.value).split(":");
-        if (kind && index !== undefined) {
-          setMediaTarget(kind, Number(index));
-        } else {
-          state.builder.mediaTarget = null;
-          state.mediaFeedback = "Select a Hero slot first.";
-          saveBuilderDraft();
-          renderMediaLibrary();
-        }
         return;
       }
 
