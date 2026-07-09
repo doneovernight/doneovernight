@@ -1497,7 +1497,7 @@ async function handleViewerBuildSubmissionRequest(req, res, input = {}) {
     }
   }).catch(() => null);
 
-  const notificationOk = internalNotification.delivered === true;
+  const notificationOk = internalNotification.delivered === true || internalNotification.configured === false;
   const emailOk = payload.email ? visitorEmail.delivered === true : true;
   if (!notificationOk || !emailOk) {
     await logViewerBuildEvent("viewer_build_submission_failed", payload, {
