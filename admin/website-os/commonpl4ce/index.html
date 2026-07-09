@@ -2690,6 +2690,8 @@
     };
 
     const workspace = WEBSITE_OS_WORKSPACES.commonpl4ce;
+    const clean = (value) => String(value ?? "").trim();
+    const lower = (value) => clean(value).toLowerCase();
     const state = {
       tasks: [],
       bookings: [],
@@ -2714,8 +2716,6 @@
     };
 
     const $ = (id) => document.getElementById(id);
-    const clean = (value) => String(value ?? "").trim();
-    const lower = (value) => clean(value).toLowerCase();
     const escapeHTML = (value) => clean(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -3039,7 +3039,9 @@
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
         mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? normalizeMediaLibrary(builder.mediaLibrary) : fallback.mediaLibrary,
         bookingAvailability: normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability || fallback.bookingAvailability }).bookingAvailability,
-        mediaTarget: builder.mediaTarget || null,
+        mediaTarget: builder.mediaTarget && ["desktop", "mobile"].includes(builder.mediaTarget.kind)
+          ? { kind: builder.mediaTarget.kind, index: Math.max(0, Math.min(6, Number(builder.mediaTarget.index) || 0)) }
+          : null,
         selectedHeroSlot: builder.selectedHeroSlot && ["desktop", "mobile"].includes(builder.selectedHeroSlot.kind)
           ? { kind: builder.selectedHeroSlot.kind, index: Math.max(0, Math.min(6, Number(builder.selectedHeroSlot.index) || 0)) }
           : fallback.selectedHeroSlot,
@@ -3806,7 +3808,15 @@
 
     function mediaTargetLabel(target = state.builder.mediaTarget) {
       const name = mediaTargetName(target);
-      return name ? `Assigning to ${name}` : "No hero slot selected";
+      return name ? `Assigning to ${name}` : "Select a Hero slot first.";
+    }
+
+    function activeMediaTarget() {
+      const target = state.builder.mediaTarget;
+      if (!target || !["desktop", "mobile"].includes(target.kind)) return null;
+      const slots = heroSlots(target.kind);
+      const index = Math.max(0, Math.min(slots.length - 1, Number(target.index) || 0));
+      return slots[index] ? { kind: target.kind, index } : null;
     }
 
     function isLocalOnlyMedia(asset = {}) {
@@ -3857,6 +3867,7 @@
       state.builder.selectedHeroSlot = { kind: normalizedKind, index: normalizedIndex };
       state.builder.mediaTarget = { kind: normalizedKind, index: normalizedIndex };
       state.heroFeedback = `${mediaTargetName(state.builder.mediaTarget)} selected for media assignment.`;
+      state.mediaFeedback = state.builder.selectedMediaId ? `${mediaTargetName(state.builder.mediaTarget)} selected.` : "Select a media asset first.";
       if (options.openMedia) {
         state.builder.mediaFilter = "Hero";
         state.builder.mediaSearch = "";
@@ -3964,8 +3975,7 @@
     }
 
     function selectedMediaAsset() {
-      const current = state.builder.mediaLibrary.find((asset) => asset.id === state.builder.selectedMediaId);
-      return current || state.builder.mediaLibrary[0] || null;
+      return state.builder.mediaLibrary.find((asset) => asset.id === state.builder.selectedMediaId) || null;
     }
 
     function renderMediaAssetDetail() {
@@ -3973,13 +3983,25 @@
       if (!target) return;
       const asset = selectedMediaAsset();
       if (!asset) {
-        target.innerHTML = `<div class="empty-state"><strong>No media assets yet.</strong>Uploads connect in Phase 3.</div>`;
+        target.innerHTML = `
+          <div class="empty-state"><strong>Select a media asset first.</strong>Choose an asset from the Media Library before assigning it to ${escapeHTML(mediaTargetName(activeMediaTarget()) || "a Hero slot")}.</div>
+          <div class="detail-grid" style="grid-template-columns:1fr">
+            <div class="detail"><span>Selected target</span><strong>${escapeHTML(mediaTargetLabel(activeMediaTarget()))}</strong></div>
+            <div class="detail"><span>Selected asset</span><strong>Select a media asset first.</strong></div>
+          </div>
+          <div class="media-asset-actions">
+            <button class="button small" type="button" disabled>Assign to selected hero slot</button>
+          </div>
+        `;
         return;
       }
-      state.builder.selectedMediaId = asset.id;
       const localOnly = isLocalOnlyMedia(asset);
       const categories = MEDIA_CATEGORIES.map((category) => `<option value="${escapeHTML(category)}"${asset.category === category ? " selected" : ""}>${escapeHTML(category)}</option>`).join("");
-      const signature = JSON.stringify({ asset, localOnly, mediaTarget: state.builder.mediaTarget });
+      const targetSlot = activeMediaTarget();
+      const targetLabel = mediaTargetLabel(targetSlot);
+      const assignDisabled = !targetSlot;
+      const assignMessage = assignDisabled ? "Select a Hero slot first." : state.mediaFeedback || "";
+      const signature = JSON.stringify({ asset, localOnly, mediaTarget: targetSlot, assignMessage });
       if (target.dataset.renderSignature === signature && target.childElementCount) return;
       target.dataset.renderSignature = signature;
       target.innerHTML = `
@@ -4001,14 +4023,15 @@
           <label class="field wide"><span>Usage</span><input value="${escapeHTML(asset.usedIn || "")}" data-media-field="usedIn"></label>
         </div>
         <div class="detail-grid" style="grid-template-columns:1fr">
-          <div class="detail"><span>Selected target</span><strong>${escapeHTML(mediaTargetLabel())}</strong></div>
+          <div class="detail"><span>Selected target</span><strong>${escapeHTML(targetLabel)}</strong></div>
           <div class="detail"><span>Dimensions</span><strong>${escapeHTML(asset.dimensions || "Unknown")}</strong></div>
           <div class="detail"><span>Added date</span><strong>${escapeHTML(asset.addedAt ? formatTimestamp(asset.addedAt) : "Existing asset")}</strong></div>
           <div class="detail"><span>Used in</span><strong>${escapeHTML(asset.usedIn || "Not assigned")}</strong></div>
         </div>
+        ${assignMessage ? `<div class="website-note">${escapeHTML(assignMessage)}</div>` : ""}
         ${localOnly ? `<div class="website-note">Upload storage required before this file can go live.</div>` : ""}
         <div class="media-asset-actions">
-          <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}">Assign to selected hero slot</button>
+          <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}"${assignDisabled ? " disabled" : ""}>Assign to selected hero slot</button>
           <label class="button small media-replace-file">Replace with local file<input type="file" accept="image/*" data-media-replace-file="${escapeHTML(asset.id)}"></label>
           <button class="button small" type="button" data-media-delete="${escapeHTML(asset.id)}">Delete from draft library</button>
         </div>
@@ -4352,9 +4375,10 @@
     }
 
     function assignMediaToTarget(assetId) {
-      const target = state.builder.mediaTarget;
+      const target = activeMediaTarget();
       if (!target) {
-        state.heroFeedback = "Choose a hero slot before assigning media.";
+        state.mediaFeedback = "Select a Hero slot first.";
+        state.heroFeedback = "Select a Hero slot first.";
         renderHeroManager();
         renderMediaLibrary();
         return;
@@ -4362,7 +4386,8 @@
       const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
       const slot = asset ? heroSlots(target.kind)[target.index] : null;
       if (!asset || !slot) {
-        state.heroFeedback = "Media assignment is not available for this selection.";
+        state.mediaFeedback = asset ? "Media assignment is not available for this selection." : "Select a media asset first.";
+        state.heroFeedback = state.mediaFeedback;
         renderHeroManager();
         renderMediaLibrary();
         return;
@@ -4381,17 +4406,16 @@
       slot.status = "Draft";
       asset.usedIn = `${target.kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(target.index + 1).padStart(2, "0")}`;
       state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
+      state.builder.mediaTarget = { kind: target.kind, index: target.index };
       state.builder.selectedMediaId = asset.id;
-      state.builder.mediaTarget = null;
       state.heroFeedback = isLocalOnlyMedia(asset)
         ? `${asset.filename} assigned as a local draft preview. Upload storage required before this file can go live.`
-        : `${asset.filename} assigned to ${mediaTargetName(target)}.`;
+        : `Assigned to ${mediaTargetName(target)}.`;
       state.mediaFeedback = isLocalOnlyMedia(asset)
         ? "Upload storage required before this file can go live."
-        : `${asset.filename} assigned to ${mediaTargetName(target)}.`;
+        : `Assigned to ${mediaTargetName(target)}.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
-      switchWebsiteTab("hero");
       renderHeroManager();
       renderMediaLibrary();
       renderBuilderPreview(selectedBuilderSection());
@@ -4964,6 +4988,8 @@
       const mediaSelect = event.target.closest("[data-media-select]");
       if (mediaSelect) {
         state.builder.selectedMediaId = mediaSelect.dataset.mediaSelect;
+        if (!activeMediaTarget()) state.mediaFeedback = "Select a Hero slot first.";
+        else state.mediaFeedback = `${selectedMediaAsset()?.filename || "Asset"} selected for ${mediaTargetName(activeMediaTarget())}.`;
         saveBuilderDraft();
         renderMediaLibrary();
         return;
