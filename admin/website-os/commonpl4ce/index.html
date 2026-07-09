@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -826,6 +826,7 @@
     }
 
     .field-grid .wide { grid-column: 1 / -1; }
+    .field-grid.with-offset { margin-top: 14px; }
 
     .website-builder {
       margin-top: 18px;
@@ -1748,6 +1749,8 @@
       font-weight: 850;
     }
 
+    label.field.with-offset { margin-top: 12px; }
+
     label.field span {
       color: rgba(241,234,220,.48);
       font: 850 10px var(--mono);
@@ -1954,7 +1957,7 @@
       </button>
       <div class="status" id="loginStatus" aria-live="polite"></div>
     </form>
-    <div class="gate-footer doneovernight-footer-watermark-frame" aria-label="DONEOVERNIGHT footer">
+    <div class="gate-footer doneovernight-footer-watermark-frame" role="group" aria-label="DONEOVERNIGHT footer">
       <div class="doneovernight-footer-watermark" aria-hidden="true">done overnight.</div>
       <div class="gate-powered">
         <span>Powered by</span>
@@ -2087,7 +2090,7 @@
                   <span>Subject</span>
                   <input id="draftSubject" type="text" disabled>
                 </label>
-                <label class="field wide" style="margin-top:12px">
+                <label class="field wide with-offset">
                   <span>Message</span>
                   <textarea id="draftBody" disabled></textarea>
                 </label>
@@ -2120,7 +2123,7 @@
             <div class="view-title">
               <div class="eyebrow">Website</div>
               <h1>Public content.</h1>
-              <p>Website-facing fields are exposed as a publish-ready model. Publishing connects in the next phase.</p>
+              <p>Website-facing fields are exposed as a publish-ready model and can be published to the live COMMONPL4CE config.</p>
             </div>
           </div>
           <section class="os-panel">
@@ -2135,13 +2138,13 @@
 
             <div class="website-task is-active" data-website-tab="builder" role="tabpanel">
               <div class="builder-status-bar">
-                <p>Drafts save only on this device until server persistence is connected.</p>
+                <p>Drafts save on this device until you publish them to the live config.</p>
                 <div class="builder-controls">
                   <button class="button small" id="saveBuilderDraft" type="button">Save draft locally</button>
                   <button class="button small" id="resetBuilderDraft" type="button">Reset draft</button>
                 </div>
               </div>
-              <div class="builder-grid" aria-label="Draft section builder">
+              <div class="builder-grid" role="group" aria-label="Draft section builder">
                 <div class="builder-panel">
                   <div class="builder-head">
                     <div>
@@ -2213,7 +2216,7 @@
                 </div>
                 <span class="builder-state">Local only</span>
               </div>
-              <div class="website-note">Drafts save only on this device until server persistence is connected.</div>
+              <div class="website-note">Drafts save on this device until you publish them to the live config.</div>
               <div class="content-draft-grid" id="websiteFields"></div>
             </div>
 
@@ -2248,7 +2251,7 @@
                 <section class="archive-preview-panel" aria-label="Hero draft previews">
                   <div>
                     <h3>Hero draft preview</h3>
-                    <p>Reflects the current local desktop and mobile order. Publishing connects in Phase 3.</p>
+                    <p>Reflects the current desktop and mobile order before it is published.</p>
                   </div>
                   <div class="archive-preview-grid">
                     <div>
@@ -2276,7 +2279,7 @@
                 <div class="media-browser-grid">
                   <div class="media-tools">
                     <label class="field"><span>Search assets</span><input id="mediaSearch" type="search" placeholder="Search filename, category or usage"></label>
-                    <div class="media-filters" id="mediaFilters" aria-label="Media categories"></div>
+                    <div class="media-filters" id="mediaFilters" role="group" aria-label="Media categories"></div>
                     <div class="media-library-grid" id="mediaLibraryGrid"></div>
                   </div>
                   <aside class="media-detail" id="mediaAssetDetail" aria-label="Selected media asset"></aside>
@@ -2286,7 +2289,7 @@
 
             <div class="website-task" data-website-tab="preview" role="tabpanel">
               <div class="builder-status-bar">
-                <p>Live public preview. Draft changes are not published yet.</p>
+                <p>Live public preview. Draft changes appear here after publishing.</p>
                 <div class="builder-controls">
                   <a class="button small ghost" href="https://doneovernight.com/cp" target="_blank" rel="noreferrer">Open public website</a>
                   <button class="button small" id="refreshPreviewFrames" type="button">Refresh preview</button>
@@ -2331,13 +2334,13 @@
             <div class="website-task" data-website-tab="publish" role="tabpanel">
               <div class="builder-head">
                 <div>
-                  <h2>Publishing preparation</h2>
-                  <p>Review local draft readiness before publishing is connected.</p>
+                  <h2>Publishing</h2>
+                  <p>Publish hero order and website content to the live COMMONPL4CE config.</p>
                 </div>
-                <button class="button small" type="button" disabled>Publishing connects in Phase 3.</button>
+                <button class="button small primary" id="publishWebsiteConfig" type="button">Publish live config</button>
               </div>
               <div class="publish-summary-grid" id="publishSummary"></div>
-              <div class="website-note">Drafts save only on this device until server persistence is connected. Publishing connects in Phase 3.</div>
+              <div class="website-note" id="publishStatusNote">Publishing writes a server-side COMMONPL4CE config. Local file previews require upload storage before they can publish.</div>
             </div>
           </section>
         </section>
@@ -2355,12 +2358,12 @@
               <strong>No editable portfolio records connected yet.</strong>
               The public COMMONPL4CE page is live. Project management and publishing controls will connect in the next phase.
             </div>
-            <div class="field-grid" style="margin-top:14px">
-              <label class="field"><span>Project title</span><input value="" placeholder="Project title" disabled></label>
-              <label class="field"><span>Category</span><input value="" placeholder="Campaign / Editorial / Travel" disabled></label>
+            <div class="field-grid with-offset">
+              <label class="field"><span>Project title</span><input type="text" value="" placeholder="Project title" disabled></label>
+              <label class="field"><span>Category</span><input type="text" value="" placeholder="Campaign / Editorial / Travel" disabled></label>
               <label class="field wide"><span>Description</span><textarea placeholder="Project description" disabled></textarea></label>
               <label class="field"><span>Status</span><select disabled><option>Draft</option><option>Published</option></select></label>
-              <label class="field"><span>Ordering</span><input value="" placeholder="Position" disabled></label>
+              <label class="field"><span>Ordering</span><input type="text" value="" placeholder="Position" disabled></label>
             </div>
           </section>
         </section>
@@ -2443,8 +2446,54 @@
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
     const HERO_LOCAL_FILE_LIMIT = 900 * 1024;
+    const COMMONPLACE_SITE_CONFIG_API = "/api/commonpl4ce-site-config";
+    const COMMONPLACE_SITE_CONFIG_URL = "/assets/common-place/config/site-content.json";
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
+    const DEFAULT_SITE_CONFIG = {
+      version: 1,
+      workspace: "commonpl4ce",
+      hero: {
+        desktop: [
+          ["/assets/common-place/fullscreen/slide-01-opening.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+          ["/assets/common-place/fullscreen/slide-02-yellow.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+          ["/assets/common-place/fullscreen/slide-03-hoodie-front.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+          ["/assets/common-place/fullscreen/slide-04-chair.jpg", "Editorial chair portrait on film", "Gallery frame"],
+          ["/assets/common-place/fullscreen/slide-05-duo.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+          ["/assets/common-place/fullscreen/slide-06-couch.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+          ["/assets/common-place/fullscreen/slide-07-profile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+        ].map(([src, alt, label], index) => ({ id: `desktop_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" })),
+        mobile: [
+          ["/assets/common-place/mobile/slide-01-mobile.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+          ["/assets/common-place/mobile/slide-02-mobile.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+          ["/assets/common-place/mobile/slide-03-mobile.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+          ["/assets/common-place/mobile/slide-04-mobile.jpg", "Editorial chair portrait on film", "Gallery frame"],
+          ["/assets/common-place/mobile/slide-05-mobile.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+          ["/assets/common-place/mobile/slide-06-mobile.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+          ["/assets/common-place/mobile/slide-07-mobile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+        ].map(([src, alt, label], index) => ({ id: `mobile_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" }))
+      },
+      content: {
+        heroLine: "Available for campaigns, editorials and selected brand projects.",
+        storyTitle: "Shot with feeling.",
+        storyLeadPrimary: "CP creates visual stories for brands, campaigns and people who want their imagery to feel real.",
+        storyLeadSecondary: "Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.",
+        storySmallLine: "For brands that need more than clean content: imagery with mood, memory and presence.",
+        aboutKicker: "Behind the Film",
+        aboutTitle: "Romy Peters",
+        aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
+        behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
+        aboutBodySecondary: "Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.",
+        socials: "Instagram: @commonpl4ce",
+        contactEmail: "book@commonpl4ce.com",
+        availability: "Netherlands\nEurope\nWorldwide",
+        availabilityNote: "Available for campaigns,\neditorials and selected brand projects.",
+        availabilityQuiet: "Limited availability each month.",
+        bookingCtaText: "Start your project",
+        footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
+        footerAvailability: "Available worldwide"
+      }
+    };
 
     const WEBSITE_OS_WORKSPACES = {
       commonpl4ce: {
@@ -2459,15 +2508,11 @@
         intakeVersion: "commonpl4ce_booker_v1",
         logo: "/assets/common-place/final/wordmark-intro-commonpl4ce.png",
         doneovernightWordmark: "/assets/doneovernight-wordmark.svg",
+        publishedConfig: DEFAULT_SITE_CONFIG,
         websiteContent: {
-          heroLine: "Available for campaigns, editorials and selected brand projects.",
-          aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
-          behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
-          socials: "Instagram: @commonpl4ce",
-          contact: "book@commonpl4ce.com",
-          availability: "Available worldwide",
-          bookingCta: "Start your project",
-          footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT"
+          ...DEFAULT_SITE_CONFIG.content,
+          contact: DEFAULT_SITE_CONFIG.content.contactEmail,
+          bookingCta: DEFAULT_SITE_CONFIG.content.bookingCtaText
         }
       }
     };
@@ -2480,7 +2525,10 @@
       selectedBookingId: "",
       drafts: readDrafts(),
       builder: readBuilderDraft(),
-      heroFeedback: ""
+      heroFeedback: "",
+      publishStatus: "",
+      publishedConfig: DEFAULT_SITE_CONFIG,
+      publishedConfigLoaded: false
     };
 
     const $ = (id) => document.getElementById(id);
@@ -2537,42 +2585,48 @@
       };
     }
 
-    function defaultHeroSlots(format = "desktop") {
-      const desktop = [
-        "/assets/common-place/fullscreen/slide-01-opening.jpg",
-        "/assets/common-place/fullscreen/slide-02-yellow.jpg",
-        "/assets/common-place/fullscreen/slide-03-hoodie-front.jpg",
-        "/assets/common-place/fullscreen/slide-04-chair.jpg",
-        "/assets/common-place/fullscreen/slide-05-duo.jpg",
-        "/assets/common-place/fullscreen/slide-06-couch.jpg",
-        "/assets/common-place/fullscreen/slide-07-profile.jpg"
-      ];
-      const mobile = [
-        "/assets/common-place/mobile/slide-01-mobile.jpg",
-        "/assets/common-place/mobile/slide-02-mobile.jpg",
-        "/assets/common-place/mobile/slide-03-mobile.jpg",
-        "/assets/common-place/mobile/slide-04-mobile.jpg",
-        "/assets/common-place/mobile/slide-05-mobile.jpg",
-        "/assets/common-place/mobile/slide-06-mobile.jpg",
-        "/assets/common-place/mobile/slide-07-mobile.jpg"
-      ];
-      const alts = [
-        "Romy standing with her back toward the camera",
-        "Yellow sweater portrait on film",
-        "Hoodie portrait seated on a bench",
-        "Editorial chair portrait on film",
-        "Duo portrait in yellow campaign styling",
-        "Campaign image with couch and hoodie",
-        "Side profile hoodie campaign image"
-      ];
-      const assets = format === "mobile" ? mobile : desktop;
-      return assets.map((image, index) => heroSlot(
-        `${format}_hero_${index + 1}`,
-        image,
+    function normalizeSiteConfig(config) {
+      const fallback = DEFAULT_SITE_CONFIG;
+      const source = config && typeof config === "object" ? config : {};
+      const normalizeHero = (kind) => {
+        const slots = Array.isArray(source.hero?.[kind]) && source.hero[kind].length ? source.hero[kind] : fallback.hero[kind];
+        return slots.concat(fallback.hero[kind]).slice(0, 7).map((slot, index) => ({
+          ...fallback.hero[kind][index],
+          ...slot,
+          id: slot.id || `${kind}_hero_${index + 1}`,
+          src: slot.src || slot.image || fallback.hero[kind][index].src,
+          status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : "Ready"
+        }));
+      };
+      return {
+        ...fallback,
+        ...source,
+        hero: {
+          desktop: normalizeHero("desktop"),
+          mobile: normalizeHero("mobile")
+        },
+        content: {
+          ...fallback.content,
+          ...(source.content || {})
+        }
+      };
+    }
+
+    function siteConfigToHeroSlots(format = "desktop", config = workspace.publishedConfig || DEFAULT_SITE_CONFIG) {
+      const normalized = normalizeSiteConfig(config);
+      const slots = format === "mobile" ? normalized.hero.mobile : normalized.hero.desktop;
+      return slots.map((slot, index) => heroSlot(
+        slot.id || `${format}_hero_${index + 1}`,
+        slot.src || slot.image || "",
         format,
-        alts[index],
-        index === 0 ? "Opening frame" : "Gallery frame"
+        slot.alt || "",
+        slot.caption || slot.label || (index === 0 ? "Opening frame" : "Gallery frame"),
+        slot.status || "Ready"
       ));
+    }
+
+    function defaultHeroSlots(format = "desktop") {
+      return siteConfigToHeroSlots(format);
     }
 
     function defaultMediaLibrary() {
@@ -2698,6 +2752,7 @@
       return {
         selectedSectionId: sections[0].id,
         updatedAt: "",
+        websiteContent: { ...workspace.websiteContent },
         sections,
         heroDesktopSlots: defaultHeroSlots("desktop"),
         heroMobileSlots: defaultHeroSlots("mobile"),
@@ -2739,9 +2794,14 @@
         format,
         status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : fallbackSlots[index].status
       }));
+      const websiteContent = {
+        ...fallback.websiteContent,
+        ...(builder.websiteContent || {})
+      };
       return {
         selectedSectionId: builder.selectedSectionId || sections[0]?.id || "",
         updatedAt: builder.updatedAt || "",
+        websiteContent,
         sections,
         heroDesktopSlots: normalizeSlots(desktopSlots, fallback.heroDesktopSlots, "desktop"),
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
@@ -2790,6 +2850,102 @@
         const target = $(id);
         if (target) target.textContent = `${message} / ${savedTimeLabel()}`;
       });
+    }
+
+    function builderToSiteConfig(builder = state.builder) {
+      const slotToConfig = (slot, index, kind) => ({
+        id: slot.id || `${kind}_hero_${index + 1}`,
+        src: slot.image || "",
+        alt: slot.alt || "",
+        label: slot.note || (index === 0 ? "Opening frame" : "Gallery frame"),
+        caption: slot.note || "",
+        status: slot.status || "Draft"
+      });
+      return normalizeSiteConfig({
+        version: state.publishedConfig.version || 1,
+        workspace: "commonpl4ce",
+        updatedAt: new Date().toISOString(),
+        hero: {
+          desktop: builder.heroDesktopSlots.map((slot, index) => slotToConfig(slot, index, "desktop")),
+          mobile: builder.heroMobileSlots.map((slot, index) => slotToConfig(slot, index, "mobile"))
+        },
+        content: { ...builder.websiteContent }
+      });
+    }
+
+    function sameValue(left, right) {
+      return clean(left) === clean(right);
+    }
+
+    function siteConfigDiff() {
+      const draft = builderToSiteConfig();
+      const published = normalizeSiteConfig(state.publishedConfig);
+      const heroChanges = ["desktop", "mobile"].reduce((total, kind) => {
+        return total + draft.hero[kind].filter((slot, index) => {
+          const live = published.hero[kind][index] || {};
+          return !sameValue(slot.src, live.src) || !sameValue(slot.alt, live.alt) || !sameValue(slot.status, live.status);
+        }).length;
+      }, 0);
+      const mediaPathChanges = ["desktop", "mobile"].reduce((total, kind) => {
+        return total + draft.hero[kind].filter((slot, index) => !sameValue(slot.src, published.hero[kind][index]?.src)).length;
+      }, 0);
+      const contentChanges = Object.keys(draft.content).filter((key) => !sameValue(draft.content[key], published.content[key]));
+      const blockedAssets = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => {
+        return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || /^local_/i.test(slot.mediaId || "");
+      }).length;
+      return { draft, published, heroChanges, mediaPathChanges, contentChanges, blockedAssets };
+    }
+
+    function syncBuilderSectionsFromContent() {
+      const content = state.builder.websiteContent || {};
+      const hero = state.builder.sections.find((section) => section.name === "Hero");
+      if (hero) hero.body = content.heroLine || "";
+      const story = state.builder.sections.find((section) => section.name === "Story / Behind the Film");
+      if (story) story.body = [content.aboutText, content.aboutBodySecondary, content.behindTheFilm].filter(Boolean).join("\n\n");
+      const booking = state.builder.sections.find((section) => section.name === "Booking");
+      if (booking) booking.ctaLabel = content.bookingCtaText || content.bookingCta || "";
+      const footer = state.builder.sections.find((section) => section.name === "Footer");
+      if (footer) footer.body = content.footerText || "";
+    }
+
+    async function fetchPublishedConfig() {
+      const apiConfig = await fetch(COMMONPLACE_SITE_CONFIG_API, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => data && data.success === true ? data.config : null)
+        .catch(() => null);
+      if (apiConfig) return { config: apiConfig, source: COMMONPLACE_SITE_CONFIG_API };
+
+      const staticConfig = await fetch(COMMONPLACE_SITE_CONFIG_URL, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : null)
+        .catch(() => null);
+      if (staticConfig) return { config: staticConfig, source: COMMONPLACE_SITE_CONFIG_URL };
+      return null;
+    }
+
+    async function loadPublishedSiteConfig() {
+      try {
+        const published = await fetchPublishedConfig();
+        if (!published) throw new Error("Published config unavailable");
+        const config = normalizeSiteConfig(published.config);
+        state.publishedConfig = config;
+        state.publishedConfigLoaded = true;
+        state.publishedConfigSource = published.source;
+        workspace.publishedConfig = config;
+        workspace.websiteContent = {
+          ...config.content,
+          contact: config.content.contactEmail,
+          bookingCta: config.content.bookingCtaText
+        };
+        if (!state.builder.updatedAt) {
+          state.builder = defaultBuilderDraft();
+        }
+        renderWebsiteFields();
+        renderSectionBuilder();
+      } catch (error) {
+        state.publishedConfigLoaded = false;
+        state.publishedConfigSource = "";
+        renderPublishSummary();
+      }
     }
 
     function setSidebarCollapsed(collapsed, persist = true) {
@@ -3132,24 +3288,43 @@
     }
 
     function renderWebsiteFields() {
+      const content = state.builder.websiteContent || workspace.websiteContent;
       const fields = [
-        ["hero line", workspace.websiteContent.heroLine],
-        ["about / behind the film", `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`],
-        ["socials", workspace.websiteContent.socials],
-        ["contact", workspace.websiteContent.contact],
-        ["availability", workspace.websiteContent.availability],
-        ["booking CTA text", workspace.websiteContent.bookingCta],
-        ["footer text", workspace.websiteContent.footerText]
+        ["hero line", "heroLine", content.heroLine, false],
+        ["story headline", "storyTitle", content.storyTitle, false],
+        ["story lead", "storyLeadPrimary", content.storyLeadPrimary, true],
+        ["story second lead", "storyLeadSecondary", content.storyLeadSecondary, true],
+        ["about / behind the film", "aboutText", content.aboutText, true],
+        ["behind the film text", "behindTheFilm", content.behindTheFilm, true],
+        ["socials", "socials", content.socials, false],
+        ["contact", "contactEmail", content.contactEmail || content.contact, false],
+        ["availability", "availability", content.availability, true],
+        ["availability note", "availabilityNote", content.availabilityNote, true],
+        ["booking CTA text", "bookingCtaText", content.bookingCtaText || content.bookingCta, false],
+        ["footer text", "footerText", content.footerText, true]
       ];
-      $("websiteFields").innerHTML = fields.map(([label, value]) => `
-        <label class="field ${label.includes("about") || label.includes("footer") ? "wide" : ""}">
+      $("websiteFields").innerHTML = fields.map(([label, key, value, multiline]) => `
+        <label class="field ${multiline ? "wide" : ""}">
           <span>${escapeHTML(label)}</span>
-          ${label.includes("about") || label.includes("footer")
-            ? `<textarea disabled>${escapeHTML(value)}</textarea>`
-            : `<input value="${escapeHTML(value)}" disabled>`}
+          ${multiline
+            ? `<textarea data-content-field="${escapeHTML(key)}">${escapeHTML(value)}</textarea>`
+            : `<input value="${escapeHTML(value)}" data-content-field="${escapeHTML(key)}">`}
         </label>
       `).join("");
       renderSectionBuilder();
+    }
+
+    function updateWebsiteContentField(field, value) {
+      state.builder.websiteContent = {
+        ...(state.builder.websiteContent || workspace.websiteContent),
+        [field]: value
+      };
+      if (field === "contactEmail") state.builder.websiteContent.contact = value;
+      if (field === "bookingCtaText") state.builder.websiteContent.bookingCta = value;
+      syncBuilderSectionsFromContent();
+      saveBuilderDraft();
+      renderBuilderPreview(selectedBuilderSection());
+      renderPublishSummary();
     }
 
     function selectedBuilderSection() {
@@ -3280,7 +3455,7 @@
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move left</button>
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="1"${index === slots.length - 1 ? " disabled" : ""}>Move right</button>
         </div>
-        <div class="hero-feedback${state.heroFeedback ? " is-warning" : ""}" id="heroSlotFeedback">${escapeHTML(state.heroFeedback || `${slot.localFileName ? `Local preview: ${slot.localFileName}. ` : ""}Drafts save only on this device until server persistence is connected.`)}</div>
+        <div class="hero-feedback${state.heroFeedback ? " is-warning" : ""}" id="heroSlotFeedback">${escapeHTML(state.heroFeedback || `${slot.localFileName ? `Local preview only: ${slot.localFileName}. Upload storage required before publishing this asset. ` : ""}Manual paths and library assets can publish. Local file previews need upload storage first.`)}</div>
       `;
     }
 
@@ -3410,13 +3585,22 @@
       const hiddenSections = state.builder.sections.filter((section) => section.visibility === "Hidden").length;
       const readyHeroSlots = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => slot.status === "Ready").length;
       const connectedMedia = state.builder.mediaLibrary.filter((asset) => clean(asset.usedIn)).length;
+      const diff = siteConfigDiff();
+      const publishBlocker = diff.blockedAssets
+        ? `${diff.blockedAssets} local preview asset${diff.blockedAssets === 1 ? "" : "s"} need upload storage`
+        : "Ready to publish server-side config";
       const items = [
+        ["Published config", state.publishedConfigLoaded ? (state.publishedConfigSource || COMMONPLACE_SITE_CONFIG_API) : "Fallback defaults loaded"],
         ["Draft changes summary", `${state.builder.sections.length} sections / 14 hero slots`],
         ["Sections ready", readySections],
         ["Sections hidden", hiddenSections],
         ["Hero slots ready", `${readyHeroSlots} of 14`],
+        ["Changed hero slots", diff.heroChanges],
+        ["Changed text fields", diff.contentChanges.length ? diff.contentChanges.join(", ") : "None"],
+        ["Changed media paths", diff.mediaPathChanges],
         ["Media assets connected", connectedMedia],
-        ["Publish status", "Disabled"]
+        ["Publish readiness", publishBlocker],
+        ["Publish status", state.publishStatus || (diff.blockedAssets ? "Blocked by local preview assets" : "Ready")]
       ];
       target.innerHTML = items.map(([label, value]) => `
         <div class="publish-summary-item">
@@ -3424,6 +3608,69 @@
           <strong>${escapeHTML(value)}</strong>
         </div>
       `).join("");
+      const publishButton = $("publishWebsiteConfig");
+      if (publishButton) {
+        const publishing = state.publishStatus === "Publishing...";
+        publishButton.disabled = diff.blockedAssets > 0 || publishing;
+        publishButton.textContent = publishing ? "Publishing..." : diff.blockedAssets ? "Upload storage required" : "Publish live config";
+      }
+      const note = $("publishStatusNote");
+      if (note) {
+        note.textContent = diff.blockedAssets
+          ? "Local file previews cannot publish yet. Use Media Library assets or manual public paths until upload storage is connected."
+          : "Publishing writes the server-side COMMONPL4CE config used by the public /cp website.";
+      }
+    }
+
+    async function publishWebsiteConfig() {
+      const diff = siteConfigDiff();
+      if (diff.blockedAssets) {
+        state.publishStatus = "Blocked by local preview assets";
+        renderPublishSummary();
+        return;
+      }
+      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
+      if (!adminKey) {
+        state.publishStatus = "Sign in again before publishing";
+        renderPublishSummary();
+        return;
+      }
+      const button = $("publishWebsiteConfig");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Publishing...";
+      }
+      state.publishStatus = "Publishing...";
+      renderPublishSummary();
+      try {
+        const response = await fetch(COMMONPLACE_SITE_CONFIG_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ admin_key: adminKey, config: diff.draft })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true || !data.config) {
+          throw new Error(data.error || data.code || "Publish failed");
+        }
+        const config = normalizeSiteConfig(data.config);
+        state.publishedConfig = config;
+        state.publishedConfigLoaded = true;
+        state.publishedConfigSource = COMMONPLACE_SITE_CONFIG_API;
+        workspace.publishedConfig = config;
+        workspace.websiteContent = {
+          ...config.content,
+          contact: config.content.contactEmail,
+          bookingCta: config.content.bookingCtaText
+        };
+        state.publishStatus = `Published ${new Date(data.publishedAt || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        saveBuilderDraft();
+        renderWebsiteFields();
+        renderSectionBuilder();
+        refreshPublicPreviewFrames();
+      } catch (error) {
+        state.publishStatus = clean(error.message || "Publish failed");
+        renderPublishSummary();
+      }
     }
 
     function updateSelectedBuilderSection(field, value) {
@@ -3656,7 +3903,7 @@
         slot.localFileName = file.name;
         slot.localFileSize = file.size;
         state.builder.selectedHeroSlot = { kind, index };
-        state.heroFeedback = "Large files require server upload in Phase 3.";
+        state.heroFeedback = "Local preview only. Large files require server upload in Phase 3 before publishing this asset.";
         setBuilderSaveState("Unsaved changes");
         renderHeroManager();
         renderHeroArchivePreview();
@@ -3675,7 +3922,7 @@
         delete slot.previewImage;
         slot.status = "Draft";
         state.builder.selectedHeroSlot = { kind, index };
-        state.heroFeedback = `${file.name} added as a local draft preview.`;
+        state.heroFeedback = `${file.name} added as a local draft preview only. Upload storage required before publishing this asset.`;
         syncHeroAssetUsage();
         saveBuilderDraft();
         renderHeroManager();
@@ -3971,6 +4218,7 @@
       setBuilderSaveState("Draft saved locally");
     });
     $("resetBuilderDraft").addEventListener("click", resetBuilderDraft);
+    $("publishWebsiteConfig").addEventListener("click", publishWebsiteConfig);
 
     document.querySelectorAll("[data-builder-field]").forEach((field) => {
       field.addEventListener("input", () => updateSelectedBuilderSection(field.dataset.builderField, field.value));
@@ -3981,6 +4229,12 @@
       const builderField = event.target.closest("[data-builder-field]");
       if (builderField) {
         updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
+        return;
+      }
+
+      const contentField = event.target.closest("[data-content-field]");
+      if (contentField) {
+        updateWebsiteContentField(contentField.dataset.contentField, contentField.value);
         return;
       }
 
@@ -4012,6 +4266,12 @@
     });
 
     document.addEventListener("input", (event) => {
+      const contentField = event.target.closest("[data-content-field]");
+      if (contentField) {
+        updateWebsiteContentField(contentField.dataset.contentField, contentField.value);
+        return;
+      }
+
       const heroField = event.target.closest("[data-hero-field]");
       if (heroField) updateHeroSlot(heroField.dataset.heroKind, Number(heroField.dataset.heroIndex), heroField.dataset.heroField, heroField.value);
 
@@ -4096,6 +4356,7 @@
     renderTemplates();
     renderWebsiteFields();
     renderSettings();
+    loadPublishedSiteConfig();
     initSidebarPreference();
     if (sessionStorage.getItem(SESSION_FLAG) === "true" && sessionStorage.getItem(SESSION_KEY)) {
       unlockApp();
