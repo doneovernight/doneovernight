@@ -2605,6 +2605,9 @@
     const ADMIN_UPDATE_TASK_ENDPOINT = "/api/admin-update-task";
     const SESSION_FLAG = "doneovernight_admin";
     const SESSION_KEY = "doneovernight_admin_key";
+    const SESSION_MODE_KEY = "doneovernight_admin_mode";
+    const DEVELOPMENT_WEBSITE_PASSWORD = "RomyAdminLogin67";
+    const DEVELOPMENT_SESSION_KEY = "commonpl4ce_development_access";
     const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
@@ -3338,7 +3341,33 @@
       return data;
     }
 
+    async function verifyWebsiteAccess(password) {
+      if (password === DEVELOPMENT_WEBSITE_PASSWORD) {
+        return {
+          mode: "development",
+          sessionKey: DEVELOPMENT_SESSION_KEY
+        };
+      }
+      await verifyAdminKey(password);
+      return {
+        mode: "doneovernight_admin",
+        sessionKey: password
+      };
+    }
+
+    function isDevelopmentSession() {
+      return sessionStorage.getItem(SESSION_MODE_KEY) === "development";
+    }
+
     async function loadBookings({ silent = false } = {}) {
+      if (isDevelopmentSession()) {
+        state.tasks = [];
+        state.bookings = [];
+        state.clients = [];
+        renderAll();
+        if (!silent) setSync("Development access active. Admin data connects with server-side auth.");
+        return;
+      }
       const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
       if (!adminKey) return;
       if (!silent) setSync("Loading bookings");
@@ -3360,6 +3389,14 @@
     }
 
     async function loadCommonplaceAnalytics(range = state.analyticsRange) {
+      if (isDevelopmentSession()) {
+        state.analyticsRange = ["24h", "7d", "30d"].includes(range) ? range : "7d";
+        state.analyticsConnected = false;
+        state.analytics = null;
+        state.analyticsMessage = "Analytics requires server-side auth.";
+        renderAnalytics();
+        return;
+      }
       const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
       if (!adminKey) return;
       state.analyticsRange = ["24h", "7d", "30d"].includes(range) ? range : "7d";
@@ -4739,7 +4776,7 @@
       const rows = [
         ["Change password", "Password management connects with server-side auth in the next phase.", "Disabled"],
         ["Last password change", "Not connected yet.", "Server-side auth"],
-        ["Active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "DONEOVERNIGHT admin auth" : "No active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "Active" : "Signed out"],
+        ["Active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? (isDevelopmentSession() ? "Temporary development access" : "DONEOVERNIGHT admin auth") : "No active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "Active" : "Signed out"],
         ["Sign out all devices", "Requires server-side sessions.", "Disabled"],
         ["Two-factor authentication", "Coming in Phase 3.", "Phase 3"]
       ];
@@ -4860,15 +4897,16 @@
       status.textContent = "";
       $("unlockButton").disabled = true;
       try {
-        await verifyAdminKey(password);
+        const access = await verifyWebsiteAccess(password);
         sessionStorage.setItem(SESSION_FLAG, "true");
-        sessionStorage.setItem(SESSION_KEY, password);
+        sessionStorage.setItem(SESSION_KEY, access.sessionKey);
+        sessionStorage.setItem(SESSION_MODE_KEY, access.mode);
         card.dataset.unlockState = "welcome";
         $("gate").classList.add("is-exiting");
         setTimeout(unlockApp, 260);
       } catch (error) {
         card.dataset.unlockState = "failed";
-        status.textContent = "Website access denied.";
+        status.textContent = "Incorrect password.";
       } finally {
         $("unlockButton").disabled = false;
       }
@@ -4877,6 +4915,7 @@
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(SESSION_FLAG);
       sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_MODE_KEY);
       window.location.reload();
     });
 
