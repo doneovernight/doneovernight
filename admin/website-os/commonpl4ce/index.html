@@ -2602,7 +2602,7 @@
   </main>
 
   <script>
-    const WEBSITE_OS_AUTH_API = "/api/website-os-auth";
+    const WEBSITE_OS_AUTH_API = "/api/task-submit";
     const WEBSITE_OS_WORKSPACE_SLUG = "cp";
     const ADMIN_TASKS_ENDPOINT = "/api/admin-tasks";
     const ADMIN_UPDATE_TASK_ENDPOINT = "/api/admin-update-task";
@@ -3335,7 +3335,8 @@
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          action,
+          action: "website_os_auth",
+          auth_action: action,
           workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
           ...payload
         })

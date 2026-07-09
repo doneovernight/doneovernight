@@ -15,7 +15,16 @@ const {
   supabaseFetch,
   workspaceSessionMatchesRequest
 } = require("../lib/ops");
-const { requireWebsiteOsSession } = require("../lib/website-os-auth");
+const {
+  changeWebsiteOsPassword,
+  getWebsiteOsSession,
+  loginWebsiteOsUser,
+  logoutOtherWebsiteOsSessions,
+  logoutWebsiteOsUser,
+  publicUser,
+  publicWorkspace,
+  requireWebsiteOsSession
+} = require("../lib/website-os-auth");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
@@ -896,6 +905,86 @@ function isCommonplaceNewsletterRequest(input = {}) {
 function isCommonplaceAnalyticsSummaryRequest(input = {}) {
   return input.action === "commonpl4ce_analytics_summary" ||
     input.intent === "commonpl4ce_analytics_summary";
+}
+
+function isWebsiteOsAuthRequest(input = {}) {
+  return input.action === "website_os_auth" || input.intent === "website_os_auth";
+}
+
+function assertWebsiteOsAdminHost(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
+  if (host && host !== "admin.doneovernight.com" && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+    const error = new Error("Website OS auth is only available on the admin host.");
+    error.statusCode = 403;
+    error.code = "ADMIN_HOST_REQUIRED";
+    throw error;
+  }
+}
+
+async function handleWebsiteOsAuthRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  const action = clean(input.auth_action || input.authAction).toLowerCase();
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || "cp");
+
+  if (action === "login") {
+    const result = await loginWebsiteOsUser(res, {
+      slug: workspaceSlug,
+      email: input.email,
+      password: input.password
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "session") {
+    const current = await getWebsiteOsSession(req, { slug: workspaceSlug });
+    if (!current) {
+      return send(res, 401, {
+        success: false,
+        authenticated: false,
+        error: "Website OS session required",
+        code: "WEBSITE_OS_SESSION_REQUIRED"
+      });
+    }
+    return send(res, 200, {
+      success: true,
+      authenticated: true,
+      workspace: publicWorkspace(current.workspace),
+      user: publicUser(current.user),
+      session: {
+        expiresAt: current.session.expires_at,
+        lastActivity: current.session.last_activity,
+        createdAt: current.session.created_at
+      }
+    });
+  }
+
+  if (action === "logout") {
+    await logoutWebsiteOsUser(req, res);
+    return send(res, 200, { success: true });
+  }
+
+  if (action === "change_password") {
+    if (clean(input.new_password || input.newPassword) !== clean(input.confirm_password || input.confirmPassword)) {
+      return send(res, 400, {
+        success: false,
+        error: "New passwords do not match.",
+        code: "PASSWORD_CONFIRMATION_MISMATCH"
+      });
+    }
+    const result = await changeWebsiteOsPassword(req, {
+      slug: workspaceSlug,
+      currentPassword: input.current_password || input.currentPassword,
+      newPassword: input.new_password || input.newPassword
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "logout_other_devices") {
+    const result = await logoutOtherWebsiteOsSessions(req, { slug: workspaceSlug });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  return send(res, 400, { success: false, error: "Unsupported Website OS auth action" });
 }
 
 function validateCommonplacePublicRequest(req, input = {}) {
@@ -3152,6 +3241,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isWebsiteOsAuthRequest(input)) {
+      return handleWebsiteOsAuthRequest(req, res, input);
+    }
+
     if (isCommonplaceSiteConfigRequest(req, input)) {
       return handleCommonplaceSiteConfigPost(req, res, input);
     }
