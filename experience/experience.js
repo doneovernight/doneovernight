@@ -22,7 +22,7 @@
       entryText: "Let's show you how.",
       discover: "How did you discover DONEOVERNIGHT?",
       interests: "What interests you most?",
-      multiple: "Choose anything that pulls your attention.",
+      multiple: "Pick the signals you want to see built.",
       storyTitle: "We don't sell AI. We build operating systems.",
       storyCopy: "The useful part is not a model. It is the way work moves.",
       oldWorkflow: "Old workflow",
@@ -33,18 +33,18 @@
       continueJourney: "Continue your journey.",
       examples: "Choose your industry.",
       improveTitle: "What are you looking to improve?",
-      improveCopy: "Choose anything that fits.",
+      improveCopy: "Choose the improvements that would create the most leverage.",
       otherIndustry: "Other...",
       otherIndustryQuestion: "What industry are you in?",
       otherIndustryPlaceholder: "Type your industry",
       operatorQuestion: "What makes an operator?",
-      operatorCopy: "No wrong answers. The pattern matters more than the score.",
+      operatorCopy: "This shapes the Builder Profile around the kind of leverage you notice first.",
       reflectionOne: "Where are you today?",
       reflectionTwo: "What would you automate first?",
       otherPlaceholder: "Type your own answer",
       gateTitle: "Unlock your access.",
-      gateCopy: "Enter your email to continue.",
-      gateNoSpam: "We'll send your personal DONEOVERNIGHT access and remember your journey.",
+      gateCopy: "Save your Builder Profile and unlock the final layer.",
+      gateNoSpam: "We'll send your access link and keep this journey attached to it.",
       email: "Email",
       name: "Name, optional",
       social: "TikTok / Instagram handle",
@@ -73,9 +73,9 @@
       sendAgainWait: "Send again in",
       sentAgain: "Sent again.",
       welcome: "Welcome.",
-      pathTitle: "Choose your Builder role.",
-      pathCopy: "Choose the role that best fits how you want to enter DONEOVERNIGHT. This shapes your Builder profile and the recommendations that follow.",
-      recommendationsCopy: "A few routes are worth opening next.",
+      pathTitle: "Builder Profile prepared.",
+      pathCopy: "Your answers are now shaping the profile you'll unlock at the end.",
+      recommendationsCopy: "These are the routes your answers point toward.",
       livePreview: "Live preview",
       livePreviewCopy: "A glimpse of what is being built now.",
       openLive: "Open Live Build",
@@ -110,6 +110,7 @@
       finished: "Recently Finished",
       upcoming: "Upcoming Builds",
       viewerTitle: "What should DONEOVERNIGHT build next?",
+      viewerOptionalCopy: "Optional. Share a build idea or skip straight to your Builder Profile.",
       idea: "Idea",
       description: "Description",
       website: "Website, optional",
@@ -144,7 +145,7 @@
       journeyId: "Journey ID",
       journeyStarted: "Journey started",
       completion: "Completion",
-      chosenPath: "Chosen Path",
+      chosenPath: "Builder Mode",
       chosenInterests: "Chosen Interests",
       builderProfile: "Builder Profile",
       automationChoice: "Automation Choice",
@@ -190,7 +191,7 @@
       entryText: "Laten we laten zien hoe.",
       discover: "Hoe ontdekte je DONEOVERNIGHT?",
       interests: "Wat trekt je het meest?",
-      multiple: "Kies alles wat je aandacht trekt.",
+      multiple: "Kies de signalen die je gebouwd wilt zien.",
       storyTitle: "We verkopen geen AI. We bouwen besturingssystemen.",
       storyCopy: "Het waardevolle deel is niet een model. Het is hoe werk beweegt.",
       oldWorkflow: "Oude workflow",
@@ -201,18 +202,18 @@
       continueJourney: "Ga verder.",
       examples: "Kies je industrie.",
       improveTitle: "Wat wil je verbeteren?",
-      improveCopy: "Kies alles wat past.",
+      improveCopy: "Kies de verbeteringen die de meeste hefboom geven.",
       otherIndustry: "Anders...",
       otherIndustryQuestion: "In welke industrie zit je?",
       otherIndustryPlaceholder: "Typ je industrie",
       operatorQuestion: "Wat maakt iemand een operator?",
-      operatorCopy: "Geen foute antwoorden. Het patroon telt meer dan de score.",
+      operatorCopy: "Dit vormt je Builder Profile rond het soort hefboom dat jij als eerste ziet.",
       reflectionOne: "Waar sta je vandaag?",
       reflectionTwo: "Wat zou je als eerste automatiseren?",
       otherPlaceholder: "Typ je eigen antwoord",
       gateTitle: "Ontgrendel je toegang.",
-      gateCopy: "Vul je e-mailadres in om verder te gaan.",
-      gateNoSpam: "We sturen je persoonlijke DONEOVERNIGHT toegang en onthouden je journey.",
+      gateCopy: "Sla je Builder Profile op en ontgrendel de laatste laag.",
+      gateNoSpam: "We sturen je access link en koppelen deze journey eraan.",
       email: "E-mail",
       name: "Naam, optioneel",
       social: "TikTok / Instagram handle",
@@ -241,9 +242,9 @@
       sendAgainWait: "Opnieuw verzenden over",
       sentAgain: "Opnieuw verzonden.",
       welcome: "Welkom.",
-      pathTitle: "Kies je Builder rol.",
-      pathCopy: "Kies de rol die past bij hoe je DONEOVERNIGHT wilt binnenkomen. Dit vormt je Builder profile en de aanbevelingen hierna.",
-      recommendationsCopy: "Een paar routes zijn het openen waard.",
+      pathTitle: "Builder Profile voorbereid.",
+      pathCopy: "Je antwoorden vormen nu het profiel dat je aan het einde ontgrendelt.",
+      recommendationsCopy: "Dit zijn de routes waar je antwoorden naartoe wijzen.",
       livePreview: "Live preview",
       livePreviewCopy: "Een glimp van wat nu wordt gebouwd.",
       openLive: "Open Live Build",
@@ -278,6 +279,7 @@
       finished: "Recent afgerond",
       upcoming: "Aankomende builds",
       viewerTitle: "Wat moet DONEOVERNIGHT hierna bouwen?",
+      viewerOptionalCopy: "Optioneel. Deel een build idee of ga direct door naar je Builder Profile.",
       idea: "Idee",
       description: "Beschrijving",
       website: "Website, optioneel",
@@ -312,7 +314,7 @@
       journeyId: "Journey ID",
       journeyStarted: "Reis gestart",
       completion: "Voltooiing",
-      chosenPath: "Gekozen pad",
+      chosenPath: "Builder mode",
       chosenInterests: "Gekozen interesses",
       builderProfile: "Builder Profiel",
       automationChoice: "Automatisering",
@@ -578,12 +580,11 @@
     reflection: 9,
     automate: 10,
     gate: 11,
-    path: 12,
-    recommendations: 13,
-    viewerBuilds: 14
+    recommendations: 12,
+    viewerBuilds: 13
   };
 
-  const progressionVersion = 5;
+  const progressionVersion = 6;
   const stepCompletionKeys = {
     1: "discover",
     2: "interests",
@@ -595,12 +596,11 @@
     8: "reflection",
     9: "automate",
     10: "gate",
-    11: "path",
-    12: "recommendations",
-    13: "viewerBuilds"
+    11: "recommendations",
+    12: "viewerBuilds"
   };
 
-  const progressTotal = 13;
+  const progressTotal = 12;
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
   let interactionLocked = false;
@@ -639,7 +639,6 @@
     mountAutomationOther();
     mountGate();
     mountViewerBuilds();
-    mountPaths();
     renderPersonalResult();
     bindResultActions();
     bindNextUnlocks();
@@ -750,7 +749,7 @@
     const selected = state.example && (industries.some((item) => item.key === state.example) || state.example === other.key)
       ? state.example
       : "";
-    const preview = selected || industries[0]?.key;
+    const preview = selected || "";
     tabs.innerHTML = `
       <label class="industry-search">
         <span>${lang === "nl" ? "Zoek industrie" : "Search industry"}</span>
@@ -814,6 +813,22 @@
     }
 
     function renderExample(key, isPreview = false) {
+      if (!key) {
+        board.classList.add("is-neutral");
+        board.classList.remove("is-other");
+        board.innerHTML = `
+          <span class="placeholder-badge">${industries.length} ${lang === "nl" ? "industrieen" : "industries"}</span>
+          <h3>${lang === "nl" ? "Kies je wereld." : "Select your sector."}</h3>
+          <p>${lang === "nl" ? "Zoek of kies een industrie om te zien waar DONEOVERNIGHT hefboom kan bouwen." : "Search or choose an industry to see where DONEOVERNIGHT can build leverage."}</p>
+          <div class="industry-signal-row">
+            <span>AI</span>
+            <span>Automation</span>
+            <span>Systems</span>
+            <span>Operations</span>
+          </div>
+        `;
+        return;
+      }
       const industry = key === other.key ? other : industries.find((item) => item.key === key) || industries[0];
       if (!industry) return;
       const signals = (industry.signals || []).slice(0, 4);
@@ -838,6 +853,7 @@
           customInput.focus({ preventScroll: true });
         }
       } else {
+        board.classList.remove("is-neutral");
         board.classList.remove("is-other");
         board.innerHTML = `
         <span class="placeholder-badge">${isPreview ? (lang === "nl" ? "Kies een industrie" : "Select an industry") : `${industries.length} ${lang === "nl" ? "industrieen" : "industries"}`}</span>
@@ -1232,6 +1248,10 @@
 
     function showEmailReview(email) {
       if (!review || !form) return;
+      const section = review.closest(".experience-step");
+      const panel = review.closest(".gate-panel");
+      if (section) section.classList.add("has-email-review");
+      if (panel) panel.classList.add("is-reviewing");
       if (reviewAddress) reviewAddress.textContent = email;
       form.hidden = true;
       review.hidden = false;
@@ -1240,11 +1260,15 @@
         reviewNote.textContent = "";
         reviewNote.classList.remove("is-success");
       }
-      setTimeout(() => scrollToQuestion(review.closest(".experience-step") || review), 120);
+      setTimeout(() => scrollToQuestion(review), 120);
     }
 
     function hideEmailReview() {
       if (!review) return;
+      const section = review.closest(".experience-step");
+      const panel = review.closest(".gate-panel");
+      if (section) section.classList.remove("has-email-review");
+      if (panel) panel.classList.remove("is-reviewing");
       review.hidden = true;
       if (reviewNote) {
         reviewNote.textContent = "";
@@ -1257,14 +1281,16 @@
       const section = confirmation.closest(".experience-step");
       const panel = confirmation.closest(".gate-panel");
       if (section) section.classList.add("has-gate-confirmation");
+      if (section) section.classList.remove("has-email-review");
       if (panel) panel.classList.add("is-confirmed");
+      if (panel) panel.classList.remove("is-reviewing");
       form.hidden = true;
       if (review) review.hidden = true;
       confirmation.hidden = false;
       if (confirmationCopy) {
         confirmationCopy.textContent = result.delivered ? copy[lang].emailConfirmedCopy : copy[lang].emailPendingCopy;
       }
-      if (scroll) setTimeout(() => scrollToQuestion(section || confirmation), 160);
+      if (scroll) setTimeout(() => scrollToQuestion(confirmation), 160);
       updateResendCooldown(resendButton, resendNote);
     }
   }
@@ -1749,7 +1775,7 @@
     fill("#builder-status", copy[lang].journeyCompleteStatus || "Builder created");
     fill("#builder-joined", joined);
     fill("#journey-completion", `${completionPercent()}%`);
-    fill("#journey-path", pathLabel(state.path) || "Curious");
+    fill("#journey-path", type);
     fill("#journey-interests", (state.interests || []).join(", ") || "Systems");
     fill("#builder-automation", automationLines().map((item) => item.replace(/^✓\s*/, "")).join(", ") || "Not selected");
     fill("#builder-identity-line", line);
@@ -2205,9 +2231,14 @@
     return /^\d+$/.test(value) ? value : "";
   }
 
+  function provisionalBuilderNumber(memory = read(memoryKey, {})) {
+    const source = String(state.journeyId || memory.journeyId || "").replace(/\D/g, "");
+    return source ? source.slice(-6).padStart(3, "0") : "";
+  }
+
   function builderNumberValue() {
     const memory = read(memoryKey, {});
-    return permanentBuilderNumber(memory) || copy[lang].builderPending;
+    return permanentBuilderNumber(memory) || provisionalBuilderNumber(memory) || copy[lang].builderPending;
   }
 
   async function prepareBuilderIdentity() {
@@ -2730,10 +2761,8 @@
       case 10:
         return currentSavedEmail()?.email || copy[lang].emailConfirmedTitle;
       case 11:
-        return pathLabel(state.path);
-      case 12:
         return document.getElementById("personal-title")?.textContent || "";
-      case 13:
+      case 12:
         const builds = read("doneovernight.viewerBuilds.v1", []);
         return builds[builds.length - 1]?.idea || copy[lang].skipViewerBuild;
       default:
