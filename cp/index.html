@@ -687,10 +687,12 @@
       display: none;
       gap: 12px;
     }
-    .cp-newsletter.is-open .cp-newsletter-form {
+    .cp-newsletter.is-open .cp-newsletter-form,
+    .cp-newsletter-popup.is-open .cp-newsletter-form {
       display: grid;
     }
-    .cp-newsletter.is-open .cp-newsletter-toggle {
+    .cp-newsletter.is-open .cp-newsletter-toggle,
+    .cp-newsletter-popup.is-open .cp-newsletter-toggle {
       display: none;
     }
     .cp-newsletter-status {
@@ -704,8 +706,91 @@
       text-transform: uppercase;
     }
     .cp-newsletter.is-success .cp-newsletter-form,
-    .cp-newsletter.is-success .cp-newsletter-toggle {
+    .cp-newsletter.is-success .cp-newsletter-toggle,
+    .cp-newsletter-popup.is-success .cp-newsletter-form,
+    .cp-newsletter-popup.is-success .cp-newsletter-toggle {
       display: none;
+    }
+
+    .cp-newsletter-popup {
+      position: fixed;
+      right: clamp(16px, 2.4vw, 28px);
+      bottom: clamp(16px, 2.4vw, 28px);
+      z-index: 70;
+      width: min(calc(100vw - 32px), 390px);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(16px);
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    .cp-newsletter-popup.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .cp-newsletter-popup-card {
+      border: 1px solid rgba(248, 244, 235, .16);
+      border-radius: 18px;
+      background:
+        linear-gradient(140deg, rgba(248, 244, 235, .13), rgba(248, 244, 235, .04)),
+        rgba(18, 17, 15, .82);
+      box-shadow: 0 24px 80px rgba(0,0,0,.28);
+      backdrop-filter: blur(20px);
+      color: var(--paper);
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+    .cp-newsletter-popup-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .cp-newsletter-popup .kicker {
+      color: rgba(248, 244, 235, .58);
+      margin: 0;
+    }
+    .cp-newsletter-popup .field {
+      border-color: rgba(248, 244, 235, .2);
+      color: var(--paper);
+    }
+    .cp-newsletter-popup .step-label,
+    .cp-newsletter-popup .cp-newsletter-status {
+      color: rgba(248, 244, 235, .64);
+    }
+    .cp-newsletter-popup-dismiss {
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(248, 244, 235, .14);
+      border-radius: 999px;
+      background: rgba(248, 244, 235, .06);
+      color: rgba(248, 244, 235, .7);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .cp-newsletter-popup-dismiss:hover {
+      border-color: rgba(248, 244, 235, .28);
+      background: rgba(248, 244, 235, .1);
+      color: var(--paper);
+    }
+    .cp-newsletter-popup .cp-newsletter-form {
+      width: 100%;
+    }
+
+    @media (max-width: 640px) {
+      .cp-newsletter-popup {
+        right: 14px;
+        bottom: 14px;
+        width: calc(100vw - 28px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cp-newsletter-popup {
+        transition: none;
+      }
     }
 
     .booking {
@@ -1285,6 +1370,7 @@
     (function () {
       const path = window.location.pathname.replace(/\/+$/, '') || '/';
       if (!['/cp', '/cp-book'].includes(path)) return;
+      const popupStorageKey = 'commonpl4ce_newsletter_popup_state_v1';
 
       function ready(callback) {
         if (document.readyState === 'loading') {
@@ -1299,52 +1385,96 @@
       }
 
       ready(function () {
-        const root = document.querySelector('[data-cp-newsletter]');
-        if (!root) return;
-        const toggle = root.querySelector('[data-newsletter-toggle]');
-        const form = root.querySelector('[data-newsletter-form]');
-        const email = root.querySelector('[data-newsletter-email]');
-        const status = root.querySelector('[data-newsletter-status]');
+        document.querySelectorAll('[data-cp-newsletter]').forEach(function (root) {
+          const toggle = root.querySelector('[data-newsletter-toggle]');
+          const form = root.querySelector('[data-newsletter-form]');
+          const email = root.querySelector('[data-newsletter-email]');
+          const status = root.querySelector('[data-newsletter-status]');
+          const dismiss = root.querySelector('[data-newsletter-dismiss]');
+          const isPopup = root.hasAttribute('data-newsletter-popup');
 
-        toggle?.addEventListener('click', function () {
-          root.classList.add('is-open');
-          if (status) status.textContent = '';
-          track('newsletter_start');
-          window.setTimeout(function () { email?.focus(); }, 60);
+          function closePopup(reason) {
+            if (!isPopup) return;
+            root.classList.remove('is-visible');
+            if (reason) {
+              try { window.localStorage.setItem(popupStorageKey, reason); } catch (error) {}
+            }
+          }
+
+          toggle?.addEventListener('click', function () {
+            root.classList.add('is-open');
+            if (status) status.textContent = '';
+            track('newsletter_start', { surface: isPopup ? 'popup' : 'section' });
+            window.setTimeout(function () { email?.focus(); }, 60);
+          });
+
+          dismiss?.addEventListener('click', function () {
+            closePopup('dismissed');
+          });
+
+          form?.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const value = String(email?.value || '').trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              if (status) status.textContent = 'Please add a valid email.';
+              return;
+            }
+            track('newsletter_submit', { surface: isPopup ? 'popup' : 'section' });
+            const button = form.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            try {
+              const response = await fetch('/api/task-submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                  action: 'commonpl4ce_newsletter_signup',
+                  source: 'commonpl4ce_newsletter',
+                  intakeVersion: 'commonpl4ce_newsletter_v1',
+                  email: value,
+                  path
+                })
+              });
+              const result = await response.json().catch(function () { return {}; });
+              if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
+              root.classList.add('is-success');
+              if (status) status.textContent = 'Thank you. You\u2019re on the list.';
+              if (isPopup) {
+                try { window.localStorage.setItem(popupStorageKey, 'success'); } catch (error) {}
+              }
+              track('newsletter_success', { surface: isPopup ? 'popup' : 'section' });
+            } catch (error) {
+              if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
+              if (button) button.disabled = false;
+            }
+          });
         });
 
-        form?.addEventListener('submit', async function (event) {
-          event.preventDefault();
-          const value = String(email?.value || '').trim();
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-            if (status) status.textContent = 'Please add a valid email.';
-            return;
-          }
-          track('newsletter_submit');
-          const button = form.querySelector('button[type="submit"]');
-          if (button) button.disabled = true;
-          try {
-            const response = await fetch('/api/task-submit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({
-                action: 'commonpl4ce_newsletter_signup',
-                source: 'commonpl4ce_newsletter',
-                intakeVersion: 'commonpl4ce_newsletter_v1',
-                email: value,
-                path
-              })
-            });
-            const result = await response.json().catch(function () { return {}; });
-            if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
-            root.classList.add('is-success');
-            if (status) status.textContent = 'Thank you. You\u2019re on the list.';
-            track('newsletter_success');
-          } catch (error) {
-            if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
-            if (button) button.disabled = false;
-          }
-        });
+        const popup = path === '/cp' ? document.querySelector('[data-newsletter-popup]') : null;
+        if (!popup) return;
+        try {
+          if (window.localStorage.getItem(popupStorageKey)) return;
+        } catch (error) {}
+
+        let popupVisible = false;
+        function showPopup() {
+          if (popupVisible) return;
+          popupVisible = true;
+          popup.removeAttribute('hidden');
+          window.requestAnimationFrame(function () {
+            popup.classList.add('is-visible');
+          });
+          window.removeEventListener('scroll', checkPopupScroll);
+        }
+
+        function checkPopupScroll() {
+          const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          const depth = window.scrollY / scrollable;
+          if (depth >= 0.35) showPopup();
+        }
+
+        window.addEventListener('scroll', checkPopupScroll, { passive: true });
+        window.setTimeout(showPopup, 8000);
+        checkPopupScroll();
       });
     })();
   </script>
@@ -1357,6 +1487,24 @@
     </div>
     <a class="book-link" href="#booker-station">Book</a>
   </header>
+
+  <aside class="cp-newsletter-popup" data-cp-newsletter data-newsletter-popup hidden aria-label="COMMONPL4CE newsletter popup">
+    <div class="cp-newsletter-popup-card">
+      <div class="cp-newsletter-popup-top">
+        <p class="kicker">Newsletter</p>
+        <button class="cp-newsletter-popup-dismiss" type="button" data-newsletter-dismiss aria-label="Dismiss newsletter popup">×</button>
+      </div>
+      <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+      <form class="cp-newsletter-form" data-newsletter-form>
+        <label class="step">
+          <span class="step-label">Email</span>
+          <input class="field" data-newsletter-email type="email" autocomplete="email" required>
+        </label>
+        <button class="cal-button" type="submit">Join</button>
+      </form>
+      <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
+    </div>
+  </aside>
 
   <main id="top">
     <script type="application/json" id="archive-filename-order">
