@@ -20,6 +20,8 @@
       entryKicker: "DONEOVERNIGHT",
       entryTitle: "Every business becomes software eventually.",
       entryText: "Let's show you how.",
+      archiveLabel: "Hero archive preview",
+      archiveLine: "Archive preview initializing... request -> system -> overnight execution.",
       discover: "How did you discover DONEOVERNIGHT?",
       interests: "What interests you most?",
       multiple: "Choose anything that pulls your attention.",
@@ -180,6 +182,8 @@
       entryKicker: "DONEOVERNIGHT",
       entryTitle: "Elk bedrijf wordt uiteindelijk software.",
       entryText: "Laten we laten zien hoe.",
+      archiveLabel: "Hero archive preview",
+      archiveLine: "Operator archive laden... aanvraag -> systeem -> overnight execution.",
       discover: "Hoe ontdekte je DONEOVERNIGHT?",
       interests: "Wat trekt je het meest?",
       multiple: "Kies alles wat je aandacht trekt.",
@@ -605,6 +609,7 @@
     if (!document.body.dataset.experience) return;
     normalizeProgress();
     ensureJourney();
+    mountHeroArchivePreview();
     mountChoices("discover-grid", data.discover[lang], "discover", false);
     mountChoices("interest-grid", data.interests[lang], "interests", true);
     mountStory();
@@ -621,6 +626,7 @@
     bindResultActions();
     bindNextUnlocks();
     bindChoiceContinues();
+    bindHeroScroll();
     bindPlatformHub();
     renderProgress();
     renderReturnVisitor();
@@ -717,11 +723,13 @@
   function mountExamples() {
     const tabs = document.getElementById("example-tabs");
     const board = document.getElementById("example-board");
+    const continueButton = document.querySelector("[data-industry-continue]");
     if (!tabs || !board) return;
     const industries = industryCatalog();
-    const active = state.example && industries.some((item) => item.key === state.example)
+    const selected = state.example && industries.some((item) => item.key === state.example)
       ? state.example
-      : industries[0]?.key;
+      : "";
+    const preview = selected || industries[0]?.key;
     tabs.innerHTML = `
       <label class="industry-search">
         <span>${lang === "nl" ? "Zoek industrie" : "Search industry"}</span>
@@ -732,9 +740,16 @@
     const input = tabs.querySelector("#industry-search");
     const grid = tabs.querySelector("[data-industry-grid]");
     renderIndustryGrid("");
-    renderExample(active);
+    renderExample(preview, !selected);
+    updateIndustryContinue();
     if (input) {
       input.oninput = () => renderIndustryGrid(input.value);
+    }
+    if (continueButton) {
+      continueButton.onclick = () => {
+        if (!canInteract(continueButton) || !state.example) return;
+        completeInteractionAfterFeedback("example", progression.example, continueButton);
+      };
     }
 
     function renderIndustryGrid(query = "") {
@@ -748,7 +763,7 @@
         return !term || haystack.includes(term);
       });
       grid.innerHTML = filtered.map((industry) => `
-        <button class="tab-pill industry-pill ${industry.key === (state.example || active) ? "is-active" : ""}" type="button" data-example="${escapeAttr(industry.key)}">
+        <button class="tab-pill industry-pill ${industry.key === state.example ? "is-active" : ""}" type="button" data-example="${escapeAttr(industry.key)}" aria-pressed="${industry.key === state.example ? "true" : "false"}">
           <span>${escapeHtml(industryLabel(industry))}</span>
           <small>${escapeHtml((industry.signals || []).slice(0, 2).join(" / "))}</small>
         </button>
@@ -758,20 +773,32 @@
           if (!canInteract(button)) return;
           state.example = button.dataset.example;
           save(storageKey, state);
-          grid.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
+          grid.querySelectorAll("button").forEach((item) => {
+            item.classList.remove("is-active");
+            item.setAttribute("aria-pressed", "false");
+          });
           button.classList.add("is-active");
-          renderExample(button.dataset.example);
-          completeInteractionAfterFeedback("example", progression.example, button);
+          button.setAttribute("aria-pressed", "true");
+          renderExample(button.dataset.example, false);
+          updateIndustryContinue();
         });
       });
     }
 
-    function renderExample(key) {
+    function updateIndustryContinue() {
+      if (!continueButton) return;
+      const ready = Boolean(state.example && industries.some((item) => item.key === state.example));
+      continueButton.disabled = !ready;
+      continueButton.setAttribute("aria-disabled", ready ? "false" : "true");
+      continueButton.classList.toggle("is-ready", ready);
+    }
+
+    function renderExample(key, isPreview = false) {
       const industry = industries.find((item) => item.key === key) || industries[0];
       if (!industry) return;
       const signals = (industry.signals || []).slice(0, 4);
       board.innerHTML = `
-        <span class="placeholder-badge">${industries.length} ${lang === "nl" ? "industrieen" : "industries"}</span>
+        <span class="placeholder-badge">${isPreview ? (lang === "nl" ? "Kies een industrie" : "Select an industry") : `${industries.length} ${lang === "nl" ? "industrieen" : "industries"}`}</span>
         <h3>${escapeHtml(industryLabel(industry))}</h3>
         <p>${escapeHtml(industrySummary(industry))}</p>
         <div class="industry-signal-row">
@@ -807,6 +834,43 @@
 
   function industryByKey(key) {
     return industryCatalog().find((industry) => industry.key === key);
+  }
+
+  function mountHeroArchivePreview() {
+    const root = document.querySelector("[data-archive-preview]");
+    const line = root?.querySelector("[data-archive-text]");
+    if (!root || !line) return;
+    const text = copy[lang].archiveLine;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const writeLine = () => {
+      if (reducedMotion) {
+        line.textContent = text;
+        root.classList.add("is-ready");
+        return;
+      }
+      const run = `${Date.now()}:${lang}`;
+      line.dataset.archiveRun = run;
+      line.textContent = "";
+      root.classList.add("is-ready");
+      let index = 0;
+      const tick = () => {
+        if (line.dataset.archiveRun !== run) return;
+        line.textContent = text.slice(0, index);
+        index += 1;
+        if (index <= text.length) window.setTimeout(tick, index < 24 ? 34 : 22);
+      };
+      tick();
+    };
+    if (!("IntersectionObserver" in window)) {
+      writeLine();
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      writeLine();
+    }, { threshold: 0.36 });
+    observer.observe(root);
   }
 
   function mountQuiz() {
@@ -1516,10 +1580,10 @@
 
   function scrollToQuestion(section) {
     if (!section) return;
-    const target = section.querySelector?.(".step-title") || section.querySelector?.(".step-head") || section;
+    const target = section.querySelector?.(".step-head") || section.querySelector?.(".step-title") || section;
     const mobile = window.matchMedia("(max-width: 620px)").matches;
     const progressBottom = document.querySelector(".experience-progress")?.getBoundingClientRect().bottom || 0;
-    const desiredTop = mobile ? Math.max(142, progressBottom + 50) : 104;
+    const desiredTop = mobile ? Math.max(132, progressBottom + 42) : 104;
     const top = target.getBoundingClientRect().top + window.scrollY - desiredTop;
     const duration = mobile ? 760 : 640;
     animateScrollTo(Math.max(0, top), duration);
@@ -1638,6 +1702,16 @@
         if (selected.length && progression[key]) completeInteractionAfterFeedback(key, progression[key], button);
       };
     });
+  }
+
+  function bindHeroScroll() {
+    const link = document.querySelector(".scroll-cue");
+    const target = document.getElementById("discover");
+    if (!link || !target) return;
+    link.onclick = (event) => {
+      event.preventDefault();
+      scheduleStepScroll(target, 0);
+    };
   }
 
   function bindResultActions() {

@@ -81,11 +81,17 @@ img, svg { display: block; max-width: 100%; }
   letter-spacing: 0.42em;
   color: rgba(245, 241, 234, 0.82);
   min-width: 0;
+  white-space: nowrap;
 }
 .experience-brand img {
   width: clamp(132px, 12vw, 164px);
   height: auto;
   object-fit: contain;
+}
+.eyebrow,
+.step-number,
+.placeholder-badge {
+  white-space: nowrap;
 }
 .language-switch {
   pointer-events: auto;
@@ -196,9 +202,51 @@ body.has-reward .experience-progress {
   font-size: clamp(58px, 15vw, 176px);
   line-height: 0.9;
   letter-spacing: -0.035em;
+  hyphens: none;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: normal;
 }
 .experience-hero .display {
   margin-top: 0;
+}
+.hero-archive {
+  width: min(100%, 560px);
+  margin: 10px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(233,196,138,0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(233,196,138,0.055), transparent 68%), rgba(5,6,8,0.48);
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.55;
+  letter-spacing: 0.08em;
+  opacity: 0.86;
+}
+.hero-archive span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(233,196,138,0.82);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hero-archive code {
+  display: inline;
+  color: rgba(245,241,234,0.68);
+  font-family: inherit;
+  white-space: normal;
+}
+.hero-archive.is-ready code::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 4px;
+  border-right: 1px solid rgba(233,196,138,0.7);
+  transform: translateY(2px);
+  animation: archiveCaret 1.2s steps(1) infinite;
 }
 .lede {
   max-width: 30ch;
@@ -341,6 +389,10 @@ body.has-reward .experience-progress {
   font-size: clamp(42px, 9vw, 108px);
   line-height: 0.95;
   letter-spacing: -0.03em;
+  hyphens: none;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  word-break: normal;
 }
 .step-copy {
   max-width: 34ch;
@@ -606,6 +658,7 @@ body.has-reward .experience-progress {
   color: #050608;
   background: var(--ink);
   border-color: var(--ink);
+  box-shadow: 0 0 0 1px rgba(233,196,138,0.2), 0 16px 44px rgba(0,0,0,0.22);
 }
 .tab-pill.is-active::after {
   content: "✓";
@@ -640,6 +693,12 @@ body.has-reward .experience-progress {
 }
 .industry-pill.is-active small {
   color: rgba(5, 6, 8, 0.7);
+}
+.industry-continue {
+  justify-self: start;
+}
+.industry-continue.is-ready {
+  border-color: rgba(233,196,138,0.62);
 }
 .industry-empty {
   margin: 8px 0 0;
@@ -1215,6 +1274,7 @@ textarea.text-field {
   margin: 5px 0 0;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.35;
 }
 .community-line {
   margin: 14px auto 0;
@@ -2083,6 +2143,10 @@ textarea.text-field {
   0%, 28% { opacity: 0.6; transform: translateX(-10px); }
   54%, 100% { opacity: 1; transform: translateX(0); }
 }
+@keyframes archiveCaret {
+  0%, 48% { opacity: 1; }
+  49%, 100% { opacity: 0.18; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -2091,6 +2155,10 @@ textarea.text-field {
   }
   .follow-card {
     animation: none;
+  }
+  .hero-archive.is-ready code::after {
+    animation: none;
+    opacity: 0.45;
   }
 }
 @media (max-width: 920px) {
@@ -2145,7 +2213,8 @@ textarea.text-field {
   .display,
   .step-title {
     letter-spacing: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .experience-hero {
     padding-top: 154px;
@@ -2221,7 +2290,12 @@ textarea.text-field {
     grid-template-columns: 1fr;
   }
   .builder-card {
-    min-height: 250px;
+    aspect-ratio: auto;
+    gap: 18px;
+    min-height: 330px;
+  }
+  .builder-card dl {
+    gap: 14px 12px;
   }
   .wallet-actions {
     grid-template-columns: 1fr;
@@ -2235,6 +2309,10 @@ textarea.text-field {
   .industry-pill {
     flex-basis: min(72vw, 260px);
     min-height: 68px;
+  }
+  .hero-archive {
+    margin-top: 14px;
+    margin-bottom: 18px;
   }
   .example-board {
     min-height: 280px;
