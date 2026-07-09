@@ -1734,6 +1734,13 @@
       gap: 7px;
     }
 
+    .media-target-picker {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
     .media-replace-file {
       position: relative;
       overflow: hidden;
@@ -3033,6 +3040,19 @@
         ...fallback.websiteContent,
         ...(builder.websiteContent || {})
       };
+      const normalizeTarget = (target) => {
+        if (!target || !["desktop", "mobile"].includes(target.kind)) return null;
+        const kind = target.kind;
+        const slots = kind === "mobile" ? mobileSlots : desktopSlots;
+        const index = Math.max(0, Math.min(6, Number(target.index) || 0));
+        const slot = slots[index] || {};
+        return {
+          kind,
+          index,
+          id: slot.id || `${kind}_hero_${index + 1}`,
+          label: `${kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(index + 1).padStart(2, "0")}`
+        };
+      };
       return {
         selectedSectionId: builder.selectedSectionId || sections[0]?.id || "",
         updatedAt: builder.updatedAt || "",
@@ -3042,9 +3062,7 @@
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
         mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? normalizeMediaLibrary(builder.mediaLibrary) : fallback.mediaLibrary,
         bookingAvailability: normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability || fallback.bookingAvailability }).bookingAvailability,
-        mediaTarget: builder.mediaTarget && ["desktop", "mobile"].includes(builder.mediaTarget.kind)
-          ? { kind: builder.mediaTarget.kind, index: Math.max(0, Math.min(6, Number(builder.mediaTarget.index) || 0)) }
-          : null,
+        mediaTarget: normalizeTarget(builder.mediaTarget),
         selectedHeroSlot: builder.selectedHeroSlot && ["desktop", "mobile"].includes(builder.selectedHeroSlot.kind)
           ? { kind: builder.selectedHeroSlot.kind, index: Math.max(0, Math.min(6, Number(builder.selectedHeroSlot.index) || 0)) }
           : fallback.selectedHeroSlot,
@@ -3822,6 +3840,19 @@
       return `${target.kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(Number(target.index || 0) + 1).padStart(2, "0")}`;
     }
 
+    function mediaTargetFrom(kind, index) {
+      const normalizedKind = kind === "mobile" ? "mobile" : "desktop";
+      const slots = heroSlots(normalizedKind);
+      const normalizedIndex = Math.max(0, Math.min(slots.length - 1, Number(index) || 0));
+      const slot = slots[normalizedIndex] || {};
+      return {
+        kind: normalizedKind,
+        index: normalizedIndex,
+        id: slot.id || `${normalizedKind}_hero_${normalizedIndex + 1}`,
+        label: `${normalizedKind === "mobile" ? "Mobile" : "Desktop"} slot ${String(normalizedIndex + 1).padStart(2, "0")}`
+      };
+    }
+
     function mediaTargetLabel(target = state.builder.mediaTarget) {
       const name = mediaTargetName(target);
       return name ? `Assigning to ${name}` : "Select a Hero slot first.";
@@ -3832,7 +3863,43 @@
       if (!target || !["desktop", "mobile"].includes(target.kind)) return null;
       const slots = heroSlots(target.kind);
       const index = Math.max(0, Math.min(slots.length - 1, Number(target.index) || 0));
-      return slots[index] ? { kind: target.kind, index } : null;
+      return slots[index] ? mediaTargetFrom(target.kind, index) : null;
+    }
+
+    function setMediaTarget(kind, index, options = {}) {
+      const target = mediaTargetFrom(kind, index);
+      state.builder.mediaTarget = target;
+      state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
+      if (!options.silent) {
+        state.heroFeedback = `${target.label} selected for media assignment.`;
+        state.mediaFeedback = state.builder.selectedMediaId ? `${target.label} selected.` : "Select a media asset first.";
+      }
+      if (options.persist !== false) saveBuilderDraft();
+      renderHeroManager();
+      renderMediaLibrary();
+      return target;
+    }
+
+    function heroTargetSelectOptions(kind) {
+      const selected = activeMediaTarget();
+      return [`<option value="">${kind === "mobile" ? "Mobile" : "Desktop"} slot...</option>`].concat(
+        heroSlots(kind).map((slot, index) => {
+          const value = `${kind}:${index}`;
+          const isSelected = selected?.kind === kind && selected.index === index;
+          const name = `${kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(index + 1).padStart(2, "0")}`;
+          const suffix = slot.image ? ` / ${slot.image.split("/").pop()}` : "";
+          return `<option value="${escapeHTML(value)}"${isSelected ? " selected" : ""}>${escapeHTML(name + suffix)}</option>`;
+        })
+      ).join("");
+    }
+
+    function mediaTargetPickerHTML() {
+      return `
+        <div class="media-target-picker" role="group" aria-label="Hero slot assignment target">
+          <label class="field"><span>Desktop target</span><select data-media-target-picker="desktop">${heroTargetSelectOptions("desktop")}</select></label>
+          <label class="field"><span>Mobile target</span><select data-media-target-picker="mobile">${heroTargetSelectOptions("mobile")}</select></label>
+        </div>
+      `;
     }
 
     function isLocalOnlyMedia(asset = {}) {
@@ -3877,17 +3944,11 @@
     }
 
     function selectHeroSlotForMedia(kind, index, options = {}) {
-      const normalizedKind = kind === "mobile" ? "mobile" : "desktop";
-      const slots = heroSlots(normalizedKind);
-      const normalizedIndex = Math.max(0, Math.min(slots.length - 1, Number(index) || 0));
-      state.builder.selectedHeroSlot = { kind: normalizedKind, index: normalizedIndex };
-      state.builder.mediaTarget = { kind: normalizedKind, index: normalizedIndex };
-      state.heroFeedback = `${mediaTargetName(state.builder.mediaTarget)} selected for media assignment.`;
-      state.mediaFeedback = state.builder.selectedMediaId ? `${mediaTargetName(state.builder.mediaTarget)} selected.` : "Select a media asset first.";
+      const target = setMediaTarget(kind, index, { persist: false });
       if (options.openMedia) {
         state.builder.mediaFilter = "Hero";
         state.builder.mediaSearch = "";
-        const preferredFormat = normalizedKind === "mobile" ? "mobile" : "desktop";
+        const preferredFormat = target.kind === "mobile" ? "mobile" : "desktop";
         const preferredAsset = state.builder.mediaLibrary.find((asset) => asset.category === "Hero" && lower(asset.format).includes(preferredFormat))
           || state.builder.mediaLibrary.find((asset) => asset.category === "Hero")
           || state.builder.mediaLibrary[0];
@@ -4001,10 +4062,12 @@
       if (!asset) {
         target.innerHTML = `
           <div class="empty-state"><strong>Select a media asset first.</strong>Choose an asset from the Media Library before assigning it to ${escapeHTML(mediaTargetName(activeMediaTarget()) || "a Hero slot")}.</div>
+          ${mediaTargetPickerHTML()}
           <div class="detail-grid" style="grid-template-columns:1fr">
             <div class="detail"><span>Selected target</span><strong>${escapeHTML(mediaTargetLabel(activeMediaTarget()))}</strong></div>
             <div class="detail"><span>Selected asset</span><strong>Select a media asset first.</strong></div>
           </div>
+          <div class="website-note">Select a media asset first.</div>
           <div class="media-asset-actions">
             <button class="button small" type="button" disabled>Assign to selected hero slot</button>
           </div>
@@ -4017,7 +4080,7 @@
       const targetLabel = mediaTargetLabel(targetSlot);
       const assignDisabled = !targetSlot;
       const assignMessage = assignDisabled ? "Select a Hero slot first." : state.mediaFeedback || "";
-      const signature = JSON.stringify({ asset, localOnly, mediaTarget: targetSlot, assignMessage });
+      const signature = JSON.stringify({ asset, localOnly, mediaTarget: targetSlot, assignMessage, desktopSlots: state.builder.heroDesktopSlots.map((slot) => slot.image), mobileSlots: state.builder.heroMobileSlots.map((slot) => slot.image) });
       if (target.dataset.renderSignature === signature && target.childElementCount) return;
       target.dataset.renderSignature = signature;
       target.innerHTML = `
@@ -4038,6 +4101,7 @@
           <label class="field"><span>Format / type</span><input value="${escapeHTML(asset.format || "")}" data-media-field="format"></label>
           <label class="field wide"><span>Usage</span><input value="${escapeHTML(asset.usedIn || "")}" data-media-field="usedIn"></label>
         </div>
+        ${mediaTargetPickerHTML()}
         <div class="detail-grid" style="grid-template-columns:1fr">
           <div class="detail"><span>Selected target</span><strong>${escapeHTML(targetLabel)}</strong></div>
           <div class="detail"><span>Dimensions</span><strong>${escapeHTML(asset.dimensions || "Unknown")}</strong></div>
@@ -4349,6 +4413,7 @@
       const [slot] = slots.splice(index, 1);
       slots.splice(nextIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: nextIndex };
+      state.builder.mediaTarget = mediaTargetFrom(kind, nextIndex);
       state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} slot moved. Draft saved locally.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
@@ -4363,6 +4428,7 @@
       const [slot] = slots.splice(fromIndex, 1);
       slots.splice(toIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: toIndex };
+      state.builder.mediaTarget = mediaTargetFrom(kind, toIndex);
       state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} order updated. Draft saved locally.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
@@ -4415,14 +4481,15 @@
       slot.status = "Draft";
       asset.usedIn = `${target.kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(target.index + 1).padStart(2, "0")}`;
       state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
-      state.builder.mediaTarget = { kind: target.kind, index: target.index };
+      state.builder.mediaTarget = mediaTargetFrom(target.kind, target.index);
       state.builder.selectedMediaId = asset.id;
+      const assignedMessage = `Assigned ${asset.filename} to ${mediaTargetName(target)}.`;
       state.heroFeedback = isLocalOnlyMedia(asset)
         ? `${asset.filename} assigned as a local draft preview. Upload storage required before this file can go live.`
-        : `Assigned to ${mediaTargetName(target)}.`;
+        : assignedMessage;
       state.mediaFeedback = isLocalOnlyMedia(asset)
         ? "Upload storage required before this file can go live."
-        : `Assigned to ${mediaTargetName(target)}.`;
+        : assignedMessage;
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
@@ -5156,6 +5223,20 @@
       const mediaField = event.target.closest("[data-media-field]");
       if (mediaField) {
         updateSelectedMediaAsset(mediaField.dataset.mediaField, mediaField.value);
+        return;
+      }
+
+      const mediaTargetPicker = event.target.closest("[data-media-target-picker]");
+      if (mediaTargetPicker) {
+        const [kind, index] = clean(mediaTargetPicker.value).split(":");
+        if (kind && index !== undefined) {
+          setMediaTarget(kind, Number(index));
+        } else {
+          state.builder.mediaTarget = null;
+          state.mediaFeedback = "Select a Hero slot first.";
+          saveBuilderDraft();
+          renderMediaLibrary();
+        }
         return;
       }
 
