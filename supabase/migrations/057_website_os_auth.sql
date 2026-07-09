@@ -53,6 +53,11 @@ alter table public.website_os_workspaces enable row level security;
 alter table public.website_os_users enable row level security;
 alter table public.website_os_sessions enable row level security;
 
+grant usage on schema public to service_role;
+grant select, insert, update, delete on public.website_os_workspaces to service_role;
+grant select, insert, update, delete on public.website_os_users to service_role;
+grant select, insert, update, delete on public.website_os_sessions to service_role;
+
 insert into public.website_os_workspaces (slug, display_name, domain, status)
 values ('cp', 'COMMONPL4CE', 'doneovernight.com/cp', 'active')
 on conflict (slug) do update set

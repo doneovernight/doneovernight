@@ -3242,7 +3242,15 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     if (isWebsiteOsAuthRequest(input)) {
-      return handleWebsiteOsAuthRequest(req, res, input);
+      try {
+        return await handleWebsiteOsAuthRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.message || "Website OS auth failed",
+          code: error.code || "WEBSITE_OS_AUTH_FAILED"
+        });
+      }
     }
 
     if (isCommonplaceSiteConfigRequest(req, input)) {
