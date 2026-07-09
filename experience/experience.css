@@ -138,6 +138,7 @@ img, svg { display: block; max-width: 100%; }
   border-radius: 999px;
   background: rgba(5, 6, 8, 0.42);
   backdrop-filter: blur(18px);
+  transition: opacity 0.9s ease, transform 0.9s ease, border-color 0.9s ease, background 0.9s ease;
 }
 .experience-progress span {
   flex: 1 1 0;
@@ -179,6 +180,12 @@ img, svg { display: block; max-width: 100%; }
 }
 body.has-reward .experience-progress {
   box-shadow: 0 0 34px rgba(233,196,138,0.12);
+}
+body.is-final-reward .experience-progress {
+  opacity: 0;
+  transform: translateY(-10px);
+  border-color: transparent;
+  background: rgba(5, 6, 8, 0);
 }
 .experience-hero {
   min-height: 100svh;
@@ -797,6 +804,10 @@ body.has-reward .experience-progress {
   font-size: clamp(32px, 7vw, 72px);
   line-height: 1;
 }
+.operator-continue {
+  width: fit-content;
+  margin-top: 24px;
+}
 .reflection-input {
   display: grid;
   gap: 12px;
@@ -810,6 +821,7 @@ body.has-reward .experience-progress {
   border-radius: 16px;
   background: rgba(5, 6, 8, 0.54);
   outline: none;
+  font-size: 16px;
 }
 textarea.text-field {
   min-height: 120px;
@@ -832,14 +844,30 @@ textarea.text-field {
   gap: 12px;
   margin-top: 28px;
 }
+.email-review,
 .gate-confirmation {
   display: grid;
   gap: 18px;
 }
+.email-review strong {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(233,196,138,0.24);
+  border-radius: 16px;
+  background: rgba(233,196,138,0.04);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: clamp(16px, 4vw, 20px);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
 .experience-step.has-gate-confirmation > .step-head,
 .gate-panel.is-confirmed > .step-copy,
 .gate-panel.is-confirmed > .gate-list,
-.gate-panel.is-confirmed form {
+.gate-panel.is-confirmed form,
+.gate-panel.is-confirmed .email-review {
   display: none;
 }
 .gate-confirmation h3 {
@@ -2237,9 +2265,11 @@ textarea.text-field {
   }
   .follow-screen.is-active {
     align-items: stretch;
+    min-height: 100svh;
+    padding-top: 136px;
   }
   .follow-screen.is-active .completion-panel {
-    margin-top: 118px;
+    margin-top: 0;
   }
   .choice-grid,
   .quiz-options {
