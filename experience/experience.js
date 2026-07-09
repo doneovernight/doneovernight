@@ -56,6 +56,9 @@
       emailSendFailed: "Confirmation email could not be sent. Try again.",
       emailPendingCopy: "Check your inbox. Your DONEOVERNIGHT access is being prepared.",
       emailFallback: "We could not send the access email yet. Try again in a minute or DM @doneovernight.",
+      emailReviewTitle: "Is this email correct?",
+      editEmail: "Edit",
+      confirmEmail: "Confirm",
       emailConfirmedTitle: "Access unlocked",
       emailConfirmedHeadline: "You're in.",
       emailConfirmedCopy: "Check your inbox. Your DONEOVERNIGHT access has been sent.",
@@ -70,8 +73,8 @@
       sendAgainWait: "Send again in",
       sentAgain: "Sent again.",
       welcome: "Welcome.",
-      pathTitle: "Welcome.",
-      pathCopy: "Choose your path.",
+      pathTitle: "Choose your Builder role.",
+      pathCopy: "Choose the role that best fits how you want to enter DONEOVERNIGHT. This shapes your Builder profile and the recommendations that follow.",
       recommendationsCopy: "A few routes are worth opening next.",
       livePreview: "Live preview",
       livePreviewCopy: "A glimpse of what is being built now.",
@@ -221,6 +224,9 @@
       emailSendFailed: "De bevestiging kon niet worden verzonden. Probeer opnieuw.",
       emailPendingCopy: "Check je inbox. Je DONEOVERNIGHT toegang wordt voorbereid.",
       emailFallback: "We konden de toegangsmail nog niet verzenden. Probeer het zo opnieuw of DM @doneovernight.",
+      emailReviewTitle: "Klopt dit e-mailadres?",
+      editEmail: "Bewerken",
+      confirmEmail: "Bevestigen",
       emailConfirmedTitle: "Toegang ontgrendeld",
       emailConfirmedHeadline: "Je bent binnen.",
       emailConfirmedCopy: "Check je inbox. Je DONEOVERNIGHT toegang is verzonden.",
@@ -235,8 +241,8 @@
       sendAgainWait: "Opnieuw verzenden over",
       sentAgain: "Opnieuw verzonden.",
       welcome: "Welkom.",
-      pathTitle: "Welkom.",
-      pathCopy: "Kies je pad.",
+      pathTitle: "Kies je Builder rol.",
+      pathCopy: "Kies de rol die past bij hoe je DONEOVERNIGHT wilt binnenkomen. Dit vormt je Builder profile en de aanbevelingen hierna.",
       recommendationsCopy: "Een paar routes zijn het openen waard.",
       livePreview: "Live preview",
       livePreviewCopy: "Een glimp van wat nu wordt gebouwd.",
@@ -1003,6 +1009,7 @@
   function mountQuiz() {
     const root = document.getElementById("quiz-options");
     const result = document.getElementById("quiz-result");
+    const continueButton = document.querySelector("[data-operator-continue]");
     if (!root || !result) return;
     const traits = Object.entries(data.quiz.traits);
     root.innerHTML = traits.map(([key, value]) => `<button class="quiz-option" type="button" data-trait="${key}">${value[lang]}</button>`).join("");
@@ -1017,9 +1024,15 @@
         result.classList.add("is-visible");
         result.innerHTML = `<h3>${data.quiz.results[trait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
         result.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 380, easing: "ease-out" });
-        completeInteractionAfterFeedback("operatorTrait", progression.operatorTrait, button);
+        updateOperatorContinue();
       });
     });
+    if (continueButton) {
+      continueButton.onclick = () => {
+        if (!canInteract(continueButton) || !state.operatorTrait) return;
+        completeInteractionAfterFeedback("operatorTrait", progression.operatorTrait, continueButton);
+      };
+    }
     if (state.operatorTrait && !data.quiz.results[state.operatorTrait]) {
       state.operatorTrait = "";
       save(storageKey, state);
@@ -1031,6 +1044,16 @@
       result.classList.add("is-visible");
       result.innerHTML = `<h3>${data.quiz.results[state.operatorTrait][lang]}</h3><p class="step-copy">${copy[lang].operatorCopy}</p>`;
     }
+    updateOperatorContinue();
+  }
+
+  function updateOperatorContinue() {
+    const button = document.querySelector("[data-operator-continue]");
+    if (!button) return;
+    const ready = Boolean(state.operatorTrait && data.quiz.results[state.operatorTrait]);
+    button.disabled = !ready;
+    button.setAttribute("aria-disabled", ready ? "false" : "true");
+    button.classList.toggle("is-ready", ready);
   }
 
   function mountGate() {
@@ -1039,6 +1062,11 @@
     const note = document.getElementById("email-note");
     const confirmation = document.getElementById("gate-confirmation");
     const confirmationCopy = document.getElementById("email-confirmation-copy");
+    const review = document.getElementById("email-review");
+    const reviewAddress = document.getElementById("email-review-address");
+    const reviewEdit = document.getElementById("email-review-edit");
+    const reviewConfirm = document.getElementById("email-review-confirm");
+    const reviewNote = document.getElementById("email-review-note");
     const continueButton = document.getElementById("gate-continue");
     const resendButton = document.getElementById("resend-confirmation");
     const resendNote = document.getElementById("resend-note");
@@ -1046,6 +1074,22 @@
     if (list) list.innerHTML = data.gateItems[lang].map((item) => `<li>${item}</li>`).join("");
     if (savedEmail?.confirmation?.delivered === true) {
       showGateConfirmation(savedEmail.confirmation || { delivered: true }, false);
+    }
+    if (reviewEdit) {
+      reviewEdit.onclick = () => {
+        if (!canInteract(reviewEdit)) return;
+        hideEmailReview();
+        if (form) {
+          form.hidden = false;
+          form.email?.focus({ preventScroll: true });
+        }
+      };
+    }
+    if (reviewConfirm) {
+      reviewConfirm.onclick = async () => {
+        if (!canInteract(reviewConfirm)) return;
+        await submitReviewedEmail();
+      };
     }
     if (continueButton) {
       continueButton.onclick = () => {
@@ -1098,28 +1142,57 @@
         note.classList.remove("is-success");
         return;
       }
+      const socialHandle = form.social ? form.social.value.trim() : "";
+      state.pendingEmailReview = {
+        email,
+        name: form.name.value.trim(),
+        socialHandle
+      };
+      state.socialHandle = socialHandle;
+      save(storageKey, state);
+      showEmailReview(email);
+    };
+
+    async function submitReviewedEmail() {
+      const pending = state.pendingEmailReview || {};
+      const email = String(pending.email || "").trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        if (reviewNote) {
+          reviewNote.textContent = copy[lang].emailError;
+          reviewNote.classList.remove("is-success");
+        }
+        return;
+      }
       const submit = form.querySelector('[type="submit"]');
       if (submit) submit.disabled = true;
-      note.textContent = copy[lang].emailSending;
-      note.classList.remove("is-success");
-      const socialHandle = form.social ? form.social.value.trim() : "";
+      if (reviewConfirm) reviewConfirm.disabled = true;
+      if (reviewEdit) reviewEdit.disabled = true;
+      if (reviewNote) {
+        reviewNote.textContent = copy[lang].emailSending;
+        reviewNote.classList.remove("is-success");
+      }
+      const socialHandle = String(pending.socialHandle || "").trim();
       state.socialHandle = socialHandle;
       save(storageKey, state);
       const confirmationPayload = buildJourneyConfirmationPayload({
         email,
-        name: form.name.value.trim(),
+        name: String(pending.name || "").trim(),
         socialHandle
       });
       const confirmationResult = await requestJourneyConfirmation(confirmationPayload);
       if (!confirmationResult.delivered) {
-        note.textContent = copy[lang].emailFallback;
-        note.classList.remove("is-success");
+        if (reviewNote) {
+          reviewNote.textContent = copy[lang].emailFallback;
+          reviewNote.classList.remove("is-success");
+        }
         if (submit) submit.disabled = false;
+        if (reviewConfirm) reviewConfirm.disabled = false;
+        if (reviewEdit) reviewEdit.disabled = false;
         return;
       }
       const payload = {
         email,
-        name: form.name.value.trim(),
+        name: String(pending.name || "").trim(),
         socialHandle,
         lang,
         createdAt: new Date().toISOString(),
@@ -1143,13 +1216,41 @@
       };
       save(emailKey, payload);
       save(confirmationCooldownKey, { lastSentAt: Date.now() });
-      note.textContent = copy[lang].welcome;
-      note.classList.add("is-success");
+      delete state.pendingEmailReview;
+      save(storageKey, state);
+      if (reviewNote) {
+        reviewNote.textContent = copy[lang].welcome;
+        reviewNote.classList.add("is-success");
+      }
       persistVisitorProgress();
       showReward();
-      completeInteractionAfterFeedback("gate", progression.gate, submit);
+      showGateConfirmation(confirmationResult);
       if (submit) submit.disabled = false;
-    };
+      if (reviewConfirm) reviewConfirm.disabled = false;
+      if (reviewEdit) reviewEdit.disabled = false;
+    }
+
+    function showEmailReview(email) {
+      if (!review || !form) return;
+      if (reviewAddress) reviewAddress.textContent = email;
+      form.hidden = true;
+      review.hidden = false;
+      if (note) note.textContent = "";
+      if (reviewNote) {
+        reviewNote.textContent = "";
+        reviewNote.classList.remove("is-success");
+      }
+      setTimeout(() => scrollToQuestion(review.closest(".experience-step") || review), 120);
+    }
+
+    function hideEmailReview() {
+      if (!review) return;
+      review.hidden = true;
+      if (reviewNote) {
+        reviewNote.textContent = "";
+        reviewNote.classList.remove("is-success");
+      }
+    }
 
     function showGateConfirmation(result = {}, scroll = true) {
       if (!confirmation || !form) return;
@@ -1158,6 +1259,7 @@
       if (section) section.classList.add("has-gate-confirmation");
       if (panel) panel.classList.add("is-confirmed");
       form.hidden = true;
+      if (review) review.hidden = true;
       confirmation.hidden = false;
       if (confirmationCopy) {
         confirmationCopy.textContent = result.delivered ? copy[lang].emailConfirmedCopy : copy[lang].emailPendingCopy;
@@ -1718,7 +1820,8 @@
 
   function scrollToQuestion(section) {
     if (!section) return;
-    const target = section.querySelector?.(".step-head") || section.querySelector?.(".step-title") || section;
+    const finalPanel = section.matches?.(".follow-screen") ? section.querySelector("#completion-panel") : null;
+    const target = finalPanel || section.querySelector?.(".step-head:not([hidden])") || section.querySelector?.(".step-title") || section;
     const mobile = window.matchMedia("(max-width: 620px)").matches;
     const progressBottom = document.querySelector(".experience-progress")?.getBoundingClientRect().bottom || 0;
     const desiredTop = mobile ? Math.max(132, progressBottom + 42) : 104;
@@ -2520,6 +2623,7 @@
     const active = Math.max(1, Math.min(highestContiguousStep(), Number(state.activeStep) || 1));
     state.activeStep = active;
     state.unlockedStep = highestContiguousStep();
+    document.body.classList.toggle("is-final-reward", active === progression.viewerBuilds);
     if (renderedActiveStep !== active) {
       renderedActiveStep = active;
       activeStepReadyAt = Date.now() + 1600;

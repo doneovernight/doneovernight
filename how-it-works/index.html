@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>How It Works | DONEOVERNIGHT</title>
   <meta name="description" content="An interactive DONEOVERNIGHT experience showing how business requests become connected systems, operators, and execution.">
   <meta name="robots" content="index, follow">
@@ -25,9 +25,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/experience/experience.css?v=discovery-system-v1">
-  <script defer src="/experience/industry-config.js?v=discovery-system-v1"></script>
-  <script defer src="/experience/experience.js?v=discovery-system-v1"></script>
+  <link rel="stylesheet" href="/experience/experience.css?v=stability-polish-v1">
+  <script defer src="/experience/industry-config.js?v=stability-polish-v1"></script>
+  <script defer src="/experience/experience.js?v=stability-polish-v1"></script>
   <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments);};</script>
   <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
@@ -129,6 +129,7 @@
       <article class="quiz-card">
         <div class="quiz-options" id="quiz-options"></div>
         <div class="quiz-result" id="quiz-result"></div>
+        <button class="quiet-action step-continue operator-continue" type="button" data-operator-continue data-i18n="continue" disabled aria-disabled="true">Continue</button>
       </article>
     </section>
 
@@ -169,6 +170,15 @@
           <button class="quiet-action" type="submit" data-i18n="unlock">Unlock</button>
           <div class="form-note" id="email-note" aria-live="polite"></div>
         </form>
+        <div class="email-review" id="email-review" hidden>
+          <span class="eyebrow" data-i18n="emailReviewTitle">Is this email correct?</span>
+          <strong id="email-review-address">email@example.com</strong>
+          <div class="gate-actions">
+            <button class="quiet-action secondary" type="button" id="email-review-edit" data-i18n="editEmail">Edit</button>
+            <button class="quiet-action" type="button" id="email-review-confirm" data-i18n="confirmEmail">Confirm</button>
+          </div>
+          <div class="form-note" id="email-review-note" aria-live="polite"></div>
+        </div>
         <div class="gate-confirmation" id="gate-confirmation" hidden>
           <span class="eyebrow" data-i18n="emailConfirmedTitle">Access unlocked</span>
           <h3 data-i18n="emailConfirmedHeadline">You're in.</h3>
