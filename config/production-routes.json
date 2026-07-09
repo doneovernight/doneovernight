@@ -1,0 +1,69 @@
+{
+  "routes": [
+    {
+      "url": "https://doneovernight.com/cp",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "commonpl4ce",
+      "notes": "Public COMMONPL4CE website must stay public.",
+      "mustContain": [
+        "COMMONPL4CE",
+        "booker-station"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE Website OS",
+        "WEBSITE ACCESS",
+        "DONEOVERNIGHT admin-safe fallback marker"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/cp-book",
+      "expectedStatus": 200,
+      "routeType": "booking",
+      "owner": "commonpl4ce",
+      "notes": "Standalone booking is intentionally offline until approved again.",
+      "mustContain": [
+        "Booking page temporarily offline.",
+        "COMMONPL4CE booking offline marker",
+        "Visit COMMONPL4CE"
+      ],
+      "mustNotContain": [
+        "commonpl4ce_booker_v1",
+        "booker-station",
+        "COMMONPL4CE Website OS"
+      ]
+    },
+    {
+      "url": "https://admin.doneovernight.com/cp",
+      "expectedStatus": 200,
+      "routeType": "admin",
+      "owner": "commonpl4ce",
+      "notes": "Admin COMMONPL4CE must show Website OS, never public /cp.",
+      "mustContain": [
+        "COMMONPL4CE Website OS",
+        "WEBSITE ACCESS"
+      ],
+      "mustNotContain": [
+        "booker-station",
+        "Booking page temporarily offline.",
+        "canonical\" href=\"https://doneovernight.com/cp"
+      ]
+    },
+    {
+      "url": "https://admin.doneovernight.com/__route-safety-missing__",
+      "expectedStatus": 200,
+      "routeType": "admin",
+      "owner": "doneovernight",
+      "notes": "Unknown admin routes must land on admin-safe fallback only.",
+      "mustContain": [
+        "Admin route not available.",
+        "DONEOVERNIGHT admin-safe fallback marker"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE",
+        "booker-station",
+        "WEBSITE ACCESS"
+      ]
+    }
+  ]
+}
