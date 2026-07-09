@@ -99,22 +99,73 @@
     {
       "url": "https://admin.doneovernight.com/cp",
       "expectedStatus": 200,
-      "mustContain": ["<title>COMMONPL4CE Website OS</title>", "WEBSITE ACCESS", "COMMONPL4CE"],
+      "mustContain": ["<title>COMMONPL4CE Website OS</title>", "WEBSITE ACCESS", "COMMONPL4CE", "/assets/common-place/final/wordmark-intro-commonpl4ce.png", "/assets/doneovernight-wordmark.svg", "/assets/doneovernight-footer.css"],
       "mustNotContain": ["<title>COMMONPL4CE | Campaign Archive</title>", "<link rel=\"canonical\" href=\"https://doneovernight.com/cp\">"],
       "routeType": "admin",
       "owner": "commonpl4ce",
       "slug": "cp",
-      "notes": "COMMONPL4CE Website OS. Must never fall through to public /cp."
+      "notes": "COMMONPL4CE Website OS. Must never fall through to public /cp.",
+      "assetChecks": [
+        {
+          "url": "https://admin.doneovernight.com/assets/common-place/final/wordmark-intro-commonpl4ce.png",
+          "expectedStatus": 200,
+          "contentType": "image/png",
+          "mustNotContain": ["Admin route not available."]
+        },
+        {
+          "url": "https://admin.doneovernight.com/assets/doneovernight-wordmark.svg",
+          "expectedStatus": 200,
+          "contentType": "image/svg+xml",
+          "mustContain": ["<svg"],
+          "mustNotContain": ["Admin route not available."]
+        },
+        {
+          "url": "https://admin.doneovernight.com/assets/doneovernight-footer.css",
+          "expectedStatus": 200,
+          "contentType": "text/css",
+          "mustContain": [".doneovernight-footer-watermark"],
+          "mustNotContain": ["Admin route not available."]
+        }
+      ]
     },
     {
       "url": "https://admin.doneovernight.com/mosyaamosya",
       "expectedStatus": 200,
-      "mustContain": ["<title>Mina Mosya</title>", "CREATOR ACCESS", "Enter your creator password."],
+      "mustContain": ["<title>Mina Mosya</title>", "CREATOR ACCESS", "Enter your creator password.", "/assets/doneovernight-wordmark.svg", "/assets/doneovernight-footer.css"],
       "mustNotContain": ["<title>Mina Mosya | DONEOVERNIGHT Creator OS</title>"],
       "routeType": "admin",
       "owner": "mosyaamosya",
       "slug": "mosyaamosya",
-      "notes": "Mina Creator OS admin login."
+      "notes": "Mina Creator OS admin login.",
+      "sourceChecks": [
+        {
+          "file": "admin/mosyaamosya/index.html",
+          "mustContain": ["fetch(\"/api/creator-settings\"", "action: \"login\"", "creator_password: password", "sessionStorage.setItem(sessionFlag", "sessionStorage.setItem(sessionKey"],
+          "mustNotContain": ["newadminuser1", "local password hash", "temporary password"]
+        }
+      ],
+      "assetChecks": [
+        {
+          "url": "https://admin.doneovernight.com/assets/doneovernight-wordmark.svg",
+          "expectedStatus": 200,
+          "contentType": "image/svg+xml",
+          "mustContain": ["<svg"],
+          "mustNotContain": ["Admin route not available."]
+        },
+        {
+          "url": "https://admin.doneovernight.com/assets/doneovernight-footer.css",
+          "expectedStatus": 200,
+          "contentType": "text/css",
+          "mustContain": [".doneovernight-footer-watermark"],
+          "mustNotContain": ["Admin route not available."]
+        },
+        {
+          "url": "https://admin.doneovernight.com/api/creator-settings",
+          "expectedStatus": 405,
+          "contentType": "application/json",
+          "mustNotContain": ["Admin route not available.", "<title>Admin route not available</title>"]
+        }
+      ]
     },
     {
       "url": "https://admin.doneovernight.com/route-safety-missing",

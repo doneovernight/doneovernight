@@ -60,6 +60,31 @@ Booking pages should include both production HTML markers and local source check
 
 This prevents two booking entry points from silently splitting into different intake groups.
 
+## Asset and API checks
+
+Admin and client shells should include `assetChecks` for critical images, CSS, and API passthroughs:
+
+```json
+{
+  "assetChecks": [
+    {
+      "url": "https://admin.doneovernight.com/assets/doneovernight-wordmark.svg",
+      "expectedStatus": 200,
+      "contentType": "image/svg+xml",
+      "mustContain": ["<svg"],
+      "mustNotContain": ["Admin route not available."]
+    }
+  ]
+}
+```
+
+Use these checks for:
+
+- Client logos.
+- DONEOVERNIGHT powered-by wordmarks.
+- Shared footer CSS.
+- Auth/intake API passthroughs that must not be swallowed by safe fallbacks.
+
 ## Admin safety rules
 
 Admin routes must never fall through to public pages. Add `mustNotContain` markers for any public page title or canonical that would be dangerous if served on the admin host.

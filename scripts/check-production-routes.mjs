@@ -197,12 +197,45 @@ function assertSourceChecks(route) {
   return failures;
 }
 
+async function assertAssetChecks(route) {
+  const failures = [];
+  for (const check of route.assetChecks || []) {
+    let response;
+    try {
+      response = await fetchWithRetry(check.url);
+    } catch (error) {
+      failures.push(`${check.url} request failed: ${String(error?.message || error)}`);
+      continue;
+    }
+
+    const expected = expectedStatuses(check);
+    if (!expected.includes(response.status)) {
+      failures.push(`${check.url} expected status ${expected.join(" or ")}, received ${response.status}`);
+    }
+
+    const contentType = String(response.headers["content-type"] || "").toLowerCase();
+    if (check.contentType && !contentType.includes(String(check.contentType).toLowerCase())) {
+      failures.push(`${check.url} expected content-type containing ${JSON.stringify(check.contentType)}, received ${JSON.stringify(contentType)}`);
+    }
+
+    const body = response.body || "";
+    for (const marker of normalizeNeedles(check.mustContain)) {
+      if (!body.includes(marker)) failures.push(`${check.url} missing marker: ${JSON.stringify(marker)}`);
+    }
+    for (const marker of normalizeNeedles(check.mustNotContain)) {
+      if (body.includes(marker)) failures.push(`${check.url} forbidden marker present: ${JSON.stringify(marker)}`);
+    }
+  }
+  return failures;
+}
+
 async function checkRoute(route, index) {
   const label = `${index + 1}. ${route.url}`;
   const response = await fetchWithRetry(route.url);
   const failures = [
     ...assertMarkers(route, response),
-    ...assertSourceChecks(route)
+    ...assertSourceChecks(route),
+    ...(await assertAssetChecks(route))
   ];
 
   if (failures.length) {

@@ -213,23 +213,28 @@
       min-height: 54px;
       border-radius: 18px;
       width: 100%;
+      position: relative;
+      display: grid;
+      place-items: center;
       transition: opacity .18s ease, transform .18s ease;
     }
     .gate-card .button.primary:active { transform: scale(.992); }
     .gate-card .status { min-height: 0; height: 0; overflow: hidden; }
     .unlock-button-content {
-      min-width: 138px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      display: contents;
       white-space: nowrap;
+    }
+    #unlockButtonLabel {
+      grid-area: 1 / 1;
+      text-align: center;
     }
     .unlock-spinner,
     .unlock-check {
+      position: absolute;
+      left: 24px;
+      top: calc(50% - 7.5px);
       width: 15px;
       height: 15px;
-      flex: 0 0 15px;
       opacity: 0;
       transform: scale(.82);
       transition: opacity .16s ease, transform .16s ease;
@@ -250,7 +255,7 @@
     .gate-card[data-unlock-state="unlocking"] .unlock-spinner {
       opacity: 1;
       transform: scale(1);
-      animation: saveSpin .82s linear infinite;
+      animation: unlockSpin .82s linear infinite;
     }
     .gate-card[data-unlock-state="welcome"] .unlock-check { opacity: 1; transform: scale(1); }
     .gate-card[data-unlock-state="failed"] .button.primary {
@@ -1025,6 +1030,10 @@
     .sticky-save[data-save-state="failed"] {
       background: linear-gradient(135deg, #fecdd3, #fb7185);
       color: #2a080d;
+    }
+    @keyframes unlockSpin {
+      from { transform: rotate(0deg) scale(1); }
+      to { transform: rotate(360deg) scale(1); }
     }
     @keyframes saveSpin {
       from { transform: translateY(-50%) rotate(0deg) scale(1); }
