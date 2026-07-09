@@ -1,0 +1,36 @@
+name: Verify How It Works Production
+
+on:
+  deployment_status:
+
+jobs:
+  verify-how-it-works:
+    if: ${{ github.event.deployment_status.state == 'success' && (github.event.deployment.environment == 'Production' || github.event.deployment.environment == 'production') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify deployed artifact
+        run: node scripts/verify-how-it-works-industries.mjs --url "${{ github.event.deployment_status.target_url }}" --production
+
+      - name: Verify production alias
+        run: node scripts/verify-how-it-works-industries.mjs --url "https://doneovernight.com" --production
+
+      - name: Report deployment verification failure
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: context.payload.deployment.id,
+              state: 'failure',
+              environment_url: context.payload.deployment_status.target_url,
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: '/how-it-works industry verification failed'
+            });

@@ -387,28 +387,6 @@
       en: ["Website", "Automation", "AI", "Operator", "Execution", "Client"],
       nl: ["Website", "Automatisering", "AI", "Operator", "Executie", "Client"]
     },
-    examples: {
-      restaurant: {
-        en: ["Restaurant", "Reservations, menus, reviews, events, and supplier questions become one operating rhythm."],
-        nl: ["Restaurant", "Reserveringen, menu's, reviews, events en leveranciersvragen worden een ritme."]
-      },
-      agency: {
-        en: ["Agency", "Leads, briefs, scopes, assets, approvals, and delivery stop living across six tabs."],
-        nl: ["Agency", "Leads, briefs, scopes, assets, approvals en delivery leven niet meer verspreid."]
-      },
-      construction: {
-        en: ["Construction", "Requests, site photos, planning changes, materials, and client updates become traceable."],
-        nl: ["Bouw", "Aanvragen, werffoto's, planning, materialen en klantupdates worden traceerbaar."]
-      },
-      healthcare: {
-        en: ["Healthcare", "Intake, scheduling, follow-up, documents, and internal routing become calmer."],
-        nl: ["Zorg", "Intake, planning, opvolging, documenten en interne routing worden rustiger."]
-      },
-      ecommerce: {
-        en: ["E-commerce", "Products, campaigns, support, fulfillment signals, and content move together."],
-        nl: ["E-commerce", "Producten, campagnes, support, fulfillment signalen en content bewegen samen."]
-      }
-    },
     quiz: {
       traits: {
         ownership: { en: "Ownership", nl: "Eigenaarschap" },
@@ -745,6 +723,16 @@
     const continueButton = document.querySelector("[data-industry-continue]");
     if (!tabs || !board) return;
     const industries = industryCatalog();
+    if (!industries.length) {
+      tabs.innerHTML = "";
+      board.innerHTML = "";
+      board.classList.add("is-config-error");
+      if (continueButton) {
+        continueButton.disabled = true;
+        continueButton.setAttribute("aria-disabled", "true");
+      }
+      return;
+    }
     const other = otherIndustryOption();
     const selected = state.example && (industries.some((item) => item.key === state.example) || state.example === other.key)
       ? state.example
@@ -869,19 +857,32 @@
   }
 
   function industryCatalog() {
-    const configured = Array.isArray(window.DONEOVERNIGHT_INDUSTRIES) ? window.DONEOVERNIGHT_INDUSTRIES : [];
-    const fallback = Object.entries(data.examples).map(([key, value]) => ({
-      key,
-      label: { en: value.en[0], nl: value.nl[0] },
-      summary: { en: value.en[1], nl: value.nl[1] },
-      signals: []
-    }));
-    return (configured.length ? configured : fallback)
+    const configured = Array.isArray(window.DONEOVERNIGHT_INDUSTRIES) ? window.DONEOVERNIGHT_INDUSTRIES : null;
+    const validation = validateIndustryConfig(configured);
+    if (!validation.ok) {
+      console.error("[DONEOVERNIGHT] Invalid industry config. Step 05 will not render.", validation.errors);
+      return [];
+    }
+    return configured
       .map((item) => {
         const key = String(item.key || "").trim();
         return { ...item, key, category: item.category || inferredIndustryCategory(key) };
       })
       .filter((item) => item.key);
+  }
+
+  function validateIndustryConfig(industries) {
+    const errors = [];
+    if (!Array.isArray(industries)) {
+      errors.push("experience/industry-config.js did not define window.DONEOVERNIGHT_INDUSTRIES.");
+      return { ok: false, errors };
+    }
+    if (industries.length < 100) errors.push(`Expected at least 100 industries, found ${industries.length}.`);
+    const labels = new Set(industries.map((item) => normalizeSearch(item?.label?.en || item?.name || item?.key)));
+    ["Industrial", "Infrastructure", "Legal"].forEach((label) => {
+      if (!labels.has(normalizeSearch(label))) errors.push(`Missing required industry: ${label}.`);
+    });
+    return { ok: errors.length === 0, errors };
   }
 
   function inferredIndustryCategory(key = "") {
