@@ -1,0 +1,390 @@
+{
+  "routes": [
+    {
+      "url": "https://doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>DONEOVERNIGHT — Submit before bed. Wake up to results.</title>", "https://doneovernight.com/"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT", "<title>COMMONPL4CE Website OS</title>"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "home",
+      "notes": "Primary public marketing homepage."
+    },
+    {
+      "url": "https://doneovernight.com/cp",
+      "expectedStatus": 200,
+      "mustContain": ["<title>COMMONPL4CE | Campaign Archive</title>", "https://doneovernight.com/cp", "booker-station"],
+      "mustNotContain": ["<title>COMMONPL4CE Website OS</title>", "WEBSITE ACCESS"],
+      "routeType": "public",
+      "owner": "commonpl4ce",
+      "slug": "cp",
+      "notes": "Public COMMONPL4CE archive. Must never be served on admin.doneovernight.com."
+    },
+    {
+      "url": "https://doneovernight.com/cp-book",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Book a Shoot | COMMONPL4CE</title>", "source: 'commonpl4ce_booker'", "intakeVersion: 'commonpl4ce_booker_v1'", "WE SHOOT COMMONPLACES."],
+      "mustNotContain": ["<title>COMMONPL4CE Website OS</title>", "WEBSITE ACCESS", "<title>COMMONPL4CE | Campaign Archive</title>"],
+      "routeType": "booking",
+      "owner": "commonpl4ce",
+      "slug": "cp-book",
+      "notes": "Standalone Instagram booking route. Must share source/intake markers with /cp.",
+      "sourceChecks": [
+        {
+          "file": "cp-book/index.html",
+          "mustContain": ["source: 'commonpl4ce_booker'", "intakeVersion: 'commonpl4ce_booker_v1'", "fetch('/api/task-submit'"]
+        }
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/common-place",
+      "expectedStatus": 200,
+      "mustContain": ["<title>COMMONPL4CE | Campaign Archive</title>"],
+      "mustNotContain": ["<title>COMMONPL4CE Website OS</title>"],
+      "routeType": "public",
+      "owner": "commonpl4ce",
+      "slug": "common-place",
+      "notes": "Legacy COMMONPL4CE alias should land on public CP."
+    },
+    {
+      "url": "https://doneovernight.com/commonpl4ce",
+      "expectedStatus": 200,
+      "mustContain": ["<title>COMMONPL4CE | Campaign Archive</title>"],
+      "mustNotContain": ["<title>COMMONPL4CE Website OS</title>"],
+      "routeType": "public",
+      "owner": "commonpl4ce",
+      "slug": "commonpl4ce",
+      "notes": "Legacy COMMONPL4CE alias should land on public CP."
+    },
+    {
+      "url": "https://doneovernight.com/mosyaamosya",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Mina Mosya | DONEOVERNIGHT Creator OS</title>", "Mina Mosya"],
+      "mustNotContain": ["CREATOR ACCESS", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "mosyaamosya",
+      "slug": "mosyaamosya",
+      "notes": "Public Creator OS page."
+    },
+    {
+      "url": "https://doneovernight.com/mina",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Mina Mosya | DONEOVERNIGHT Creator OS</title>", "Mina Mosya"],
+      "mustNotContain": ["CREATOR ACCESS", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "mosyaamosya",
+      "slug": "mina",
+      "notes": "Public Mina alias."
+    },
+    {
+      "url": "https://doneovernight.com/romypeters",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Romy Peters — Visual Portfolio</title>", "https://doneovernight.com/romypeters"],
+      "mustNotContain": ["<title>COMMONPL4CE Website OS</title>", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "romy-peters",
+      "slug": "romypeters",
+      "notes": "Existing public Romy Peters portfolio page."
+    },
+    {
+      "url": "https://admin.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Admin Control — DONEOVERNIGHT</title>"],
+      "mustNotContain": ["COMMONPL4CE | Campaign Archive", "Book a Shoot | COMMONPL4CE"],
+      "routeType": "admin",
+      "owner": "doneovernight",
+      "slug": "admin-root",
+      "notes": "DONEOVERNIGHT admin access/root."
+    },
+    {
+      "url": "https://admin.doneovernight.com/cp",
+      "expectedStatus": 200,
+      "mustContain": ["<title>COMMONPL4CE Website OS</title>", "WEBSITE ACCESS", "COMMONPL4CE"],
+      "mustNotContain": ["<title>COMMONPL4CE | Campaign Archive</title>", "<link rel=\"canonical\" href=\"https://doneovernight.com/cp\">"],
+      "routeType": "admin",
+      "owner": "commonpl4ce",
+      "slug": "cp",
+      "notes": "COMMONPL4CE Website OS. Must never fall through to public /cp."
+    },
+    {
+      "url": "https://admin.doneovernight.com/mosyaamosya",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Mina Mosya</title>", "CREATOR ACCESS", "Enter your creator password."],
+      "mustNotContain": ["<title>Mina Mosya | DONEOVERNIGHT Creator OS</title>"],
+      "routeType": "admin",
+      "owner": "mosyaamosya",
+      "slug": "mosyaamosya",
+      "notes": "Mina Creator OS admin login."
+    },
+    {
+      "url": "https://admin.doneovernight.com/route-safety-missing",
+      "expectedStatus": 200,
+      "mustContain": ["Admin route not available. This route is protected and cannot fall through to the public website."],
+      "mustNotContain": ["COMMONPL4CE | Campaign Archive", "Mina Mosya | DONEOVERNIGHT Creator OS", "DONEOVERNIGHT — Submit before bed"],
+      "routeType": "admin",
+      "owner": "doneovernight",
+      "slug": "missing-admin-fallback",
+      "notes": "Missing admin slugs must show protected fallback instead of public pages."
+    },
+    {
+      "url": "https://ask.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Ask DONEOVERNIGHT | Private Overnight Intake</title>", "source: \"ask_intake\""],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "ask",
+      "notes": "Ask DONEOVERNIGHT intake subdomain."
+    },
+    {
+      "url": "https://start.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Start a Task | DONEOVERNIGHT</title>", "intakeVersion\" value=\"start_page_v1"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "start",
+      "notes": "Start task subdomain."
+    },
+    {
+      "url": "https://operator.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Operator Headquarters | DONEOVERNIGHT</title>", "Open Operator Headquarters"],
+      "mustNotContain": ["Client onboarding | DONEOVERNIGHT", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "operator",
+      "notes": "Operator workspace root."
+    },
+    {
+      "url": "https://operator.doneovernight.com/apply",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Operator application | DONEOVERNIGHT</title>", "Operator application"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "operator-apply",
+      "notes": "Operator application route."
+    },
+    {
+      "url": "https://operator.doneovernight.com/@route-safety",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Operator Headquarters | DONEOVERNIGHT</title>"],
+      "mustNotContain": ["Client onboarding | DONEOVERNIGHT", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "operator-handle",
+      "notes": "Operator handle route should remain in operator workspace."
+    },
+    {
+      "url": "https://portal.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Portal | DONEOVERNIGHT</title>", "Client entry"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "portal",
+      "notes": "Client portal entry."
+    },
+    {
+      "url": "https://portal.doneovernight.com/@route-safety",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Workspace | DONEOVERNIGHT</title>", "Workspace syncing"],
+      "mustNotContain": ["Portal | DONEOVERNIGHT", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "portal-workspace-handle",
+      "notes": "Portal handle route must open workspace shell."
+    },
+    {
+      "url": "https://portal.doneovernight.com/workspace/@route-safety",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Workspace | DONEOVERNIGHT</title>", "Workspace syncing"],
+      "mustNotContain": ["Portal | DONEOVERNIGHT", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "portal-workspace-path",
+      "notes": "Portal workspace route must open workspace shell."
+    },
+    {
+      "url": "https://client.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Client onboarding | DONEOVERNIGHT</title>", "Introduced through DONEOVERNIGHT."],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "client-onboarding",
+      "notes": "Client onboarding root."
+    },
+    {
+      "url": "https://client.doneovernight.com/@route-safety",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Client onboarding | DONEOVERNIGHT</title>", "Create Private Workspace"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "client-onboarding-handle",
+      "notes": "Client invite handle route."
+    },
+    {
+      "url": "https://client.doneovernight.com/workspace/route-safety",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Workspace | DONEOVERNIGHT</title>", "Workspace syncing"],
+      "mustNotContain": ["Client onboarding | DONEOVERNIGHT", "Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "client-workspace",
+      "notes": "Client workspace shell route."
+    },
+    {
+      "url": "https://pay.doneovernight.com/",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Secure Checkout | DONEOVERNIGHT</title>", "Workspace Activation"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "pay",
+      "notes": "Secure checkout host."
+    },
+    {
+      "url": "https://doneovernight.com/trust",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Trust — DONEOVERNIGHT</title>", "https://doneovernight.com/trust"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "trust",
+      "notes": "Trust policy page."
+    },
+    {
+      "url": "https://doneovernight.com/enterprise",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Enterprise — DONEOVERNIGHT</title>", "https://doneovernight.com/enterprise"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "enterprise",
+      "notes": "Enterprise page."
+    },
+    {
+      "url": "https://doneovernight.com/privacy",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Privacy Policy — DONEOVERNIGHT</title>", "https://doneovernight.com/privacy"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "privacy",
+      "notes": "Privacy page."
+    },
+    {
+      "url": "https://doneovernight.com/terms",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Terms of Service — DONEOVERNIGHT</title>", "https://doneovernight.com/terms"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "terms",
+      "notes": "Terms page."
+    },
+    {
+      "url": "https://doneovernight.com/refund",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Satisfaction Policy — DONEOVERNIGHT</title>", "https://doneovernight.com/refund"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "refund",
+      "notes": "Satisfaction/refund policy page."
+    },
+    {
+      "url": "https://doneovernight.com/portal",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Portal | DONEOVERNIGHT</title>", "Client entry"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "public-portal",
+      "notes": "Main-domain portal route."
+    },
+    {
+      "url": "https://doneovernight.com/client-onboarding",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Client onboarding | DONEOVERNIGHT</title>"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "doneovernight",
+      "slug": "client-onboarding-redirect",
+      "notes": "Main-domain client onboarding redirect should land on client host."
+    },
+    {
+      "url": "https://doneovernight.com/SaiUniversity-Preview",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Client onboarding | DONEOVERNIGHT</title>"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "workspace",
+      "owner": "sai-university",
+      "slug": "SaiUniversity-Preview",
+      "notes": "Existing client preview redirect should land in client onboarding."
+    },
+    {
+      "url": "https://doneovernight.com/ai",
+      "expectedStatus": 200,
+      "mustContain": ["<title>AI — DONEOVERNIGHT</title>", "https://doneovernight.com/ai"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "ai",
+      "notes": "Public service surface."
+    },
+    {
+      "url": "https://doneovernight.com/automation",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Automation — DONEOVERNIGHT</title>", "https://doneovernight.com/automation"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "automation",
+      "notes": "Public service surface."
+    },
+    {
+      "url": "https://doneovernight.com/services",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Services | DONEOVERNIGHT</title>", "https://doneovernight.com/services"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "services",
+      "notes": "Public services page."
+    },
+    {
+      "url": "https://doneovernight.com/resources",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Resources | DONEOVERNIGHT</title>", "https://doneovernight.com/resources"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "resources",
+      "notes": "Public resources page."
+    },
+    {
+      "url": "https://doneovernight.com/how-it-works",
+      "expectedStatus": 200,
+      "mustContain": ["<title>How It Works | DONEOVERNIGHT</title>", "https://doneovernight.com/how-it-works"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "how-it-works",
+      "notes": "Public guide page."
+    },
+    {
+      "url": "https://doneovernight.com/task",
+      "expectedStatus": 200,
+      "mustContain": ["<title>Ask DONEOVERNIGHT | Private Overnight Intake</title>"],
+      "mustNotContain": ["Admin Control — DONEOVERNIGHT"],
+      "routeType": "public",
+      "owner": "doneovernight",
+      "slug": "task",
+      "notes": "Legacy task route should redirect to ask intake."
+    }
+  ]
+}
