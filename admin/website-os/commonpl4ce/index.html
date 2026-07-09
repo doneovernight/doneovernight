@@ -1479,16 +1479,35 @@
       gap: 7px;
       text-align: left;
       cursor: grab;
+      position: relative;
     }
 
     .hero-slot-card[aria-selected="true"] {
       border-color: rgba(191,161,113,.72);
-      background: rgba(191,161,113,.08);
+      background: rgba(191,161,113,.12);
       color: var(--text);
+      box-shadow: 0 0 0 1px rgba(191,161,113,.38), 0 14px 34px rgba(0,0,0,.22);
     }
 
     .hero-slot-card.is-media-target {
-      box-shadow: 0 0 0 3px rgba(191,161,113,.12);
+      border-color: rgba(191,161,113,.84);
+      box-shadow: 0 0 0 3px rgba(191,161,113,.14), 0 14px 34px rgba(0,0,0,.22);
+    }
+
+    .hero-slot-card.is-media-target::after {
+      content: "Selected";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 1px solid rgba(191,161,113,.42);
+      border-radius: 999px;
+      background: rgba(12,10,8,.72);
+      color: rgba(241,234,220,.82);
+      font: 850 8px var(--mono);
+      letter-spacing: .12em;
+      line-height: 1;
+      padding: 5px 6px;
+      text-transform: uppercase;
     }
 
     .hero-slot-card.is-dragging {
@@ -3533,9 +3552,14 @@
       return slot?.previewImage || slot?.image || "";
     }
 
-    function mediaTargetLabel(target = state.builder.mediaTarget) {
-      if (!target) return "No slot selected";
+    function mediaTargetName(target = state.builder.mediaTarget) {
+      if (!target) return "";
       return `${target.kind === "mobile" ? "Mobile" : "Desktop"} slot ${String(Number(target.index || 0) + 1).padStart(2, "0")}`;
+    }
+
+    function mediaTargetLabel(target = state.builder.mediaTarget) {
+      const name = mediaTargetName(target);
+      return name ? `Assigning to ${name}` : "No hero slot selected";
     }
 
     function isLocalOnlyMedia(asset = {}) {
@@ -3570,6 +3594,28 @@
       const index = Math.max(0, Math.min(slots.length - 1, Number(selection.index) || 0));
       state.builder.selectedHeroSlot = { kind, index };
       return { kind, index, slot: slots[index], slots };
+    }
+
+    function selectHeroSlotForMedia(kind, index, options = {}) {
+      const normalizedKind = kind === "mobile" ? "mobile" : "desktop";
+      const slots = heroSlots(normalizedKind);
+      const normalizedIndex = Math.max(0, Math.min(slots.length - 1, Number(index) || 0));
+      state.builder.selectedHeroSlot = { kind: normalizedKind, index: normalizedIndex };
+      state.builder.mediaTarget = { kind: normalizedKind, index: normalizedIndex };
+      state.heroFeedback = `${mediaTargetName(state.builder.mediaTarget)} selected for media assignment.`;
+      if (options.openMedia) {
+        state.builder.mediaFilter = "Hero";
+        state.builder.mediaSearch = "";
+        const preferredFormat = normalizedKind === "mobile" ? "mobile" : "desktop";
+        const preferredAsset = state.builder.mediaLibrary.find((asset) => asset.category === "Hero" && lower(asset.format).includes(preferredFormat))
+          || state.builder.mediaLibrary.find((asset) => asset.category === "Hero")
+          || state.builder.mediaLibrary[0];
+        if (preferredAsset) state.builder.selectedMediaId = preferredAsset.id;
+        switchWebsiteTab("media");
+      }
+      saveBuilderDraft();
+      renderHeroManager();
+      renderMediaLibrary();
     }
 
     function renderHeroSlotEditor() {
@@ -4010,20 +4056,9 @@
         renderHeroManager();
         return;
       }
-      state.builder.mediaTarget = { kind, index };
-      state.builder.selectedHeroSlot = { kind, index };
-      state.builder.mediaFilter = "Hero";
-      state.builder.mediaSearch = "";
-      const preferredFormat = kind === "mobile" ? "mobile" : "desktop";
-      const preferredAsset = state.builder.mediaLibrary.find((asset) => asset.category === "Hero" && lower(asset.format).includes(preferredFormat))
-        || state.builder.mediaLibrary.find((asset) => asset.category === "Hero")
-        || state.builder.mediaLibrary[0];
-      if (preferredAsset) state.builder.selectedMediaId = preferredAsset.id;
+      selectHeroSlotForMedia(kind, index, { openMedia: true });
       state.heroFeedback = `Choose a ${kind === "mobile" ? "mobile" : "desktop"} asset from the Media Library.`;
-      saveBuilderDraft();
-      switchWebsiteTab("media");
       renderHeroManager();
-      renderMediaLibrary();
     }
 
     function assignMediaToTarget(assetId) {
@@ -4060,10 +4095,10 @@
       state.builder.mediaTarget = null;
       state.heroFeedback = isLocalOnlyMedia(asset)
         ? `${asset.filename} assigned as a local draft preview. Upload storage required before this file can go live.`
-        : `${asset.filename} assigned to ${target.kind === "mobile" ? "mobile" : "desktop"} slot ${String(target.index + 1).padStart(2, "0")}.`;
+        : `${asset.filename} assigned to ${mediaTargetName(target)}.`;
       state.mediaFeedback = isLocalOnlyMedia(asset)
         ? "Upload storage required before this file can go live."
-        : `${asset.filename} assigned to ${mediaTargetLabel({ kind: target.kind, index: target.index })}.`;
+        : `${asset.filename} assigned to ${mediaTargetName(target)}.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
       switchWebsiteTab("hero");
@@ -4410,39 +4445,43 @@
       const heroSelect = event.target.closest("[data-hero-select]");
       if (heroSelect) {
         const [kind, index] = heroSelect.dataset.heroSelect.split(":");
-        state.builder.selectedHeroSlot = { kind, index: Number(index) };
-        state.builder.mediaTarget = { kind, index: Number(index) };
-        saveBuilderDraft();
-        renderHeroManager();
-        renderMediaLibrary();
+        selectHeroSlotForMedia(kind, Number(index));
+        return;
       }
 
       const heroRemove = event.target.closest("[data-hero-remove]");
       if (heroRemove) {
         const [kind, index] = heroRemove.dataset.heroRemove.split(":");
         clearHeroSlot(kind, Number(index));
+        return;
       }
 
       const heroMove = event.target.closest("[data-hero-move]");
       if (heroMove) {
         const [kind, index] = heroMove.dataset.heroMove.split(":");
         moveHeroSlot(kind, Number(index), Number(heroMove.dataset.direction));
+        return;
       }
 
       const heroChoose = event.target.closest("[data-hero-choose]");
       if (heroChoose) {
         const [kind, index] = heroChoose.dataset.heroChoose.split(":");
         chooseHeroSlot(kind, Number(index));
+        return;
       }
 
       const mediaAssign = event.target.closest("[data-media-assign]");
-      if (mediaAssign) assignMediaToTarget(mediaAssign.dataset.mediaAssign);
+      if (mediaAssign) {
+        assignMediaToTarget(mediaAssign.dataset.mediaAssign);
+        return;
+      }
 
       const mediaSelect = event.target.closest("[data-media-select]");
       if (mediaSelect) {
         state.builder.selectedMediaId = mediaSelect.dataset.mediaSelect;
         saveBuilderDraft();
         renderMediaLibrary();
+        return;
       }
 
       const mediaFilter = event.target.closest("[data-media-filter]");
@@ -4450,6 +4489,7 @@
         state.builder.mediaFilter = mediaFilter.dataset.mediaFilter;
         saveBuilderDraft();
         renderMediaLibrary();
+        return;
       }
     });
 
