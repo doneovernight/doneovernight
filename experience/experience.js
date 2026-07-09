@@ -76,7 +76,6 @@
       followCardTitle: "You've reached the end.",
       followCardCopy: "The rest happens in public.",
       currentBuild: "Current Build",
-      currentOperator: "Current Operator",
       currentProject: "Current Project",
       progress: "Progress",
       latestDeployment: "Latest deployment",
@@ -86,11 +85,6 @@
       placeholder: "Waiting for connection",
       liveTitle: "Live build signal.",
       liveText: "A quiet window into what DONEOVERNIGHT is building, shipping, and learning. Live data connects here next.",
-      today: "Today's Progress",
-      todayLabel: "TODAY",
-      currentlyBuilding: "Currently building",
-      started: "Started",
-      expected: "Expected",
       foundingBuilder: "Founding Builder",
       builderNumber: "Builder #",
       builderPending: "Preparing",
@@ -242,7 +236,6 @@
       followCardTitle: "Je hebt het einde bereikt.",
       followCardCopy: "De rest gebeurt publiek.",
       currentBuild: "Huidige build",
-      currentOperator: "Huidige operator",
       currentProject: "Huidig project",
       progress: "Voortgang",
       latestDeployment: "Laatste deployment",
@@ -252,11 +245,6 @@
       placeholder: "Wacht op koppeling",
       liveTitle: "Live build signaal.",
       liveText: "Een rustig venster op wat DONEOVERNIGHT bouwt, shipped en leert. Live data wordt hierna gekoppeld.",
-      today: "Voortgang vandaag",
-      todayLabel: "VANDAAG",
-      currentlyBuilding: "Nu aan het bouwen",
-      started: "Gestart",
-      expected: "Verwacht",
       foundingBuilder: "Founding Builder",
       builderNumber: "Builder #",
       builderPending: "Voorbereiden",
@@ -1425,38 +1413,7 @@
     } catch (error) {
       platformSignal = null;
     }
-    mountTodaySections();
     applyLiveSignalFallbacks();
-  }
-
-  function mountTodaySections() {
-    if (document.body.dataset.experience === "how-it-works") return;
-    const shells = document.querySelectorAll(".experience-shell");
-    if (!shells.length) return;
-    shells.forEach((shell) => {
-      if (shell.hasAttribute("data-no-today")) return;
-      shell.querySelectorAll("[data-today-section]").forEach((node) => node.remove());
-      const hero = shell.querySelector(".live-hero, .experience-hero");
-      if (!hero) return;
-      const today = (platformSignal && platformSignal.today) || {};
-      const section = document.createElement("section");
-      section.className = "today-signal";
-      section.setAttribute("data-today-section", "");
-      section.innerHTML = `
-        <span class="eyebrow">${escapeHtml(copy[lang].todayLabel)}</span>
-        <div class="today-signal-grid">
-          ${todayCell(copy[lang].currentlyBuilding, today.currently_building || "DONEOVERNIGHT HQ")}
-          ${todayCell(copy[lang].started, today.started || "09:40")}
-          ${todayCell(copy[lang].expected, today.expected || "Tonight")}
-          ${todayCell(copy[lang].currentOperator, today.current_operator || "Don")}
-        </div>
-      `;
-      hero.insertAdjacentElement("afterend", section);
-    });
-  }
-
-  function todayCell(label, value) {
-    return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
   function applyLiveSignalFallbacks() {
@@ -2072,7 +2029,6 @@
         applyLanguage();
         mountHowItWorks();
         mountLive();
-        mountTodaySections();
         revealOnScroll();
       });
     });
