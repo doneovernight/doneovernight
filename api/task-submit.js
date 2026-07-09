@@ -77,6 +77,26 @@ const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
+const COMMONPLACE_NEWSLETTER_SOURCE = "commonpl4ce_newsletter";
+const COMMONPLACE_NEWSLETTER_VERSION = "commonpl4ce_newsletter_v1";
+const COMMONPLACE_ALLOWED_ANALYTICS_PATHS = new Set(["/cp", "/cp-book"]);
+const COMMONPLACE_ANALYTICS_EVENTS = new Set([
+  "page_view",
+  "hero_view",
+  "scroll_depth",
+  "booker_station_view",
+  "book_cta_click",
+  "project_section_view",
+  "newsletter_start",
+  "newsletter_submit",
+  "newsletter_success",
+  "form_start",
+  "field_progress",
+  "form_submit_attempt",
+  "form_submit_success",
+  "form_submit_error"
+]);
 const COMMONPLACE_SITE_CONFIG_DEFAULT = {
   version: 1,
   workspace: "commonpl4ce",
@@ -678,6 +698,60 @@ function safeAnalyticsMetadata(input = {}) {
   return output;
 }
 
+function requestHost(req, input = {}) {
+  const raw = clean(input.host || req.headers["x-forwarded-host"] || req.headers.host).toLowerCase();
+  return raw.split(",")[0].trim();
+}
+
+function normalizeCommonplacePublicPath(value = "", fallback = "") {
+  const raw = clean(value || fallback);
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw, "https://doneovernight.com");
+    const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  } catch (error) {
+    const pathname = raw.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  }
+}
+
+function resolveCommonplaceAnalyticsPath(req, input = {}) {
+  return normalizeCommonplacePublicPath(
+    input.path || input.route || input.pathname || input.page_path || input.url,
+    req.headers.referer || ""
+  );
+}
+
+function isCommonplaceAnalyticsInput(input = {}) {
+  return clean(input.source || input.scope || input.workspace).toLowerCase() === COMMONPLACE_ANALYTICS_SOURCE ||
+    input.action === "commonpl4ce_analytics_event" ||
+    input.intent === "commonpl4ce_analytics_event";
+}
+
+function normalizeCommonplaceAnalyticsEvent(value = "") {
+  const normalized = clean(value).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return COMMONPLACE_ANALYTICS_EVENTS.has(normalized) ? normalized : "";
+}
+
+function safeCommonplaceAnalyticsMetadata(input = {}) {
+  const metadata = safeAnalyticsMetadata(input);
+  const output = {};
+  const allowed = new Set(["depth", "section", "field", "label", "button", "status", "source_path", "form"]);
+  Object.entries(metadata).forEach(([key, value]) => {
+    if (!allowed.has(key)) return;
+    if (key === "depth" && !["25", "50", "75", "100"].includes(String(value))) return;
+    output[key] = value;
+  });
+  return output;
+}
+
+function analyticsRangeStart(range = "7d") {
+  const now = Date.now();
+  const days = range === "24h" ? 1 : range === "30d" ? 30 : 7;
+  return new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function hashAnalyticsUserAgent(value = "") {
   const safe = clean(value).slice(0, 500);
   if (!safe) return "";
@@ -692,7 +766,75 @@ function isTrackEventRequest(req, input = {}) {
   return input.action === "track_event" || input.intent === "track_event";
 }
 
+async function handleCommonplaceTrackEventRequest(req, res, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics disabled on admin hosts" });
+  }
+
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics path rejected" });
+  }
+
+  const eventType = normalizeCommonplaceAnalyticsEvent(input.event_type || input.eventType || input.name || input.event);
+  if (!eventType) {
+    return send(res, 400, { success: false, error: "Unsupported COMMONPL4CE event type" });
+  }
+
+  const metadata = safeCommonplaceAnalyticsMetadata(input.metadata || input.props || {});
+  if (eventType === "scroll_depth" && !["25", "50", "75", "100"].includes(String(metadata.depth || ""))) {
+    return send(res, 400, { success: false, error: "Invalid scroll depth" });
+  }
+
+  const row = {
+    event_type: eventType,
+    task_id: "",
+    source: COMMONPLACE_ANALYTICS_SOURCE,
+    route: path,
+    referrer: stripAnalyticsUrl(input.referrer || input.referrer_url || ""),
+    session_id: clean(input.session_id || input.sessionId).slice(0, 120),
+    user_agent_hash: hashAnalyticsUserAgent(req.headers["user-agent"] || ""),
+    metadata
+  };
+
+  try {
+    await supabaseFetch(ANALYTICS_EVENT_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(row)
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: true,
+      reason: "stored",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_ANALYTICS_STORE_FAILED]", {
+      event_type: eventType,
+      path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: false,
+      reason: error.statusCode ? `supabase_http_${error.statusCode}` : "analytics_not_configured",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  }
+}
+
 async function handleTrackEventRequest(req, res, input = {}) {
+  if (isCommonplaceAnalyticsInput(input)) {
+    return handleCommonplaceTrackEventRequest(req, res, input);
+  }
+
   const eventType = normalizeAnalyticsEventType(input.event_type || input.eventType || input.name || input.event);
   if (!eventType) {
     return send(res, 400, { success: false, error: "Unsupported event type" });
@@ -734,6 +876,186 @@ async function handleTrackEventRequest(req, res, input = {}) {
       stored: false,
       reason: error.statusCode ? `supabase_http_${error.statusCode}` : "tracking_failed",
       event_type: eventType
+    });
+  }
+}
+
+function isCommonplaceNewsletterRequest(input = {}) {
+  return input.action === "commonpl4ce_newsletter_signup" ||
+    input.intent === "commonpl4ce_newsletter_signup" ||
+    clean(input.source).toLowerCase() === COMMONPLACE_NEWSLETTER_SOURCE;
+}
+
+function isCommonplaceAnalyticsSummaryRequest(input = {}) {
+  return input.action === "commonpl4ce_analytics_summary" ||
+    input.intent === "commonpl4ce_analytics_summary";
+}
+
+function validateCommonplacePublicRequest(req, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE public action disabled on admin hosts" };
+  }
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE path rejected" };
+  }
+  return { ok: true, path };
+}
+
+async function handleCommonplaceNewsletterRequest(req, res, input = {}) {
+  const publicRequest = validateCommonplacePublicRequest(req, input);
+  if (!publicRequest.ok) {
+    return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error });
+  }
+
+  const email = normalizeEmailValue(input.email);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return send(res, 400, { success: false, error: "Valid email required" });
+  }
+
+  const now = new Date().toISOString();
+  const rawPayload = {
+    source: COMMONPLACE_NEWSLETTER_SOURCE,
+    intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+    path: publicRequest.path,
+    submittedAt: now,
+    consent: clean(input.consent) || "newsletter_signup"
+  };
+
+  try {
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: now,
+        updated_at: now,
+        status: "new",
+        payment_status: "not_required",
+        queue_state: "newsletter",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE newsletter signup",
+        email,
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE newsletter signup",
+        task_summary: `Newsletter signup from ${publicRequest.path}`,
+        source: COMMONPLACE_NEWSLETTER_SOURCE,
+        raw_payload: rawPayload
+      })
+    });
+    const row = Array.isArray(rows) ? rows[0] : null;
+    return send(res, 200, {
+      success: true,
+      stored: true,
+      source: COMMONPLACE_NEWSLETTER_SOURCE,
+      intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+      id: row?.task_id || row?.id || ""
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_NEWSLETTER_STORE_FAILED]", {
+      path: publicRequest.path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 503, {
+      success: false,
+      stored: false,
+      error: "Newsletter storage is not connected yet",
+      code: error.statusCode ? `supabase_http_${error.statusCode}` : "newsletter_not_configured"
+    });
+  }
+}
+
+function summarizeCommonplaceAnalytics(events = [], newsletters = [], bookings = []) {
+  const count = (type, route = "") => events.filter((event) => (
+    event.event_type === type && (!route || normalizeCommonplacePublicPath(event.route) === route)
+  )).length;
+  const scrollCounts = { 25: 0, 50: 0, 75: 0, 100: 0 };
+  events.forEach((event) => {
+    if (event.event_type !== "scroll_depth") return;
+    const depth = clean(event.metadata?.depth);
+    if (Object.prototype.hasOwnProperty.call(scrollCounts, depth)) scrollCounts[depth] += 1;
+  });
+  const formStarts = count("form_start", "/cp-book");
+  const formSuccess = count("form_submit_success", "/cp-book") || bookings.length;
+  const conversionRate = formStarts ? Math.round((formSuccess / formStarts) * 100) : 0;
+  return {
+    connected: true,
+    generatedAt: new Date().toISOString(),
+    metrics: {
+      cpVisits: count("page_view", "/cp"),
+      cpBookVisits: count("page_view", "/cp-book"),
+      bookCtaClicks: count("book_cta_click"),
+      bookerStationViews: count("booker_station_view"),
+      bookingFormStarts: formStarts,
+      bookingFormSubmissions: formSuccess,
+      conversionRate,
+      newsletterStarts: count("newsletter_start"),
+      newsletterSignups: newsletters.length || count("newsletter_success")
+    },
+    scrollDropoff: scrollCounts,
+    recentSignups: newsletters.slice(0, 8).map((row) => ({
+      email: clean(row.email),
+      createdAt: row.created_at || row.updated_at || "",
+      path: normalizeCommonplacePublicPath(row.raw_payload?.path || row.route || "")
+    }))
+  };
+}
+
+async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
+  const authorized = await verifyAdminKey(input.admin_key || input.adminKey || req.headers["x-admin-key"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+
+  const range = ["24h", "7d", "30d"].includes(clean(input.range)) ? clean(input.range) : "7d";
+  const since = analyticsRangeStart(range);
+
+  try {
+    const [events, newsletters, bookings] = await Promise.all([
+      supabaseFetch([
+        `analytics_events?source=eq.${encodeURIComponent(COMMONPLACE_ANALYTICS_SOURCE)}`,
+        "select=event_type,route,metadata,created_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=1000"
+      ].join("&")),
+      supabaseFetch([
+        `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_NEWSLETTER_SOURCE)}`,
+        "select=email,raw_payload,created_at,updated_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=100"
+      ].join("&")),
+      supabaseFetch([
+        "task_requests?source=eq.commonpl4ce_booker",
+        "select=task_id,created_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=1000"
+      ].join("&"))
+    ]);
+
+    return send(res, 200, {
+      success: true,
+      connected: true,
+      range,
+      analytics: summarizeCommonplaceAnalytics(
+        Array.isArray(events) ? events : [],
+        Array.isArray(newsletters) ? newsletters : [],
+        Array.isArray(bookings) ? bookings : []
+      )
+    });
+  } catch (error) {
+    return send(res, 200, {
+      success: true,
+      connected: false,
+      range,
+      analytics: null,
+      message: "Analytics not connected yet",
+      reason: error.code || error.message || "analytics_store_unavailable"
     });
   }
 }
@@ -2825,6 +3147,14 @@ module.exports = async function handler(req, res) {
     const input = await parseBody(req);
     if (isCommonplaceSiteConfigRequest(req, input)) {
       return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
+    if (isCommonplaceAnalyticsSummaryRequest(input)) {
+      return handleCommonplaceAnalyticsSummaryRequest(req, res, input);
+    }
+
+    if (isCommonplaceNewsletterRequest(input)) {
+      return handleCommonplaceNewsletterRequest(req, res, input);
     }
 
     if (isJourneyConfirmationRequest(req, input)) {

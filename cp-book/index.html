@@ -243,6 +243,44 @@
       min-width: 190px;
       margin-top: 30px;
     }
+    .cp-newsletter {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding-top: clamp(72px, 9vw, 128px);
+      padding-bottom: clamp(72px, 9vw, 128px);
+    }
+    .cp-newsletter-card {
+      width: min(100%, 560px);
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+    }
+    .cp-newsletter-form {
+      width: min(100%, 420px);
+      display: none;
+      gap: 12px;
+    }
+    .cp-newsletter.is-open .cp-newsletter-form {
+      display: grid;
+    }
+    .cp-newsletter.is-open .cp-newsletter-toggle {
+      display: none;
+    }
+    .cp-newsletter-status {
+      min-height: 1.4em;
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: .12em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .cp-newsletter.is-success .cp-newsletter-form,
+    .cp-newsletter.is-success .cp-newsletter-toggle {
+      display: none;
+    }
     .section-title {
       margin: 0;
       font-size: clamp(38px, 6.4vw, 104px);
@@ -689,6 +727,131 @@
     </div>
   </div>
 
+  <script>
+    (function () {
+      const COMMONPL4CE_ANALYTICS_SCOPE = 'commonpl4ce';
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      const sessionKey = 'commonpl4ce_analytics_session';
+      const sessionId = sessionStorage.getItem(sessionKey) || (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+      sessionStorage.setItem(sessionKey, sessionId);
+
+      function track(eventType, metadata) {
+        fetch('/api/track-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            action: 'track_event',
+            source: COMMONPL4CE_ANALYTICS_SCOPE,
+            event_type: eventType,
+            path,
+            session_id: sessionId,
+            metadata: metadata || {}
+          }),
+          keepalive: true
+        }).catch(function () {});
+      }
+
+      window.commonpl4ceTrack = track;
+      track('page_view');
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      ready(function () {
+        const seenDepths = new Set();
+        function checkScrollDepth() {
+          const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          const depth = Math.min(100, Math.round((window.scrollY / scrollable) * 100));
+          [25, 50, 75, 100].forEach(function (mark) {
+            if (depth >= mark && !seenDepths.has(mark)) {
+              seenDepths.add(mark);
+              track('scroll_depth', { depth: String(mark) });
+            }
+          });
+          if (seenDepths.size === 4) window.removeEventListener('scroll', checkScrollDepth);
+        }
+
+        window.addEventListener('scroll', checkScrollDepth, { passive: true });
+        checkScrollDepth();
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      function track(eventType, metadata) {
+        if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(eventType, metadata);
+      }
+
+      ready(function () {
+        const root = document.querySelector('[data-cp-newsletter]');
+        if (!root) return;
+        const toggle = root.querySelector('[data-newsletter-toggle]');
+        const form = root.querySelector('[data-newsletter-form]');
+        const email = root.querySelector('[data-newsletter-email]');
+        const status = root.querySelector('[data-newsletter-status]');
+
+        toggle?.addEventListener('click', function () {
+          root.classList.add('is-open');
+          if (status) status.textContent = '';
+          track('newsletter_start');
+          window.setTimeout(function () { email?.focus(); }, 60);
+        });
+
+        form?.addEventListener('submit', async function (event) {
+          event.preventDefault();
+          const value = String(email?.value || '').trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            if (status) status.textContent = 'Please add a valid email.';
+            return;
+          }
+          track('newsletter_submit');
+          const button = form.querySelector('button[type="submit"]');
+          if (button) button.disabled = true;
+          try {
+            const response = await fetch('/api/task-submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                action: 'commonpl4ce_newsletter_signup',
+                source: 'commonpl4ce_newsletter',
+                intakeVersion: 'commonpl4ce_newsletter_v1',
+                email: value,
+                path
+              })
+            });
+            const result = await response.json().catch(function () { return {}; });
+            if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
+            root.classList.add('is-success');
+            if (status) status.textContent = 'Thank you. You\u2019re on the list.';
+            track('newsletter_success');
+          } catch (error) {
+            if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
+            if (button) button.disabled = false;
+          }
+        });
+      });
+    })();
+  </script>
+
   <header class="site-header" aria-label="COMMONPL4CE">
     <a href="/cp" aria-label="COMMONPL4CE home">
       <img class="header-logo" src="/assets/common-place/final/cp-header-small.png" alt="COMMONPL4CE">
@@ -790,6 +953,21 @@
         <a class="confirmation-link" href="/cp">Back to COMMONPL4CE</a>
       </div>
     </section>
+
+    <section class="dark-section cp-newsletter" data-cp-newsletter aria-label="COMMONPL4CE newsletter">
+      <div class="cp-newsletter-card">
+        <p class="step-label">Newsletter</p>
+        <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+        <form class="cp-newsletter-form" data-newsletter-form>
+          <label class="step">
+            <span class="step-label">Email</span>
+            <input class="field" data-newsletter-email type="email" autocomplete="email" required>
+          </label>
+          <button class="cal-button" type="submit">Join</button>
+        </form>
+        <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
@@ -849,6 +1027,8 @@
       let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       let selectedDate = null;
       let isSubmitting = false;
+      let formStarted = false;
+      const progressedFields = new Set();
 
       const formatDate = (date) => {
         const year = date.getFullYear();
@@ -944,6 +1124,9 @@
           return humanMessage(value.message || value.error || value.code || value.statusText, fallback);
         }
         return fallback;
+      };
+      const track = (eventType, metadata) => {
+        if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(eventType, metadata || {});
       };
 
       async function fetchBookingAvailability() {
@@ -1122,18 +1305,33 @@
         window.setTimeout(finish, 2900);
       }
 
-      form.addEventListener('input', clearFormState);
-      form.addEventListener('change', clearFormState);
+      function trackFormProgress(event) {
+        clearFormState();
+        if (!formStarted) {
+          formStarted = true;
+          track('form_start', { form: 'cp_booker' });
+        }
+        const fieldName = event.target?.name || event.target?.id || '';
+        if (fieldName && !progressedFields.has(fieldName)) {
+          progressedFields.add(fieldName);
+          track('field_progress', { field: fieldName });
+        }
+      }
+
+      form.addEventListener('input', trackFormProgress);
+      form.addEventListener('change', trackFormProgress);
 
       form.addEventListener('submit', async function (event) {
         event.preventDefault();
         if (isSubmitting || form.classList.contains('is-success')) return;
 
+        track('form_submit_attempt', { form: 'cp_booker' });
         clearFormState();
         const validation = validateForm();
         if (!validation.valid) {
           form.classList.add('is-error');
           if (errorMessage) errorMessage.textContent = validation.message;
+          track('form_submit_error', { status: 'validation' });
           return;
         }
 
@@ -1165,12 +1363,14 @@
           if (submitButton) {
             submitButton.textContent = 'Request sent';
           }
+          track('form_submit_success', { form: 'cp_booker' });
           showSuccessFlash();
         } catch (error) {
           form.classList.add('is-error');
           if (errorMessage) {
             errorMessage.textContent = humanMessage(error, 'Request could not be sent. Please try again.');
           }
+          track('form_submit_error', { status: 'api' });
           if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Send request';

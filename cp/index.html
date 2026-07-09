@@ -669,6 +669,45 @@
       text-transform: uppercase;
     }
 
+    .cp-newsletter {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding-top: clamp(76px, 10vw, 138px);
+      padding-bottom: clamp(76px, 10vw, 138px);
+    }
+    .cp-newsletter-card {
+      width: min(100%, 560px);
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+    }
+    .cp-newsletter-form {
+      width: min(100%, 420px);
+      display: none;
+      gap: 12px;
+    }
+    .cp-newsletter.is-open .cp-newsletter-form {
+      display: grid;
+    }
+    .cp-newsletter.is-open .cp-newsletter-toggle {
+      display: none;
+    }
+    .cp-newsletter-status {
+      min-height: 1.4em;
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: .12em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .cp-newsletter.is-success .cp-newsletter-form,
+    .cp-newsletter.is-success .cp-newsletter-toggle {
+      display: none;
+    }
+
     .booking {
       display: grid;
       grid-template-columns: minmax(220px, .62fr) minmax(0, 1fr);
@@ -1157,6 +1196,159 @@
     })();
   </script>
 
+  <script>
+    (function () {
+      const COMMONPL4CE_ANALYTICS_SCOPE = 'commonpl4ce';
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      const sessionKey = 'commonpl4ce_analytics_session';
+      const sessionId = sessionStorage.getItem(sessionKey) || (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+      sessionStorage.setItem(sessionKey, sessionId);
+
+      function track(eventType, metadata) {
+        const payload = {
+          action: 'track_event',
+          source: COMMONPL4CE_ANALYTICS_SCOPE,
+          event_type: eventType,
+          path,
+          session_id: sessionId,
+          metadata: metadata || {}
+        };
+        fetch('/api/track-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true
+        }).catch(function () {});
+      }
+
+      window.commonpl4ceTrack = track;
+      track('page_view');
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      ready(function () {
+        const seenDepths = new Set();
+        function checkScrollDepth() {
+          const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          const depth = Math.min(100, Math.round((window.scrollY / scrollable) * 100));
+          [25, 50, 75, 100].forEach(function (mark) {
+            if (depth >= mark && !seenDepths.has(mark)) {
+              seenDepths.add(mark);
+              track('scroll_depth', { depth: String(mark) });
+            }
+          });
+          if (seenDepths.size === 4) window.removeEventListener('scroll', checkScrollDepth);
+        }
+
+        window.addEventListener('scroll', checkScrollDepth, { passive: true });
+        checkScrollDepth();
+
+        document.querySelectorAll('a[href="#booker-station"], a[href="/cp-book"]').forEach(function (link) {
+          link.addEventListener('click', function () {
+            track('book_cta_click', { label: link.textContent || 'Book' });
+          });
+        });
+
+        const observer = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            const element = entry.target;
+            observer.unobserve(element);
+            if (element.id === 'archive') track('hero_view');
+            if (element.id === 'booker-station') track('booker_station_view');
+            if (element.dataset.projectSection) track('project_section_view', { section: element.dataset.projectSection });
+          });
+        }, { threshold: 0.38 }) : null;
+
+        if (observer) {
+          ['archive', 'booker-station'].forEach(function (id) {
+            const element = document.getElementById(id);
+            if (element) observer.observe(element);
+          });
+          document.querySelectorAll('[data-project-section]').forEach(function (element) {
+            observer.observe(element);
+          });
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      function track(eventType, metadata) {
+        if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(eventType, metadata);
+      }
+
+      ready(function () {
+        const root = document.querySelector('[data-cp-newsletter]');
+        if (!root) return;
+        const toggle = root.querySelector('[data-newsletter-toggle]');
+        const form = root.querySelector('[data-newsletter-form]');
+        const email = root.querySelector('[data-newsletter-email]');
+        const status = root.querySelector('[data-newsletter-status]');
+
+        toggle?.addEventListener('click', function () {
+          root.classList.add('is-open');
+          if (status) status.textContent = '';
+          track('newsletter_start');
+          window.setTimeout(function () { email?.focus(); }, 60);
+        });
+
+        form?.addEventListener('submit', async function (event) {
+          event.preventDefault();
+          const value = String(email?.value || '').trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            if (status) status.textContent = 'Please add a valid email.';
+            return;
+          }
+          track('newsletter_submit');
+          const button = form.querySelector('button[type="submit"]');
+          if (button) button.disabled = true;
+          try {
+            const response = await fetch('/api/task-submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                action: 'commonpl4ce_newsletter_signup',
+                source: 'commonpl4ce_newsletter',
+                intakeVersion: 'commonpl4ce_newsletter_v1',
+                email: value,
+                path
+              })
+            });
+            const result = await response.json().catch(function () { return {}; });
+            if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
+            root.classList.add('is-success');
+            if (status) status.textContent = 'Thank you. You\u2019re on the list.';
+            track('newsletter_success');
+          } catch (error) {
+            if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
+            if (button) button.disabled = false;
+          }
+        });
+      });
+    })();
+  </script>
+
   <header class="site-header" id="siteHeader" aria-label="COMMONPL4CE">
     <div class="header-brand">
       <a href="/cp" aria-label="COMMONPL4CE home">
@@ -1245,7 +1437,7 @@
         </div>
       </section>
 
-      <section class="light-section novateur-project" aria-label="Novateur selected client">
+      <section class="light-section novateur-project" data-project-section="novateur" aria-label="Novateur selected client">
         <div class="section-inner">
           <div class="novateur-head">
             <div class="novateur-brand">
@@ -1363,6 +1555,21 @@
           <p>Netherlands<br>Europe<br>Worldwide</p>
           <p class="availability-note">Available for campaigns,<br>editorials and selected brand projects.</p>
           <p class="availability-note availability-note--quiet">Limited availability each month.</p>
+        </div>
+      </section>
+
+      <section class="dark-section cp-newsletter" data-cp-newsletter aria-label="COMMONPL4CE newsletter">
+        <div class="cp-newsletter-card">
+          <p class="kicker">Newsletter</p>
+          <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+          <form class="cp-newsletter-form" data-newsletter-form>
+            <label class="step">
+              <span class="step-label">Email</span>
+              <input class="field" data-newsletter-email type="email" autocomplete="email" required>
+            </label>
+            <button class="cal-button" type="submit">Join</button>
+          </form>
+          <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
         </div>
       </section>
 

@@ -2507,13 +2507,20 @@
             <div class="view-title">
               <div class="eyebrow">Analytics</div>
               <h1>Signals.</h1>
-              <p>No fake numbers. This section stays quiet until analytics collection is connected.</p>
+              <p>COMMONPL4CE-only analytics for /cp and /cp-book.</p>
+            </div>
+            <div class="hero-controls" id="analyticsRangeControls">
+              <button class="button small" type="button" data-analytics-range="24h">24h</button>
+              <button class="button small" type="button" data-analytics-range="7d">7d</button>
+              <button class="button small" type="button" data-analytics-range="30d">30d</button>
             </div>
           </div>
           <section class="os-panel">
-            <div class="empty-state">
-              <strong>Waiting for first tracked signal.</strong>
-              Future metrics: visitors, booking conversion, most viewed project, inquiries this month, average response time.
+            <div id="commonpl4ceAnalyticsPanel" data-commonpl4ce-analytics-panel>
+              <div class="empty-state">
+                <strong>Analytics not connected yet.</strong>
+                Waiting for first tracked signal.
+              </div>
             </div>
           </section>
         </section>
@@ -2604,6 +2611,7 @@
     const HERO_LOCAL_FILE_LIMIT = 900 * 1024;
     const MEDIA_LOCAL_FILE_LIMIT = 5 * 1024 * 1024;
     const COMMONPLACE_SITE_CONFIG_API = "/api/task-submit?commonpl4ce_site_config=1";
+    const COMMONPLACE_ANALYTICS_API = "/api/task-submit";
     const COMMONPLACE_SITE_CONFIG_URL = "/assets/common-place/config/site-content.json";
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
@@ -2698,6 +2706,10 @@
       publishedBuilderSignature: "",
       publishedConfig: DEFAULT_SITE_CONFIG,
       publishedConfigLoaded: false,
+      analyticsRange: "7d",
+      analytics: null,
+      analyticsConnected: false,
+      analyticsMessage: "Analytics not connected yet",
       activeWebsiteTab: "builder"
     };
 
@@ -3345,6 +3357,71 @@
       setSync(state.bookings.length ? `Connected: ${state.bookings.length} bookings` : "Connected: no bookings yet");
     }
 
+    async function loadCommonplaceAnalytics(range = state.analyticsRange) {
+      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
+      if (!adminKey) return;
+      state.analyticsRange = ["24h", "7d", "30d"].includes(range) ? range : "7d";
+      renderAnalytics();
+      const response = await fetch(COMMONPLACE_ANALYTICS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_analytics_summary",
+          admin_key: adminKey,
+          range: state.analyticsRange
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success !== true) {
+        throw new Error(data?.error || "Analytics unavailable");
+      }
+      state.analyticsConnected = data.connected === true;
+      state.analytics = data.analytics || null;
+      state.analyticsMessage = data.message || (state.analyticsConnected ? "Connected" : "Analytics not connected yet");
+      renderAnalytics();
+    }
+
+    function renderAnalytics() {
+      const target = $("commonpl4ceAnalyticsPanel");
+      if (!target) return;
+      document.querySelectorAll("[data-analytics-range]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.analyticsRange === state.analyticsRange ? "true" : "false");
+      });
+      if (!state.analyticsConnected || !state.analytics) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(state.analyticsMessage || "Analytics not connected yet")}</strong>No fake numbers are shown. COMMONPL4CE analytics stay scoped to /cp and /cp-book.</div>`;
+        return;
+      }
+      const metrics = state.analytics.metrics || {};
+      const scroll = state.analytics.scrollDropoff || {};
+      const recent = Array.isArray(state.analytics.recentSignups) ? state.analytics.recentSignups : [];
+      const metricRows = [
+        ["Visits /cp", metrics.cpVisits || 0],
+        ["Visits /cp-book", metrics.cpBookVisits || 0],
+        ["Book CTA clicks", metrics.bookCtaClicks || 0],
+        ["Booker station views", metrics.bookerStationViews || 0],
+        ["Form starts", metrics.bookingFormStarts || 0],
+        ["Form submissions", metrics.bookingFormSubmissions || 0],
+        ["Conversion rate", `${metrics.conversionRate || 0}%`],
+        ["Newsletter starts", metrics.newsletterStarts || 0],
+        ["Newsletter signups", metrics.newsletterSignups || 0]
+      ];
+      target.innerHTML = `
+        <div class="detail-grid">
+          ${metricRows.map(([label, value]) => `<div class="detail"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join("")}
+        </div>
+        <div class="setting-row">
+          <strong>Scroll drop-off</strong>
+          <span>25%: ${escapeHTML(scroll[25] || 0)} · 50%: ${escapeHTML(scroll[50] || 0)} · 75%: ${escapeHTML(scroll[75] || 0)} · 100%: ${escapeHTML(scroll[100] || 0)}</span>
+          <span class="status-pill">${escapeHTML(state.analyticsRange)}</span>
+        </div>
+        <div class="setting-row">
+          <strong>Recent newsletter signups</strong>
+          <span>${recent.length ? recent.map((item) => `${escapeHTML(item.email)} (${escapeHTML(formatDate(item.createdAt))})`).join("<br>") : "No signups in this range."}</span>
+          <span class="status-pill">COMMONPL4CE</span>
+        </div>
+      `;
+    }
+
     function buildClients(bookings) {
       const map = new Map();
       bookings.forEach((booking) => {
@@ -3376,6 +3453,7 @@
       renderTemplates();
       renderWebsiteFields();
       renderSettings();
+      renderAnalytics();
       renderDraftEditor();
     }
 
@@ -4723,6 +4801,14 @@
         section.classList.toggle("is-active", section.dataset.view === view);
       });
       window.scrollTo({ top: 0, behavior: "smooth" });
+      if (view === "analytics") {
+        loadCommonplaceAnalytics(state.analyticsRange).catch((error) => {
+          state.analyticsConnected = false;
+          state.analytics = null;
+          state.analyticsMessage = error.message || "Analytics not connected yet";
+          renderAnalytics();
+        });
+      }
     }
 
     function unlockApp() {
@@ -4731,6 +4817,12 @@
         setSync("Bookings unavailable");
         $("overviewBookings").innerHTML = `<div class="empty-state"><strong>Could not load bookings.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
         $("bookingsList").innerHTML = `<div class="empty-state"><strong>Could not load booking requests.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
+      });
+      loadCommonplaceAnalytics(state.analyticsRange).catch(() => {
+        state.analyticsConnected = false;
+        state.analytics = null;
+        state.analyticsMessage = "Analytics not connected yet";
+        renderAnalytics();
       });
     }
 
@@ -4882,6 +4974,18 @@
         state.builder.mediaFilter = mediaFilter.dataset.mediaFilter;
         saveBuilderDraft();
         renderMediaLibrary();
+        return;
+      }
+
+      const analyticsRange = event.target.closest("[data-analytics-range]");
+      if (analyticsRange) {
+        state.analyticsRange = analyticsRange.dataset.analyticsRange;
+        loadCommonplaceAnalytics(state.analyticsRange).catch((error) => {
+          state.analyticsConnected = false;
+          state.analytics = null;
+          state.analyticsMessage = error.message || "Analytics not connected yet";
+          renderAnalytics();
+        });
         return;
       }
     });
