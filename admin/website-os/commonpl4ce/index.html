@@ -1667,6 +1667,7 @@
       display: grid;
       gap: 9px;
       text-align: left;
+      position: relative;
     }
 
     button.media-asset {
@@ -1682,6 +1683,23 @@
     .media-asset[aria-selected="true"] {
       border-color: rgba(191,161,113,.72);
       background: rgba(191,161,113,.08);
+      box-shadow: 0 0 0 1px rgba(191,161,113,.34);
+    }
+
+    .media-asset[aria-selected="true"]::after {
+      content: "Selected";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border: 1px solid rgba(191,161,113,.42);
+      border-radius: 999px;
+      background: rgba(12,10,8,.72);
+      color: rgba(241,234,220,.82);
+      font: 850 8px var(--mono);
+      letter-spacing: .12em;
+      line-height: 1;
+      padding: 5px 6px;
+      text-transform: uppercase;
     }
 
     .media-asset strong {
@@ -1714,6 +1732,18 @@
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
+    }
+
+    .media-replace-file {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .media-replace-file input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
     }
 
     .media-detail {
@@ -2719,7 +2749,8 @@
       const path = safe(asset.path || asset.url || asset.src);
       const filename = safe(asset.filename || asset.name || path.split("/").pop()) || `media-${String(index + 1).padStart(2, "0")}`;
       const category = MEDIA_CATEGORIES.includes(asset.category) ? asset.category : "Hero";
-      const isLocal = Boolean(asset.isLocal) || /^local_/i.test(safe(asset.id)) || /^blob:/i.test(path) || /^data:/i.test(path);
+      const hasStaticPath = /^https?:|^\//i.test(path) && !/^blob:/i.test(path) && !/^data:/i.test(path);
+      const isLocal = Boolean(asset.isLocal && !hasStaticPath) || /^blob:/i.test(path) || /^data:/i.test(path) || (/^local_/i.test(safe(asset.id)) && !hasStaticPath);
       const status = ["Draft", "Ready", "Hidden"].includes(asset.status) ? asset.status : (isLocal ? "Draft" : "Ready");
       return {
         id: safe(asset.id) || `${isLocal ? "local_media" : "media"}_${index + 1}`,
@@ -3038,7 +3069,8 @@
       }, 0);
       const contentChanges = Object.keys(draft.content).filter((key) => !sameValue(draft.content[key], published.content[key]));
       const blockedAssets = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => {
-        return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || /^local_/i.test(slot.mediaId || "");
+        const asset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId);
+        return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || isLocalOnlyMedia(asset);
       }).length;
       const sectionChanges = builderSectionSignature() === publishedBuilderSignature() ? 0 : 1;
       const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || sectionChanges > 0;
@@ -3563,7 +3595,7 @@
     }
 
     function isLocalOnlyMedia(asset = {}) {
-      return Boolean(asset.isLocal) || /^local_/i.test(clean(asset.id)) || /^blob:/i.test(clean(asset.path)) || /^data:/i.test(clean(asset.path));
+      return Boolean(asset.isLocal) || /^blob:/i.test(clean(asset.path)) || /^data:/i.test(clean(asset.path)) || Boolean(asset.previewImage && !clean(asset.path));
     }
 
     function mediaPreviewImage(asset = {}) {
@@ -3722,6 +3754,7 @@
         <div class="field-grid">
           <label class="field"><span>Filename</span><input value="${escapeHTML(asset.filename)}" data-media-field="filename"></label>
           <label class="field"><span>Category</span><select data-media-field="category">${categories}</select></label>
+          <label class="field wide"><span>Asset path</span><input value="${escapeHTML(asset.path || "")}" data-media-field="path" placeholder="/assets/common-place/..."></label>
           <label class="field wide"><span>Alt text</span><input value="${escapeHTML(asset.alt || "")}" data-media-field="alt"></label>
           <label class="field"><span>Status</span><select data-media-field="status"><option${asset.status === "Draft" ? " selected" : ""}>Draft</option><option${asset.status === "Ready" ? " selected" : ""}>Ready</option><option${asset.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
           <label class="field"><span>Format / type</span><input value="${escapeHTML(asset.format || "")}" data-media-field="format"></label>
@@ -3736,8 +3769,8 @@
         ${localOnly ? `<div class="website-note">Upload storage required before this file can go live.</div>` : ""}
         <div class="media-asset-actions">
           <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}">Assign to selected hero slot</button>
-          <button class="button small" type="button" disabled>Replace disabled</button>
-          <button class="button small" type="button" disabled>Delete disabled</button>
+          <label class="button small media-replace-file">Replace with local file<input type="file" accept="image/*" data-media-replace-file="${escapeHTML(asset.id)}"></label>
+          <button class="button small" type="button" data-media-delete="${escapeHTML(asset.id)}">Delete from draft library</button>
         </div>
       `;
     }
@@ -4127,14 +4160,77 @@
       });
     }
 
+    function heroUsageLabelsForAsset(assetId) {
+      const labels = [];
+      ["desktop", "mobile"].forEach((kind) => {
+        heroSlots(kind).forEach((slot, index) => {
+          if (slot.mediaId === assetId) {
+            labels.push(`${kind === "mobile" ? "Mobile" : "Hero"} slot ${String(index + 1).padStart(2, "0")}`);
+          }
+        });
+      });
+      return labels;
+    }
+
+    function firstHeroUsageWarning(assetId) {
+      const labels = heroUsageLabelsForAsset(assetId);
+      if (!labels.length) return "";
+      return `This asset is used in ${labels[0]}.`;
+    }
+
+    function applyAssetPathState(asset) {
+      const path = clean(asset.path);
+      const localOnly = !path || /^blob:/i.test(path) || /^data:/i.test(path) || Boolean(asset.previewImage && !path);
+      asset.isLocal = localOnly;
+      if (path && !localOnly) {
+        delete asset.previewImage;
+        asset.status = asset.status === "Hidden" ? "Hidden" : "Ready";
+      } else if (localOnly) {
+        asset.status = "Draft";
+      }
+      return asset;
+    }
+
+    function syncHeroSlotsForAsset(asset) {
+      if (!asset) return;
+      heroSlots("desktop").concat(heroSlots("mobile")).forEach((slot) => {
+        if (slot.mediaId !== asset.id) return;
+        if (isLocalOnlyMedia(asset)) {
+          slot.image = "";
+          slot.previewImage = mediaPreviewImage(asset);
+          slot.localFileName = asset.filename;
+          slot.localFileSize = 0;
+          slot.status = "Draft";
+        } else {
+          slot.image = asset.path;
+          slot.alt = asset.alt || slot.alt;
+          slot.status = asset.status === "Hidden" ? "Hidden" : "Draft";
+          slot.localFileName = "";
+          slot.localFileSize = 0;
+          delete slot.previewImage;
+        }
+      });
+    }
+
     function updateSelectedMediaAsset(field, value) {
       const asset = selectedMediaAsset();
       if (!asset) return;
       asset[field] = value;
       if (field === "filename" && !asset.alt) asset.alt = clean(value).replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
       if (field === "category" && !MEDIA_CATEGORIES.includes(asset.category)) asset.category = "Hero";
+      if (field === "path") {
+        asset.path = clean(value);
+        if (asset.path && !asset.filename) asset.filename = asset.path.split("/").pop();
+        applyAssetPathState(asset);
+        state.mediaFeedback = isLocalOnlyMedia(asset)
+          ? "Draft only — upload storage required before publish."
+          : "Static asset path saved. Publish can use this media.";
+      }
+      if (["path", "alt", "status"].includes(field)) syncHeroSlotsForAsset(asset);
+      syncHeroAssetUsage();
       saveBuilderDraft();
       renderMediaLibrary();
+      renderHeroManager();
       renderPublishSummary();
     }
 
@@ -4168,7 +4264,56 @@
       state.builder.mediaLibrary.unshift(asset);
       state.builder.selectedMediaId = asset.id;
       state.builder.mediaFilter = "All";
-      state.mediaFeedback = "Upload storage required before this file can go live.";
+      state.mediaFeedback = "Draft only — upload storage required before publish.";
+      saveBuilderDraft();
+      renderMediaLibrary();
+      renderPublishSummary();
+    }
+
+    function handleReplaceMediaFile(assetId, file) {
+      const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
+      if (!asset || !file) return;
+      if (!file.type.startsWith("image/")) {
+        state.mediaFeedback = "Choose an image file to replace this media asset.";
+        renderMediaLibrary();
+        return;
+      }
+      if (file.size > MEDIA_LOCAL_FILE_LIMIT) {
+        state.mediaFeedback = "File is too large. Upload storage required before this file can go live.";
+        renderMediaLibrary();
+        return;
+      }
+      asset.filename = file.name;
+      asset.path = "";
+      asset.dimensions = `${Math.round(file.size / 1024)} KB local preview`;
+      asset.format = file.type || "Image";
+      asset.alt = asset.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+      asset.status = "Draft";
+      asset.isLocal = true;
+      asset.addedAt = new Date().toISOString();
+      asset.previewImage = URL.createObjectURL(file);
+      syncHeroSlotsForAsset(asset);
+      syncHeroAssetUsage();
+      state.mediaFeedback = "Draft only — upload storage required before publish.";
+      state.heroFeedback = firstHeroUsageWarning(asset.id) || state.heroFeedback;
+      saveBuilderDraft();
+      renderMediaLibrary();
+      renderHeroManager();
+      renderPublishSummary();
+    }
+
+    function deleteMediaAsset(assetId) {
+      const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
+      if (!asset) return;
+      const warning = firstHeroUsageWarning(asset.id);
+      if (warning) {
+        state.mediaFeedback = warning;
+        renderMediaLibrary();
+        return;
+      }
+      state.builder.mediaLibrary = state.builder.mediaLibrary.filter((item) => item.id !== asset.id);
+      state.builder.selectedMediaId = state.builder.mediaLibrary[0]?.id || "";
+      state.mediaFeedback = `${asset.filename} removed from the draft media library. Real files were not deleted.`;
       saveBuilderDraft();
       renderMediaLibrary();
       renderPublishSummary();
@@ -4476,6 +4621,12 @@
         return;
       }
 
+      const mediaDelete = event.target.closest("[data-media-delete]");
+      if (mediaDelete) {
+        deleteMediaAsset(mediaDelete.dataset.mediaDelete);
+        return;
+      }
+
       const mediaSelect = event.target.closest("[data-media-select]");
       if (mediaSelect) {
         state.builder.selectedMediaId = mediaSelect.dataset.mediaSelect;
@@ -4541,6 +4692,13 @@
       if (addMediaFile) {
         handleAddMediaFile(addMediaFile.files?.[0]);
         addMediaFile.value = "";
+        return;
+      }
+
+      const mediaReplaceFile = event.target.closest("[data-media-replace-file]");
+      if (mediaReplaceFile) {
+        handleReplaceMediaFile(mediaReplaceFile.dataset.mediaReplaceFile, mediaReplaceFile.files?.[0]);
+        mediaReplaceFile.value = "";
         return;
       }
 
