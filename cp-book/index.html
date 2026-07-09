@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -107,6 +107,87 @@
     .book-link:hover::after {
       opacity: .72;
       transform: scaleX(1);
+    }
+
+    .success-flash-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: none;
+      background: var(--black);
+      pointer-events: none;
+    }
+    .success-flash-backdrop::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .success-flash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      pointer-events: none;
+    }
+    .success-flash-lockup {
+      display: grid;
+      justify-items: center;
+      gap: clamp(18px, 3vw, 34px);
+      opacity: 0;
+    }
+    .success-flash-lockup img {
+      width: min(82vw, 1040px);
+      height: auto;
+    }
+    .success-flash-copy {
+      margin: 0;
+      color: var(--paper);
+      font-size: clamp(15px, 2.8vw, 34px);
+      font-weight: var(--type-display-weight);
+      line-height: .92;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .success-flash-backdrop.is-visible,
+    .success-flash-screen.is-visible {
+      display: grid;
+      animation: introExit 340ms ease 2380ms forwards;
+    }
+    .success-flash-backdrop.is-visible::after {
+      animation: cameraFlash 180ms ease 2180ms forwards;
+    }
+    .success-flash-screen.is-visible .success-flash-lockup {
+      animation: introLogo 950ms ease 180ms forwards;
+    }
+    .success-flash-backdrop.is-hidden,
+    .success-flash-screen.is-hidden {
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      animation: none;
+    }
+
+    @keyframes introLogo {
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes introExit {
+      to {
+        opacity: 0;
+        visibility: hidden;
+      }
+    }
+    @keyframes cameraFlash {
+      0% { opacity: 0; }
+      28% { opacity: .92; }
+      100% { opacity: 0; }
     }
 
     .dark-section {
@@ -370,6 +451,51 @@
       font-size: var(--type-body-size);
       line-height: var(--type-body-line);
     }
+    .booking-confirmation {
+      display: none;
+      min-height: calc(100vh - 154px);
+      align-content: center;
+    }
+    .booking-confirmation-inner {
+      width: min(100%, 760px);
+      display: grid;
+      gap: 20px;
+    }
+    .confirmation-note {
+      margin: 0;
+      max-width: 540px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: var(--type-label-weight);
+      letter-spacing: .12em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .confirmation-link {
+      width: fit-content;
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(237,230,216,.3);
+      padding: 14px 18px;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .confirmation-link:hover {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.07);
+    }
+    body.has-confirmation .booking {
+      display: none;
+    }
+    body.has-confirmation .booking-confirmation {
+      display: grid;
+    }
     .footer {
       position: relative;
       display: grid;
@@ -501,9 +627,27 @@
         max-width: none;
       }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .success-flash-backdrop,
+      .success-flash-screen,
+      .success-flash-backdrop::after {
+        display: none !important;
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="success-flash-backdrop" id="successFlashBackdrop" aria-hidden="true"></div>
+  <div class="success-flash-screen" id="successFlashScreen" aria-hidden="true">
+    <div class="success-flash-lockup">
+      <img src="/assets/common-place/final/wordmark-intro-commonpl4ces.png" alt="">
+      <p class="success-flash-copy">WE SHOOT COMMONPLACES.</p>
+    </div>
+  </div>
+
   <header class="site-header" aria-label="COMMONPL4CE">
     <a href="/cp" aria-label="COMMONPL4CE home">
       <img class="header-logo" src="/assets/common-place/final/cp-header-small.png" alt="COMMONPL4CE">
@@ -561,9 +705,9 @@
           <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
         </fieldset>
         <p class="cal-note">Select a preferred shoot date.</p>
-        <div class="calendar" aria-label="Calendar date selector">
+        <div class="calendar" role="group" aria-label="Calendar date selector">
           <div class="calendar-head">
-            <h3 class="calendar-title" id="calendarTitle"></h3>
+            <h3 class="calendar-title" id="calendarTitle">Calendar</h3>
             <div class="calendar-nav">
               <button type="button" id="calendarPrev" aria-label="Previous month">&lsaquo;</button>
               <button type="button" id="calendarNext" aria-label="Next month">&rsaquo;</button>
@@ -595,6 +739,15 @@
           <p class="form-error" id="bookerError" role="alert"></p>
         </div>
       </form>
+    </section>
+
+    <section class="dark-section booking-confirmation" id="bookingConfirmation" aria-labelledby="confirmation-title" aria-live="polite">
+      <div class="booking-confirmation-inner">
+        <h1 class="section-title" id="confirmation-title">Thank you for your request.</h1>
+        <p class="body-copy">We received your booking request. We&rsquo;ll review the direction and get back to you as soon as possible.</p>
+        <p class="confirmation-note">A confirmation email will be added soon. For now, your request has been sent.</p>
+        <a class="confirmation-link" href="/cp">Back to COMMONPL4CE</a>
+      </div>
     </section>
   </main>
 
@@ -635,6 +788,9 @@
       const next = document.getElementById('calendarNext');
       const submitButton = form.querySelector('.cal-button');
       const errorMessage = document.getElementById('bookerError');
+      const flashBackdrop = document.getElementById('successFlashBackdrop');
+      const flashScreen = document.getElementById('successFlashScreen');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
 
@@ -826,6 +982,38 @@
         };
       }
 
+      function showConfirmation() {
+        document.body.classList.add('has-confirmation');
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+
+      function showSuccessFlash() {
+        if (reduceMotion || !flashBackdrop || !flashScreen) {
+          showConfirmation();
+          return;
+        }
+
+        let confirmed = false;
+        function finish() {
+          if (confirmed) return;
+          confirmed = true;
+          flashBackdrop.classList.add('is-hidden');
+          flashScreen.classList.add('is-hidden');
+          showConfirmation();
+        }
+
+        flashBackdrop.classList.remove('is-hidden');
+        flashScreen.classList.remove('is-hidden');
+        flashBackdrop.classList.add('is-visible');
+        flashScreen.classList.add('is-visible');
+        flashScreen.addEventListener('animationend', function onAnimationEnd(event) {
+          if (event.animationName !== 'introExit') return;
+          flashScreen.removeEventListener('animationend', onAnimationEnd);
+          finish();
+        });
+        window.setTimeout(finish, 2900);
+      }
+
       form.addEventListener('input', clearFormState);
       form.addEventListener('change', clearFormState);
 
@@ -869,6 +1057,7 @@
           if (submitButton) {
             submitButton.textContent = 'Request sent';
           }
+          showSuccessFlash();
         } catch (error) {
           form.classList.add('is-error');
           if (errorMessage) {
