@@ -2410,7 +2410,7 @@
                         <p>Scrollable public /cp desktop preview.</p>
                       </div>
                       <div class="live-frame-shell">
-                        <iframe id="desktopPublicPreview" title="Live public COMMONPL4CE desktop preview" src="https://doneovernight.com/cp" loading="lazy"></iframe>
+                        <div id="desktopPublicPreviewMount" data-preview-frame="desktop"></div>
                       </div>
                     </section>
                     <section class="live-preview-panel" aria-label="Live Mobile preview">
@@ -2419,7 +2419,7 @@
                         <p>Scrollable phone-sized public /cp preview.</p>
                       </div>
                       <div class="live-frame-shell is-mobile">
-                        <iframe id="mobilePublicPreview" title="Live public COMMONPL4CE mobile preview" src="https://doneovernight.com/cp" loading="lazy"></iframe>
+                        <div id="mobilePublicPreviewMount" data-preview-frame="mobile"></div>
                       </div>
                     </section>
                   </div>
@@ -2643,7 +2643,8 @@
       lastPublishedAt: "",
       publishedBuilderSignature: "",
       publishedConfig: DEFAULT_SITE_CONFIG,
-      publishedConfigLoaded: false
+      publishedConfigLoaded: false,
+      activeWebsiteTab: "builder"
     };
 
     const $ = (id) => document.getElementById(id);
@@ -3123,7 +3124,6 @@
         state.publishedBuilderSignature = builderSectionSignature(defaultBuilderDraft());
         state.lastPublishedAt = clean(config.updatedAt);
         renderWebsiteFields();
-        renderSectionBuilder();
       } catch (error) {
         state.publishedConfigLoaded = false;
         state.publishedConfigSource = "";
@@ -3304,6 +3304,70 @@
       renderWebsiteFields();
       renderSettings();
       renderDraftEditor();
+    }
+
+    function isWebsiteTabActive(tab) {
+      return state.activeWebsiteTab === tab;
+    }
+
+    function previewFrameHTML(kind) {
+      const id = kind === "mobile" ? "mobilePublicPreview" : "desktopPublicPreview";
+      const title = kind === "mobile" ? "Live public COMMONPL4CE mobile preview" : "Live public COMMONPL4CE desktop preview";
+      return `<iframe id="${id}" title="${title}" src="https://doneovernight.com/cp" loading="lazy"></iframe>`;
+    }
+
+    function mountPreviewFrames() {
+      const desktopMount = $("desktopPublicPreviewMount");
+      const mobileMount = $("mobilePublicPreviewMount");
+      if (desktopMount && !desktopMount.querySelector("iframe")) desktopMount.innerHTML = previewFrameHTML("desktop");
+      if (mobileMount && !mobileMount.querySelector("iframe")) mobileMount.innerHTML = previewFrameHTML("mobile");
+    }
+
+    function unmountPreviewFrames() {
+      ["desktopPublicPreviewMount", "mobilePublicPreviewMount"].forEach((id) => {
+        const mount = $(id);
+        if (mount) mount.replaceChildren();
+      });
+    }
+
+    function unmountWebsiteTab(tab) {
+      if (tab === "hero") {
+        ["desktopHeroSlots", "mobileHeroSlots", "heroSlotEditor"].forEach((id) => {
+          const target = $(id);
+          if (target) target.replaceChildren();
+        });
+      }
+      if (tab === "media") {
+        ["mediaFilters", "mediaLibraryGrid", "mediaAssetDetail"].forEach((id) => {
+          const target = $(id);
+          if (target) target.replaceChildren();
+        });
+      }
+      if (tab === "preview") {
+        unmountPreviewFrames();
+        const preview = $("builderPreviewLarge");
+        if (preview) preview.replaceChildren();
+      }
+      if (tab === "builder") {
+        const preview = $("builderPreview");
+        if (preview) preview.replaceChildren();
+      }
+    }
+
+    function renderActiveWebsiteTab() {
+      const section = selectedBuilderSection();
+      if (isWebsiteTabActive("builder")) {
+        renderSectionBuilder();
+      } else if (isWebsiteTabActive("hero")) {
+        renderHeroManager();
+      } else if (isWebsiteTabActive("media")) {
+        renderMediaLibrary();
+      } else if (isWebsiteTabActive("preview")) {
+        mountPreviewFrames();
+        renderBuilderPreview(section);
+      } else if (isWebsiteTabActive("publish")) {
+        renderPublishSummary();
+      }
     }
 
     function renderMetrics() {
@@ -3494,7 +3558,8 @@
             : `<input value="${escapeHTML(value)}" data-content-field="${escapeHTML(key)}">`}
         </label>
       `).join("");
-      renderSectionBuilder();
+      renderActiveWebsiteTab();
+      renderPublishSummary();
     }
 
     function updateWebsiteContentField(field, value) {
@@ -3520,8 +3585,6 @@
       const section = selectedBuilderSection();
       renderBuilderSectionList(section);
       renderBuilderEditor(section);
-      renderHeroManager();
-      renderMediaLibrary();
       renderBuilderPreview(section);
       renderPublishSummary();
     }
@@ -3568,6 +3631,7 @@
     }
 
     function renderHeroManager() {
+      if (!isWebsiteTabActive("hero")) return;
       const manager = $("heroManager");
       if (!manager) return;
       renderHeroSlotList("desktop");
@@ -3610,9 +3674,16 @@
       const target = $(kind === "mobile" ? "mobileHeroSlots" : "desktopHeroSlots");
       if (!target) return;
       const slots = heroSlots(kind);
+      const signature = JSON.stringify({
+        slots: slots.map((slot) => [slot.id, slot.mediaId, slot.image, slot.previewImage, slot.alt, slot.status]),
+        selected: state.builder.selectedHeroSlot,
+        target: state.builder.mediaTarget
+      });
+      if (target.dataset.renderSignature === signature && target.childElementCount) return;
+      target.dataset.renderSignature = signature;
       target.innerHTML = slots.map((slot, index) => `
         <button class="hero-slot-card${state.builder.mediaTarget?.kind === kind && state.builder.mediaTarget?.index === index ? " is-media-target" : ""}" type="button" draggable="true" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-select="${kind}:${index}" aria-selected="${state.builder.selectedHeroSlot?.kind === kind && state.builder.selectedHeroSlot?.index === index ? "true" : "false"}">
-          <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
+          <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}" loading="lazy" decoding="async">` : "<span>No image</span>"}</div>
           <strong>Slot ${String(index + 1).padStart(2, "0")}</strong>
           <span>${escapeHTML(slot.status || "Draft")}</span>
         </button>
@@ -3654,6 +3725,9 @@
       const target = $("heroSlotEditor");
       if (!target) return;
       const { kind, index, slot, slots } = selectedHeroSlot();
+      const signature = JSON.stringify({ kind, index, slot });
+      if (target.dataset.renderSignature === signature && target.childElementCount) return;
+      target.dataset.renderSignature = signature;
       if (!slot) {
         target.innerHTML = `<div class="empty-state"><strong>No hero slot selected.</strong>Select a desktop or mobile slot to edit it.</div>`;
         return;
@@ -3666,7 +3740,7 @@
           </div>
           <span class="builder-state">${escapeHTML(slot.status || "Draft")}</span>
         </div>
-        <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
+        <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}" loading="lazy" decoding="async">` : "<span>No image</span>"}</div>
         <div class="hero-field-grid">
           <label class="field wide"><span>Image path</span><input value="${escapeHTML(slot.image)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="image"></label>
           <label class="field"><span>Alt text</span><input value="${escapeHTML(slot.alt)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="alt"></label>
@@ -3686,8 +3760,17 @@
     }
 
     function renderMediaLibrary() {
+      if (!isWebsiteTabActive("media")) return;
       const target = $("mediaLibraryGrid");
       if (!target) return;
+      const mediaSignature = JSON.stringify({
+        assets: state.builder.mediaLibrary.map((asset) => [asset.id, asset.filename, asset.path, asset.previewImage, asset.category, asset.status, asset.usedIn, asset.alt, asset.isLocal]),
+        selected: state.builder.selectedMediaId,
+        filter: state.builder.mediaFilter,
+        search: state.builder.mediaSearch,
+        mediaTarget: state.builder.mediaTarget,
+        feedback: state.mediaFeedback
+      });
       const uploadNote = $("mediaUploadNote");
       if (uploadNote) uploadNote.textContent = state.mediaFeedback || "Upload storage required before this file can go live.";
       const filters = $("mediaFilters");
@@ -3704,21 +3787,24 @@
         const haystack = lower(`${asset.filename} ${asset.category} ${asset.format} ${asset.dimensions} ${asset.usedIn} ${asset.alt} ${asset.status}`);
         return matchesFilter && (!query || haystack.includes(query));
       });
-      target.innerHTML = assets.length ? `
-        <div class="media-category-grid">
-          ${assets.map((asset) => `
-            <button class="media-asset${isLocalOnlyMedia(asset) ? " is-local-only" : ""}" type="button" data-media-select="${escapeHTML(asset.id)}" aria-selected="${state.builder.selectedMediaId === asset.id ? "true" : "false"}">
-              <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}">` : "<span>No preview</span>"}</div>
-              <strong>${escapeHTML(asset.filename)}</strong>
-              <div class="media-meta">
-                <span>${escapeHTML(asset.category)}</span>
-                <span>${escapeHTML(mediaTypeLabel(asset))}</span>
-              </div>
-              <span>Used in: ${escapeHTML(asset.usedIn || "Not assigned")}</span>
-            </button>
-          `).join("")}
-        </div>
-      ` : `<div class="empty-state"><strong>No matching assets.</strong>Add media creates a draft-only local asset until upload storage is connected.</div>`;
+      if (target.dataset.renderSignature !== mediaSignature || !target.childElementCount) {
+        target.dataset.renderSignature = mediaSignature;
+        target.innerHTML = assets.length ? `
+          <div class="media-category-grid">
+            ${assets.map((asset) => `
+              <button class="media-asset${isLocalOnlyMedia(asset) ? " is-local-only" : ""}" type="button" data-media-select="${escapeHTML(asset.id)}" aria-selected="${state.builder.selectedMediaId === asset.id ? "true" : "false"}">
+                <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}" loading="lazy" decoding="async">` : "<span>No preview</span>"}</div>
+                <strong>${escapeHTML(asset.filename)}</strong>
+                <div class="media-meta">
+                  <span>${escapeHTML(asset.category)}</span>
+                  <span>${escapeHTML(mediaTypeLabel(asset))}</span>
+                </div>
+                <span>Used in: ${escapeHTML(asset.usedIn || "Not assigned")}</span>
+              </button>
+            `).join("")}
+          </div>
+        ` : `<div class="empty-state"><strong>No matching assets.</strong>Add media creates a draft-only local asset until upload storage is connected.</div>`;
+      }
       const label = $("mediaTargetState");
       if (label) {
         label.textContent = mediaTargetLabel();
@@ -3742,6 +3828,9 @@
       state.builder.selectedMediaId = asset.id;
       const localOnly = isLocalOnlyMedia(asset);
       const categories = MEDIA_CATEGORIES.map((category) => `<option value="${escapeHTML(category)}"${asset.category === category ? " selected" : ""}>${escapeHTML(category)}</option>`).join("");
+      const signature = JSON.stringify({ asset, localOnly, mediaTarget: state.builder.mediaTarget });
+      if (target.dataset.renderSignature === signature && target.childElementCount) return;
+      target.dataset.renderSignature = signature;
       target.innerHTML = `
         <div class="builder-head">
           <div>
@@ -3750,7 +3839,7 @@
           </div>
           <span class="builder-state">${escapeHTML(mediaTypeLabel(asset))}</span>
         </div>
-        <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}">` : "<span>No preview</span>"}</div>
+        <div class="media-preview-thumb">${asset.format === "Video" ? "<span>Video</span>" : mediaPreviewImage(asset) ? `<img src="${escapeHTML(mediaPreviewImage(asset))}" alt="${escapeHTML(asset.alt || "")}" loading="lazy" decoding="async">` : "<span>No preview</span>"}</div>
         <div class="field-grid">
           <label class="field"><span>Filename</span><input value="${escapeHTML(asset.filename)}" data-media-field="filename"></label>
           <label class="field"><span>Category</span><select data-media-field="category">${categories}</select></label>
@@ -3776,7 +3865,18 @@
     }
 
     function renderBuilderPreview(section) {
-      const targets = ["builderPreview", "builderPreviewLarge"].map((id) => $(id)).filter(Boolean);
+      const targets = [
+        isWebsiteTabActive("builder") ? $("builderPreview") : null,
+        isWebsiteTabActive("preview") ? $("builderPreviewLarge") : null
+      ].filter(Boolean);
+      if (!isWebsiteTabActive("builder")) {
+        const builderPreview = $("builderPreview");
+        if (builderPreview) builderPreview.replaceChildren();
+      }
+      if (!isWebsiteTabActive("preview")) {
+        const largePreview = $("builderPreviewLarge");
+        if (largePreview) largePreview.replaceChildren();
+      }
       if (!targets.length) return;
       if (!section) {
         targets.forEach((target) => {
@@ -3800,7 +3900,12 @@
           <span class="builder-state">${escapeHTML(section.visibility)} / not live</span>
         </article>
       `;
-      targets.forEach((target) => { target.innerHTML = html; });
+      const signature = JSON.stringify([section.id, section.type, section.kicker, section.heading, section.body, section.ctaLabel, section.visibility, media]);
+      targets.forEach((target) => {
+        if (target.dataset.renderSignature === signature && target.childElementCount) return;
+        target.dataset.renderSignature = signature;
+        target.innerHTML = html;
+      });
     }
 
     function renderPublishSummary() {
@@ -3939,8 +4044,7 @@
         state.publishError = "";
         saveBuilderDraft();
         renderWebsiteFields();
-        renderSectionBuilder();
-        refreshPublicPreviewFrames();
+        if (isWebsiteTabActive("preview")) refreshPublicPreviewFrames();
       } catch (error) {
         state.publishPhase = "failed";
         state.publishStatus = "Publish failed. Draft is still saved locally.";
@@ -4464,18 +4568,34 @@
     }
 
     function switchWebsiteTab(tab) {
+      if (!["builder", "content", "hero", "media", "preview", "publish"].includes(tab)) return;
+      if (state.activeWebsiteTab !== tab) {
+        unmountWebsiteTab(state.activeWebsiteTab);
+        state.activeWebsiteTab = tab;
+      }
       document.querySelectorAll("[data-website-tab-target]").forEach((button) => {
         button.setAttribute("aria-selected", button.dataset.websiteTabTarget === tab ? "true" : "false");
       });
       document.querySelectorAll("[data-website-tab]").forEach((panel) => {
         panel.classList.toggle("is-active", panel.dataset.websiteTab === tab);
       });
+      renderActiveWebsiteTab();
     }
 
     function refreshPublicPreviewFrames() {
-      ["desktopPublicPreview", "mobilePublicPreview"].forEach((id) => {
-        const frame = $(id);
-        if (frame) frame.src = "https://doneovernight.com/cp";
+      if (!isWebsiteTabActive("preview")) return;
+      mountPreviewFrames();
+      [
+        ["desktopPublicPreview", "desktopPublicPreviewMount", "desktop"],
+        ["mobilePublicPreview", "mobilePublicPreviewMount", "mobile"]
+      ].forEach(([frameId, mountId, kind]) => {
+        const frame = $(frameId);
+        if (frame) {
+          frame.src = "https://doneovernight.com/cp";
+        } else {
+          const mount = $(mountId);
+          if (mount) mount.innerHTML = previewFrameHTML(kind);
+        }
       });
     }
 
@@ -4582,10 +4702,16 @@
       }
 
       const websiteTab = event.target.closest("[data-website-tab-target]");
-      if (websiteTab) switchWebsiteTab(websiteTab.dataset.websiteTabTarget);
+      if (websiteTab) {
+        switchWebsiteTab(websiteTab.dataset.websiteTabTarget);
+        return;
+      }
 
       const refreshPreview = event.target.closest("#refreshPreviewFrames");
-      if (refreshPreview) refreshPublicPreviewFrames();
+      if (refreshPreview) {
+        refreshPublicPreviewFrames();
+        return;
+      }
 
       const heroSelect = event.target.closest("[data-hero-select]");
       if (heroSelect) {
@@ -4740,6 +4866,7 @@
     });
 
     document.addEventListener("dragstart", (event) => {
+      if (!isWebsiteTabActive("hero")) return;
       const card = event.target.closest("[data-hero-kind][data-hero-index]");
       if (!card) return;
       card.classList.add("is-dragging");
@@ -4748,10 +4875,12 @@
     });
 
     document.addEventListener("dragend", (event) => {
+      if (!isWebsiteTabActive("hero")) return;
       event.target.closest(".hero-slot-card")?.classList.remove("is-dragging");
     });
 
     document.addEventListener("dragover", (event) => {
+      if (!isWebsiteTabActive("hero")) return;
       const card = event.target.closest("[data-hero-kind][data-hero-index]");
       if (!card) return;
       event.preventDefault();
@@ -4759,6 +4888,7 @@
     });
 
     document.addEventListener("drop", (event) => {
+      if (!isWebsiteTabActive("hero")) return;
       const card = event.target.closest("[data-hero-kind][data-hero-index]");
       if (!card) return;
       event.preventDefault();
