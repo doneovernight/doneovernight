@@ -624,6 +624,39 @@
       border-radius: 8px;
       padding: 16px;
       background: rgba(0,0,0,.18);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+
+    .metric:hover,
+    .booking-row.is-overview-link:hover,
+    .activity-row.is-overview-link:hover {
+      border-color: rgba(237,230,216,.26);
+      background: rgba(237,230,216,.055);
+      transform: translateY(-1px);
+    }
+
+    .metric::after,
+    .booking-row.is-overview-link::after,
+    .activity-row.is-overview-link::after {
+      content: "→";
+      position: absolute;
+      right: 14px;
+      top: 12px;
+      color: rgba(241,234,220,.34);
+      font: 850 11px var(--mono);
+      opacity: 0;
+      transform: translateX(-3px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .metric:hover::after,
+    .booking-row.is-overview-link:hover::after,
+    .activity-row.is-overview-link:hover::after {
+      opacity: 1;
+      transform: translateX(0);
     }
 
     .metric span {
@@ -666,6 +699,18 @@
       background: rgba(0,0,0,.18);
       border: 1px solid rgba(237,230,216,.12);
       box-shadow: none;
+    }
+
+    .metric,
+    .booking-row.is-overview-link,
+    .activity-row.is-overview-link {
+      position: relative;
+    }
+
+    .booking-row.is-overview-link,
+    .activity-row.is-overview-link {
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
     }
 
     .booking-row {
@@ -936,6 +981,36 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+    }
+
+    .hero-local-file {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .hero-local-file input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .hero-feedback {
+      min-height: 36px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(237,230,216,.04);
+      color: rgba(241,234,220,.62);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .hero-feedback.is-warning {
+      border-color: rgba(191,161,113,.36);
+      color: rgba(241,234,220,.8);
+      background: rgba(191,161,113,.08);
     }
 
     .section-builder {
@@ -1775,6 +1850,21 @@
     .setting-row strong { font-size: 13px; }
     .setting-row span { color: var(--muted); font-size: 13px; line-height: 1.45; }
 
+    .security-section {
+      margin-top: 18px;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding-top: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .security-form {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
     .activity-row {
       display: grid;
       gap: 5px;
@@ -1836,7 +1926,7 @@
       .os-brand-meta { padding-left: 0; border-left: 0; }
       .os-header-actions { width: 100%; justify-content: space-between; }
       .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid { grid-template-columns: 1fr; }
+      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form { grid-template-columns: 1fr; }
       .hero-slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .view-head { align-items: start; flex-direction: column; }
       .builder-head { flex-direction: column; }
@@ -1919,10 +2009,10 @@
             </div>
           </div>
           <div class="metric-grid">
-            <div class="metric"><span>New booking requests</span><strong id="metricNew">0</strong></div>
-            <div class="metric"><span>Pending replies</span><strong id="metricPending">0</strong></div>
-            <div class="metric"><span>Published portfolio status</span><strong id="metricPortfolio">Live</strong></div>
-            <div class="metric"><span>Known clients</span><strong id="metricClients">0</strong></div>
+            <button class="metric" type="button" data-overview-target="bookings"><span>New booking requests</span><strong id="metricNew">0</strong></button>
+            <button class="metric" type="button" data-overview-target="messages"><span>Pending replies</span><strong id="metricPending">0</strong></button>
+            <button class="metric" type="button" data-overview-target="portfolio"><span>Published portfolio status</span><strong id="metricPortfolio">Live</strong></button>
+            <button class="metric" type="button" data-overview-target="clients"><span>Known clients</span><strong id="metricClients">0</strong></button>
           </div>
           <div class="split">
             <section class="os-panel">
@@ -2134,7 +2224,7 @@
                     <h2>Hero Builder</h2>
                     <p>Draft control for the current public archive playback order. Desktop and mobile are separate.</p>
                   </div>
-                  <span class="builder-state">Publishing connects in Phase 3.</span>
+                  <span class="builder-state" id="heroDraftState">Local draft</span>
                 </div>
                 <div class="hero-workspace-grid">
                   <div class="hero-builder-v2">
@@ -2155,6 +2245,22 @@
                   </div>
                   <aside class="hero-slot-detail" id="heroSlotEditor" aria-label="Selected hero slot editor"></aside>
                 </div>
+                <section class="archive-preview-panel" aria-label="Hero draft previews">
+                  <div>
+                    <h3>Hero draft preview</h3>
+                    <p>Reflects the current local desktop and mobile order. Publishing connects in Phase 3.</p>
+                  </div>
+                  <div class="archive-preview-grid">
+                    <div>
+                      <div class="section-preview-kicker">Desktop order</div>
+                      <div class="archive-preview-stage" id="desktopHeroDraftPreview"></div>
+                    </div>
+                    <div>
+                      <div class="section-preview-kicker">Mobile order</div>
+                      <div class="archive-preview-stage is-mobile" id="mobileHeroDraftPreview"></div>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 
@@ -2298,6 +2404,22 @@
           </div>
           <section class="os-panel">
             <div class="settings-list" id="settingsList"></div>
+            <section class="security-section" aria-label="Security settings">
+              <div class="panel-head">
+                <div>
+                  <h2>Security</h2>
+                  <p>Workspace access controls for COMMONPL4CE Website OS.</p>
+                </div>
+              </div>
+              <div class="security-form">
+                <label class="field"><span>Current password</span><input type="password" autocomplete="current-password" disabled></label>
+                <label class="field"><span>New password</span><input type="password" autocomplete="new-password" disabled></label>
+                <label class="field"><span>Confirm password</span><input type="password" autocomplete="new-password" disabled></label>
+                <button class="button small" type="button" disabled>Change password</button>
+              </div>
+              <div class="settings-list" id="securitySettingsList"></div>
+              <p class="form-note" id="securityStatus">Password management connects with server-side auth in the next phase.</p>
+            </section>
           </section>
         </section>
       </section>
@@ -2320,6 +2442,7 @@
     const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
+    const HERO_LOCAL_FILE_LIMIT = 900 * 1024;
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
 
@@ -2356,7 +2479,8 @@
       clients: [],
       selectedBookingId: "",
       drafts: readDrafts(),
-      builder: readBuilderDraft()
+      builder: readBuilderDraft(),
+      heroFeedback: ""
     };
 
     const $ = (id) => document.getElementById(id);
@@ -2642,7 +2766,30 @@
 
     function saveBuilderDraft() {
       state.builder.updatedAt = new Date().toISOString();
-      localStorage.setItem(BUILDER_DRAFT_KEY, JSON.stringify(state.builder));
+      try {
+        const draftForStorage = JSON.parse(JSON.stringify(state.builder, (key, value) => key === "previewImage" ? undefined : value));
+        localStorage.setItem(BUILDER_DRAFT_KEY, JSON.stringify(draftForStorage));
+        setBuilderSaveState("Draft saved locally");
+        return true;
+      } catch (error) {
+        state.heroFeedback = "Large files require server upload in Phase 3.";
+        setBuilderSaveState("Unsaved changes");
+        return false;
+      }
+    }
+
+    function savedTimeLabel(value = state.builder.updatedAt) {
+      if (!value) return "Not saved yet";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "Last saved time unavailable";
+      return `Last saved ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    }
+
+    function setBuilderSaveState(message = "Draft saved locally") {
+      ["builderStorageState", "heroDraftState"].forEach((id) => {
+        const target = $(id);
+        if (target) target.textContent = `${message} / ${savedTimeLabel()}`;
+      });
     }
 
     function setSidebarCollapsed(collapsed, persist = true) {
@@ -2839,7 +2986,7 @@
         `<option value="${status}"${booking.status === status ? " selected" : ""}>${status}</option>`
       ).join("");
       return `
-        <article class="booking-row" data-booking-id="${escapeHTML(booking.id)}">
+        <article class="booking-row${compact ? " is-overview-link" : ""}" data-booking-id="${escapeHTML(booking.id)}"${compact ? ` data-overview-booking="${escapeHTML(booking.id)}"` : ""}>
           <div class="booking-primary">
             <div class="booking-title">
               <strong>${escapeHTML(booking.name)}</strong>
@@ -2891,18 +3038,22 @@
       state.bookings.slice(0, 6).forEach((booking) => {
         rows.push({
           label: formatDate(booking.createdAt) || "Recently",
-          text: `${booking.name} sent a ${booking.projectType || "project"} request for ${booking.brandCompany || "COMMONPL4CE"}.`
+          text: `${booking.name} sent a ${booking.projectType || "project"} request for ${booking.brandCompany || "COMMONPL4CE"}.`,
+          target: "bookings",
+          bookingId: booking.id
         });
       });
       Object.entries(state.drafts).slice(0, 3).forEach(([id, draft]) => {
         const booking = state.bookings.find((item) => item.id === id);
         rows.push({
           label: formatDate(draft.updatedAt) || "Draft",
-          text: `Draft saved${booking ? ` for ${booking.name}` : ""}.`
+          text: `Draft saved${booking ? ` for ${booking.name}` : ""}.`,
+          target: "messages",
+          bookingId: booking?.id || id
         });
       });
       $("activityList").innerHTML = rows.length
-        ? rows.map((row) => `<div class="activity-row"><span>${escapeHTML(row.label)}</span>${escapeHTML(row.text)}</div>`).join("")
+        ? rows.map((row) => `<div class="activity-row is-overview-link" data-activity-target="${escapeHTML(row.target)}" data-activity-booking="${escapeHTML(row.bookingId || "")}"><span>${escapeHTML(row.label)}</span>${escapeHTML(row.text)}</div>`).join("")
         : `<div class="empty-state"><strong>No activity yet.</strong>Real booking and draft activity will appear here.</div>`;
     }
 
@@ -3065,10 +3216,15 @@
       renderHeroSlotList("desktop");
       renderHeroSlotList("mobile");
       renderHeroSlotEditor();
+      setBuilderSaveState(state.builder.updatedAt ? "Draft saved locally" : "Unsaved changes");
     }
 
     function heroSlots(kind) {
       return kind === "mobile" ? state.builder.heroMobileSlots : state.builder.heroDesktopSlots;
+    }
+
+    function slotPreviewImage(slot) {
+      return slot?.previewImage || slot?.image || "";
     }
 
     function renderHeroSlotList(kind) {
@@ -3077,7 +3233,7 @@
       const slots = heroSlots(kind);
       target.innerHTML = slots.map((slot, index) => `
         <button class="hero-slot-card${state.builder.mediaTarget?.kind === kind && state.builder.mediaTarget?.index === index ? " is-media-target" : ""}" type="button" draggable="true" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-select="${kind}:${index}" aria-selected="${state.builder.selectedHeroSlot?.kind === kind && state.builder.selectedHeroSlot?.index === index ? "true" : "false"}">
-          <div class="hero-preview-thumb">${slot.image ? `<img src="${escapeHTML(slot.image)}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
+          <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
           <strong>Slot ${String(index + 1).padStart(2, "0")}</strong>
           <span>${escapeHTML(slot.status || "Draft")}</span>
         </button>
@@ -3109,11 +3265,12 @@
           </div>
           <span class="builder-state">${escapeHTML(slot.status || "Draft")}</span>
         </div>
-        <div class="hero-preview-thumb">${slot.image ? `<img src="${escapeHTML(slot.image)}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
+        <div class="hero-preview-thumb">${slotPreviewImage(slot) ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || "")}">` : "<span>No image</span>"}</div>
         <div class="hero-field-grid">
           <label class="field wide"><span>Image path</span><input value="${escapeHTML(slot.image)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="image"></label>
           <label class="field"><span>Alt text</span><input value="${escapeHTML(slot.alt)}" data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="alt"></label>
           <label class="field"><span>Status</span><select data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="status"><option${slot.status === "Draft" ? " selected" : ""}>Draft</option><option${slot.status === "Ready" ? " selected" : ""}>Ready</option><option${slot.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
+          <label class="field"><span>Local file preview</span><span class="button small hero-local-file">Choose local file<input type="file" accept="image/*" data-hero-file="${kind}:${index}"></span></label>
           <label class="field wide"><span>Internal note</span><textarea data-hero-kind="${kind}" data-hero-index="${index}" data-hero-field="note">${escapeHTML(slot.note)}</textarea></label>
         </div>
         <div class="image-actions">
@@ -3123,6 +3280,7 @@
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move left</button>
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="1"${index === slots.length - 1 ? " disabled" : ""}>Move right</button>
         </div>
+        <div class="hero-feedback${state.heroFeedback ? " is-warning" : ""}" id="heroSlotFeedback">${escapeHTML(state.heroFeedback || `${slot.localFileName ? `Local preview: ${slot.localFileName}. ` : ""}Drafts save only on this device until server persistence is connected.`)}</div>
       `;
     }
 
@@ -3204,13 +3362,15 @@
     function renderHeroArchivePreview() {
       renderArchivePreview("desktop", $("desktopHeroPreview"));
       renderArchivePreview("mobile", $("mobileHeroPreview"));
+      renderArchivePreview("desktop", $("desktopHeroDraftPreview"));
+      renderArchivePreview("mobile", $("mobileHeroDraftPreview"));
     }
 
     function renderArchivePreview(kind, target) {
       if (!target) return;
       target.innerHTML = heroSlots(kind).map((slot, index) => `
         <div class="archive-preview-frame">
-          ${slot.image && slot.status !== "Hidden" ? `<img src="${escapeHTML(slot.image)}" alt="${escapeHTML(slot.alt || `Hero ${index + 1}`)}">` : `<span>${String(index + 1).padStart(2, "0")}</span>`}
+          ${slotPreviewImage(slot) && slot.status !== "Hidden" ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || `Hero ${index + 1}`)}">` : `<span>${String(index + 1).padStart(2, "0")}</span>`}
         </div>
       `).join("");
     }
@@ -3337,6 +3497,14 @@
       const slot = heroSlots(kind)[index];
       if (!slot) return;
       slot[field] = value;
+      if (field === "image") {
+        slot.mediaId = "";
+        slot.localFileName = "";
+        slot.localFileSize = 0;
+        delete slot.previewImage;
+      }
+      state.heroFeedback = "";
+      syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
       renderHeroArchivePreview();
@@ -3352,8 +3520,14 @@
       slot.alt = "";
       slot.note = "";
       slot.status = "Draft";
+      slot.localFileName = "";
+      slot.localFileSize = 0;
+      delete slot.previewImage;
+      state.heroFeedback = "Hero slot cleared. Draft saved locally.";
+      syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
+      renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
     }
@@ -3365,6 +3539,8 @@
       const [slot] = slots.splice(index, 1);
       slots.splice(nextIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: nextIndex };
+      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} slot moved. Draft saved locally.`;
+      syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
       renderBuilderPreview(selectedBuilderSection());
@@ -3378,6 +3554,8 @@
       const [slot] = slots.splice(fromIndex, 1);
       slots.splice(toIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: toIndex };
+      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} order updated. Draft saved locally.`;
+      syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
       renderBuilderPreview(selectedBuilderSection());
@@ -3386,32 +3564,130 @@
     }
 
     function chooseHeroSlot(kind, index) {
+      const slot = heroSlots(kind)[index];
+      if (!slot) {
+        state.heroFeedback = "Choose a valid hero slot before assigning media.";
+        renderHeroManager();
+        return;
+      }
       state.builder.mediaTarget = { kind, index };
       state.builder.selectedHeroSlot = { kind, index };
+      state.builder.mediaFilter = "Hero";
+      state.builder.mediaSearch = "";
+      const preferredFormat = kind === "mobile" ? "mobile" : "desktop";
+      const preferredAsset = state.builder.mediaLibrary.find((asset) => asset.category === "Hero" && lower(asset.format).includes(preferredFormat))
+        || state.builder.mediaLibrary.find((asset) => asset.category === "Hero")
+        || state.builder.mediaLibrary[0];
+      if (preferredAsset) state.builder.selectedMediaId = preferredAsset.id;
+      state.heroFeedback = `Choose a ${kind === "mobile" ? "mobile" : "desktop"} asset from the Media Library.`;
       saveBuilderDraft();
+      switchWebsiteTab("media");
       renderHeroManager();
       renderMediaLibrary();
     }
 
     function assignMediaToTarget(assetId) {
       const target = state.builder.mediaTarget;
-      if (!target) return;
+      if (!target) {
+        state.heroFeedback = "Choose a hero slot before assigning media.";
+        renderHeroManager();
+        renderMediaLibrary();
+        return;
+      }
       const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
       const slot = asset ? heroSlots(target.kind)[target.index] : null;
-      if (!asset || !slot) return;
+      if (!asset || !slot) {
+        state.heroFeedback = "Media assignment is not available for this selection.";
+        renderHeroManager();
+        renderMediaLibrary();
+        return;
+      }
       slot.mediaId = asset.id;
       slot.image = asset.path;
+      slot.alt = slot.alt || asset.filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+      slot.localFileName = "";
+      slot.localFileSize = 0;
+      delete slot.previewImage;
       slot.status = "Draft";
       asset.usedIn = `${target.kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(target.index + 1).padStart(2, "0")}`;
       state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
       state.builder.selectedMediaId = asset.id;
       state.builder.mediaTarget = null;
+      state.heroFeedback = `${asset.filename} assigned to ${target.kind === "mobile" ? "mobile" : "desktop"} slot ${String(target.index + 1).padStart(2, "0")}.`;
+      syncHeroAssetUsage();
       saveBuilderDraft();
+      switchWebsiteTab("hero");
       renderHeroManager();
       renderMediaLibrary();
       renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
+    }
+
+    function syncHeroAssetUsage() {
+      const usage = new Map();
+      ["desktop", "mobile"].forEach((kind) => {
+        heroSlots(kind).forEach((slot, index) => {
+          if (!slot.mediaId) return;
+          const label = `${kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(index + 1).padStart(2, "0")}`;
+          usage.set(slot.mediaId, usage.has(slot.mediaId) ? `${usage.get(slot.mediaId)}, ${label}` : label);
+        });
+      });
+      state.builder.mediaLibrary.forEach((asset) => {
+        const nextUsage = usage.get(asset.id);
+        if (nextUsage) {
+          asset.usedIn = nextUsage;
+        } else if (asset.category === "Hero" || /Hero \d/i.test(asset.usedIn || "")) {
+          asset.usedIn = "Not assigned";
+        }
+      });
+    }
+
+    function handleHeroLocalFile(kind, index, file) {
+      const slot = heroSlots(kind)[index];
+      if (!slot || !file) return;
+      if (!file.type.startsWith("image/")) {
+        state.heroFeedback = "Choose an image file for this hero slot.";
+        renderHeroManager();
+        return;
+      }
+      if (file.size > HERO_LOCAL_FILE_LIMIT) {
+        slot.previewImage = URL.createObjectURL(file);
+        slot.localFileName = file.name;
+        slot.localFileSize = file.size;
+        state.builder.selectedHeroSlot = { kind, index };
+        state.heroFeedback = "Large files require server upload in Phase 3.";
+        setBuilderSaveState("Unsaved changes");
+        renderHeroManager();
+        renderHeroArchivePreview();
+        renderBuilderPreview(selectedBuilderSection());
+        return;
+      }
+      state.heroFeedback = "Unsaved changes";
+      setBuilderSaveState("Unsaved changes");
+      const reader = new FileReader();
+      reader.onload = () => {
+        slot.mediaId = `local_${Date.now()}`;
+        slot.image = String(reader.result || "");
+        slot.alt = slot.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
+        slot.localFileName = file.name;
+        slot.localFileSize = file.size;
+        delete slot.previewImage;
+        slot.status = "Draft";
+        state.builder.selectedHeroSlot = { kind, index };
+        state.heroFeedback = `${file.name} added as a local draft preview.`;
+        syncHeroAssetUsage();
+        saveBuilderDraft();
+        renderHeroManager();
+        renderHeroArchivePreview();
+        renderBuilderPreview(selectedBuilderSection());
+        renderPublishSummary();
+      };
+      reader.onerror = () => {
+        state.heroFeedback = "Local file preview could not be loaded.";
+        renderHeroManager();
+      };
+      reader.readAsDataURL(file);
     }
 
     function resetBuilderDraft() {
@@ -3452,6 +3728,26 @@
         ["Workspace access", "Uses existing DONEOVERNIGHT admin key auth.", "Active"]
       ];
       $("settingsList").innerHTML = settings.map(([title, value, stateLabel]) => `
+        <div class="setting-row">
+          <strong>${escapeHTML(title)}</strong>
+          <span>${escapeHTML(value)}</span>
+          <span class="status-pill">${escapeHTML(stateLabel)}</span>
+        </div>
+      `).join("");
+      renderSecuritySettings();
+    }
+
+    function renderSecuritySettings() {
+      const target = $("securitySettingsList");
+      if (!target) return;
+      const rows = [
+        ["Change password", "Password management connects with server-side auth in the next phase.", "Disabled"],
+        ["Last password change", "Not connected yet.", "Server-side auth"],
+        ["Active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "DONEOVERNIGHT admin auth" : "No active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "Active" : "Signed out"],
+        ["Sign out all devices", "Requires server-side sessions.", "Disabled"],
+        ["Two-factor authentication", "Coming in Phase 3.", "Phase 3"]
+      ];
+      target.innerHTML = rows.map(([title, value, stateLabel]) => `
         <div class="setting-row">
           <strong>${escapeHTML(title)}</strong>
           <span>${escapeHTML(value)}</span>
@@ -3572,6 +3868,24 @@
       const jump = event.target.closest("[data-view-jump]");
       if (jump) switchView(jump.dataset.viewJump);
 
+      const overviewTarget = event.target.closest("[data-overview-target]");
+      if (overviewTarget) switchView(overviewTarget.dataset.overviewTarget);
+
+      const overviewBooking = event.target.closest("[data-overview-booking]");
+      if (overviewBooking && !event.target.closest("button, select, input, textarea, a")) {
+        switchView("bookings");
+      }
+
+      const activityTarget = event.target.closest("[data-activity-target]");
+      if (activityTarget) {
+        if (activityTarget.dataset.activityTarget === "messages" && activityTarget.dataset.activityBooking) {
+          state.selectedBookingId = activityTarget.dataset.activityBooking;
+          renderPicker();
+          renderDraftEditor();
+        }
+        switchView(activityTarget.dataset.activityTarget);
+      }
+
       const draftButton = event.target.closest("[data-draft-for]");
       if (draftButton) {
         state.selectedBookingId = draftButton.dataset.draftFor;
@@ -3631,8 +3945,12 @@
       const mediaSelect = event.target.closest("[data-media-select]");
       if (mediaSelect) {
         state.builder.selectedMediaId = mediaSelect.dataset.mediaSelect;
-        saveBuilderDraft();
-        renderMediaLibrary();
+        if (state.builder.mediaTarget) {
+          assignMediaToTarget(mediaSelect.dataset.mediaSelect);
+        } else {
+          saveBuilderDraft();
+          renderMediaLibrary();
+        }
       }
 
       const mediaFilter = event.target.closest("[data-media-filter]");
@@ -3650,7 +3968,7 @@
     $("builderMoveDown").addEventListener("click", () => moveBuilderSection(1));
     $("saveBuilderDraft").addEventListener("click", () => {
       saveBuilderDraft();
-      $("builderStorageState").textContent = "Saved locally";
+      setBuilderSaveState("Draft saved locally");
     });
     $("resetBuilderDraft").addEventListener("click", resetBuilderDraft);
 
@@ -3663,6 +3981,14 @@
       const builderField = event.target.closest("[data-builder-field]");
       if (builderField) {
         updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
+        return;
+      }
+
+      const heroFile = event.target.closest("[data-hero-file]");
+      if (heroFile) {
+        const [kind, index] = heroFile.dataset.heroFile.split(":");
+        handleHeroLocalFile(kind, Number(index), heroFile.files?.[0]);
+        heroFile.value = "";
         return;
       }
 
