@@ -32,6 +32,11 @@
       welcomeBack: "Welcome back.",
       continueJourney: "Continue your journey.",
       examples: "Choose your industry.",
+      improveTitle: "What are you looking to improve?",
+      improveCopy: "Choose anything that fits.",
+      otherIndustry: "Other...",
+      otherIndustryQuestion: "What industry are you in?",
+      otherIndustryPlaceholder: "Type your industry",
       operatorQuestion: "What makes an operator?",
       operatorCopy: "No wrong answers. The pattern matters more than the score.",
       reflectionOne: "Where are you today?",
@@ -192,6 +197,11 @@
       welcomeBack: "Welkom terug.",
       continueJourney: "Ga verder.",
       examples: "Kies je industrie.",
+      improveTitle: "Wat wil je verbeteren?",
+      improveCopy: "Kies alles wat past.",
+      otherIndustry: "Anders...",
+      otherIndustryQuestion: "In welke industrie zit je?",
+      otherIndustryPlaceholder: "Typ je industrie",
       operatorQuestion: "Wat maakt iemand een operator?",
       operatorCopy: "Geen foute antwoorden. Het patroon telt meer dan de score.",
       reflectionOne: "Waar sta je vandaag?",
@@ -437,6 +447,10 @@
       en: ["Lead generation", "Emails", "Sales", "Administration", "Content", "CRM", "Scheduling", "Customer support", "Other"],
       nl: ["Leadgeneratie", "E-mails", "Sales", "Administratie", "Content", "CRM", "Planning", "Klantenservice", "Anders"]
     },
+    goals: {
+      en: ["AI", "Automation", "Website", "Branding", "CRM", "Lead generation", "Internal tools", "Client portal", "Operator portal", "Dashboard", "Reporting", "Scheduling", "Bookings", "Inventory", "Document management", "Knowledge base", "Workflows", "Integrations", "Custom software", "Mobile app", "API", "Payments", "Operations", "Marketing", "Sales", "Customer support"],
+      nl: ["AI", "Automatisering", "Website", "Branding", "CRM", "Leadgeneratie", "Interne tools", "Client portal", "Operator portal", "Dashboard", "Reporting", "Planning", "Boekingen", "Voorraad", "Documentbeheer", "Knowledge base", "Workflows", "Integraties", "Custom software", "Mobiele app", "API", "Betalingen", "Operations", "Marketing", "Sales", "Klantenservice"]
+    },
     paths: {
       en: ["Business Owner", "Operator", "Builder", "Just Curious"],
       nl: ["Business owner", "Operator", "Builder", "Gewoon nieuwsgierig"]
@@ -553,32 +567,34 @@
     story: 4,
     workflow: 5,
     example: 6,
-    operatorTrait: 7,
-    reflection: 8,
-    automate: 9,
-    gate: 10,
-    path: 11,
-    recommendations: 12,
-    viewerBuilds: 13
+    goals: 7,
+    operatorTrait: 8,
+    reflection: 9,
+    automate: 10,
+    gate: 11,
+    path: 12,
+    recommendations: 13,
+    viewerBuilds: 14
   };
 
-  const progressionVersion = 4;
+  const progressionVersion = 5;
   const stepCompletionKeys = {
     1: "discover",
     2: "interests",
     3: "story",
     4: "workflow",
     5: "example",
-    6: "operatorTrait",
-    7: "reflection",
-    8: "automate",
-    9: "gate",
-    10: "path",
-    11: "recommendations",
-    12: "viewerBuilds"
+    6: "goals",
+    7: "operatorTrait",
+    8: "reflection",
+    9: "automate",
+    10: "gate",
+    11: "path",
+    12: "recommendations",
+    13: "viewerBuilds"
   };
 
-  const progressTotal = 12;
+  const progressTotal = 13;
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
   let interactionLocked = false;
@@ -610,6 +626,7 @@
     mountStory();
     mountWorkflow();
     mountExamples();
+    mountChoices("goals-grid", data.goals[lang], "goals", true);
     mountQuiz();
     mountChoices("reflection-grid", data.reflections[lang], "reflection", false);
     mountChoices("automate-grid", data.automate[lang], "automate", true);
@@ -686,6 +703,7 @@
           state[stableKey] = Array.from(next);
           state[key] = Array.from(next).map((item) => items[Number(item.split(":")[1])]).filter(Boolean);
           button.classList.toggle("is-selected");
+          updateChoiceContinue(key);
         } else {
           state[stableKey] = [choiceKey];
           state[key] = value;
@@ -696,6 +714,7 @@
         save(storageKey, state);
       });
     });
+    updateChoiceContinue(key);
   }
 
   function mountStory() {
@@ -721,14 +740,15 @@
     const continueButton = document.querySelector("[data-industry-continue]");
     if (!tabs || !board) return;
     const industries = industryCatalog();
-    const selected = state.example && industries.some((item) => item.key === state.example)
+    const other = otherIndustryOption();
+    const selected = state.example && (industries.some((item) => item.key === state.example) || state.example === other.key)
       ? state.example
       : "";
     const preview = selected || industries[0]?.key;
     tabs.innerHTML = `
       <label class="industry-search">
         <span>${lang === "nl" ? "Zoek industrie" : "Search industry"}</span>
-        <input id="industry-search" type="search" autocomplete="off" placeholder="${lang === "nl" ? "Zoek alle 56 industrieen" : "Search all 56 industries"}" aria-label="${lang === "nl" ? "Zoek industrie" : "Search industry"}">
+        <input id="industry-search" type="search" autocomplete="off" placeholder="${lang === "nl" ? `Zoek alle ${industries.length} industrieen` : `Search all ${industries.length} industries`}" aria-label="${lang === "nl" ? "Zoek industrie" : "Search industry"}">
       </label>
       <div class="industry-grid" data-industry-grid></div>
     `;
@@ -742,31 +762,30 @@
     }
     if (continueButton) {
       continueButton.onclick = () => {
-        if (!canInteract(continueButton) || !state.example) return;
+        if (!canInteract(continueButton) || !industrySelectionReady()) return;
         completeInteractionAfterFeedback("example", progression.example, continueButton);
       };
     }
 
     function renderIndustryGrid(query = "") {
-      const term = String(query || "").trim().toLowerCase();
-      const filtered = industries.filter((industry) => {
-        const haystack = [
-          industryLabel(industry),
-          industrySummary(industry),
-          ...(industry.signals || [])
-        ].join(" ").toLowerCase();
-        return !term || haystack.includes(term);
-      });
+      const filtered = searchIndustries(industries, query).concat(other);
       grid.innerHTML = filtered.map((industry) => `
-        <button class="tab-pill industry-pill ${industry.key === state.example ? "is-active" : ""}" type="button" data-example="${escapeAttr(industry.key)}" aria-pressed="${industry.key === state.example ? "true" : "false"}">
+        <button class="tab-pill industry-pill ${industry.key === state.example ? "is-active" : ""} ${industry.key === other.key ? "is-other" : ""}" type="button" data-example="${escapeAttr(industry.key)}" aria-pressed="${industry.key === state.example ? "true" : "false"}">
           <span>${escapeHtml(industryLabel(industry))}</span>
           <small>${escapeHtml((industry.signals || []).slice(0, 2).join(" / "))}</small>
         </button>
-      `).join("") || `<p class="industry-empty">${lang === "nl" ? "Geen industrie gevonden." : "No industry found."}</p>`;
+      `).join("");
       grid.querySelectorAll("button").forEach((button) => {
         button.addEventListener("click", () => {
           if (!canInteract(button)) return;
           state.example = button.dataset.example;
+          if (state.example !== other.key) {
+            const selectedIndustry = industryByKey(state.example);
+            state.industry = industryProfile(selectedIndustry);
+            state.customIndustry = "";
+          } else {
+            state.industry = industryProfile(other, state.customIndustry);
+          }
           save(storageKey, state);
           grid.querySelectorAll("button").forEach((item) => {
             item.classList.remove("is-active");
@@ -782,24 +801,47 @@
 
     function updateIndustryContinue() {
       if (!continueButton) return;
-      const ready = Boolean(state.example && industries.some((item) => item.key === state.example));
+      const ready = industrySelectionReady();
       continueButton.disabled = !ready;
       continueButton.setAttribute("aria-disabled", ready ? "false" : "true");
       continueButton.classList.toggle("is-ready", ready);
     }
 
     function renderExample(key, isPreview = false) {
-      const industry = industries.find((item) => item.key === key) || industries[0];
+      const industry = key === other.key ? other : industries.find((item) => item.key === key) || industries[0];
       if (!industry) return;
       const signals = (industry.signals || []).slice(0, 4);
-      board.innerHTML = `
+      if (industry.key === other.key) {
+        board.classList.add("is-other");
+        board.innerHTML = `
+          <span class="placeholder-badge">${industries.length} ${lang === "nl" ? "industrieen" : "industries"} + ${escapeHtml(industryLabel(other))}</span>
+          <h3>${escapeHtml(industryLabel(other))}</h3>
+          <label class="other-industry-field" for="other-industry-input">
+            <span>${escapeHtml(copy[lang].otherIndustryQuestion)}</span>
+            <input id="other-industry-input" class="text-field" type="text" autocomplete="organization-title" value="${escapeAttr(state.customIndustry || "")}" placeholder="${escapeAttr(copy[lang].otherIndustryPlaceholder)}">
+          </label>
+        `;
+        const customInput = board.querySelector("#other-industry-input");
+        if (customInput) {
+          customInput.oninput = () => {
+            state.customIndustry = customInput.value.trim();
+            state.industry = industryProfile(other, state.customIndustry);
+            save(storageKey, state);
+            updateIndustryContinue();
+          };
+          customInput.focus({ preventScroll: true });
+        }
+      } else {
+        board.classList.remove("is-other");
+        board.innerHTML = `
         <span class="placeholder-badge">${isPreview ? (lang === "nl" ? "Kies een industrie" : "Select an industry") : `${industries.length} ${lang === "nl" ? "industrieen" : "industries"}`}</span>
         <h3>${escapeHtml(industryLabel(industry))}</h3>
         <p>${escapeHtml(industrySummary(industry))}</p>
         <div class="industry-signal-row">
           ${signals.map((signal) => `<span>${escapeHtml(signal)}</span>`).join("")}
         </div>
-      `;
+        `;
+      }
       board.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 360, easing: "ease-out" });
     }
   }
@@ -813,8 +855,29 @@
       signals: []
     }));
     return (configured.length ? configured : fallback)
-      .map((item) => ({ ...item, key: String(item.key || "").trim() }))
+      .map((item) => {
+        const key = String(item.key || "").trim();
+        return { ...item, key, category: item.category || inferredIndustryCategory(key) };
+      })
       .filter((item) => item.key);
+  }
+
+  function inferredIndustryCategory(key = "") {
+    const groups = {
+      Hospitality: ["restaurant", "cafe_bar", "hotel", "travel", "wellness_spa"],
+      Retail: ["ecommerce", "retail", "fashion", "beauty", "wholesale"],
+      Health: ["fitness", "healthcare", "dental", "mental_health", "pet_services"],
+      Education: ["education", "coaching"],
+      Creative: ["agency", "creative_studio", "marketing", "entertainment", "music", "creator_brand"],
+      Professional: ["consulting", "legal", "accounting", "insurance", "finance", "hr_recruitment", "sales_team", "customer_support"],
+      Property: ["real_estate", "construction", "architecture", "interior_design", "property_management", "cleaning_services", "home_services", "landscaping", "local_services"],
+      Logistics: ["logistics", "transportation", "automotive"],
+      Industrial: ["manufacturing", "agriculture", "food_beverage"],
+      Public: ["nonprofit", "church", "government"],
+      Technology: ["software", "saas", "app_startup", "ai_company", "cybersecurity", "data_analytics"]
+    };
+    const match = Object.entries(groups).find(([, keys]) => keys.includes(key));
+    return match ? match[0] : "General";
   }
 
   function industryLabel(industry = {}) {
@@ -829,6 +892,112 @@
 
   function industryByKey(key) {
     return industryCatalog().find((industry) => industry.key === key);
+  }
+
+  function otherIndustryOption() {
+    return {
+      key: "other",
+      category: "Custom",
+      label: { en: copy.en.otherIndustry, nl: copy.nl.otherIndustry },
+      summary: { en: copy.en.otherIndustryQuestion, nl: copy.nl.otherIndustryQuestion },
+      signals: [lang === "nl" ? "Eigen industrie" : "Custom industry"],
+      aliases: ["custom", "other", "anders"]
+    };
+  }
+
+  function industryProfile(industry = {}, customLabel = "") {
+    const label = String(customLabel || industryLabel(industry)).trim();
+    return {
+      key: industry.key || "",
+      label,
+      category: industry.category || "",
+      custom: industry.key === "other",
+      selected_at: new Date().toISOString()
+    };
+  }
+
+  function selectedIndustryLabel() {
+    if (state.example === "other") return String(state.customIndustry || state.industry?.label || "").trim();
+    const selected = industryByKey(state.example);
+    return selected ? industryLabel(selected) : String(state.industry?.label || "").trim();
+  }
+
+  function industrySelectionReady() {
+    if (state.example === "other") return Boolean(String(state.customIndustry || state.industry?.label || "").trim());
+    return Boolean(state.example && industryByKey(state.example));
+  }
+
+  function searchIndustries(industries = [], query = "") {
+    const term = normalizeSearch(query);
+    if (!term) return industries;
+    return industries
+      .map((industry, index) => ({ industry, index, score: industrySearchScore(industry, term) }))
+      .filter((entry) => entry.score >= 18)
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map((entry) => entry.industry);
+  }
+
+  function industrySearchScore(industry = {}, term = "") {
+    const aliases = Array.isArray(industry.aliases) ? industry.aliases : [];
+    const signals = Array.isArray(industry.signals) ? industry.signals : [];
+    const fields = [
+      industry.key,
+      industry.category,
+      industryLabel(industry),
+      industrySummary(industry),
+      ...signals,
+      ...aliases
+    ].map(normalizeSearch).filter(Boolean);
+    const text = fields.join(" ");
+    if (!term) return 1;
+    let score = 0;
+    if (normalizeSearch(industryLabel(industry)) === term) score += 120;
+    if (normalizeSearch(industryLabel(industry)).startsWith(term)) score += 90;
+    if (fields.some((field) => field === term)) score += 80;
+    if (fields.some((field) => field.startsWith(term))) score += 64;
+    if (text.includes(term)) score += 44;
+    const queryTokens = term.split(" ").filter(Boolean);
+    const fieldTokens = text.split(" ").filter(Boolean);
+    queryTokens.forEach((queryToken) => {
+      fieldTokens.forEach((token) => {
+        if (token === queryToken) score += 26;
+        else if (token.startsWith(queryToken) || queryToken.startsWith(token)) score += 18;
+        else if (isFuzzyMatch(queryToken, token)) score += 24;
+      });
+    });
+    return score;
+  }
+
+  function normalizeSearch(value = "") {
+    return String(value)
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/&/g, " and ")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function isFuzzyMatch(queryToken = "", token = "") {
+    if (queryToken.length < 4 || token.length < 4) return false;
+    if (token.includes(queryToken) || queryToken.includes(token)) return true;
+    const max = Math.max(queryToken.length, token.length);
+    const allowed = max < 7 ? 1 : 2;
+    return levenshtein(queryToken, token) <= allowed;
+  }
+
+  function levenshtein(a = "", b = "") {
+    let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+    for (let i = 1; i <= a.length; i += 1) {
+      const current = [i];
+      for (let j = 1; j <= b.length; j += 1) {
+        current[j] = a[i - 1] === b[j - 1]
+          ? previous[j - 1]
+          : Math.min(previous[j - 1], previous[j], current[j - 1]) + 1;
+      }
+      previous = current;
+    }
+    return previous[b.length];
   }
 
   function mountQuiz() {
@@ -966,6 +1135,9 @@
           automationOther: state.automationOther || "",
           operatorTrait: state.operatorTrait || "",
           example: state.example || "",
+          industry: state.industry || null,
+          industryLabel: selectedIndustryLabel(),
+          goals: state.goals || [],
           socialHandle
         }
       };
@@ -1005,6 +1177,8 @@
       journey_id: state.journeyId || "",
       chosen_path: state.path || "",
       chosen_interests: state.interests || [],
+      industry: state.industry || null,
+      goals: state.goals || [],
       result: resolveCurrentResult(),
       source: state.discover || "how_it_works",
       created_at: new Date().toISOString(),
@@ -1059,6 +1233,9 @@
         ...language,
         chosen_path: state.path || "",
         chosen_interests: state.interests || [],
+        industry: state.industry || null,
+        industry_label: selectedIndustryLabel(),
+        goals: state.goals || [],
         completion: completionPercent(),
         result: document.getElementById("final-title")?.textContent || document.getElementById("personal-title")?.textContent || "",
         automate: Array.isArray(state.automate) ? state.automate : [],
@@ -1315,6 +1492,7 @@
     input.oninput = () => {
       state.automationOther = input.value.trim();
       save(storageKey, state);
+      updateChoiceContinue("automate");
     };
   }
 
@@ -1386,6 +1564,8 @@
       completion: completionPercent(),
       chosenPath: state.path || memory.chosenPath || "",
       chosenInterests: state.interests || memory.chosenInterests || [],
+      industry: state.industry || memory.industry || null,
+      goals: state.goals || memory.goals || [],
       automationChoice: [...(Array.isArray(state.automate) ? state.automate : []), state.automationOther].filter(Boolean),
       viewerBuilds: read("doneovernight.viewerBuilds.v1", memory.viewerBuilds || []),
       resourcesOpened: memory.resourcesOpened || [],
@@ -1601,6 +1781,9 @@
         browser_language: state.browserLanguage || navigator.language || "",
         chosen_path: state.path || "",
         chosen_interests: state.interests || [],
+        industry: state.industry || null,
+        industry_label: selectedIndustryLabel(),
+        goals: state.goals || [],
         completion: completionPercent(),
         result: document.getElementById("final-title")?.textContent || "",
         journey_started_at: state.journeyStartedAt || "",
@@ -1649,6 +1832,7 @@
 
   function bindChoiceContinues() {
     document.querySelectorAll("[data-continue-choice]").forEach((button) => {
+      updateChoiceContinue(button.dataset.continueChoice);
       button.onclick = () => {
         if (!canInteract(button)) return;
         const key = button.dataset.continueChoice;
@@ -1660,6 +1844,16 @@
         if (selected.length && progression[key]) completeInteractionAfterFeedback(key, progression[key], button);
       };
     });
+  }
+
+  function updateChoiceContinue(key) {
+    const button = document.querySelector(`[data-continue-choice="${key}"]`);
+    if (!button) return;
+    const selected = Array.isArray(state[`${key}Keys`]) ? state[`${key}Keys`] : [];
+    const ready = Boolean(selected.length || (key === "automate" && String(state.automationOther || "").trim()));
+    button.disabled = !ready;
+    button.setAttribute("aria-disabled", ready ? "false" : "true");
+    button.classList.toggle("is-ready", ready);
   }
 
   function bindHeroScroll() {
@@ -1737,6 +1931,8 @@
     addProfileSection(lines, "Builder Type", [builderType()]);
     addProfileSection(lines, "Identity Line", [builderIdentityLine()]);
     addProfileSection(lines, "Primary Interests", bulletLines(state.interests || []));
+    addProfileSection(lines, "Industry", [selectedIndustryLabel()]);
+    addProfileSection(lines, "Improvement Goals", bulletLines(state.goals || []));
     addProfileSection(lines, "Path", [pathLabel(state.path)]);
     addProfileSection(lines, "Current Stage", [currentStage()]);
     addProfileSection(lines, "You said you'd automate", automationLines());
@@ -1773,7 +1969,9 @@
     if (support) lines.push(support);
     const source = [
       state.path,
+      selectedIndustryLabel(),
       ...(state.interests || []),
+      ...(Array.isArray(state.goals) ? state.goals : []),
       state.operatorTrait,
       state.reflection,
       ...(Array.isArray(state.automate) ? state.automate : state.automate ? [state.automate] : [])
@@ -1818,6 +2016,7 @@
     const source = [
       type,
       state.path || "",
+      selectedIndustryLabel(),
       ...(state.interests || [])
     ].join(" ").toLowerCase();
     const lines = lang === "nl"
@@ -1867,7 +2066,9 @@
     const labels = recommendationLabels(state.path || "curious").map((label) => data.recommendationLabels.en[label] || label);
     const signals = [
       state.path,
+      selectedIndustryLabel(),
       ...(state.interests || []),
+      ...(Array.isArray(state.goals) ? state.goals : []),
       ...(Array.isArray(state.automate) ? state.automate : state.automate ? [state.automate] : []),
       state.automationOther
     ].join("|").toLowerCase();
@@ -2084,6 +2285,7 @@
     state.completed = Array.isArray(state.completed) ? state.completed : [];
     migrateChoice("discover", data.discover);
     migrateChoice("interests", data.interests);
+    migrateChoice("goals", data.goals);
     migrateChoice("reflection", data.reflections);
     migrateChoice("automate", data.automate);
     sanitizeProgressState();
@@ -2099,9 +2301,13 @@
 
   function sanitizeProgressState() {
     if (state.progressionVersion !== progressionVersion) {
-      const migratedKeys = ["story", "workflow", "example", "operatorTrait", "reflection", "automate", "gate", "path", "recommendations", "livePreview", "viewerBuilds"];
+      const migratedKeys = ["story", "workflow", "example", "goals", "operatorTrait", "reflection", "automate", "gate", "path", "recommendations", "livePreview", "viewerBuilds"];
       state.completed = state.completed.filter((key) => !migratedKeys.includes(key));
       state.example = "";
+      state.industry = null;
+      state.customIndustry = "";
+      state.goals = [];
+      state.goalsKeys = [];
       state.operatorTrait = "";
       delete state.reflection;
       state.reflectionKeys = [];
@@ -2131,11 +2337,31 @@
       state.interests = [];
       state.interestsKeys = [];
     }
-    if (state.example && !industryByKey(state.example)) {
+    if (state.example && !industrySelectionReady()) {
       state.example = "";
+      state.industry = null;
+      state.customIndustry = "";
       removeComplete("example");
     }
-    if (!hasComplete("example")) state.example = "";
+    if (!hasComplete("example")) {
+      state.example = "";
+      state.industry = null;
+      state.customIndustry = "";
+    }
+    if (state.example && industrySelectionReady() && !state.industry) {
+      state.industry = state.example === "other"
+        ? industryProfile(otherIndustryOption(), state.customIndustry)
+        : industryProfile(industryByKey(state.example));
+    }
+    if (!isValidChoice("goals", data.goals)) {
+      state.goals = [];
+      state.goalsKeys = [];
+      removeComplete("goals");
+    }
+    if (!hasComplete("goals")) {
+      state.goals = [];
+      state.goalsKeys = [];
+    }
     if (state.operatorTrait && !data.quiz.results[state.operatorTrait]) {
       state.operatorTrait = "";
       removeComplete("operatorTrait");
@@ -2166,7 +2392,7 @@
     }
     if (!hasComplete("path")) state.path = "";
     let foundGap = false;
-    for (let step = 1; step <= 12; step += 1) {
+    for (let step = 1; step <= progressTotal; step += 1) {
       const key = stepCompletionKeys[step];
       if (foundGap) {
         removeComplete(key);
@@ -2184,6 +2410,12 @@
     switch (key) {
       case "example":
         state.example = "";
+        state.industry = null;
+        state.customIndustry = "";
+        break;
+      case "goals":
+        state.goals = [];
+        state.goalsKeys = [];
         break;
       case "operatorTrait":
         state.operatorTrait = "";
@@ -2208,11 +2440,11 @@
 
   function highestContiguousStep() {
     let active = 1;
-    for (let step = 1; step <= 12; step += 1) {
+    for (let step = 1; step <= progressTotal; step += 1) {
       if (!isCompletionValid(stepCompletionKeys[step])) break;
       active = step + 1;
     }
-    return Math.min(13, active);
+    return Math.min(progressTotal + 1, active);
   }
 
   function isStepComplete(step) {
@@ -2233,7 +2465,9 @@
       case "viewerBuilds":
         return hasComplete(key);
       case "example":
-        return Boolean(state.example && industryByKey(state.example) && hasComplete(key));
+        return Boolean(industrySelectionReady() && hasComplete(key));
+      case "goals":
+        return isValidChoice("goals", data.goals) && hasComplete(key);
       case "operatorTrait":
         return Boolean(state.operatorTrait && data.quiz.results[state.operatorTrait] && hasComplete(key));
       case "reflection":
@@ -2314,7 +2548,7 @@
       if (!head) return;
       const node = document.createElement("p");
       node.className = "completed-summary";
-      if (Number(section.dataset.step) === 9) {
+      if (stepCompletionKeys[Number(section.dataset.step)] === "gate") {
         const email = currentSavedEmail()?.email || "";
         node.innerHTML = `${escapeHtml(copy[lang].emailConfirmedTitle)} ✓${email ? `<span>${escapeHtml(email)}</span>` : ""}`;
       } else {
@@ -2336,6 +2570,7 @@
           execution: "Je waardeert uitvoering boven complexiteit.",
           workflow: "Je ziet waar werk vastloopt.",
           example: "Je koppelt systemen aan echte werelden.",
+          goals: "Je kiest waar de hefboom moet komen.",
           operator: "Je let op eigenaarschap.",
           stage: "Je weet waar je nu staat.",
           automation: "Je zoekt hefboom in herhaling.",
@@ -2347,6 +2582,7 @@
           execution: "You value execution over complexity.",
           workflow: "You notice where work gets stuck.",
           example: "You connect systems to real worlds.",
+          goals: "You choose where the leverage should land.",
           operator: "You pay attention to ownership.",
           stage: "You know where you are right now.",
           automation: "You look for leverage in repetition.",
@@ -2356,10 +2592,11 @@
     if (step === 2) return interests.includes("automation") || interests.includes("systems") || interests.includes("systemen") ? lines.systems : lines.execution;
     if (step === 3 || step === 4) return lines.workflow;
     if (step === 5) return lines.example;
-    if (step === 6 || path === "operator") return lines.operator;
-    if (step === 7) return lines.stage;
-    if (step === 8 || automate) return lines.automation;
-    if (step >= 10) return lines.identity;
+    if (step === 6) return lines.goals;
+    if (step === 7 || path === "operator") return lines.operator;
+    if (step === 8) return lines.stage;
+    if (step === 9 || automate) return lines.automation;
+    if (step >= 11) return lines.identity;
     return "";
   }
 
@@ -2374,23 +2611,25 @@
       case 4:
         return copy[lang].newWorkflow;
       case 5:
-        return state.example && industryByKey(state.example) ? industryLabel(industryByKey(state.example)) : "";
+        return selectedIndustryLabel();
       case 6:
-        return state.operatorTrait && data.quiz.traits[state.operatorTrait] ? data.quiz.traits[state.operatorTrait][lang] : "";
+        return choiceLabels("goals", data.goals).join(", ");
       case 7:
+        return state.operatorTrait && data.quiz.traits[state.operatorTrait] ? data.quiz.traits[state.operatorTrait][lang] : "";
+      case 8:
         return choiceLabels("reflection", data.reflections).join(", ");
-      case 8: {
+      case 9: {
         const answers = choiceLabels("automate", data.automate);
         if (state.automationOther) answers.push(state.automationOther);
         return answers.join(", ");
       }
-      case 9:
-        return currentSavedEmail()?.email || copy[lang].emailConfirmedTitle;
       case 10:
-        return pathLabel(state.path);
+        return currentSavedEmail()?.email || copy[lang].emailConfirmedTitle;
       case 11:
-        return document.getElementById("personal-title")?.textContent || "";
+        return pathLabel(state.path);
       case 12:
+        return document.getElementById("personal-title")?.textContent || "";
+      case 13:
         const builds = read("doneovernight.viewerBuilds.v1", []);
         return builds[builds.length - 1]?.idea || copy[lang].skipViewerBuild;
       default:
@@ -2441,7 +2680,7 @@
     renderProgress();
     renderPassport();
     persistVisitorProgress();
-    const target = document.querySelector('[data-step="10"]');
+    const target = document.querySelector(`[data-step="${progression.gate}"]`);
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
@@ -2459,7 +2698,7 @@
     renderPassport();
     persistVisitorProgress();
     showReward();
-    const target = document.querySelector('[data-step="11"]');
+    const target = document.querySelector(`[data-step="${progression.recommendations}"]`);
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
@@ -2541,6 +2780,8 @@
       completion: completionPercent(),
       chosenPath: state.path || "",
       chosenInterests: state.interests || [],
+      industry: state.industry || null,
+      goals: state.goals || [],
       automationChoice: [...(Array.isArray(state.automate) ? state.automate : []), state.automationOther].filter(Boolean),
       source: state.discover || "",
       foundingBuilder: completionPercent() >= 100 || read(memoryKey, {}).foundingBuilder === true,
