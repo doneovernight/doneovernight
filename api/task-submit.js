@@ -75,6 +75,60 @@ const HQ_SESSION_COOKIE = "doneovernight_hq_session";
 const HQ_SESSION_TTL_SECONDS = Number(process.env.HQ_SESSION_TTL_SECONDS || 60 * 60 * 24);
 const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
+const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_SITE_CONFIG_DEFAULT = {
+  version: 1,
+  workspace: "commonpl4ce",
+  updatedAt: "2026-07-09T00:00:00.000Z",
+  hero: {
+    desktop: [
+      ["/assets/common-place/fullscreen/slide-01-opening.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/fullscreen/slide-02-yellow.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-03-hoodie-front.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-04-chair.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-05-duo.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-06-couch.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-07-profile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `desktop_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" })),
+    mobile: [
+      ["/assets/common-place/mobile/slide-01-mobile.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/mobile/slide-02-mobile.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-03-mobile.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-04-mobile.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-05-mobile.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-06-mobile.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-07-mobile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `mobile_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" }))
+  },
+  content: {
+    heroLine: "Available for campaigns, editorials and selected brand projects.",
+    storyTitle: "Shot with feeling.",
+    storyLeadPrimary: "CP creates visual stories for brands, campaigns and people who want their imagery to feel real.",
+    storyLeadSecondary: "Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.",
+    storySmallLine: "For brands that need more than clean content: imagery with mood, memory and presence.",
+    aboutKicker: "Behind the Film",
+    aboutTitle: "Romy Peters",
+    aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
+    behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
+    aboutBodySecondary: "Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.",
+    socials: "Instagram: @commonpl4ce",
+    contactEmail: "book@commonpl4ce.com",
+    availability: "Netherlands\nEurope\nWorldwide",
+    availabilityNote: "Available for campaigns,\neditorials and selected brand projects.",
+    availabilityQuiet: "Limited availability each month.",
+    bookingCtaText: "Start your project",
+    footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
+    footerAvailability: "Available worldwide"
+  },
+  bookingAvailability: {
+    status: "online",
+    offlineHeading: "Booking temporarily unavailable.",
+    offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
+    offlineCtaLabel: "Visit COMMONPL4CE",
+    offlineCtaLink: "/cp"
+  }
+};
 const hqLoginAttempts = new Map();
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
@@ -110,6 +164,182 @@ const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCommonplaceBookingAvailability(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT.bookingAvailability;
+  const status = clean(source.status).toLowerCase() === "offline" ? "offline" : "online";
+  const offlineCtaLink = clean(source.offlineCtaLink || source.ctaLink) || fallback.offlineCtaLink;
+  return {
+    status,
+    offlineHeading: clean(source.offlineHeading || source.heading) || fallback.offlineHeading,
+    offlineMessage: clean(source.offlineMessage || source.message) || fallback.offlineMessage,
+    offlineCtaLabel: clean(source.offlineCtaLabel || source.ctaLabel) || fallback.offlineCtaLabel,
+    offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : fallback.offlineCtaLink
+  };
+}
+
+function normalizeCommonplaceSiteConfig(config = {}) {
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT;
+  const source = config && typeof config === "object" ? config : {};
+  const normalizeHero = (kind) => {
+    const slots = Array.isArray(source.hero?.[kind]) && source.hero[kind].length ? source.hero[kind] : fallback.hero[kind];
+    return slots.concat(fallback.hero[kind]).slice(0, 7).map((slot = {}, index) => ({
+      ...fallback.hero[kind][index],
+      ...slot,
+      id: clean(slot.id) || `${kind}_hero_${index + 1}`,
+      src: clean(slot.src || slot.image) || fallback.hero[kind][index].src,
+      alt: clean(slot.alt) || fallback.hero[kind][index].alt,
+      status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : "Ready"
+    }));
+  };
+  return {
+    ...fallback,
+    ...source,
+    version: Number(source.version || fallback.version) || fallback.version,
+    workspace: "commonpl4ce",
+    updatedAt: clean(source.updatedAt) || fallback.updatedAt,
+    hero: {
+      desktop: normalizeHero("desktop"),
+      mobile: normalizeHero("mobile")
+    },
+    content: {
+      ...fallback.content,
+      ...(source.content && typeof source.content === "object" ? source.content : {})
+    },
+    bookingAvailability: normalizeCommonplaceBookingAvailability(source.bookingAvailability)
+  };
+}
+
+function isCommonplaceSiteConfigRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") return true;
+  } catch (error) {}
+  return input.action === COMMONPLACE_SITE_CONFIG_SOURCE || input.intent === COMMONPLACE_SITE_CONFIG_SOURCE;
+}
+
+async function verifyAdminKey(adminKey) {
+  if (!clean(adminKey)) return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ admin_key: adminKey }),
+      signal: controller.signal
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    return data?.success === true;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function readCommonplaceSiteConfigRecord() {
+  const rows = await supabaseFetch([
+    `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_SITE_CONFIG_SOURCE)}`,
+    "select=*",
+    "order=updated_at.desc",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+function configFromCommonplaceRecord(record = {}) {
+  return normalizeCommonplaceSiteConfig(record.raw_payload?.config || record.raw_payload || COMMONPLACE_SITE_CONFIG_DEFAULT);
+}
+
+async function handleCommonplaceSiteConfigGet(req, res) {
+  try {
+    const record = await readCommonplaceSiteConfigRecord();
+    const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
+    return send(res, 200, {
+      success: true,
+      config,
+      source: record ? "task_requests" : "default",
+      publishedAt: record?.updated_at || config.updatedAt || null
+    });
+  } catch (error) {
+    return send(res, 200, {
+      success: true,
+      config: normalizeCommonplaceSiteConfig(),
+      source: "default",
+      warning: error.code || error.message || "config_store_unavailable"
+    });
+  }
+}
+
+async function handleCommonplaceSiteConfigPost(req, res, input = {}) {
+  const authorized = await verifyAdminKey(input.admin_key || input.adminKey || req.headers["x-admin-key"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+  const config = normalizeCommonplaceSiteConfig({
+    ...(input.config || {}),
+    updatedAt: new Date().toISOString()
+  });
+  const rawPayload = {
+    source: COMMONPLACE_SITE_CONFIG_SOURCE,
+    config,
+    published_at: config.updatedAt,
+    workspace: "commonpl4ce"
+  };
+  const existing = await readCommonplaceSiteConfigRecord().catch(() => null);
+  let row = null;
+
+  if (existing?.id || existing?.task_id) {
+    const filter = existing.id
+      ? `id=eq.${encodeURIComponent(existing.id)}`
+      : `task_id=eq.${encodeURIComponent(existing.task_id)}`;
+    const rows = await supabaseFetch(`task_requests?${filter}&select=*`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        updated_at: config.updatedAt,
+        status: "published",
+        queue_state: "website_config",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  } else {
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: config.updatedAt,
+        updated_at: config.updatedAt,
+        status: "published",
+        payment_status: "not_required",
+        queue_state: "website_config",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE Website OS",
+        email: "book@commonpl4ce.com",
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        source: COMMONPLACE_SITE_CONFIG_SOURCE,
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  }
+
+  return send(res, 200, {
+    success: true,
+    config: row ? configFromCommonplaceRecord(row) : config,
+    source: "task_requests",
+    publishedAt: row?.updated_at || config.updatedAt
+  });
 }
 
 const EMAIL_TYPO_DOMAIN_SUGGESTIONS = {
@@ -2537,6 +2767,9 @@ async function getConnectedOperatorMetadata(input = {}) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") {
+      return handleCommonplaceSiteConfigGet(req, res);
+    }
     if (url.searchParams.get("ask_security_config") === "1") {
       const config = askVerificationConfig();
       return send(res, 200, {
@@ -2590,6 +2823,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isCommonplaceSiteConfigRequest(req, input)) {
+      return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
     if (isJourneyConfirmationRequest(req, input)) {
       return handleJourneyConfirmationRequest(req, res, input);
     }

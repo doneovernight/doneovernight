@@ -27,6 +27,13 @@ for (const route of config.routes) {
     }
   }
 
+  for (const group of route.mustContainAny || []) {
+    const markers = Array.isArray(group) ? group : [];
+    if (markers.length && !markers.some((marker) => body.includes(marker))) {
+      failures.push(`missing one of markers: ${markers.join(" | ")}`);
+    }
+  }
+
   for (const marker of route.mustNotContain || []) {
     if (body.includes(marker)) {
       failures.push(`forbidden marker present: ${marker}`);

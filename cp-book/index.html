@@ -202,6 +202,47 @@
       gap: clamp(34px, 7vw, 120px);
       align-items: start;
     }
+    .booking.is-booking-offline {
+      min-height: calc(100vh - 154px);
+      grid-template-columns: minmax(0, 580px);
+      justify-content: center;
+      text-align: center;
+    }
+    .booking-offline-card {
+      width: min(100%, 580px);
+      margin: 0 auto;
+      border: 1px solid rgba(237, 230, 216, .16);
+      background:
+        radial-gradient(circle at top, rgba(237, 230, 216, .12), transparent 28rem),
+        rgba(237, 230, 216, .055);
+      padding: clamp(34px, 6vw, 58px);
+      backdrop-filter: blur(18px);
+    }
+    .booking-offline-card img {
+      width: min(250px, 76%);
+      margin: 0 auto 28px;
+      opacity: .94;
+    }
+    .booking-offline-card .step-label {
+      display: block;
+      margin-bottom: 18px;
+    }
+    .booking-offline-card .section-title {
+      max-width: 440px;
+      margin: 0 auto 18px;
+      font-size: clamp(30px, 5vw, 58px);
+      letter-spacing: 0;
+      line-height: .96;
+    }
+    .booking-offline-card .body-copy {
+      max-width: 430px;
+      margin: 0 auto;
+    }
+    .booking-offline-card .cal-button {
+      width: auto;
+      min-width: 190px;
+      margin-top: 30px;
+    }
     .section-title {
       margin: 0;
       font-size: clamp(38px, 6.4vw, 104px);
@@ -791,8 +832,18 @@
       const flashBackdrop = document.getElementById('successFlashBackdrop');
       const flashScreen = document.getElementById('successFlashScreen');
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const SITE_CONFIG_API = '/api/task-submit?commonpl4ce_site_config=1';
+      const SITE_CONFIG_FALLBACK = '/assets/common-place/config/site-content.json';
+      const DEFAULT_BOOKING_AVAILABILITY = {
+        status: 'online',
+        offlineHeading: 'Booking temporarily unavailable.',
+        offlineMessage: 'Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.',
+        offlineCtaLabel: 'Visit COMMONPL4CE',
+        offlineCtaLink: '/cp'
+      };
 
       if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
+      if (submitButton) submitButton.disabled = true;
 
       const today = new Date();
       let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -869,6 +920,22 @@
       const selectedRadio = (name) => form.querySelector(`input[name="${name}"]:checked`);
       const clean = (value) => String(value || '').trim();
       const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));
+      const escapeHTML = (value) => clean(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+      const normalizeBookingAvailability = (value = {}) => {
+        const ctaLink = clean(value.offlineCtaLink || value.ctaLink) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink;
+        return {
+          status: clean(value.status).toLowerCase() === 'offline' ? 'offline' : 'online',
+          offlineHeading: clean(value.offlineHeading || value.heading) || DEFAULT_BOOKING_AVAILABILITY.offlineHeading,
+          offlineMessage: clean(value.offlineMessage || value.message) || DEFAULT_BOOKING_AVAILABILITY.offlineMessage,
+          offlineCtaLabel: clean(value.offlineCtaLabel || value.ctaLabel) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLabel,
+          offlineCtaLink: ctaLink.startsWith('/') || /^https?:\/\//i.test(ctaLink) ? ctaLink : DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink
+        };
+      };
       const humanMessage = (value, fallback = 'Request could not be sent. Please try again.') => {
         if (!value) return fallback;
         if (typeof value === 'string') return clean(value) || fallback;
@@ -878,6 +945,47 @@
         }
         return fallback;
       };
+
+      async function fetchBookingAvailability() {
+        const apiConfig = await fetch(SITE_CONFIG_API, { cache: 'no-store' })
+          .then((response) => response.ok ? response.json() : null)
+          .then((data) => data && data.success === true ? data.config : null)
+          .catch(() => null);
+        if (apiConfig) return normalizeBookingAvailability(apiConfig.bookingAvailability);
+
+        const staticConfig = await fetch(SITE_CONFIG_FALLBACK, { cache: 'no-store' })
+          .then((response) => response.ok ? response.json() : null)
+          .catch(() => null);
+        return normalizeBookingAvailability(staticConfig?.bookingAvailability);
+      }
+
+      function renderBookingOffline(booking) {
+        const section = document.getElementById('booker-station');
+        if (!section) return;
+        form.querySelectorAll('input, textarea, button, select').forEach((field) => {
+          field.disabled = true;
+        });
+        section.classList.add('is-booking-offline');
+        section.innerHTML = `
+          <article class="booking-offline-card">
+            <img src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+            <span class="step-label">Booking status</span>
+            <h1 class="section-title">${escapeHTML(booking.offlineHeading)}</h1>
+            <p class="body-copy">${escapeHTML(booking.offlineMessage)}</p>
+            <a class="cal-button" href="${escapeHTML(booking.offlineCtaLink)}">${escapeHTML(booking.offlineCtaLabel)}</a>
+          </article>
+        `;
+      }
+
+      fetchBookingAvailability().then((booking) => {
+        if (booking.status === 'offline') {
+          renderBookingOffline(booking);
+          return;
+        }
+        if (submitButton) submitButton.disabled = false;
+      }).catch(() => {
+        if (submitButton) submitButton.disabled = false;
+      });
 
       function clearFormState() {
         form.classList.remove('is-error', 'is-preview');

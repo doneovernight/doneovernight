@@ -1986,6 +1986,17 @@
       align-items: end;
     }
 
+    .booking-availability-form {
+      display: grid;
+      grid-template-columns: minmax(160px, .38fr) minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .booking-availability-form .field--wide {
+      grid-column: 1 / -1;
+    }
+
     .activity-row {
       display: grid;
       gap: 5px;
@@ -2047,7 +2058,8 @@
       .os-brand-meta { padding-left: 0; border-left: 0; }
       .os-header-actions { width: 100%; justify-content: space-between; }
       .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form { grid-template-columns: 1fr; }
+      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form { grid-template-columns: 1fr; }
+      .booking-availability-form .field--wide { grid-column: auto; }
       .hero-slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .view-head { align-items: start; flex-direction: column; }
       .builder-head { flex-direction: column; }
@@ -2516,6 +2528,41 @@
           </div>
           <section class="os-panel">
             <div class="settings-list" id="settingsList"></div>
+            <section class="security-section" aria-label="Booking availability settings">
+              <div class="panel-head">
+                <div>
+                  <h2>Booking availability</h2>
+                  <p>Controls whether /cp-book and the public /cp booker accept new requests after publishing.</p>
+                </div>
+                <span class="status-pill" id="bookingAvailabilityPublishState">Published</span>
+              </div>
+              <div class="booking-availability-form">
+                <label class="field">
+                  <span>Status</span>
+                  <select id="bookingAvailabilityStatus" data-booking-availability-field="status">
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Offline heading</span>
+                  <input id="bookingOfflineHeading" data-booking-availability-field="offlineHeading" type="text">
+                </label>
+                <label class="field">
+                  <span>Offline CTA label</span>
+                  <input id="bookingOfflineCtaLabel" data-booking-availability-field="offlineCtaLabel" type="text">
+                </label>
+                <label class="field field--wide">
+                  <span>Offline message</span>
+                  <textarea id="bookingOfflineMessage" data-booking-availability-field="offlineMessage" rows="3"></textarea>
+                </label>
+                <label class="field field--wide">
+                  <span>Offline CTA link</span>
+                  <input id="bookingOfflineCtaLink" data-booking-availability-field="offlineCtaLink" type="text">
+                </label>
+              </div>
+              <p class="form-note" id="bookingAvailabilityNote">Changes save as draft and require Publish before public pages change.</p>
+            </section>
             <section class="security-section" aria-label="Security settings">
               <div class="panel-head">
                 <div>
@@ -2602,6 +2649,13 @@
         bookingCtaText: "Start your project",
         footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
         footerAvailability: "Available worldwide"
+      },
+      bookingAvailability: {
+        status: "online",
+        offlineHeading: "Booking temporarily unavailable.",
+        offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
+        offlineCtaLabel: "Visit COMMONPL4CE",
+        offlineCtaLink: "/cp"
       }
     };
 
@@ -2704,6 +2758,19 @@
     function normalizeSiteConfig(config) {
       const fallback = DEFAULT_SITE_CONFIG;
       const source = config && typeof config === "object" ? config : {};
+      const normalizeBookingAvailability = (value = {}) => {
+        const booking = value && typeof value === "object" ? value : {};
+        const bookingFallback = fallback.bookingAvailability;
+        const status = lower(booking.status) === "offline" ? "offline" : "online";
+        const offlineCtaLink = clean(booking.offlineCtaLink || booking.ctaLink) || bookingFallback.offlineCtaLink;
+        return {
+          status,
+          offlineHeading: clean(booking.offlineHeading || booking.heading) || bookingFallback.offlineHeading,
+          offlineMessage: clean(booking.offlineMessage || booking.message) || bookingFallback.offlineMessage,
+          offlineCtaLabel: clean(booking.offlineCtaLabel || booking.ctaLabel) || bookingFallback.offlineCtaLabel,
+          offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : bookingFallback.offlineCtaLink
+        };
+      };
       const normalizeHero = (kind) => {
         const slots = Array.isArray(source.hero?.[kind]) && source.hero[kind].length ? source.hero[kind] : fallback.hero[kind];
         return slots.concat(fallback.hero[kind]).slice(0, 7).map((slot, index) => ({
@@ -2724,7 +2791,8 @@
         content: {
           ...fallback.content,
           ...(source.content || {})
-        }
+        },
+        bookingAvailability: normalizeBookingAvailability(source.bookingAvailability)
       };
     }
 
@@ -2908,6 +2976,7 @@
         heroDesktopSlots: defaultHeroSlots("desktop"),
         heroMobileSlots: defaultHeroSlots("mobile"),
         mediaLibrary: defaultMediaLibrary(),
+        bookingAvailability: { ...normalizeSiteConfig(workspace.publishedConfig || DEFAULT_SITE_CONFIG).bookingAvailability },
         mediaTarget: null,
         selectedHeroSlot: { kind: "desktop", index: 0 },
         selectedMediaId: "",
@@ -2957,6 +3026,7 @@
         heroDesktopSlots: normalizeSlots(desktopSlots, fallback.heroDesktopSlots, "desktop"),
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
         mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? normalizeMediaLibrary(builder.mediaLibrary) : fallback.mediaLibrary,
+        bookingAvailability: normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability || fallback.bookingAvailability }).bookingAvailability,
         mediaTarget: builder.mediaTarget || null,
         selectedHeroSlot: builder.selectedHeroSlot && ["desktop", "mobile"].includes(builder.selectedHeroSlot.kind)
           ? { kind: builder.selectedHeroSlot.kind, index: Math.max(0, Math.min(6, Number(builder.selectedHeroSlot.index) || 0)) }
@@ -3020,7 +3090,8 @@
           desktop: builder.heroDesktopSlots.map((slot, index) => slotToConfig(slot, index, "desktop")),
           mobile: builder.heroMobileSlots.map((slot, index) => slotToConfig(slot, index, "mobile"))
         },
-        content: { ...builder.websiteContent }
+        content: { ...builder.websiteContent },
+        bookingAvailability: { ...normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability }).bookingAvailability }
       });
     }
 
@@ -3069,13 +3140,14 @@
         return total + draft.hero[kind].filter((slot, index) => !sameValue(slot.src, published.hero[kind][index]?.src)).length;
       }, 0);
       const contentChanges = Object.keys(draft.content).filter((key) => !sameValue(draft.content[key], published.content[key]));
+      const bookingAvailabilityChanges = Object.keys(draft.bookingAvailability || {}).filter((key) => !sameValue(draft.bookingAvailability[key], published.bookingAvailability?.[key]));
       const blockedAssets = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => {
         const asset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId);
         return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || isLocalOnlyMedia(asset);
       }).length;
       const sectionChanges = builderSectionSignature() === publishedBuilderSignature() ? 0 : 1;
-      const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || sectionChanges > 0;
-      return { draft, published, heroChanges, mediaPathChanges, contentChanges, sectionChanges, blockedAssets, hasChanges };
+      const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || bookingAvailabilityChanges.length > 0 || sectionChanges > 0;
+      return { draft, published, heroChanges, mediaPathChanges, contentChanges, bookingAvailabilityChanges, sectionChanges, blockedAssets, hasChanges };
     }
 
     function syncBuilderSectionsFromContent() {
@@ -3124,6 +3196,7 @@
         state.publishedBuilderSignature = builderSectionSignature(defaultBuilderDraft());
         state.lastPublishedAt = clean(config.updatedAt);
         renderWebsiteFields();
+        renderSettings();
       } catch (error) {
         state.publishedConfigLoaded = false;
         state.publishedConfigSource = "";
@@ -3942,6 +4015,7 @@
         ["Changed hero slots", diff.heroChanges],
         ["Changed sections", diff.sectionChanges],
         ["Changed text fields", diff.contentChanges.length ? diff.contentChanges.join(", ") : "None"],
+        ["Booking availability", diff.bookingAvailabilityChanges.length ? diff.bookingAvailabilityChanges.join(", ") : "No change"],
         ["Changed media paths", diff.mediaPathChanges],
         ["Media assets connected", connectedMedia],
         ["Publish readiness", publishBlocker],
@@ -4044,6 +4118,7 @@
         state.publishError = "";
         saveBuilderDraft();
         renderWebsiteFields();
+        renderBookingAvailabilitySettings();
         if (isWebsiteTabActive("preview")) refreshPublicPreviewFrames();
       } catch (error) {
         state.publishPhase = "failed";
@@ -4496,6 +4571,46 @@
       `).join("");
     }
 
+    function renderBookingAvailabilitySettings() {
+      const booking = normalizeSiteConfig({ bookingAvailability: state.builder.bookingAvailability }).bookingAvailability;
+      state.builder.bookingAvailability = booking;
+      const fields = {
+        bookingAvailabilityStatus: booking.status,
+        bookingOfflineHeading: booking.offlineHeading,
+        bookingOfflineMessage: booking.offlineMessage,
+        bookingOfflineCtaLabel: booking.offlineCtaLabel,
+        bookingOfflineCtaLink: booking.offlineCtaLink
+      };
+      Object.entries(fields).forEach(([id, value]) => {
+        const field = $(id);
+        if (field && field.value !== value) field.value = value;
+      });
+      const diff = siteConfigDiff();
+      const stateLabel = $("bookingAvailabilityPublishState");
+      if (stateLabel) {
+        stateLabel.textContent = diff.bookingAvailabilityChanges.length ? "Unpublished" : "Published";
+        stateLabel.classList.toggle("is-warning", diff.bookingAvailabilityChanges.length > 0);
+      }
+      const note = $("bookingAvailabilityNote");
+      if (note) {
+        note.textContent = booking.status === "offline"
+          ? "Offline is drafted. Publish to pause booking submissions on /cp-book and /cp."
+          : "Online is drafted. Publish to accept booking submissions on /cp-book and /cp.";
+      }
+    }
+
+    function updateBookingAvailabilityField(field, value) {
+      state.builder.bookingAvailability = normalizeSiteConfig({
+        bookingAvailability: {
+          ...(state.builder.bookingAvailability || DEFAULT_SITE_CONFIG.bookingAvailability),
+          [field]: value
+        }
+      }).bookingAvailability;
+      saveBuilderDraft();
+      renderBookingAvailabilitySettings();
+      renderPublishSummary();
+    }
+
     function renderSettings() {
       const settings = [
         ["COMMONPL4CE brand", "Logo and public visual identity assets are connected.", "Active"],
@@ -4512,6 +4627,7 @@
           <span class="status-pill">${escapeHTML(stateLabel)}</span>
         </div>
       `).join("");
+      renderBookingAvailabilitySettings();
       renderSecuritySettings();
     }
 
@@ -4785,6 +4901,12 @@
     document.querySelectorAll("[data-builder-field]").forEach((field) => {
       field.addEventListener("input", () => updateSelectedBuilderSection(field.dataset.builderField, field.value));
       field.addEventListener("change", () => updateSelectedBuilderSection(field.dataset.builderField, field.value));
+    });
+
+    document.querySelectorAll("[data-booking-availability-field]").forEach((field) => {
+      const update = () => updateBookingAvailabilityField(field.dataset.bookingAvailabilityField, field.value);
+      field.addEventListener("input", update);
+      field.addEventListener("change", update);
     });
 
     document.addEventListener("change", async (event) => {
