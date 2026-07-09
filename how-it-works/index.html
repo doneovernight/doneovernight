@@ -25,8 +25,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/experience/experience.css">
-  <script defer src="/experience/experience.js"></script>
+  <link rel="stylesheet" href="/experience/experience.css?v=56-industries-v2">
+  <script defer src="/experience/industry-config.js?v=56-industries-v2"></script>
+  <script defer src="/experience/experience.js?v=56-industries-v2"></script>
   <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments);};</script>
   <script defer data-domain="doneovernight.com" src="https://plausible.io/js/script.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
@@ -100,10 +101,10 @@
       <button class="quiet-action step-continue" type="button" data-next-key="workflow" data-next-step="5" data-i18n="continue">Continue</button>
     </section>
 
-    <section class="experience-step" data-step="5" hidden>
+    <section class="experience-step" data-step="5" data-industry-version="56-industries-v2" hidden>
       <div class="step-head reveal">
         <span class="step-number">05</span>
-        <h2 class="step-title" data-i18n="examples">Choose a world.</h2>
+        <h2 class="step-title" data-i18n="examples">Choose your industry.</h2>
       </div>
       <div class="example-tabs" id="example-tabs" aria-label="Examples"></div>
       <div class="example-board" id="example-board"></div>
@@ -170,9 +171,6 @@
           </ul>
           <div class="gate-actions">
             <button class="quiet-action" type="button" id="gate-continue" data-i18n="continue">Continue</button>
-            <a class="quiet-action secondary" href="/live" data-i18n="goLive">Go to Live</a>
-            <a class="quiet-action secondary" href="/resources" data-i18n="openResources">Open Resources</a>
-            <a class="quiet-action secondary" href="/live#viewer-builds" data-i18n="submitViewerBuild">Submit Viewer Build</a>
           </div>
           <button class="resend-action" type="button" id="resend-confirmation" data-i18n="sendAgain">Send again</button>
           <div class="form-note" id="resend-note" aria-live="polite"></div>
@@ -200,30 +198,10 @@
         <button class="quiet-action secondary" type="button" id="share-page" data-i18n="sharePage">Share this page</button>
       </div>
       <div class="recommendation-grid" id="recommendation-grid"></div>
-      <button class="next-unlock" type="button" data-next-key="recommendations" data-next-step="12" data-i18n="nextLive">Next: Live Build</button>
+      <button class="next-unlock" type="button" data-next-key="recommendations" data-next-step="12" data-i18n="nextViewer">Next: Viewer Builds</button>
     </section>
 
-    <section class="experience-step" data-after-gate data-step="12" hidden>
-      <div class="step-head reveal">
-        <span class="step-number">12</span>
-        <h2 class="step-title" data-i18n="livePreview">Live preview</h2>
-        <p class="step-copy" data-i18n="livePreviewCopy">A glimpse of what is being built now.</p>
-      </div>
-      <article class="live-preview">
-        <div class="live-grid">
-          <div class="signal-card"><span data-i18n="currentBuild">Current Build</span><strong data-preview="build">Interactive operating system</strong></div>
-          <div class="signal-card"><span data-i18n="currentOperator">Current Operator</span><strong data-preview="operator">DONEOVERNIGHT Studio</strong></div>
-          <div class="signal-card"><span data-i18n="currentProject">Current Project</span><strong data-preview="project">Public experience layer</strong></div>
-          <div class="signal-card"><span data-i18n="latestDeployment">Latest deployment</span><strong data-preview="deployment">Preview verified</strong></div>
-          <div class="signal-card"><span data-i18n="estimated">Estimated completion</span><strong data-preview="completion">Tonight</strong></div>
-          <div class="signal-card"><span data-i18n="progress">Progress</span><strong data-preview="progressLabel">Pending</strong><div class="progress-line"><i data-preview-progress></i></div></div>
-        </div>
-        <a class="open-live" href="/live" data-i18n="openLive">Open Live Build</a>
-      </article>
-      <button class="next-unlock" type="button" data-next-key="livePreview" data-next-step="13" data-i18n="nextViewer">Next: Viewer Builds</button>
-    </section>
-
-    <section class="experience-step" id="viewer-builds" data-after-gate data-step="13" hidden>
+    <section class="experience-step" id="viewer-builds" data-after-gate data-step="12" hidden>
       <div class="step-head reveal">
         <span class="step-number">Viewer Builds</span>
         <h2 class="step-title" data-i18n="viewerTitle">What should DONEOVERNIGHT build next?</h2>
@@ -238,12 +216,12 @@
           <button class="quiet-action" type="submit" data-i18n="submitIdea">Submit idea</button>
           <div class="form-note" id="viewer-note" aria-live="polite"></div>
         </form>
+        <button class="quiet-action secondary viewer-skip" type="button" id="skip-viewer-build" data-i18n="skipViewerBuild">Skip for now</button>
         <a class="dm-idea" href="https://ig.me/m/doneovernight" target="_blank" rel="noopener" data-i18n="dmIdea">DM us your build idea</a>
       </article>
-      <p class="next-unlock is-preview" data-i18n="nextFollow">Next: Follow the journey</p>
     </section>
 
-    <section class="experience-step follow-screen" data-after-gate data-step="14" hidden>
+    <section class="experience-step follow-screen" data-after-gate data-step="13" hidden>
       <div class="completion-panel" id="completion-panel">
         <span class="eyebrow" data-i18n="journeyComplete">Builder created.</span>
         <h2 class="step-title" id="completion-welcome" data-i18n="platformWelcome">Welcome Builder.</h2>
@@ -293,7 +271,14 @@
           <button class="quiet-action secondary" type="button" id="google-wallet">Google Wallet prepared</button>
           <p class="form-note" id="wallet-note" aria-live="polite">Wallet delivery is prepared and will unlock when credentials are configured.</p>
         </div>
-        <button class="quiet-action platform-continue" id="open-platform" type="button" data-i18n="openPlatform">Enter Builder Home</button>
+        <div class="final-cta-grid" aria-label="DONEOVERNIGHT links">
+          <a class="quiet-action secondary" href="/">Website</a>
+          <a class="quiet-action secondary" href="https://ask.doneovernight.com">Ask</a>
+          <a class="quiet-action secondary" href="mailto:ask@doneovernight.com">Mail</a>
+          <a class="quiet-action secondary" href="https://www.instagram.com/doneovernight" target="_blank" rel="noopener">Socials</a>
+          <a class="quiet-action secondary follow-mini" href="https://www.tiktok.com/@doneovernight" target="_blank" rel="noopener"><span>+</span> TikTok</a>
+        </div>
+        <button class="quiet-action platform-continue" id="open-platform" type="button" data-i18n="builderHomeSoon" disabled aria-disabled="true">Builder Home coming soon</button>
       </div>
 
       <div class="platform-hub" id="platform-hub" hidden>

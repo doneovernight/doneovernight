@@ -541,13 +541,52 @@ body.has-reward .experience-progress {
   box-shadow: 0 0 20px rgba(139,216,170,0.55);
 }
 .example-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  display: grid;
+  gap: 14px;
+  overflow: visible;
   padding-bottom: 8px;
   scrollbar-width: none;
 }
 .example-tabs::-webkit-scrollbar { display: none; }
+.industry-search {
+  width: min(100%, 680px);
+  display: grid;
+  gap: 8px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.industry-search input {
+  min-height: 54px;
+  padding: 0 18px;
+  border: 1px solid rgba(233,196,138,0.24);
+  border-radius: 999px;
+  background: rgba(5, 6, 8, 0.62);
+  color: var(--ink);
+  outline: none;
+  font-family: var(--sans);
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.industry-search input:focus {
+  border-color: rgba(233,196,138,0.62);
+  box-shadow: 0 0 28px rgba(233,196,138,0.08);
+}
+.industry-grid {
+  display: flex;
+  gap: 9px;
+  width: 100%;
+  max-width: 1040px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 2px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
 .tab-pill {
   flex: 0 0 auto;
   position: relative;
@@ -569,6 +608,39 @@ body.has-reward .experience-progress {
   content: "✓";
   margin-left: 8px;
   color: #050608;
+}
+.industry-pill {
+  flex: 0 0 clamp(164px, 22vw, 220px);
+  min-height: 76px;
+  width: auto;
+  border-radius: 18px;
+  padding: 13px 14px;
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  scroll-snap-align: start;
+  text-align: left;
+  white-space: normal;
+}
+.industry-pill span {
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.industry-pill small {
+  color: rgba(245, 241, 234, 0.42);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.industry-pill.is-active small {
+  color: rgba(5, 6, 8, 0.7);
+}
+.industry-empty {
+  margin: 8px 0 0;
+  color: var(--muted);
 }
 .example-board {
   margin-top: 20px;
@@ -596,6 +668,22 @@ body.has-reward .experience-progress {
   color: var(--muted);
   font-size: 16px;
   line-height: 1.6;
+}
+.industry-signal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+}
+.industry-signal-row span {
+  padding: 7px 10px;
+  border: 1px solid rgba(245,241,234,0.1);
+  border-radius: 999px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 .quiz-card, .gate-panel, .live-preview, .viewer-panel {
   border: 1px solid var(--line);
@@ -784,6 +872,9 @@ textarea.text-field {
 .viewer-success-actions .quiet-action {
   width: auto;
 }
+.viewer-skip {
+  margin-top: 14px;
+}
 .gate-list {
   display: grid;
   gap: 9px;
@@ -815,6 +906,15 @@ textarea.text-field {
   background: rgba(233,196,138,0.11);
   border-color: rgba(233,196,138,0.64);
   box-shadow: 0 0 24px rgba(233,196,138,0.1);
+}
+.quiet-action:disabled,
+.quiet-action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.54;
+  color: var(--faint);
+  border-color: rgba(245,241,234,0.12);
+  background: rgba(245,241,234,0.018);
+  box-shadow: none;
 }
 .step-continue {
   margin-top: 22px;
@@ -1132,6 +1232,33 @@ textarea.text-field {
 .wallet-actions .form-note {
   grid-column: 1 / -1;
   text-align: center;
+}
+.final-cta-grid {
+  width: min(100%, 620px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 22px;
+}
+.final-cta-grid .quiet-action {
+  width: 100%;
+  justify-content: center;
+  justify-self: stretch;
+  text-align: center;
+  white-space: nowrap;
+}
+.follow-mini span {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #050608;
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1;
 }
 .platform-continue {
   margin-top: 28px;
@@ -1809,6 +1936,11 @@ textarea.text-field {
 }
 .viewer-panel {
   margin-top: 14px;
+  min-width: 0;
+}
+.viewer-panel form,
+.viewer-panel .text-field {
+  min-width: 0;
 }
 .live-status-writer {
   margin-top: 18px;
@@ -2043,15 +2175,35 @@ textarea.text-field {
   .experience-progress span {
     width: auto;
   }
+  .display,
+  .step-title {
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+  .experience-hero {
+    padding-top: 154px;
+    padding-bottom: 70px;
+  }
   .experience-hero,
   .experience-step,
   .live-page {
     padding-left: 24px;
     padding-right: 24px;
   }
+  .experience-step {
+    padding-top: 172px;
+    padding-bottom: max(118px, calc(86px + env(safe-area-inset-bottom)));
+    scroll-margin-top: 172px;
+  }
   .experience-step.is-active {
-    min-height: calc(100svh + 96px);
+    min-height: calc(100svh + 132px);
     justify-content: flex-start;
+  }
+  .follow-screen.is-active {
+    align-items: stretch;
+  }
+  .follow-screen.is-active .completion-panel {
+    margin-top: 118px;
   }
   .choice-grid,
   .quiz-options {
@@ -2060,6 +2212,22 @@ textarea.text-field {
   .choice-card {
     min-height: 68px;
     border-radius: 18px;
+  }
+  .choice-card,
+  .quiz-card,
+  .gate-panel,
+  .viewer-panel,
+  .workflow-panel,
+  .recommendation-card,
+  .passport-card,
+  .builder-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .quiet-action,
+  .next-unlock {
+    max-width: 100%;
+    white-space: normal;
   }
   .gate-actions {
     display: grid;
@@ -2090,6 +2258,23 @@ textarea.text-field {
   }
   .wallet-actions {
     grid-template-columns: 1fr;
+  }
+  .final-cta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .final-cta-grid .follow-mini {
+    grid-column: 1 / -1;
+  }
+  .industry-pill {
+    flex-basis: min(72vw, 260px);
+    min-height: 68px;
+  }
+  .example-board {
+    min-height: 280px;
+    border-radius: 24px;
+  }
+  .viewer-panel textarea.text-field {
+    min-height: 136px;
   }
   .connect-page {
     padding: 104px 24px 44px;

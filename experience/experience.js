@@ -31,7 +31,7 @@
       unlockToast: "Unlocked",
       welcomeBack: "Welcome back.",
       continueJourney: "Continue your journey.",
-      examples: "Choose a world.",
+      examples: "Choose your industry.",
       operatorQuestion: "What makes an operator?",
       operatorCopy: "No wrong answers. The pattern matters more than the score.",
       reflectionOne: "Where are you today?",
@@ -112,6 +112,7 @@
       description: "Description",
       website: "Website, optional",
       submitIdea: "Submit idea",
+      skipViewerBuild: "Skip for now",
       ideaSaved: "Your idea has been added.",
       ideaFailed: "We could not add your idea yet. Try again in a minute.",
       viewerSubmitted: "Viewer Build submitted",
@@ -151,7 +152,8 @@
       journeyCompleteStatus: "Builder created",
       walletComingSoon: "Wallet delivery is prepared and will unlock when credentials are configured.",
       result: "Result",
-      openPlatform: "Enter Builder Home",
+      openPlatform: "Builder Home coming soon",
+      builderHomeSoon: "Builder Home coming soon",
       platformHub: "Builder Home",
       platformHubTitle: "Your Builder OS.",
       platformHubCopy: "Choose the next module.",
@@ -195,7 +197,7 @@
       unlockToast: "Ontgrendeld",
       welcomeBack: "Welkom terug.",
       continueJourney: "Ga verder.",
-      examples: "Kies een wereld.",
+      examples: "Kies je industrie.",
       operatorQuestion: "Wat maakt iemand een operator?",
       operatorCopy: "Geen foute antwoorden. Het patroon telt meer dan de score.",
       reflectionOne: "Waar sta je vandaag?",
@@ -276,6 +278,7 @@
       description: "Beschrijving",
       website: "Website, optioneel",
       submitIdea: "Verstuur idee",
+      skipViewerBuild: "Sla nu over",
       ideaSaved: "Je idee is toegevoegd.",
       ideaFailed: "We konden je idee nog niet toevoegen. Probeer het zo opnieuw.",
       viewerSubmitted: "Viewer Build ingediend",
@@ -315,7 +318,8 @@
       journeyCompleteStatus: "Builder aangemaakt",
       walletComingSoon: "Wallet ondersteuning komt eraan.",
       result: "Resultaat",
-      openPlatform: "Open Builder Home",
+      openPlatform: "Builder Home binnenkort",
+      builderHomeSoon: "Builder Home binnenkort",
       platformHub: "Builder Home",
       platformHubTitle: "Jouw Builder OS.",
       platformHubCopy: "Kies de volgende module.",
@@ -512,6 +516,28 @@
         "Systems": "Systemen",
         "Viewer Builds": "Viewer Builds"
       }
+    },
+    recommendationDescriptions: {
+      en: {
+        "AI": "Use intelligence where judgment, context, and speed actually improve the workflow.",
+        "Architecture": "Map the operating system before adding more tools.",
+        "Automation": "Remove the repeated handoffs that quietly drain time every week.",
+        "Business": "Turn momentum into a system your team can repeat.",
+        "Live": "Watch what is being shipped and how the execution layer develops.",
+        "Operators": "Study the role that keeps systems moving after the first build.",
+        "Systems": "Connect intake, decisions, follow-up, and delivery into one rhythm.",
+        "Viewer Builds": "Shape what DONEOVERNIGHT should build next."
+      },
+      nl: {
+        "AI": "Gebruik intelligentie waar oordeel, context en snelheid de workflow echt verbeteren.",
+        "Architecture": "Teken het operating system voordat je meer tools toevoegt.",
+        "Automation": "Haal de herhaalde overdrachten weg die elke week tijd lekken.",
+        "Business": "Zet momentum om in een systeem dat je team kan herhalen.",
+        "Live": "Bekijk wat er wordt shipped en hoe de executielaag groeit.",
+        "Operators": "Bestudeer de rol die systemen laat bewegen na de eerste build.",
+        "Systems": "Verbind intake, besluiten, opvolging en delivery in een ritme.",
+        "Viewer Builds": "Geef richting aan wat DONEOVERNIGHT hierna bouwt."
+      }
     }
   };
 
@@ -545,11 +571,10 @@
     gate: 10,
     path: 11,
     recommendations: 12,
-    livePreview: 13,
-    viewerBuilds: 14
+    viewerBuilds: 13
   };
 
-  const progressionVersion = 3;
+  const progressionVersion = 4;
   const stepCompletionKeys = {
     1: "discover",
     2: "interests",
@@ -562,11 +587,10 @@
     9: "gate",
     10: "path",
     11: "recommendations",
-    12: "livePreview",
-    13: "viewerBuilds"
+    12: "viewerBuilds"
   };
 
-  const progressTotal = 13;
+  const progressTotal = 12;
   let renderedActiveStep = null;
   let activeStepReadyAt = Date.now();
   let interactionLocked = false;
@@ -603,7 +627,6 @@
     mountChoices("automate-grid", data.automate[lang], "automate", true);
     mountAutomationOther();
     mountGate();
-    mountLivePreview();
     mountViewerBuilds();
     mountPaths();
     renderPersonalResult();
@@ -707,26 +730,95 @@
     const tabs = document.getElementById("example-tabs");
     const board = document.getElementById("example-board");
     if (!tabs || !board) return;
-    const keys = Object.keys(data.examples);
-    const active = state.example || keys[0];
-    tabs.innerHTML = keys.map((key) => `<button class="tab-pill ${key === state.example ? "is-active" : ""}" type="button" data-example="${key}">${data.examples[key][lang][0]}</button>`).join("");
+    const industries = industryCatalog();
+    const active = state.example && industries.some((item) => item.key === state.example)
+      ? state.example
+      : industries[0]?.key;
+    tabs.innerHTML = `
+      <label class="industry-search">
+        <span>${lang === "nl" ? "Zoek industrie" : "Search industry"}</span>
+        <input id="industry-search" type="search" autocomplete="off" placeholder="${lang === "nl" ? "Zoek alle 56 industrieen" : "Search all 56 industries"}" aria-label="${lang === "nl" ? "Zoek industrie" : "Search industry"}">
+      </label>
+      <div class="industry-grid" data-industry-grid></div>
+    `;
+    const input = tabs.querySelector("#industry-search");
+    const grid = tabs.querySelector("[data-industry-grid]");
+    renderIndustryGrid("");
     renderExample(active);
-    tabs.querySelectorAll("button").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (!canInteract(button)) return;
-        state.example = button.dataset.example;
-        save(storageKey, state);
-        tabs.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
-        button.classList.add("is-active");
-        renderExample(button.dataset.example);
-        completeInteractionAfterFeedback("example", progression.example, button);
+    if (input) {
+      input.oninput = () => renderIndustryGrid(input.value);
+    }
+
+    function renderIndustryGrid(query = "") {
+      const term = String(query || "").trim().toLowerCase();
+      const filtered = industries.filter((industry) => {
+        const haystack = [
+          industryLabel(industry),
+          industrySummary(industry),
+          ...(industry.signals || [])
+        ].join(" ").toLowerCase();
+        return !term || haystack.includes(term);
       });
-    });
+      grid.innerHTML = filtered.map((industry) => `
+        <button class="tab-pill industry-pill ${industry.key === (state.example || active) ? "is-active" : ""}" type="button" data-example="${escapeAttr(industry.key)}">
+          <span>${escapeHtml(industryLabel(industry))}</span>
+          <small>${escapeHtml((industry.signals || []).slice(0, 2).join(" / "))}</small>
+        </button>
+      `).join("") || `<p class="industry-empty">${lang === "nl" ? "Geen industrie gevonden." : "No industry found."}</p>`;
+      grid.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!canInteract(button)) return;
+          state.example = button.dataset.example;
+          save(storageKey, state);
+          grid.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
+          button.classList.add("is-active");
+          renderExample(button.dataset.example);
+          completeInteractionAfterFeedback("example", progression.example, button);
+        });
+      });
+    }
+
     function renderExample(key) {
-      const [title, text] = data.examples[key][lang];
-      board.innerHTML = `<h3>${title}</h3><p>${text}</p>`;
+      const industry = industries.find((item) => item.key === key) || industries[0];
+      if (!industry) return;
+      const signals = (industry.signals || []).slice(0, 4);
+      board.innerHTML = `
+        <span class="placeholder-badge">${industries.length} ${lang === "nl" ? "industrieen" : "industries"}</span>
+        <h3>${escapeHtml(industryLabel(industry))}</h3>
+        <p>${escapeHtml(industrySummary(industry))}</p>
+        <div class="industry-signal-row">
+          ${signals.map((signal) => `<span>${escapeHtml(signal)}</span>`).join("")}
+        </div>
+      `;
       board.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 360, easing: "ease-out" });
     }
+  }
+
+  function industryCatalog() {
+    const configured = Array.isArray(window.DONEOVERNIGHT_INDUSTRIES) ? window.DONEOVERNIGHT_INDUSTRIES : [];
+    const fallback = Object.entries(data.examples).map(([key, value]) => ({
+      key,
+      label: { en: value.en[0], nl: value.nl[0] },
+      summary: { en: value.en[1], nl: value.nl[1] },
+      signals: []
+    }));
+    return (configured.length ? configured : fallback)
+      .map((item) => ({ ...item, key: String(item.key || "").trim() }))
+      .filter((item) => item.key);
+  }
+
+  function industryLabel(industry = {}) {
+    const label = industry.label || {};
+    return String(label[lang] || label.en || industry.name || industry.key || "").trim();
+  }
+
+  function industrySummary(industry = {}) {
+    const summary = industry.summary || {};
+    return String(summary[lang] || summary.en || "").trim();
+  }
+
+  function industryByKey(key) {
+    return industryCatalog().find((industry) => industry.key === key);
   }
 
   function mountQuiz() {
@@ -1091,20 +1183,16 @@
     return title || data.summaries[lang][summarySeed() % data.summaries[lang].length];
   }
 
-  function mountLivePreview() {
-    fill("[data-preview='build']", live.build);
-    fill("[data-preview='operator']", live.operator);
-    fill("[data-preview='project']", live.project);
-    fill("[data-preview='deployment']", live.deployment);
-    fill("[data-preview='completion']", live.completion);
-    fill("[data-preview='progressLabel']", live.progressLabel);
-    const bar = document.querySelector("[data-preview-progress]");
-    if (bar) bar.style.width = `${live.progress}%`;
-  }
-
   function mountViewerBuilds() {
     const form = document.getElementById("viewer-form");
     const note = document.getElementById("viewer-note");
+    const skip = document.getElementById("skip-viewer-build");
+    if (skip) {
+      skip.onclick = () => {
+        if (!canInteract(skip)) return;
+        completeInteractionAfterFeedback("viewerBuilds", progression.viewerBuilds, skip);
+      };
+    }
     if (!form) return;
     const fields = form.elements;
     fields.idea.placeholder = copy[lang].idea;
@@ -1115,6 +1203,7 @@
     form.onsubmit = async (event) => {
       event.preventDefault();
       if (!canInteract(form)) return;
+      if (form.dataset.submitting === "true") return;
       postPlatformEvent({ event: "viewer_build_started", page: pageName(), source: pageName() });
       const submit = form.querySelector('[type="submit"]');
       if (!fields.idea.value.trim() || !fields.description.value.trim() || !String(fields.solve?.value || "").trim()) {
@@ -1141,6 +1230,7 @@
         createdAt: new Date().toISOString()
       };
       if (submit) submit.disabled = true;
+      form.dataset.submitting = "true";
       if (note) {
         note.textContent = "";
         note.classList.remove("is-success");
@@ -1155,6 +1245,7 @@
           note.classList.remove("is-success");
         }
         if (submit) submit.disabled = false;
+        form.dataset.submitting = "";
         return;
       }
       build.viewerBuildId = result.viewer_build_id || "";
@@ -1171,6 +1262,7 @@
       });
       persistVisitorProgress();
       if (submit) submit.disabled = false;
+      form.dataset.submitting = "";
     };
   }
 
@@ -1193,8 +1285,6 @@
         <p>${escapeHtml(copy[lang].viewerSuccessCopy)}</p>
         <div class="viewer-success-actions">
           ${document.body.dataset.experience ? `<button class="quiet-action" type="button" data-viewer-continue>${escapeHtml(copy[lang].continue)}</button>` : ""}
-          <a class="quiet-action secondary" href="/live">${escapeHtml(copy[lang].goLive)}</a>
-          <a class="quiet-action secondary" href="/resources">${escapeHtml(copy[lang].openResources)}</a>
         </div>
       </div>
     `;
@@ -1251,7 +1341,10 @@
     fill("#final-title", title.textContent);
     fill("#final-copy", body.textContent);
     const labels = recommendationLabels(state.path || "curious");
-    grid.innerHTML = labels.map((label) => `<a class="recommendation-card" href="${recommendationHref(label)}"><span>${data.recommendationLabels[lang][label] || label}</span><small>${copy[lang].recommendationsCopy}</small></a>`).join("");
+    grid.innerHTML = labels.map((label) => {
+      const text = data.recommendationDescriptions[lang][label] || data.recommendationDescriptions.en[label] || copy[lang].recommendationsCopy;
+      return `<article class="recommendation-card"><span>${data.recommendationLabels[lang][label] || label}</span><small>${escapeHtml(text)}</small></article>`;
+    }).join("");
   }
 
   function ensureJourney() {
@@ -1337,6 +1430,7 @@
   }
 
   function mountTodaySections() {
+    if (document.body.dataset.experience === "how-it-works") return;
     const shells = document.querySelectorAll(".experience-shell");
     if (!shells.length) return;
     shells.forEach((shell) => {
@@ -1417,20 +1511,15 @@
     const panel = document.getElementById("completion-panel");
     const hub = document.getElementById("platform-hub");
     if (button && panel && hub) {
+      button.disabled = true;
+      button.setAttribute("aria-disabled", "true");
+      button.textContent = copy[lang].builderHomeSoon || copy[lang].openPlatform;
       button.onclick = () => {
-        window.location.href = "/builder";
-        return;
-        panel.hidden = true;
-        hub.hidden = false;
-        state.platformOpened = true;
-        save(storageKey, state);
-        persistVisitorProgress();
-        hub.animate([{ opacity: 0, transform: "translateY(18px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 420, easing: "ease-out" });
-        setTimeout(() => scrollToPanel(hub), 80);
+        showReward(copy[lang].builderHomeSoon || copy[lang].openPlatform);
       };
       if (state.platformOpened) {
-        panel.hidden = true;
-        hub.hidden = false;
+        state.platformOpened = false;
+        save(storageKey, state);
       }
     }
     const follow = document.getElementById("follow-journey");
@@ -1473,11 +1562,18 @@
     const target = section.querySelector?.(".step-title") || section.querySelector?.(".step-head") || section;
     const mobile = window.matchMedia("(max-width: 620px)").matches;
     const progressBottom = document.querySelector(".experience-progress")?.getBoundingClientRect().bottom || 0;
-    const desiredTop = mobile ? Math.max(116, progressBottom + 16) : 104;
+    const desiredTop = mobile ? Math.max(142, progressBottom + 50) : 104;
     const top = target.getBoundingClientRect().top + window.scrollY - desiredTop;
     const duration = mobile ? 760 : 640;
     animateScrollTo(Math.max(0, top), duration);
     window.setTimeout(() => settleQuestionPosition(target, desiredTop), duration + 40);
+  }
+
+  function scheduleStepScroll(target, delay = 180) {
+    window.setTimeout(() => scrollToQuestion(target), delay);
+    if (window.matchMedia("(max-width: 620px)").matches) {
+      window.setTimeout(() => scrollToQuestion(target), delay + 980);
+    }
   }
 
   function settleQuestionPosition(target, desiredTop) {
@@ -1860,32 +1956,19 @@
     const apple = document.getElementById("apple-wallet");
     const google = document.getElementById("google-wallet");
     const note = document.getElementById("wallet-note");
-    const handler = async (kind) => {
+    const handler = () => {
       if (note) note.textContent = copy[lang].walletComingSoon;
-      const endpoint = kind === "apple" ? "/api/builder-wallet/apple?type=builder" : "/api/builder-wallet/google?type=builder";
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(builderIdentityPayload())
-        });
-        const result = await response.json().catch(() => ({}));
-        const issuedNumber = result.identity?.builderNumber || result.identity_storage?.builder_number || result.storage?.pass?.builder_number;
-        if (issuedNumber) {
-          updateMemory({ builderNumber: String(issuedNumber) });
-          renderPassport();
-        }
-        if (note) note.textContent = result.message || copy[lang].walletComingSoon;
-      } catch (error) {}
       showReward(copy[lang].walletComingSoon);
     };
     if (apple && !apple.dataset.bound) {
       apple.dataset.bound = "true";
-      apple.onclick = () => handler("apple");
+      apple.setAttribute("aria-disabled", "true");
+      apple.onclick = handler;
     }
     if (google && !google.dataset.bound) {
       google.dataset.bound = "true";
-      google.onclick = () => handler("google");
+      google.setAttribute("aria-disabled", "true");
+      google.onclick = handler;
     }
   }
 
@@ -2060,7 +2143,7 @@
       state.interests = [];
       state.interestsKeys = [];
     }
-    if (state.example && !data.examples[state.example]) {
+    if (state.example && !industryByKey(state.example)) {
       state.example = "";
       removeComplete("example");
     }
@@ -2095,7 +2178,7 @@
     }
     if (!hasComplete("path")) state.path = "";
     let foundGap = false;
-    for (let step = 1; step <= 13; step += 1) {
+    for (let step = 1; step <= 12; step += 1) {
       const key = stepCompletionKeys[step];
       if (foundGap) {
         removeComplete(key);
@@ -2137,11 +2220,11 @@
 
   function highestContiguousStep() {
     let active = 1;
-    for (let step = 1; step <= 13; step += 1) {
+    for (let step = 1; step <= 12; step += 1) {
       if (!isCompletionValid(stepCompletionKeys[step])) break;
       active = step + 1;
     }
-    return Math.min(14, active);
+    return Math.min(13, active);
   }
 
   function isStepComplete(step) {
@@ -2159,11 +2242,10 @@
       case "story":
       case "workflow":
       case "recommendations":
-      case "livePreview":
       case "viewerBuilds":
         return hasComplete(key);
       case "example":
-        return Boolean(state.example && data.examples[state.example] && hasComplete(key));
+        return Boolean(state.example && industryByKey(state.example) && hasComplete(key));
       case "operatorTrait":
         return Boolean(state.operatorTrait && data.quiz.results[state.operatorTrait] && hasComplete(key));
       case "reflection":
@@ -2304,7 +2386,7 @@
       case 4:
         return copy[lang].newWorkflow;
       case 5:
-        return state.example && data.examples[state.example] ? data.examples[state.example][lang][0] : "";
+        return state.example && industryByKey(state.example) ? industryLabel(industryByKey(state.example)) : "";
       case 6:
         return state.operatorTrait && data.quiz.traits[state.operatorTrait] ? data.quiz.traits[state.operatorTrait][lang] : "";
       case 7:
@@ -2321,11 +2403,8 @@
       case 11:
         return document.getElementById("personal-title")?.textContent || "";
       case 12:
-        return copy[lang].openLive;
-      case 13: {
         const builds = read("doneovernight.viewerBuilds.v1", []);
-        return builds[builds.length - 1]?.idea || copy[lang].ideaSaved;
-      }
+        return builds[builds.length - 1]?.idea || copy[lang].skipViewerBuild;
       default:
         return "";
     }
@@ -2359,7 +2438,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      if (scroll) setTimeout(() => scrollToQuestion(target), 180);
+      if (scroll) scheduleStepScroll(target, 180);
     }
   }
 
@@ -2378,7 +2457,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      if (scroll) setTimeout(() => scrollToQuestion(target), 360);
+      if (scroll) scheduleStepScroll(target, 360);
     }
   }
 
@@ -2396,7 +2475,7 @@
     if (target) {
       target.classList.add("is-unlocking");
       setTimeout(() => target.classList.remove("is-unlocking"), 800);
-      setTimeout(() => scrollToQuestion(target), 180);
+      scheduleStepScroll(target, 180);
     }
   }
 
