@@ -15,6 +15,7 @@ const {
   supabaseFetch,
   workspaceSessionMatchesRequest
 } = require("../lib/ops");
+const { requireWebsiteOsSession } = require("../lib/website-os-auth");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
@@ -260,6 +261,12 @@ async function verifyAdminKey(adminKey) {
   }
 }
 
+async function verifyAdminOrWebsiteOsSession(req, adminKey, roles = ["Owner", "Admin", "Editor"]) {
+  if (clean(adminKey)) return verifyAdminKey(adminKey);
+  await requireWebsiteOsSession(req, { slug: "cp", roles });
+  return true;
+}
+
 async function readCommonplaceSiteConfigRecord() {
   const rows = await supabaseFetch([
     `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_SITE_CONFIG_SOURCE)}`,
@@ -295,7 +302,7 @@ async function handleCommonplaceSiteConfigGet(req, res) {
 }
 
 async function handleCommonplaceSiteConfigPost(req, res, input = {}) {
-  const authorized = await verifyAdminKey(input.admin_key || input.adminKey || req.headers["x-admin-key"]);
+  const authorized = await verifyAdminOrWebsiteOsSession(req, input.admin_key || input.adminKey || req.headers["x-admin-key"], ["Owner", "Admin", "Editor"]);
   if (!authorized) {
     return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
   }
@@ -1005,7 +1012,7 @@ function summarizeCommonplaceAnalytics(events = [], newsletters = [], bookings =
 }
 
 async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
-  const authorized = await verifyAdminKey(input.admin_key || input.adminKey || req.headers["x-admin-key"]);
+  const authorized = await verifyAdminOrWebsiteOsSession(req, input.admin_key || input.adminKey || req.headers["x-admin-key"], ["Owner", "Admin", "Editor", "Viewer"]);
   if (!authorized) {
     return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
   }

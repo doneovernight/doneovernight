@@ -2076,7 +2076,8 @@
     <form class="gate-card" id="loginForm" data-unlock-state="idle">
       <div class="eyebrow">WEBSITE ACCESS</div>
       <img class="commonplace-gate-logo" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
-      <p class="muted">Enter your website password.</p>
+      <p class="muted">Enter your website email and password.</p>
+      <label>Email<input id="websiteEmail" type="email" autocomplete="username" value="romy@commonpl4ce.com" required></label>
       <label>Password<input id="websitePassword" type="password" autocomplete="current-password" required></label>
       <button class="button primary" id="unlockButton" type="submit" aria-live="polite">
         <span class="unlock-button-content">
@@ -2578,13 +2579,14 @@
                 </div>
               </div>
               <div class="security-form">
-                <label class="field"><span>Current password</span><input type="password" autocomplete="current-password" disabled></label>
-                <label class="field"><span>New password</span><input type="password" autocomplete="new-password" disabled></label>
-                <label class="field"><span>Confirm password</span><input type="password" autocomplete="new-password" disabled></label>
-                <button class="button small" type="button" disabled>Change password</button>
+                <label class="field"><span>Current password</span><input id="securityCurrentPassword" type="password" autocomplete="current-password"></label>
+                <label class="field"><span>New password</span><input id="securityNewPassword" type="password" autocomplete="new-password"></label>
+                <label class="field"><span>Confirm password</span><input id="securityConfirmPassword" type="password" autocomplete="new-password"></label>
+                <button class="button small" id="changePasswordButton" type="button">Change password</button>
+                <button class="button ghost small" id="logoutOtherDevicesButton" type="button">Log out other devices</button>
               </div>
               <div class="settings-list" id="securitySettingsList"></div>
-              <p class="form-note" id="securityStatus">Password management connects with server-side auth in the next phase.</p>
+              <p class="form-note" id="securityStatus">Password changes are stored server-side for this Website OS workspace.</p>
             </section>
           </section>
         </section>
@@ -2600,14 +2602,10 @@
   </main>
 
   <script>
-    const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+    const WEBSITE_OS_AUTH_API = "/api/website-os-auth";
+    const WEBSITE_OS_WORKSPACE_SLUG = "cp";
     const ADMIN_TASKS_ENDPOINT = "/api/admin-tasks";
     const ADMIN_UPDATE_TASK_ENDPOINT = "/api/admin-update-task";
-    const SESSION_FLAG = "doneovernight_admin";
-    const SESSION_KEY = "doneovernight_admin_key";
-    const SESSION_MODE_KEY = "doneovernight_admin_mode";
-    const DEVELOPMENT_WEBSITE_PASSWORD = "RomyAdminLogin67";
-    const DEVELOPMENT_SESSION_KEY = "commonpl4ce_development_access";
     const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
@@ -2715,6 +2713,8 @@
       analytics: null,
       analyticsConnected: false,
       analyticsMessage: "Analytics not connected yet",
+      authUser: null,
+      authSession: null,
       activeWebsiteTab: "builder"
     };
 
@@ -3329,52 +3329,39 @@
       $("syncState").textContent = message;
     }
 
-    async function verifyAdminKey(key) {
-      const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+    async function websiteAuthRequest(action, payload = {}) {
+      const response = await fetch(WEBSITE_OS_AUTH_API, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ admin_key: key })
+        body: JSON.stringify({
+          action,
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
+          ...payload
+        })
       });
-      if (!response.ok) throw new Error("Admin auth failed");
       const data = await response.json().catch(() => ({}));
-      if (data?.success !== true) throw new Error("Admin auth denied");
+      if (!response.ok || data?.success !== true) {
+        const error = new Error(data?.error || "Website OS authentication failed");
+        error.code = data?.code || "WEBSITE_OS_AUTH_FAILED";
+        throw error;
+      }
       return data;
     }
 
-    async function verifyWebsiteAccess(password) {
-      if (password === DEVELOPMENT_WEBSITE_PASSWORD) {
-        return {
-          mode: "development",
-          sessionKey: DEVELOPMENT_SESSION_KEY
-        };
-      }
-      await verifyAdminKey(password);
-      return {
-        mode: "doneovernight_admin",
-        sessionKey: password
-      };
-    }
-
-    function isDevelopmentSession() {
-      return sessionStorage.getItem(SESSION_MODE_KEY) === "development";
+    function applyWebsiteSession(data = {}) {
+      state.authUser = data.user || null;
+      state.authSession = data.session || { expiresAt: data.expiresAt || "" };
+      renderSecuritySettings();
     }
 
     async function loadBookings({ silent = false } = {}) {
-      if (isDevelopmentSession()) {
-        state.tasks = [];
-        state.bookings = [];
-        state.clients = [];
-        renderAll();
-        if (!silent) setSync("Development access active. Admin data connects with server-side auth.");
-        return;
-      }
-      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
-      if (!adminKey) return;
       if (!silent) setSync("Loading bookings");
       const response = await fetch(ADMIN_TASKS_ENDPOINT, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ admin_key: adminKey })
+        body: JSON.stringify({ workspace_slug: WEBSITE_OS_WORKSPACE_SLUG })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.success !== true) {
@@ -3389,24 +3376,15 @@
     }
 
     async function loadCommonplaceAnalytics(range = state.analyticsRange) {
-      if (isDevelopmentSession()) {
-        state.analyticsRange = ["24h", "7d", "30d"].includes(range) ? range : "7d";
-        state.analyticsConnected = false;
-        state.analytics = null;
-        state.analyticsMessage = "Analytics requires server-side auth.";
-        renderAnalytics();
-        return;
-      }
-      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
-      if (!adminKey) return;
       state.analyticsRange = ["24h", "7d", "30d"].includes(range) ? range : "7d";
       renderAnalytics();
       const response = await fetch(COMMONPLACE_ANALYTICS_API, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           action: "commonpl4ce_analytics_summary",
-          admin_key: adminKey,
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
           range: state.analyticsRange
         })
       });
@@ -4212,14 +4190,6 @@
         renderPublishSummary();
         return;
       }
-      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
-      if (!adminKey) {
-        state.publishPhase = "failed";
-        state.publishStatus = "Publish failed. Draft is still saved locally.";
-        state.publishError = "Sign in again before publishing";
-        renderPublishSummary();
-        return;
-      }
       const button = $("publishWebsiteConfig");
       if (button) {
         button.disabled = true;
@@ -4232,8 +4202,9 @@
       try {
         const response = await fetch(COMMONPLACE_SITE_CONFIG_API, {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ admin_key: adminKey, config: diff.draft })
+          body: JSON.stringify({ workspace_slug: WEBSITE_OS_WORKSPACE_SLUG, config: diff.draft })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || data.success !== true || !data.config) {
@@ -4757,7 +4728,7 @@
         ["Email", workspace.email, "Read-only"],
         ["Notifications", "Booking notifications follow the existing intake configuration.", "Existing"],
         ["DONEOVERNIGHT powered-by", "Visible in login and Website OS footer.", "Active"],
-        ["Workspace access", "Uses existing DONEOVERNIGHT admin key auth.", "Active"]
+        ["Workspace access", "Uses Website OS server-side user auth.", "Active"]
       ];
       $("settingsList").innerHTML = settings.map(([title, value, stateLabel]) => `
         <div class="setting-row">
@@ -4773,11 +4744,14 @@
     function renderSecuritySettings() {
       const target = $("securitySettingsList");
       if (!target) return;
+      const user = state.authUser || {};
+      const session = state.authSession || {};
       const rows = [
-        ["Change password", "Password management connects with server-side auth in the next phase.", "Disabled"],
-        ["Last password change", "Not connected yet.", "Server-side auth"],
-        ["Active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? (isDevelopmentSession() ? "Temporary development access" : "DONEOVERNIGHT admin auth") : "No active session", sessionStorage.getItem(SESSION_FLAG) === "true" ? "Active" : "Signed out"],
-        ["Sign out all devices", "Requires server-side sessions.", "Disabled"],
+        ["Change password", "Available for Owner and Admin roles.", "Active"],
+        ["Last password change", user.passwordChangedAt ? formatTimestamp(user.passwordChangedAt) : "Not recorded yet.", "Server-side auth"],
+        ["Active session", user.email ? `${user.email} · ${user.role || "Viewer"}` : "No active session", user.email ? "Active" : "Signed out"],
+        ["Session expires", session.expiresAt ? formatTimestamp(session.expiresAt) : "Not available.", "HttpOnly cookie"],
+        ["Logout other devices", "Revokes other server-side Website OS sessions.", "Active"],
         ["Two-factor authentication", "Coming in Phase 3.", "Phase 3"]
       ];
       target.innerHTML = rows.map(([title, value, stateLabel]) => `
@@ -4798,14 +4772,13 @@
         if (note) note.textContent = "Status updates connect in the next phase.";
         return;
       }
-      const adminKey = sessionStorage.getItem(SESSION_KEY) || "";
-      if (!adminKey) return;
       if (note) note.textContent = "Saving status...";
       const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          admin_key: adminKey,
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
           id: booking.tableId || booking.taskId || booking.id,
           status: mappedStatus,
           updated_at: new Date().toISOString()
@@ -4887,20 +4860,79 @@
       });
     }
 
+    async function restoreWebsiteSession() {
+      try {
+        const data = await websiteAuthRequest("session");
+        applyWebsiteSession(data);
+        unlockApp();
+      } catch (error) {
+        document.body.classList.remove("is-unlocked");
+        setTimeout(() => $("websiteEmail").focus(), 100);
+      }
+    }
+
+    async function changeWebsitePassword() {
+      const status = $("securityStatus");
+      const button = $("changePasswordButton");
+      const currentPassword = clean($("securityCurrentPassword").value);
+      const newPassword = clean($("securityNewPassword").value);
+      const confirmPassword = clean($("securityConfirmPassword").value);
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        status.textContent = "Fill in current password, new password and confirmation.";
+        return;
+      }
+      button.disabled = true;
+      status.textContent = "Changing password...";
+      try {
+        const data = await websiteAuthRequest("change_password", {
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword
+        });
+        state.authUser = {
+          ...(state.authUser || {}),
+          passwordChangedAt: data.changedAt || new Date().toISOString()
+        };
+        $("securityCurrentPassword").value = "";
+        $("securityNewPassword").value = "";
+        $("securityConfirmPassword").value = "";
+        status.textContent = "Password changed.";
+        renderSecuritySettings();
+      } catch (error) {
+        status.textContent = error.message || "Password change failed.";
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function logoutOtherDevices() {
+      const status = $("securityStatus");
+      const button = $("logoutOtherDevicesButton");
+      button.disabled = true;
+      status.textContent = "Logging out other devices...";
+      try {
+        await websiteAuthRequest("logout_other_devices");
+        status.textContent = "Other active sessions were signed out.";
+      } catch (error) {
+        status.textContent = error.message || "Could not log out other devices.";
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     $("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      const email = clean($("websiteEmail").value);
       const password = clean($("websitePassword").value);
-      if (!password) return;
+      if (!email || !password) return;
       const card = $("loginForm");
       const status = $("loginStatus");
       card.dataset.unlockState = "unlocking";
       status.textContent = "";
       $("unlockButton").disabled = true;
       try {
-        const access = await verifyWebsiteAccess(password);
-        sessionStorage.setItem(SESSION_FLAG, "true");
-        sessionStorage.setItem(SESSION_KEY, access.sessionKey);
-        sessionStorage.setItem(SESSION_MODE_KEY, access.mode);
+        const data = await websiteAuthRequest("login", { email, password });
+        applyWebsiteSession(data);
         card.dataset.unlockState = "welcome";
         $("gate").classList.add("is-exiting");
         setTimeout(unlockApp, 260);
@@ -4912,12 +4944,13 @@
       }
     });
 
-    $("logoutButton").addEventListener("click", () => {
-      sessionStorage.removeItem(SESSION_FLAG);
-      sessionStorage.removeItem(SESSION_KEY);
-      sessionStorage.removeItem(SESSION_MODE_KEY);
+    $("logoutButton").addEventListener("click", async () => {
+      await websiteAuthRequest("logout").catch(() => {});
       window.location.reload();
     });
+
+    $("changePasswordButton").addEventListener("click", changeWebsitePassword);
+    $("logoutOtherDevicesButton").addEventListener("click", logoutOtherDevices);
 
     $("refreshButton").addEventListener("click", () => loadBookings());
     $("reloadBookingsButton").addEventListener("click", () => loadBookings());
@@ -5225,7 +5258,7 @@
     });
 
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && sessionStorage.getItem(SESSION_FLAG) === "true") {
+      if (!document.hidden && document.body.classList.contains("is-unlocked")) {
         loadBookings({ silent: true }).catch(() => {});
       }
     });
@@ -5235,11 +5268,7 @@
     renderSettings();
     loadPublishedSiteConfig();
     initSidebarPreference();
-    if (sessionStorage.getItem(SESSION_FLAG) === "true" && sessionStorage.getItem(SESSION_KEY)) {
-      unlockApp();
-    } else {
-      setTimeout(() => $("websitePassword").focus(), 100);
-    }
+    restoreWebsiteSession();
   </script>
 </body>
 </html>

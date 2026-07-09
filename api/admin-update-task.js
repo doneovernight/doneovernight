@@ -9,6 +9,7 @@ const {
   activateWorkspaceAfterVerifiedPayment,
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
+const { requireWebsiteOsSession } = require("../lib/website-os-auth");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -366,6 +367,34 @@ async function verifyAdminKey(adminKey) {
     error.statusCode = 403;
     throw error;
   }
+}
+
+async function verifyAdminOrWebsiteOsSession(req, adminKey) {
+  const key = clean(adminKey);
+  if (key) {
+    await verifyAdminKey(key);
+    return { mode: "admin" };
+  }
+  const current = await requireWebsiteOsSession(req, {
+    slug: "cp",
+    roles: ["Owner", "Admin", "Editor"]
+  });
+  return { mode: "website_os", workspaceSlug: current.workspace.slug };
+}
+
+function isCommonplaceTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
+  const workspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    workspace === "commonpl4ce" ||
+    workspace === "cp";
+}
+
+function isWebsiteOsStatusOnlyUpdate(input = {}) {
+  const allowedKeys = new Set(["workspace_slug", "workspaceSlug", "id", "task_id", "taskId", "operational_id", "reference_id", "status", "updated_at", "updatedAt"]);
+  return clean(input.status) && Object.keys(input).every((key) => allowedKeys.has(key));
 }
 
 function buildTaskFilter(taskId) {
@@ -1523,7 +1552,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
-    await verifyAdminKey(input.admin_key || req.headers["x-admin-key"]);
+    const authContext = await verifyAdminOrWebsiteOsSession(req, input.admin_key || req.headers["x-admin-key"]);
     const taskId = clean(input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
     if (!taskId) {
       return send(res, 400, {
@@ -1531,6 +1560,24 @@ module.exports = async function handler(req, res) {
         error: "Missing task id",
         code: "TASK_ID_REQUIRED"
       });
+    }
+
+    if (authContext.mode === "website_os") {
+      if (!isWebsiteOsStatusOnlyUpdate(input)) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS permission denied",
+          code: "WEBSITE_OS_PERMISSION_DENIED"
+        });
+      }
+      const scopedTask = await loadTask(taskId);
+      if (!scopedTask || !isCommonplaceTask(scopedTask)) {
+        return send(res, 404, {
+          success: false,
+          error: "Task not found",
+          code: "TASK_NOT_FOUND"
+        });
+      }
     }
 
     if (isReopenArchivedTaskRequest(input)) {

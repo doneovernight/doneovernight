@@ -2,6 +2,7 @@ const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { buildSecureReviewUrl } = require("../lib/review-token");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
+const { requireWebsiteOsSession } = require("../lib/website-os-auth");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -70,6 +71,26 @@ async function verifyAdminKey(adminKey) {
   }
 }
 
+async function verifyAdminOrWebsiteOsSession(req, adminKey) {
+  if (adminKey && await verifyAdminKey(adminKey)) return { mode: "admin" };
+  const current = await requireWebsiteOsSession(req, {
+    slug: "cp",
+    roles: ["Owner", "Admin", "Editor", "Viewer"]
+  });
+  return { mode: "website_os", workspaceSlug: current.workspace.slug };
+}
+
+function isCommonplaceTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
+  const workspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    source === "commonpl4ce_newsletter" ||
+    workspace === "commonpl4ce" ||
+    workspace === "cp";
+}
+
 async function fetchTasks() {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
@@ -118,13 +139,16 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     const adminKey = clean(input.admin_key || input.adminKey);
-    const authorized = await verifyAdminKey(adminKey);
+    const authorized = await verifyAdminOrWebsiteOsSession(req, adminKey);
     if (!authorized) {
       return send(res, 401, { success: false, error: "Admin access denied" });
     }
 
     const tasks = await fetchTasks();
-    const enrichedTasks = Array.isArray(tasks) ? await Promise.all(tasks.map(enrichTask)) : [];
+    const scopedTasks = authorized.mode === "website_os"
+      ? (Array.isArray(tasks) ? tasks.filter(isCommonplaceTask) : [])
+      : tasks;
+    const enrichedTasks = Array.isArray(scopedTasks) ? await Promise.all(scopedTasks.map(enrichTask)) : [];
     return send(res, 200, { success: true, tasks: enrichedTasks });
   } catch (error) {
     if (error.message === "Invalid JSON") {
