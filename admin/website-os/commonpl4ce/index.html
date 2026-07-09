@@ -1400,8 +1400,7 @@
     }
 
     .hero-order-panel,
-    .media-library,
-    .archive-preview-panel {
+    .media-library {
       border: 1px solid rgba(237,230,216,.12);
       border-radius: 8px;
       background: rgba(0,0,0,.14);
@@ -1411,8 +1410,7 @@
     }
 
     .hero-order-panel h3,
-    .media-library h3,
-    .archive-preview-panel h3 {
+    .media-library h3 {
       margin: 0;
       font-size: 16px;
       line-height: 1.2;
@@ -1420,8 +1418,7 @@
     }
 
     .hero-order-panel p,
-    .media-library p,
-    .archive-preview-panel p {
+    .media-library p {
       margin: 0;
       color: rgba(241,234,220,.58);
       font-size: 12px;
@@ -1775,47 +1772,6 @@
     .publish-summary-item strong {
       font-size: 22px;
       line-height: 1;
-    }
-
-    .archive-preview-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(170px, .45fr);
-      gap: 12px;
-    }
-
-    .archive-preview-stage {
-      min-height: 260px;
-      border: 1px solid rgba(237,230,216,.14);
-      border-radius: 8px;
-      background: #050505;
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: repeat(7, minmax(64px, 1fr));
-    }
-
-    .archive-preview-stage.is-mobile {
-      min-height: 260px;
-      max-width: 190px;
-      grid-template-columns: 1fr;
-      justify-self: center;
-    }
-
-    .archive-preview-frame {
-      min-height: 100%;
-      background: rgba(237,230,216,.04);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      border-left: 1px solid rgba(237,230,216,.06);
-    }
-
-    .archive-preview-frame:first-child { border-left: 0; }
-    .archive-preview-frame img { width: 100%; height: 100%; object-fit: cover; }
-    .archive-preview-frame span {
-      color: rgba(241,234,220,.36);
-      font: 850 10px var(--mono);
-      letter-spacing: .12em;
-      text-transform: uppercase;
     }
 
     label.field {
@@ -2390,22 +2346,6 @@
                   <div id="builderPreviewLarge"></div>
                 </section>
               </div>
-              <section class="archive-preview-panel" aria-label="Hero archive draft preview">
-                <div>
-                  <h3>Hero archive preview</h3>
-                  <p>Draft desktop and mobile order for the public archive playback.</p>
-                </div>
-                <div class="archive-preview-grid">
-                  <div>
-                    <div class="section-preview-kicker">Desktop order</div>
-                    <div class="archive-preview-stage" id="desktopHeroPreview"></div>
-                  </div>
-                  <div>
-                    <div class="section-preview-kicker">Mobile order</div>
-                    <div class="archive-preview-stage is-mobile" id="mobileHeroPreview"></div>
-                  </div>
-                </div>
-              </section>
             </div>
 
             <div class="website-task" data-website-tab="publish" role="tabpanel">
@@ -3455,7 +3395,6 @@
       renderBuilderEditor(section);
       renderHeroManager();
       renderMediaLibrary();
-      renderHeroArchivePreview();
       renderBuilderPreview(section);
       renderPublishSummary();
     }
@@ -3648,20 +3587,6 @@
           <button class="button small" type="button" disabled>Delete disabled</button>
         </div>
       `;
-    }
-
-    function renderHeroArchivePreview() {
-      renderArchivePreview("desktop", $("desktopHeroPreview"));
-      renderArchivePreview("mobile", $("mobileHeroPreview"));
-    }
-
-    function renderArchivePreview(kind, target) {
-      if (!target) return;
-      target.innerHTML = heroSlots(kind).map((slot, index) => `
-        <div class="archive-preview-frame">
-          ${slotPreviewImage(slot) && slot.status !== "Hidden" ? `<img src="${escapeHTML(slotPreviewImage(slot))}" alt="${escapeHTML(slot.alt || `Hero ${index + 1}`)}">` : `<span>${String(index + 1).padStart(2, "0")}</span>`}
-        </div>
-      `).join("");
     }
 
     function renderBuilderPreview(section) {
@@ -3919,7 +3844,6 @@
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
-      renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
     }
@@ -3939,7 +3863,6 @@
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
-      renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
     }
@@ -3956,7 +3879,6 @@
       saveBuilderDraft();
       renderHeroManager();
       renderBuilderPreview(selectedBuilderSection());
-      renderHeroArchivePreview();
       renderPublishSummary();
     }
 
@@ -3971,7 +3893,6 @@
       saveBuilderDraft();
       renderHeroManager();
       renderBuilderPreview(selectedBuilderSection());
-      renderHeroArchivePreview();
       renderPublishSummary();
     }
 
@@ -4031,7 +3952,6 @@
       switchWebsiteTab("hero");
       renderHeroManager();
       renderMediaLibrary();
-      renderHeroArchivePreview();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
     }
@@ -4071,7 +3991,6 @@
         state.heroFeedback = "Local preview only. Large files require server upload in Phase 3 before publishing this asset.";
         setBuilderSaveState("Unsaved changes");
         renderHeroManager();
-        renderHeroArchivePreview();
         renderBuilderPreview(selectedBuilderSection());
         return;
       }
@@ -4091,7 +4010,6 @@
         syncHeroAssetUsage();
         saveBuilderDraft();
         renderHeroManager();
-        renderHeroArchivePreview();
         renderBuilderPreview(selectedBuilderSection());
         renderPublishSummary();
       };
