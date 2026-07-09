@@ -210,44 +210,6 @@ body.has-reward .experience-progress {
 .experience-hero .display {
   margin-top: 0;
 }
-.hero-archive {
-  width: min(100%, 560px);
-  margin: 10px 0 18px;
-  padding: 12px 14px;
-  border: 1px solid rgba(233,196,138,0.18);
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(233,196,138,0.055), transparent 68%), rgba(5,6,8,0.48);
-  color: var(--faint);
-  font-family: var(--mono);
-  font-size: 10px;
-  line-height: 1.55;
-  letter-spacing: 0.08em;
-  opacity: 0.86;
-}
-.hero-archive span {
-  display: block;
-  margin-bottom: 5px;
-  color: rgba(233,196,138,0.82);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.hero-archive code {
-  display: inline;
-  color: rgba(245,241,234,0.68);
-  font-family: inherit;
-  white-space: normal;
-}
-.hero-archive.is-ready code::after {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 1em;
-  margin-left: 4px;
-  border-right: 1px solid rgba(233,196,138,0.7);
-  transform: translateY(2px);
-  animation: archiveCaret 1.2s steps(1) infinite;
-}
 .lede {
   max-width: 30ch;
   color: var(--muted);
@@ -271,6 +233,15 @@ body.has-reward .experience-progress {
 .return-note small {
   color: var(--faint);
   letter-spacing: 0.14em;
+}
+.return-note .is-typing-caret::after {
+  content: "";
+  display: inline-block;
+  height: 1em;
+  margin-left: 4px;
+  border-right: 1px solid rgba(233,196,138,0.78);
+  transform: translateY(2px);
+  animation: returnCaret 1s steps(1) infinite;
 }
 .scroll-cue {
   margin-top: 62px;
@@ -2143,7 +2114,7 @@ textarea.text-field {
   0%, 28% { opacity: 0.6; transform: translateX(-10px); }
   54%, 100% { opacity: 1; transform: translateX(0); }
 }
-@keyframes archiveCaret {
+@keyframes returnCaret {
   0%, 48% { opacity: 1; }
   49%, 100% { opacity: 0.18; }
 }
@@ -2156,7 +2127,7 @@ textarea.text-field {
   .follow-card {
     animation: none;
   }
-  .hero-archive.is-ready code::after {
+  .return-note .is-typing-caret::after {
     animation: none;
     opacity: 0.45;
   }
@@ -2309,10 +2280,6 @@ textarea.text-field {
   .industry-pill {
     flex-basis: min(72vw, 260px);
     min-height: 68px;
-  }
-  .hero-archive {
-    margin-top: 14px;
-    margin-bottom: 18px;
   }
   .example-board {
     min-height: 280px;
