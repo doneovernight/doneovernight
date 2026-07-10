@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>DON Assistant Lab | DONEOVERNIGHT</title>
+  <meta name="description" content="Protected internal prototype for the DONEOVERNIGHT website guide.">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#08090b">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/doneovernight-footer.css">
+  <link rel="stylesheet" href="/components/don-assistant/styles.css">
+  <link rel="stylesheet" href="/labs/don-assistant/lab.css">
+</head>
+<body class="is-locked">
+  <div class="access-gate" id="accessGate" role="status" aria-live="polite">
+    <div class="access-gate__panel">
+      <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT" width="210" height="32">
+      <span class="eyebrow">Internal lab</span>
+      <h1>Checking HQ access.</h1>
+      <p id="accessNote">This preview is available to authorized DONEOVERNIGHT operators.</p>
+      <a class="quiet-link" id="loginLink" href="/hq/login" hidden>Open HQ login</a>
+    </div>
+  </div>
+
+  <div class="lab-site" id="labSite" hidden>
+    <header class="lab-nav">
+      <a class="lab-brand" href="/" aria-label="DONEOVERNIGHT home">
+        <img src="/assets/doneovernight-wordmark.svg" alt="DONEOVERNIGHT" width="210" height="32">
+      </a>
+      <div class="lab-nav__meta">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>Phase 1 / Internal</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="lab-hero">
+        <div class="lab-hero__copy">
+          <span class="eyebrow">DON Assistant / Prototype 01</span>
+          <h1>A quiet guide<br>for the <em>system.</em></h1>
+          <p>Original to DONEOVERNIGHT. Alive through restraint. Built to explain systems, point toward useful work, and stay out of the way.</p>
+        </div>
+        <div class="lab-hero__spec" aria-label="Prototype boundaries">
+          <span>Local messages only</span>
+          <span>No LLM connected</span>
+          <span>No visitor data</span>
+          <span>Reduced motion ready</span>
+        </div>
+      </section>
+
+      <section class="lab-section" aria-labelledby="desktop-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">01</span>
+            <h2 id="desktop-title">Desktop placement</h2>
+          </div>
+          <p>Hover or focus the operator. The response is exactly three short jumps, with stacking locked until completion.</p>
+        </div>
+        <div class="desktop-stage">
+          <div class="stage-copy">
+            <span class="eyebrow">System window</span>
+            <h3>Clarity before<br>conversation.</h3>
+            <p>The assistant occupies a reserved corner layer and never shifts page content.</p>
+          </div>
+          <div class="stage-grid" aria-hidden="true"></div>
+          <div class="assistant-placement assistant-placement--desktop" id="desktopAssistant"></div>
+        </div>
+      </section>
+
+      <section class="control-grid" aria-label="Assistant laboratory controls">
+        <div class="control-panel">
+          <div class="control-panel__head">
+            <div>
+              <span class="section-number">02</span>
+              <h2>State machine</h2>
+            </div>
+            <output class="state-output" id="stateOutput">idle</output>
+          </div>
+          <div class="state-controls" id="stateControls">
+            <button type="button" data-state="idle">Idle</button>
+            <button type="button" data-state="blink">Blink</button>
+            <button type="button" data-state="sleep">Sleep</button>
+            <button type="button" data-state="awake">Awake</button>
+            <button type="button" data-state="hover">Hover</button>
+            <button type="button" data-state="triple_jump">Triple jump</button>
+            <button type="button" data-state="listening">Listening</button>
+            <button type="button" data-state="thinking">Thinking</button>
+            <button type="button" data-state="speaking">Speaking</button>
+            <button type="button" data-state="success">Success</button>
+            <button type="button" data-state="collapsed">Collapsed</button>
+            <button type="button" data-state="expanded">Expanded</button>
+          </div>
+        </div>
+
+        <div class="control-panel">
+          <div class="control-panel__head">
+            <div>
+              <span class="section-number">03</span>
+              <h2>Message bubble</h2>
+            </div>
+          </div>
+          <label class="select-label" for="messageSelect">Deterministic prototype message</label>
+          <select id="messageSelect">
+            <option>Looking for something specific?</option>
+            <option>Want to see how the system works?</option>
+            <option>Tell me what your business needs.</option>
+            <option>Your next step is ready.</option>
+          </select>
+          <div class="control-actions">
+            <button type="button" id="expandBubble">Expand</button>
+            <button type="button" id="collapseBubble">Collapse</button>
+          </div>
+        </div>
+
+        <div class="control-panel">
+          <div class="control-panel__head">
+            <div>
+              <span class="section-number">04</span>
+              <h2>Motion access</h2>
+            </div>
+          </div>
+          <label class="motion-toggle">
+            <input type="checkbox" id="reduceMotion">
+            <span>
+              <strong>Force reduced motion</strong>
+              <small>All controls and state feedback remain available.</small>
+            </span>
+          </label>
+          <p class="system-preference" id="systemPreference">Reading system preference…</p>
+        </div>
+
+        <div class="control-panel">
+          <div class="control-panel__head">
+            <div>
+              <span class="section-number">05</span>
+              <h2>Explicit event</h2>
+            </div>
+          </div>
+          <p class="panel-copy">Success never occurs randomly. It only runs after a named product event.</p>
+          <button class="event-button" type="button" id="successEvent">Dispatch completion event</button>
+        </div>
+      </section>
+
+      <section class="lab-section mobile-section" aria-labelledby="mobile-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">06</span>
+            <h2 id="mobile-title">Mobile placement</h2>
+          </div>
+          <p>Inset with <code>env(safe-area-inset-*)</code>, compact enough to preserve the page’s primary controls.</p>
+        </div>
+        <div class="mobile-stage-wrap">
+          <div class="mobile-window">
+            <div class="mobile-window__bar"><span>9:41</span><i></i></div>
+            <div class="mobile-window__copy">
+              <span class="eyebrow">DONEOVERNIGHT</span>
+              <h3>Your next step<br>stays visible.</h3>
+              <button type="button">Primary page action</button>
+            </div>
+            <div class="assistant-placement assistant-placement--mobile" id="mobileAssistant"></div>
+          </div>
+          <div class="mobile-notes">
+            <article><strong>Safe area</strong><span>Bottom and right insets are respected.</span></article>
+            <article><strong>Hit targets</strong><span>Keyboard and pointer controls remain independent.</span></article>
+            <article><strong>Content first</strong><span>Placement avoids the primary action zone.</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="lab-section" aria-labelledby="performance-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-number">07</span>
+            <h2 id="performance-title">Performance notes</h2>
+          </div>
+          <p>No framework runtime. No image payload. No continuous JavaScript animation loop.</p>
+        </div>
+        <div class="performance-grid">
+          <article><span>Runtime</span><strong>ES modules</strong><p>Loaded only on the protected prototype route.</p></article>
+          <article><span>Motion</span><strong>CSS transforms</strong><p>Timers schedule natural blinks; CSS handles paint-safe movement.</p></article>
+          <article><span>Layout</span><strong id="clsMetric">0.000 CLS</strong><p>Reserved dimensions and overlay placement prevent content shifts.</p></article>
+          <article><span>Data</span><strong>0 requests</strong><p>Messages are fixed local strings. No chat endpoint or persistence.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="lab-footer doneovernight-footer-watermark-frame">
+      <div class="wordmark italic doneovernight-footer-watermark">done overnight.</div>
+      <div class="lab-footer__grid">
+        <div>
+          <span class="lab-footer__wordmark">done overnight.</span>
+          <p>Overnight execution for founders, creatives, and operators.</p>
+        </div>
+        <nav aria-label="Footer">
+          <a href="/how-it-works">How it works</a>
+          <a href="/case-studies">Case studies</a>
+          <a href="/trust">Trust</a>
+          <a href="mailto:ask@doneovernight.com">Contact</a>
+        </nav>
+      </div>
+      <div class="lab-footer__bottom">
+        <span>DONEOVERNIGHT — Internal prototype.</span>
+        <span>© 2026 · Done Overnight</span>
+        <a href="mailto:ask@doneovernight.com">ask@doneovernight.com</a>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="/labs/don-assistant/lab.js"></script>
+</body>
+</html>
