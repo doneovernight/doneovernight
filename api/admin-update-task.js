@@ -392,6 +392,17 @@ function isCommonplaceTask(task = {}) {
     workspace === "cp";
 }
 
+function isCommonplaceBookingTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
+  const intakeVersion = clean(task.intake_version || task.intakeVersion || raw.intakeVersion || raw.intake_version).toLowerCase();
+  const summary = clean(task.task_summary || task.task_description || raw.task_summary || raw.task_description);
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    intakeVersion === "commonpl4ce_booker_v1" ||
+    summary.includes("COMMONPL4CE booking request");
+}
+
 function isWebsiteOsStatusOnlyUpdate(input = {}) {
   const allowedKeys = new Set(["workspace_slug", "workspaceSlug", "id", "task_id", "taskId", "operational_id", "reference_id", "status", "updated_at", "updatedAt"]);
   return clean(input.status) && Object.keys(input).every((key) => allowedKeys.has(key));
@@ -1600,7 +1611,7 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   const roles = action === "permanent_delete" ? ["Owner"] : ["Owner", "Admin"];
   const current = await requireWebsiteOsSession(req, { slug: "cp", roles });
   const task = await loadTask(taskId);
-  if (!task || !isCommonplaceTask(task)) {
+  if (!task || !isCommonplaceBookingTask(task)) {
     const error = new Error("Record not found");
     error.code = "RECORD_NOT_FOUND";
     error.statusCode = 404;
