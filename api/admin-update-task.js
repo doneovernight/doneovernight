@@ -1594,13 +1594,6 @@ async function writeCommonpl4ceRecordAudit(entry = {}) {
   });
 }
 
-async function deleteCommonpl4ceRecord(taskId) {
-  await supabaseRest(`${TASK_TABLE}?${buildTaskFilter(taskId)}`, {
-    method: "DELETE",
-    headers: { Prefer: "return=minimal" }
-  });
-}
-
 async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   const action = clean(input.record_action || input.recordAction || input.operation).toLowerCase();
   const recordType = clean(input.record_type || input.recordType).toLowerCase() === "message" ? "message" : "booking";
@@ -1707,7 +1700,17 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
       throw error;
     }
     await writeCommonpl4ceRecordAudit(auditEntry);
-    await deleteCommonpl4ceRecord(taskId);
+    const archivedForDelete = await patchTask(taskId, {
+      status: "archived",
+      raw_payload: {
+        ...baseRawPayload,
+        website_os_visibility: "trashed",
+        permanent_delete_requested_at: now,
+        permanent_delete_requested_by: clean(current.user.id || "")
+      },
+      updated_at: now
+    });
+    await deleteTaskRow(archivedForDelete);
     return { action, deleted: true, message: "Record permanently deleted." };
   }
 
