@@ -720,13 +720,22 @@
       width: min(calc(100vw - 32px), 390px);
       opacity: 0;
       pointer-events: none;
-      transform: translateY(16px);
-      transition: opacity .35s ease, transform .35s ease;
+      transform: translate3d(26px, 42px, 0);
+      transition: opacity .38s ease, transform .38s ease;
+      will-change: opacity, transform;
     }
     .cp-newsletter-popup.is-visible {
       opacity: 1;
       pointer-events: auto;
       transform: translateY(0);
+    }
+    .cp-newsletter-popup.is-exiting {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(26px, 42px, 0);
+    }
+    .cp-newsletter-popup.is-success {
+      pointer-events: none;
     }
     .cp-newsletter-popup-card {
       border: 1px solid rgba(248, 244, 235, .16);
@@ -790,6 +799,10 @@
     @media (prefers-reduced-motion: reduce) {
       .cp-newsletter-popup {
         transition: none;
+        transform: none;
+      }
+      .cp-newsletter-popup.is-exiting {
+        transform: none;
       }
     }
 
@@ -1371,6 +1384,8 @@
       const path = window.location.pathname.replace(/\/+$/, '') || '/';
       if (!['/cp', '/cp-book'].includes(path)) return;
       const popupStorageKey = 'commonpl4ce_newsletter_popup_state_v1';
+      const popupSuccessDelay = 2800;
+      const popupExitDelay = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 430;
 
       function ready(callback) {
         if (document.readyState === 'loading') {
@@ -1385,6 +1400,37 @@
       }
 
       ready(function () {
+        const popup = path === '/cp' ? document.querySelector('[data-newsletter-popup]') : null;
+        let popupVisible = false;
+        let popupClosing = false;
+        let popupSuccessTimer = 0;
+        let popupExitTimer = 0;
+        let popupRevealTimer = 0;
+
+        function hidePopupAfterExit(target) {
+          window.clearTimeout(popupExitTimer);
+          popupExitTimer = window.setTimeout(function () {
+            target.hidden = true;
+            target.classList.remove('is-visible', 'is-exiting', 'is-open');
+            popupVisible = false;
+            popupClosing = false;
+          }, popupExitDelay);
+        }
+
+        function closePopup(target, reason) {
+          if (!target || popupClosing) return;
+          popupClosing = true;
+          window.clearTimeout(popupSuccessTimer);
+          window.clearTimeout(popupRevealTimer);
+          target.classList.add('is-exiting');
+          target.classList.remove('is-visible');
+          if (reason) {
+            try { window.localStorage.setItem(popupStorageKey, reason); } catch (error) {}
+          }
+          window.removeEventListener('scroll', checkPopupScroll);
+          hidePopupAfterExit(target);
+        }
+
         document.querySelectorAll('[data-cp-newsletter]').forEach(function (root) {
           const toggle = root.querySelector('[data-newsletter-toggle]');
           const form = root.querySelector('[data-newsletter-form]');
@@ -1393,15 +1439,8 @@
           const dismiss = root.querySelector('[data-newsletter-dismiss]');
           const isPopup = root.hasAttribute('data-newsletter-popup');
 
-          function closePopup(reason) {
-            if (!isPopup) return;
-            root.classList.remove('is-visible');
-            if (reason) {
-              try { window.localStorage.setItem(popupStorageKey, reason); } catch (error) {}
-            }
-          }
-
           toggle?.addEventListener('click', function () {
+            if (root.classList.contains('is-success')) return;
             root.classList.add('is-open');
             if (status) status.textContent = '';
             track('newsletter_start', { surface: isPopup ? 'popup' : 'section' });
@@ -1409,11 +1448,12 @@
           });
 
           dismiss?.addEventListener('click', function () {
-            closePopup('dismissed');
+            closePopup(root, 'dismissed');
           });
 
           form?.addEventListener('submit', async function (event) {
             event.preventDefault();
+            if (root.classList.contains('is-success')) return;
             const value = String(email?.value || '').trim();
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
               if (status) status.textContent = 'Please add a valid email.';
@@ -1422,6 +1462,11 @@
             track('newsletter_submit', { surface: isPopup ? 'popup' : 'section' });
             const button = form.querySelector('button[type="submit"]');
             if (button) button.disabled = true;
+            if (isPopup) {
+              root.querySelectorAll('button, input').forEach(function (control) {
+                if (!control.hasAttribute('data-newsletter-dismiss')) control.disabled = true;
+              });
+            }
             try {
               const response = await fetch('/api/task-submit', {
                 method: 'POST',
@@ -1440,29 +1485,39 @@
               if (status) status.textContent = 'Thank you. You\u2019re on the list.';
               if (isPopup) {
                 try { window.localStorage.setItem(popupStorageKey, 'success'); } catch (error) {}
+                window.clearTimeout(popupSuccessTimer);
+                popupSuccessTimer = window.setTimeout(function () {
+                  closePopup(root, 'success');
+                }, popupSuccessDelay);
               }
               track('newsletter_success', { surface: isPopup ? 'popup' : 'section' });
             } catch (error) {
               if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
               if (button) button.disabled = false;
+              if (isPopup) {
+                root.querySelectorAll('button, input').forEach(function (control) {
+                  control.disabled = false;
+                });
+              }
             }
           });
         });
 
-        const popup = path === '/cp' ? document.querySelector('[data-newsletter-popup]') : null;
         if (!popup) return;
         try {
           if (window.localStorage.getItem(popupStorageKey)) return;
         } catch (error) {}
 
-        let popupVisible = false;
         function showPopup() {
-          if (popupVisible) return;
+          if (popupVisible || popupClosing || popup.hidden === false && popup.classList.contains('is-visible')) return;
           popupVisible = true;
+          popupClosing = false;
+          popup.classList.remove('is-exiting');
           popup.removeAttribute('hidden');
-          window.requestAnimationFrame(function () {
+          window.clearTimeout(popupRevealTimer);
+          popupRevealTimer = window.setTimeout(function () {
             popup.classList.add('is-visible');
-          });
+          }, 20);
           window.removeEventListener('scroll', checkPopupScroll);
         }
 
