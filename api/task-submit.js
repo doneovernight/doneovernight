@@ -911,6 +911,10 @@ function isWebsiteOsAuthRequest(input = {}) {
   return input.action === "website_os_auth" || input.intent === "website_os_auth";
 }
 
+function isCommonplaceRecordActionRequest(input = {}) {
+  return input.action === "commonpl4ce_record_action" || input.intent === "commonpl4ce_record_action";
+}
+
 function assertWebsiteOsAdminHost(req) {
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
   if (host && host !== "admin.doneovernight.com" && !host.includes("localhost") && !host.includes("127.0.0.1")) {
@@ -985,6 +989,199 @@ async function handleWebsiteOsAuthRequest(req, res, input = {}) {
   }
 
   return send(res, 400, { success: false, error: "Unsupported Website OS auth action" });
+}
+
+function isCommonplaceBookingRecord(task = {}) {
+  const rawPayload = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || rawPayload.source || rawPayload.booking_source || rawPayload.bookingSource).toLowerCase();
+  const intakeVersion = clean(task.intake_version || task.intakeVersion || rawPayload.intakeVersion || rawPayload.intake_version).toLowerCase();
+  const workspace = clean(task.workspace || task.workspace_slug || rawPayload.workspace || rawPayload.workspace_slug).toLowerCase();
+  const summary = clean(task.task_summary || task.task_description || rawPayload.task_summary || rawPayload.task_description);
+  if (source === COMMONPLACE_NEWSLETTER_SOURCE || source === COMMONPLACE_SITE_CONFIG_SOURCE) return false;
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    intakeVersion === "commonpl4ce_booker_v1" ||
+    workspace === "commonpl4ce" ||
+    workspace === "cp" ||
+    summary.includes("COMMONPL4CE booking request");
+}
+
+function commonplaceRecordRef(task = {}) {
+  return clean(task.task_id || task.taskId || task.id || task.raw_payload?.task_id || "");
+}
+
+function commonplaceRecordRaw(task = {}) {
+  return task.raw_payload && typeof task.raw_payload === "object" && task.raw_payload ? task.raw_payload : {};
+}
+
+function commonplaceRecordAuditEntry({ current, task, recordType, action, previousStatus }) {
+  return {
+    workspace: "cp",
+    record_id: commonplaceRecordRef(task),
+    record_type: recordType,
+    action,
+    actor_user_id: clean(current?.user?.id || ""),
+    actor_role: clean(current?.user?.role || ""),
+    timestamp: new Date().toISOString(),
+    previous_status: clean(previousStatus || task.status || task.raw_payload?.status || "")
+  };
+}
+
+async function writeCommonplaceRecordAudit(entry = {}) {
+  await supabaseFetch(ANALYTICS_EVENT_TABLE, {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      event_type: "website_os_record_action",
+      task_id: clean(entry.record_id).slice(0, 100),
+      source: COMMONPLACE_ANALYTICS_SOURCE,
+      route: "admin.doneovernight.com/cp",
+      referrer: "",
+      session_id: "",
+      user_agent_hash: "",
+      metadata: safeAnalyticsMetadata({
+        workspace: entry.workspace,
+        record_id: entry.record_id,
+        record_type: entry.record_type,
+        action: entry.action,
+        actor_user_id: entry.actor_user_id,
+        actor_role: entry.actor_role,
+        previous_status: entry.previous_status
+      })
+    })
+  });
+}
+
+async function patchCommonplaceRecord(taskId, task, patch = {}) {
+  const filter = buildTaskFilter(taskId || commonplaceRecordRef(task));
+  const rows = await supabaseFetch([
+    `task_requests?${filter}`,
+    "select=*"
+  ].join("&"), {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(patch)
+  });
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function deleteCommonplaceRecord(taskId, task) {
+  const filter = buildTaskFilter(taskId || commonplaceRecordRef(task));
+  await supabaseFetch(`task_requests?${filter}`, {
+    method: "DELETE",
+    headers: { Prefer: "return=minimal" }
+  });
+}
+
+async function handleCommonplaceRecordActionRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  const action = clean(input.record_action || input.recordAction || input.operation).toLowerCase();
+  const recordType = clean(input.record_type || input.recordType).toLowerCase() === "message" ? "message" : "booking";
+  const roles = action === "permanent_delete" ? ["Owner"] : ["Owner", "Admin"];
+  const current = await requireWebsiteOsSession(req, { slug: "cp", roles });
+  const recordId = clean(input.record_id || input.recordId || input.task_id || input.taskId || input.id);
+  if (!recordId) {
+    return send(res, 400, { success: false, error: "Record id required", code: "RECORD_ID_REQUIRED" });
+  }
+
+  const task = await loadReviewTask(recordId);
+  if (!task || !isCommonplaceBookingRecord(task)) {
+    return send(res, 404, { success: false, error: "Record not found", code: "RECORD_NOT_FOUND" });
+  }
+
+  const now = new Date().toISOString();
+  const previousStatus = clean(task.status || task.raw_payload?.status || "new");
+  const rawPayload = commonplaceRecordRaw(task);
+  const auditEntry = commonplaceRecordAuditEntry({ current, task, recordType, action, previousStatus });
+  const previousAudit = Array.isArray(rawPayload.website_os_audit) ? rawPayload.website_os_audit : [];
+  const nextAudit = [auditEntry, ...previousAudit].slice(0, 50);
+  const baseRawPayload = {
+    ...rawPayload,
+    website_os_audit: nextAudit,
+    website_os_last_action_at: now,
+    website_os_last_action_by: clean(current.user.id || ""),
+    website_os_last_action: action
+  };
+
+  if (action === "archive") {
+    const updated = await patchCommonplaceRecord(recordId, task, {
+      status: "archived",
+      raw_payload: {
+        ...baseRawPayload,
+        website_status: "Archived",
+        website_os_visibility: "active",
+        archived_at: now,
+        archived_by: clean(current.user.id || "")
+      },
+      updated_at: now
+    });
+    await writeCommonplaceRecordAudit(auditEntry).catch(() => {});
+    return send(res, 200, { success: true, action, record: updated, message: "Record archived." });
+  }
+
+  if (action === "trash") {
+    const updated = await patchCommonplaceRecord(recordId, task, {
+      status: "trashed",
+      raw_payload: {
+        ...baseRawPayload,
+        deleted_at: now,
+        deleted_by: clean(current.user.id || ""),
+        delete_reason: clean(input.delete_reason || input.deleteReason) || `Moved ${recordType} to Trash`,
+        deleted_record_type: recordType,
+        previous_status: previousStatus,
+        website_os_visibility: "trashed"
+      },
+      updated_at: now
+    });
+    await writeCommonplaceRecordAudit(auditEntry).catch(() => {});
+    return send(res, 200, { success: true, action, record: updated, message: "Record moved to Trash." });
+  }
+
+  if (action === "restore") {
+    const restoredStatus = clean(rawPayload.previous_status) || "new";
+    const updated = await patchCommonplaceRecord(recordId, task, {
+      status: restoredStatus === "trashed" ? "new" : restoredStatus,
+      raw_payload: {
+        ...baseRawPayload,
+        restored_at: now,
+        restored_by: clean(current.user.id || ""),
+        website_os_visibility: "active",
+        previous_status: previousStatus
+      },
+      updated_at: now
+    });
+    await writeCommonplaceRecordAudit(auditEntry).catch(() => {});
+    return send(res, 200, { success: true, action, record: updated, message: "Record restored." });
+  }
+
+  if (action === "mark_test" || action === "unmark_test") {
+    const isTest = action === "mark_test";
+    const updated = await patchCommonplaceRecord(recordId, task, {
+      raw_payload: {
+        ...baseRawPayload,
+        website_os_test_record: isTest,
+        test_record: isTest
+      },
+      updated_at: now
+    });
+    await writeCommonplaceRecordAudit(auditEntry).catch(() => {});
+    return send(res, 200, { success: true, action, record: updated, message: isTest ? "Record marked as test." : "Test label removed." });
+  }
+
+  if (action === "permanent_delete") {
+    if (clean(input.confirm) !== "PERMANENT_DELETE") {
+      return send(res, 400, { success: false, error: "Permanent delete confirmation required", code: "PERMANENT_DELETE_CONFIRMATION_REQUIRED" });
+    }
+    const isTrashed = clean(task.status).toLowerCase() === "trashed" || clean(rawPayload.website_os_visibility).toLowerCase() === "trashed" || Boolean(rawPayload.deleted_at);
+    if (!isTrashed) {
+      return send(res, 409, { success: false, error: "Only trashed records can be permanently deleted", code: "RECORD_NOT_TRASHED" });
+    }
+    await writeCommonplaceRecordAudit(auditEntry);
+    await deleteCommonplaceRecord(recordId, task);
+    return send(res, 200, { success: true, action, deleted: true, message: "Record permanently deleted." });
+  }
+
+  return send(res, 400, { success: false, error: "Unsupported record action", code: "UNSUPPORTED_RECORD_ACTION" });
 }
 
 function validateCommonplacePublicRequest(req, input = {}) {
@@ -3255,6 +3452,18 @@ module.exports = async function handler(req, res) {
 
     if (isCommonplaceSiteConfigRequest(req, input)) {
       return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
+    if (isCommonplaceRecordActionRequest(input)) {
+      try {
+        return await handleCommonplaceRecordActionRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.message || "Record action failed",
+          code: error.code || "COMMONPLACE_RECORD_ACTION_FAILED"
+        });
+      }
     }
 
     if (isCommonplaceAnalyticsSummaryRequest(input)) {

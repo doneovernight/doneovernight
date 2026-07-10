@@ -2060,6 +2060,113 @@
     .setting-row strong { font-size: 13px; }
     .setting-row span { color: var(--muted); font-size: 13px; line-height: 1.45; }
 
+    .record-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .button.danger {
+      border-color: rgba(255, 166, 130, .28);
+      color: rgba(255, 206, 188, .92);
+    }
+
+    .button.danger:hover {
+      border-color: rgba(255, 190, 160, .5);
+      background: rgba(255, 160, 120, .08);
+    }
+
+    .trash-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .trash-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding-top: 12px;
+    }
+
+    .trash-row:first-child { border-top: 0; padding-top: 0; }
+
+    .trash-row strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .trash-row span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .os-toast {
+      position: fixed;
+      right: clamp(18px, 4vw, 42px);
+      bottom: clamp(18px, 4vw, 42px);
+      z-index: 80;
+      max-width: 360px;
+      padding: 13px 15px;
+      border: 1px solid rgba(237,230,216,.16);
+      background: rgba(24, 21, 19, .88);
+      box-shadow: 0 24px 70px rgba(0,0,0,.34);
+      color: var(--cream);
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity .22s ease, transform .22s ease;
+    }
+
+    .os-toast.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0,0,0,.56);
+      backdrop-filter: blur(14px);
+    }
+
+    .confirm-backdrop.is-visible { display: grid; }
+
+    .confirm-card {
+      width: min(440px, 100%);
+      border: 1px solid rgba(237,230,216,.16);
+      background: linear-gradient(145deg, rgba(40, 35, 31, .96), rgba(22, 19, 17, .96));
+      box-shadow: 0 30px 90px rgba(0,0,0,.45);
+      padding: 22px;
+    }
+
+    .confirm-card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .confirm-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
     .security-section {
       margin-top: 18px;
       border-top: 1px solid rgba(237,230,216,.1);
@@ -2320,6 +2427,8 @@
                   <button class="button small" id="saveDraft" type="button" disabled>Save draft locally</button>
                   <button class="button small" id="copyDraft" type="button" disabled>Copy draft</button>
                   <button class="button small" type="button" disabled>Send</button>
+                  <button class="button ghost small" id="archiveMessageButton" type="button" data-message-action="archive" disabled>Archive thread</button>
+                  <button class="button danger small" id="trashMessageButton" type="button" data-message-action="trash" disabled>Move message to Trash</button>
                 </div>
                 <p class="form-note" id="draftNote">Send will be connected in the next phase.</p>
               </div>
@@ -2677,9 +2786,33 @@
               <div class="settings-list" id="securitySettingsList"></div>
               <p class="form-note" id="securityStatus">Password changes are stored server-side for this Website OS workspace.</p>
             </section>
+            <section class="security-section" aria-label="Trash settings">
+              <div class="panel-head">
+                <div>
+                  <h2>Trash</h2>
+                  <p>Bookings and booking-backed message threads moved out of the active workspace.</p>
+                </div>
+                <button class="button ghost small" id="deleteTestRecordsButton" type="button" disabled>Delete test records</button>
+              </div>
+              <div class="trash-list" id="trashList"></div>
+              <p class="form-note" id="trashStatus">Trash actions are verified server-side for the COMMONPL4CE workspace.</p>
+            </section>
           </section>
         </section>
       </section>
+    </div>
+
+    <div class="os-toast" id="osToast" role="status" aria-live="polite"></div>
+
+    <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true">
+      <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
+        <h2 id="confirmTitle">Move this booking to Trash?</h2>
+        <p id="confirmBody">This removes it from the active workspace. It can be restored later.</p>
+        <div class="confirm-actions">
+          <button class="button ghost small" type="button" id="confirmCancel">Cancel</button>
+          <button class="button danger small" type="button" id="confirmAccept">Move to Trash</button>
+        </div>
+      </div>
     </div>
 
     <footer class="os-footer">
@@ -2695,6 +2828,7 @@
     const WEBSITE_OS_WORKSPACE_SLUG = "cp";
     const ADMIN_TASKS_ENDPOINT = "/api/admin-tasks";
     const ADMIN_UPDATE_TASK_ENDPOINT = "/api/admin-update-task";
+    const COMMONPLACE_RECORD_ACTION_API = "/api/task-submit";
     const DRAFT_KEY = "doneovernight_website_os_commonpl4ce_drafts";
     const SIDEBAR_KEY = "doneovernight_website_os_commonpl4ce_sidebar";
     const BUILDER_DRAFT_KEY = "doneovernight_website_os_commonpl4ce_builder_drafts";
@@ -2784,7 +2918,9 @@
     const lower = (value) => clean(value).toLowerCase();
     const state = {
       tasks: [],
+      allBookings: [],
       bookings: [],
+      trash: [],
       clients: [],
       selectedBookingId: "",
       drafts: readDrafts(),
@@ -2804,6 +2940,7 @@
       analyticsMessage: "Analytics not connected yet",
       authUser: null,
       authSession: null,
+      toastTimer: null,
       activeWebsiteTab: "builder"
     };
 
@@ -3374,6 +3511,8 @@
       const data = raw(task);
       const summary = clean(task.task_summary || task.task_description || data.task_summary || data.task_description || data.task || task.task);
       const status = normalizeWebsiteStatus(task.status || data.website_status || data.status);
+      const rawStatus = lower(task.status || data.status || "new") || "new";
+      const isTrashed = rawStatus === "trashed" || lower(data.website_os_visibility) === "trashed" || Boolean(data.deleted_at);
       const booking = {
         id: taskRef(task) || clean(task.id),
         tableId: clean(task.id),
@@ -3388,7 +3527,13 @@
         budget: normalizeBudget(data.budgetRange || task.client_budget || data.client_budget || data.budget || parseLine(summary, "Budget range")),
         notes: clean(data.references || data.notes || data.links) || parseLine(summary, "References / mood / notes"),
         status,
-        taskStatus: lower(task.status || data.status || "new") || "new",
+        taskStatus: rawStatus,
+        isTrashed,
+        isTest: data.website_os_test_record === true || data.test_record === true,
+        deletedAt: clean(data.deleted_at),
+        deletedBy: clean(data.deleted_by),
+        deleteReason: clean(data.delete_reason),
+        deletedRecordType: lower(data.deleted_record_type) === "message" ? "message" : "booking",
         createdAt: clean(task.created_at || data.created_at || task.createdAt || data.createdAt),
         updatedAt: clean(task.updated_at || data.updated_at || task.updatedAt || data.updatedAt),
         sourceTask: task
@@ -3469,9 +3614,14 @@
         throw new Error(data?.error || "Could not load admin tasks");
       }
       state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-      state.bookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
+      state.allBookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
+      state.trash = state.allBookings.filter((booking) => booking.isTrashed);
+      state.bookings = state.allBookings.filter((booking) => !booking.isTrashed);
       state.clients = buildClients(state.bookings);
       if (!state.selectedBookingId && state.bookings[0]) state.selectedBookingId = state.bookings[0].id;
+      if (state.selectedBookingId && !state.bookings.some((booking) => booking.id === state.selectedBookingId)) {
+        state.selectedBookingId = state.bookings[0]?.id || "";
+      }
       renderAll();
       setSync(state.bookings.length ? `Connected: ${state.bookings.length} bookings` : "Connected: no bookings yet");
     }
@@ -3571,6 +3721,7 @@
       renderTemplates();
       renderWebsiteFields();
       renderSettings();
+      renderTrash();
       renderAnalytics();
       renderDraftEditor();
     }
@@ -3679,8 +3830,14 @@
           </div>
           <div class="booking-actions">
             <span class="status-pill ${escapeHTML(statusClass)}">${escapeHTML(booking.status)}</span>
+            ${booking.isTest ? `<span class="status-pill">Test record</span>` : ""}
             <select data-status-select="${escapeHTML(booking.id)}" aria-label="Booking status">${statusOptions}</select>
             <button class="button small" type="button" data-draft-for="${escapeHTML(booking.id)}">Draft reply</button>
+            <div class="record-actions">
+              <button class="button ghost small" type="button" data-record-action="archive" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">Archive</button>
+              <button class="button ghost small" type="button" data-record-action="${booking.isTest ? "unmark_test" : "mark_test"}" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">${booking.isTest ? "Unmark test" : "Mark test"}</button>
+              <button class="button danger small" type="button" data-record-action="trash" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">Move to Trash</button>
+            </div>
             <div class="form-note" data-status-note="${escapeHTML(booking.id)}">Status writes to existing admin task lifecycle.</div>
           </div>
         </article>
@@ -3768,7 +3925,7 @@
       const subject = $("draftSubject");
       const body = $("draftBody");
       const enabled = Boolean(booking);
-      [subject, body, $("draftReceived"), $("draftMoreInfo"), $("saveDraft"), $("copyDraft")].forEach((element) => {
+      [subject, body, $("draftReceived"), $("draftMoreInfo"), $("saveDraft"), $("copyDraft"), $("archiveMessageButton"), $("trashMessageButton")].forEach((element) => {
         if (element) element.disabled = !enabled;
       });
       if (!booking) {
@@ -4904,6 +5061,155 @@
       `).join("");
       renderBookingAvailabilitySettings();
       renderSecuritySettings();
+      renderTrash();
+    }
+
+    function showToast(message) {
+      const toast = $("osToast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add("is-visible");
+      window.clearTimeout(state.toastTimer);
+      state.toastTimer = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+      }, 3200);
+    }
+
+    function askConfirmation({ title, body, confirmLabel = "Confirm" }) {
+      return new Promise((resolve) => {
+        const dialog = $("confirmDialog");
+        const titleNode = $("confirmTitle");
+        const bodyNode = $("confirmBody");
+        const cancel = $("confirmCancel");
+        const accept = $("confirmAccept");
+        if (!dialog || !titleNode || !bodyNode || !cancel || !accept) {
+          resolve(window.confirm(`${title}\n\n${body}`));
+          return;
+        }
+        const cleanup = (value) => {
+          dialog.classList.remove("is-visible");
+          dialog.setAttribute("aria-hidden", "true");
+          cancel.removeEventListener("click", onCancel);
+          accept.removeEventListener("click", onAccept);
+          document.removeEventListener("keydown", onKeydown);
+          resolve(value);
+        };
+        const onCancel = () => cleanup(false);
+        const onAccept = () => cleanup(true);
+        const onKeydown = (event) => {
+          if (event.key === "Escape") cleanup(false);
+        };
+        titleNode.textContent = title;
+        bodyNode.textContent = body;
+        accept.textContent = confirmLabel;
+        dialog.classList.add("is-visible");
+        dialog.setAttribute("aria-hidden", "false");
+        cancel.addEventListener("click", onCancel);
+        accept.addEventListener("click", onAccept);
+        document.addEventListener("keydown", onKeydown);
+        cancel.focus();
+      });
+    }
+
+    function renderTrash() {
+      const target = $("trashList");
+      if (!target) return;
+      const testRecords = state.trash.filter((booking) => booking.isTest);
+      const bulkButton = $("deleteTestRecordsButton");
+      if (bulkButton) bulkButton.disabled = !testRecords.length;
+      if (!state.trash.length) {
+        target.innerHTML = `<div class="empty-state"><strong>Trash is empty.</strong>Trashed bookings and booking-backed message threads can be restored here.</div>`;
+        const status = $("trashStatus");
+        if (status) status.textContent = "Trash actions are verified server-side for the COMMONPL4CE workspace.";
+        return;
+      }
+      target.innerHTML = state.trash.map((booking) => {
+        const typeLabel = booking.deletedRecordType === "message" ? "Message thread" : "Booking";
+        const deleted = booking.deletedAt ? `Moved ${formatDate(booking.deletedAt)}` : "Moved to Trash";
+        return `
+          <article class="trash-row" data-trash-record="${escapeHTML(booking.id)}">
+            <div>
+              <strong>${escapeHTML(typeLabel)} / ${escapeHTML(booking.name)}${booking.isTest ? " / Test record" : ""}</strong>
+              <span>${escapeHTML(booking.taskId || booking.id)} / ${escapeHTML(deleted)} / ${escapeHTML(booking.deleteReason || "No reason provided")}</span>
+            </div>
+            <div class="record-actions">
+              <button class="button ghost small" type="button" data-trash-action="restore" data-record-type="${escapeHTML(booking.deletedRecordType)}" data-record-id="${escapeHTML(booking.id)}">Restore</button>
+              <button class="button danger small" type="button" data-trash-action="permanent_delete" data-record-type="${escapeHTML(booking.deletedRecordType)}" data-record-id="${escapeHTML(booking.id)}">Permanently delete</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+      const status = $("trashStatus");
+      if (status) status.textContent = `${state.trash.length} record${state.trash.length === 1 ? "" : "s"} in Trash. Permanent deletion is Owner-only.`;
+    }
+
+    async function runRecordAction({ recordId, recordType = "booking", action }) {
+      const response = await fetch(COMMONPLACE_RECORD_ACTION_API, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_record_action",
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
+          record_id: recordId,
+          record_type: recordType,
+          record_action: action,
+          confirm: action === "permanent_delete" ? "PERMANENT_DELETE" : ""
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success !== true) {
+        throw new Error(data?.error || "Record action failed");
+      }
+      return data;
+    }
+
+    async function handleRecordAction({ recordId, recordType = "booking", action }) {
+      const isTrash = action === "trash";
+      const isPermanent = action === "permanent_delete";
+      if (isTrash) {
+        const ok = await askConfirmation({
+          title: recordType === "message" ? "Move this message to Trash?" : "Move this booking to Trash?",
+          body: "This removes it from the active workspace. It can be restored later.",
+          confirmLabel: "Move to Trash"
+        });
+        if (!ok) return;
+      }
+      if (isPermanent) {
+        const ok = await askConfirmation({
+          title: "Permanently delete this record?",
+          body: "This cannot be undone. Recovery is impossible after permanent deletion.",
+          confirmLabel: "Permanently delete"
+        });
+        if (!ok) return;
+      }
+      await runRecordAction({ recordId, recordType, action });
+      const labels = {
+        archive: recordType === "message" ? "Message thread archived." : "Booking archived.",
+        trash: recordType === "message" ? "Message moved to Trash." : "Booking moved to Trash.",
+        restore: "Record restored.",
+        permanent_delete: "Record permanently deleted.",
+        mark_test: "Record marked as test.",
+        unmark_test: "Test label removed."
+      };
+      showToast(labels[action] || "Record updated.");
+      await loadBookings({ silent: true }).catch(() => renderAll());
+    }
+
+    async function deleteTestRecords() {
+      const testRecords = state.trash.filter((booking) => booking.isTest);
+      if (!testRecords.length) return;
+      const ok = await askConfirmation({
+        title: "Delete test records?",
+        body: "Only records explicitly marked as test will be permanently deleted. This cannot be undone.",
+        confirmLabel: "Delete test records"
+      });
+      if (!ok) return;
+      for (const booking of testRecords) {
+        await runRecordAction({ recordId: booking.id, recordType: booking.deletedRecordType, action: "permanent_delete" });
+      }
+      showToast(`${testRecords.length} test record${testRecords.length === 1 ? "" : "s"} permanently deleted.`);
+      await loadBookings({ silent: true }).catch(() => renderAll());
     }
 
     function renderSecuritySettings() {
@@ -5119,6 +5425,9 @@
 
     $("refreshButton").addEventListener("click", () => loadBookings());
     $("reloadBookingsButton").addEventListener("click", () => loadBookings());
+    $("deleteTestRecordsButton").addEventListener("click", () => {
+      deleteTestRecords().catch((error) => showToast(error.message || "Could not delete test records."));
+    });
     $("sidebarToggle").addEventListener("click", () => {
       setSidebarCollapsed($("app").dataset.sidebar !== "collapsed");
     });
@@ -5327,6 +5636,62 @@
       const mediaField = event.target.closest("[data-media-field]");
       if (mediaField) {
         updateSelectedMediaAsset(mediaField.dataset.mediaField, mediaField.value);
+        return;
+      }
+
+      const recordAction = event.target.closest("[data-record-action]");
+      if (recordAction) {
+        const button = recordAction;
+        button.disabled = true;
+        try {
+          await handleRecordAction({
+            recordId: button.dataset.recordId,
+            recordType: button.dataset.recordType || "booking",
+            action: button.dataset.recordAction
+          });
+        } catch (error) {
+          showToast(error.message || "Record action failed.");
+        } finally {
+          button.disabled = false;
+        }
+        return;
+      }
+
+      const trashAction = event.target.closest("[data-trash-action]");
+      if (trashAction) {
+        const button = trashAction;
+        button.disabled = true;
+        try {
+          await handleRecordAction({
+            recordId: button.dataset.recordId,
+            recordType: button.dataset.recordType || "booking",
+            action: button.dataset.trashAction
+          });
+        } catch (error) {
+          showToast(error.message || "Trash action failed.");
+        } finally {
+          button.disabled = false;
+        }
+        return;
+      }
+
+      const messageAction = event.target.closest("[data-message-action]");
+      if (messageAction) {
+        const booking = selectedBooking();
+        if (!booking) return;
+        const button = messageAction;
+        button.disabled = true;
+        try {
+          await handleRecordAction({
+            recordId: booking.id,
+            recordType: "message",
+            action: button.dataset.messageAction
+          });
+        } catch (error) {
+          showToast(error.message || "Message action failed.");
+        } finally {
+          button.disabled = false;
+        }
         return;
       }
 
