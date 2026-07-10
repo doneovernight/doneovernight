@@ -1695,6 +1695,8 @@
     (() => {
       const endpoint = "/api/creator-health";
       const rateWindow = 5 * 60 * 1000;
+      const previewParams = new URLSearchParams(location.search);
+      const isPreviewSurface = previewParams.has("preview");
       function text(value, limit) {
         return String(value || "").replace(/[\r\n\t]+/g, " ").slice(0, limit || 500);
       }
@@ -1711,6 +1713,7 @@
         return true;
       }
       function report(area, action, error, extra) {
+        if (isPreviewSurface && area === "Public" && /^Fetch/.test(String(action || ""))) return;
         const reportSlug = String(window.__creatorSlug || "mosyaamosya");
         const message = text(error && (error.message || error.reason) || error, 700);
         if (!message) return;
