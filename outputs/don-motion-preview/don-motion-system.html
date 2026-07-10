@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Don Motion System</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Don Motion System" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Don Motion System&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(--background) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: light-dark(rgb(255 255 255), rgb(24 24 24));
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 12.5px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;don-motion-system-vis&quot;&gt;
+  &lt;div class=&quot;viz-controls&quot;&gt;
+    &lt;label class=&quot;form-label&quot; for=&quot;don-state-select&quot;&gt;Inspect state&lt;/label&gt;
+    &lt;select class=&quot;form-select&quot; id=&quot;don-state-select&quot;&gt;
+      &lt;option&gt;Idle&lt;/option&gt;
+      &lt;option&gt;Hover&lt;/option&gt;
+      &lt;option&gt;Thinking&lt;/option&gt;
+      &lt;option&gt;Typing&lt;/option&gt;
+      &lt;option&gt;Listening&lt;/option&gt;
+      &lt;option&gt;Speaking&lt;/option&gt;
+      &lt;option&gt;Sleep&lt;/option&gt;
+      &lt;option&gt;Celebrate&lt;/option&gt;
+      &lt;option&gt;Success&lt;/option&gt;
+      &lt;option&gt;Working&lt;/option&gt;
+    &lt;/select&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;viz-grid don-motion-stats&quot;&gt;
+    &lt;div class=&quot;card viz-stat&quot;&gt;
+      &lt;div class=&quot;text-muted&quot;&gt;Entry / sequence&lt;/div&gt;
+      &lt;div class=&quot;viz-stat-value&quot; id=&quot;don-duration&quot;&gt;1540 ms&lt;/div&gt;
+      &lt;div class=&quot;text-small text-muted&quot; id=&quot;don-duration-note&quot;&gt;scheduled one-shot&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;card viz-stat&quot;&gt;
+      &lt;div class=&quot;text-muted&quot;&gt;Body ownership&lt;/div&gt;
+      &lt;div class=&quot;viz-stat-value&quot; id=&quot;don-lock&quot;&gt;none&lt;/div&gt;
+      &lt;div class=&quot;text-small text-muted&quot; id=&quot;don-lock-note&quot;&gt;micro-actions eligible&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;card viz-stat&quot;&gt;
+      &lt;div class=&quot;text-muted&quot;&gt;Stable behavior&lt;/div&gt;
+      &lt;div class=&quot;viz-stat-value&quot; id=&quot;don-hold&quot;&gt;still&lt;/div&gt;
+      &lt;div class=&quot;text-small text-muted&quot; id=&quot;don-hold-note&quot;&gt;random quiet window&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;section aria-labelledby=&quot;don-state-flow-heading&quot;&gt;
+    &lt;h3 id=&quot;don-state-flow-heading&quot;&gt;Semantic state flow&lt;/h3&gt;
+    &lt;svg class=&quot;don-state-map&quot; viewBox=&quot;0 0 720 420&quot; role=&quot;img&quot; aria-labelledby=&quot;don-map-title don-map-desc&quot;&gt;
+      &lt;title id=&quot;don-map-title&quot;&gt;DON finite state machine&lt;/title&gt;
+      &lt;desc id=&quot;don-map-desc&quot;&gt;Idle connects to Hover, Listening, Sleep, and Celebrate. Listening connects to Thinking and Speaking. Thinking connects to Typing, Working, and Speaking. Working connects to Success. Speaking and Success return to Listening or Idle.&lt;/desc&gt;
+      &lt;defs&gt;
+        &lt;marker id=&quot;don-arrow&quot; markerWidth=&quot;8&quot; markerHeight=&quot;8&quot; refX=&quot;7&quot; refY=&quot;4&quot; orient=&quot;auto&quot;&gt;
+          &lt;path d=&quot;M0,0 L8,4 L0,8 Z&quot; fill=&quot;var(--muted-foreground)&quot;&gt;&lt;/path&gt;
+        &lt;/marker&gt;
+      &lt;/defs&gt;
+      &lt;g class=&quot;don-edges&quot; fill=&quot;none&quot; stroke=&quot;var(--border)&quot; stroke-width=&quot;2&quot; marker-end=&quot;url(#don-arrow)&quot;&gt;
+        &lt;path d=&quot;M360 70 C210 80 115 100 105 142&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M360 70 C310 86 285 105 270 142&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M360 70 C410 86 480 105 505 142&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M360 70 C500 82 615 100 635 142&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M270 182 L270 242&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M320 172 C365 185 395 210 405 242&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M235 282 C190 300 150 320 145 342&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M270 282 L285 342&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M320 270 L355 270&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M405 282 C380 310 350 325 325 342&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M340 382 C390 390 455 388 485 382&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M455 282 C500 310 520 330 525 342&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M525 342 C500 280 445 200 390 90&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M405 242 C405 185 385 120 370 90&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M505 142 C470 115 430 90 390 78&quot;&gt;&lt;/path&gt;
+        &lt;path d=&quot;M635 182 C590 220 520 275 500 342&quot;&gt;&lt;/path&gt;
+      &lt;/g&gt;
+
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Idle&quot; transform=&quot;translate(305 30)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Idle&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Hover&quot; transform=&quot;translate(50 142)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Hover&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Listening&quot; transform=&quot;translate(215 142)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Listening&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Sleep&quot; transform=&quot;translate(450 142)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Sleep&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Celebrate&quot; transform=&quot;translate(580 142)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Celebrate&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Thinking&quot; transform=&quot;translate(215 242)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Thinking&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Speaking&quot; transform=&quot;translate(355 242)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Speaking&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Typing&quot; transform=&quot;translate(90 342)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Typing&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Working&quot; transform=&quot;translate(230 342)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Working&lt;/text&gt;&lt;/g&gt;
+      &lt;g class=&quot;don-node&quot; data-state=&quot;Success&quot; transform=&quot;translate(470 342)&quot;&gt;&lt;rect width=&quot;110&quot; height=&quot;40&quot; rx=&quot;10&quot;&gt;&lt;/rect&gt;&lt;text x=&quot;55&quot; y=&quot;25&quot;&gt;Success&lt;/text&gt;&lt;/g&gt;
+    &lt;/svg&gt;
+  &lt;/section&gt;
+
+  &lt;section aria-labelledby=&quot;don-timing-heading&quot;&gt;
+    &lt;h3 id=&quot;don-timing-heading&quot;&gt;Selected sequence timing&lt;/h3&gt;
+    &lt;svg class=&quot;don-timing-chart&quot; id=&quot;don-timing-chart&quot; viewBox=&quot;0 0 720 190&quot; role=&quot;img&quot; aria-labelledby=&quot;don-chart-title don-chart-desc&quot;&gt;
+      &lt;title id=&quot;don-chart-title&quot;&gt;Idle sequence timing&lt;/title&gt;
+      &lt;desc id=&quot;don-chart-desc&quot;&gt;Idle breath is a 1540 millisecond scheduled one-shot with preparation, inhale, peak hold, return, and settle phases.&lt;/desc&gt;
+      &lt;g id=&quot;don-chart-grid&quot;&gt;&lt;/g&gt;
+      &lt;g id=&quot;don-chart-bars&quot;&gt;&lt;/g&gt;
+      &lt;g id=&quot;don-chart-labels&quot;&gt;&lt;/g&gt;
+    &lt;/svg&gt;
+    &lt;p class=&quot;text-small text-muted don-selected-detail&quot; id=&quot;don-selected-detail&quot; aria-live=&quot;polite&quot;&gt;Idle remains still between randomized breath opportunities.&lt;/p&gt;
+  &lt;/section&gt;
+
+  &lt;p class=&quot;sr-only&quot; id=&quot;don-motion-summary&quot;&gt;DON uses exactly one semantic state at a time. Blink, eye movement, breath, and Wave are scheduled micro-actions and never stack over a body sequence.&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;style&gt;
+  #don-motion-system-vis {
+    color: var(--foreground);
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+  }
+  #don-motion-system-vis .don-motion-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  #don-motion-system-vis section {
+    min-width: 0;
+  }
+  #don-motion-system-vis h3 {
+    margin-block: 0 0.5rem;
+  }
+  #don-motion-system-vis .don-state-map,
+  #don-motion-system-vis .don-timing-chart {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    width: 100%;
+  }
+  #don-motion-system-vis .don-node rect {
+    fill: var(--card);
+    stroke: var(--border);
+    stroke-width: 2;
+  }
+  #don-motion-system-vis .don-node text {
+    fill: var(--card-foreground);
+    font-size: 14px;
+    text-anchor: middle;
+  }
+  #don-motion-system-vis .don-node.is-selected rect {
+    fill: var(--primary);
+    stroke: var(--primary);
+  }
+  #don-motion-system-vis .don-node.is-selected text {
+    fill: var(--primary-foreground);
+  }
+  #don-motion-system-vis .don-chart-grid-line {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  #don-motion-system-vis .don-chart-bar {
+    fill: var(--viz-series-1);
+  }
+  #don-motion-system-vis .don-chart-bar:nth-child(even) {
+    fill: var(--viz-series-2);
+  }
+  #don-motion-system-vis .don-chart-text {
+    fill: var(--foreground);
+    font-size: 12px;
+  }
+  #don-motion-system-vis .don-chart-muted {
+    fill: var(--muted-foreground);
+    font-size: 11px;
+  }
+  #don-motion-system-vis .don-selected-detail {
+    margin: 0;
+  }
+  @media (max-width: 560px) {
+    #don-motion-system-vis .don-motion-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+&lt;/style&gt;
+
+&lt;script&gt;
+  (() =&gt; {
+    const root = document.getElementById(&#x27;don-motion-system-vis&#x27;);
+    const select = root.querySelector(&#x27;#don-state-select&#x27;);
+    const duration = root.querySelector(&#x27;#don-duration&#x27;);
+    const durationNote = root.querySelector(&#x27;#don-duration-note&#x27;);
+    const lock = root.querySelector(&#x27;#don-lock&#x27;);
+    const lockNote = root.querySelector(&#x27;#don-lock-note&#x27;);
+    const hold = root.querySelector(&#x27;#don-hold&#x27;);
+    const holdNote = root.querySelector(&#x27;#don-hold-note&#x27;);
+    const detail = root.querySelector(&#x27;#don-selected-detail&#x27;);
+    const bars = root.querySelector(&#x27;#don-chart-bars&#x27;);
+    const labels = root.querySelector(&#x27;#don-chart-labels&#x27;);
+    const grid = root.querySelector(&#x27;#don-chart-grid&#x27;);
+    const chartTitle = root.querySelector(&#x27;#don-chart-title&#x27;);
+    const chartDesc = root.querySelector(&#x27;#don-chart-desc&#x27;);
+
+    const states = {
+      Idle: {
+        duration: 1540, durationNote: &#x27;scheduled one-shot&#x27;, lock: &#x27;none&#x27;, lockNote: &#x27;micro-actions eligible&#x27;, hold: &#x27;still&#x27;, holdNote: &#x27;random quiet window&#x27;,
+        detail: &#x27;Idle remains still between randomized breath opportunities.&#x27;,
+        phases: [[&#x27;prep&#x27;, 180], [&#x27;inhale&#x27;, 220], [&#x27;peak&#x27;, 320], [&#x27;return&#x27;, 260], [&#x27;settle&#x27;, 560]]
+      },
+      Hover: {
+        duration: 1185, durationNote: &#x27;exactly 3 jumps&#x27;, lock: &#x27;body&#x27;, lockNote: &#x27;6000 ms cooldown&#x27;, hold: &#x27;one shot&#x27;, holdNote: &#x27;exit/re-entry required&#x27;,
+        detail: &#x27;Hover has three descending apexes: −7 px, −6 px, and −5 px.&#x27;,
+        phases: [[&#x27;stable&#x27;, 60], [&#x27;prep&#x27;, 80], [&#x27;jump 1&#x27;, 150], [&#x27;land&#x27;, 80], [&#x27;jump 2&#x27;, 140], [&#x27;land&#x27;, 80], [&#x27;jump 3&#x27;, 205], [&#x27;land&#x27;, 90], [&#x27;recover&#x27;, 300]]
+      },
+      Thinking: {
+        duration: 760, durationNote: &#x27;entry then hold&#x27;, lock: &#x27;soft&#x27;, lockNote: &#x27;safe authored exit&#x27;, hold: &#x27;semantic&#x27;, holdNote: &#x27;rare eye micro-glance&#x27;,
+        detail: &#x27;Thinking tilts the head by one pixel, then becomes still.&#x27;,
+        phases: [[&#x27;source&#x27;, 120], [&#x27;eyes&#x27;, 140], [&#x27;tilt&#x27;, 180], [&#x27;settle&#x27;, 320]]
+      },
+      Typing: {
+        duration: 620, durationNote: &#x27;one hand pair&#x27;, lock: &#x27;pair&#x27;, lockNote: &#x27;450–1100 ms pause&#x27;, hold: &#x27;paused&#x27;, holdNote: &#x27;blink only in pause&#x27;,
+        detail: &#x27;Typing alternates one-pixel hand motion and always inserts a randomized pause.&#x27;,
+        phases: [[&#x27;ready&#x27;, 90], [&#x27;left&#x27;, 100], [&#x27;center&#x27;, 90], [&#x27;right&#x27;, 110], [&#x27;body&#x27;, 90], [&#x27;hold&#x27;, 140]]
+      },
+      Listening: {
+        duration: 900, durationNote: &#x27;entry then hold&#x27;, lock: &#x27;soft&#x27;, lockNote: &#x27;no repeated nod&#x27;, hold: &#x27;still&#x27;, holdNote: &#x27;after entry&#x27;,
+        detail: &#x27;Listening performs one subtle tilt and then holds.&#x27;,
+        phases: [[&#x27;source&#x27;, 140], [&#x27;anticipate&#x27;, 180], [&#x27;tilt&#x27;, 260], [&#x27;settle&#x27;, 320]]
+      },
+      Speaking: {
+        duration: 2340, durationNote: &#x27;nominal cadence&#x27;, lock: &#x27;soft&#x27;, lockNote: &#x27;no mouth animation&#x27;, hold: &#x27;1400–2400&#x27;, holdNote: &#x27;between eye cadences&#x27;,
+        detail: &#x27;Speaking uses rare eye softening while the body remains still.&#x27;,
+        phases: [[&#x27;neutral&#x27;, 140], [&#x27;soften&#x27;, 120], [&#x27;return&#x27;, 180], [&#x27;still hold&#x27;, 1900]]
+      },
+      Sleep: {
+        duration: 5520, durationNote: &#x27;nominal cycle&#x27;, lock: &#x27;soft&#x27;, lockNote: &#x27;wake transition&#x27;, hold: &#x27;slow&#x27;, holdNote: &#x27;eyes remain closed&#x27;,
+        detail: &#x27;Sleep breathes slowly; optional Z motion is off by default.&#x27;,
+        phases: [[&#x27;still&#x27;, 3000], [&#x27;inhale&#x27;, 420], [&#x27;peak&#x27;, 780], [&#x27;exhale&#x27;, 420], [&#x27;settle&#x27;, 900]]
+      },
+      Celebrate: {
+        duration: 1440, durationNote: &#x27;maximum 2000 ms&#x27;, lock: &#x27;body&#x27;, lockNote: &#x27;major milestone only&#x27;, hold: &#x27;one shot&#x27;, holdNote: &#x27;never loops&#x27;,
+        detail: &#x27;Celebrate is a short restrained lift for explicit major milestones.&#x27;,
+        phases: [[&#x27;source&#x27;, 120], [&#x27;prep&#x27;, 140], [&#x27;arms&#x27;, 180], [&#x27;lift&#x27;, 220], [&#x27;peak&#x27;, 160], [&#x27;return&#x27;, 180], [&#x27;land&#x27;, 180], [&#x27;recover&#x27;, 260]]
+      },
+      Success: {
+        duration: 840, durationNote: &#x27;one shot&#x27;, lock: &#x27;body&#x27;, lockNote: &#x27;confirmed event only&#x27;, hold: &#x27;settle&#x27;, holdNote: &#x27;return to context&#x27;,
+        detail: &#x27;Success uses happy eyes and one one-pixel body lift.&#x27;,
+        phases: [[&#x27;source&#x27;, 90], [&#x27;eyes&#x27;, 110], [&#x27;lift&#x27;, 140], [&#x27;peak&#x27;, 120], [&#x27;land&#x27;, 140], [&#x27;settle&#x27;, 240]]
+      },
+      Working: {
+        duration: 2300, durationNote: &#x27;one slow cycle&#x27;, lock: &#x27;soft&#x27;, lockNote: &#x27;laptop required&#x27;, hold: &#x27;900–1800&#x27;, holdNote: &#x27;optional still pause&#x27;,
+        detail: &#x27;Working uses long holds, one eye shift, and one hand movement.&#x27;,
+        phases: [[&#x27;screen&#x27;, 180], [&#x27;eyes&#x27;, 220], [&#x27;hand&#x27;, 700], [&#x27;still&#x27;, 1200]]
+      }
+    };
+
+    function svgElement(name, attributes = {}) {
+      const element = document.createElementNS(&#x27;http://www.w3.org/2000/svg&#x27;, name);
+      Object.entries(attributes).forEach(([key, value]) =&gt; element.setAttribute(key, value));
+      return element;
+    }
+
+    function renderChart(stateName) {
+      const state = states[stateName];
+      bars.replaceChildren();
+      labels.replaceChildren();
+      grid.replaceChildren();
+
+      const left = 28;
+      const right = 692;
+      const width = right - left;
+      const total = state.phases.reduce((sum, phase) =&gt; sum + phase[1], 0);
+
+      for (let tick = 0; tick &lt;= 4; tick += 1) {
+        const x = left + width * tick / 4;
+        grid.appendChild(svgElement(&#x27;line&#x27;, { x1: x, x2: x, y1: 26, y2: 150, class: &#x27;don-chart-grid-line&#x27; }));
+        const text = svgElement(&#x27;text&#x27;, { x, y: 174, class: &#x27;don-chart-muted&#x27;, &#x27;text-anchor&#x27;: tick === 0 ? &#x27;start&#x27; : tick === 4 ? &#x27;end&#x27; : &#x27;middle&#x27; });
+        text.textContent = `${Math.round(total * tick / 4)} ms`;
+        labels.appendChild(text);
+      }
+
+      let elapsed = 0;
+      state.phases.forEach((phase, index) =&gt; {
+        const x = left + width * elapsed / total;
+        const barWidth = Math.max(2, width * phase[1] / total);
+        bars.appendChild(svgElement(&#x27;rect&#x27;, { x, y: 56, width: barWidth, height: 54, rx: 4, class: &#x27;don-chart-bar&#x27; }));
+        if (barWidth &gt; 54) {
+          const text = svgElement(&#x27;text&#x27;, { x: x + barWidth / 2, y: 88, class: &#x27;don-chart-text&#x27;, &#x27;text-anchor&#x27;: &#x27;middle&#x27; });
+          text.textContent = phase[0];
+          labels.appendChild(text);
+        } else {
+          const text = svgElement(&#x27;text&#x27;, { x: x + barWidth / 2, y: 136 + (index % 2) * 14, class: &#x27;don-chart-muted&#x27;, &#x27;text-anchor&#x27;: &#x27;middle&#x27; });
+          text.textContent = phase[0];
+          labels.appendChild(text);
+        }
+        elapsed += phase[1];
+      });
+
+      chartTitle.textContent = `${stateName} sequence timing`;
+      chartDesc.textContent = `${stateName} uses ${state.phases.length} timing phases over ${total} milliseconds in the displayed nominal sequence.`;
+    }
+
+    function selectState(stateName) {
+      const state = states[stateName];
+      root.querySelectorAll(&#x27;.don-node&#x27;).forEach((node) =&gt; node.classList.toggle(&#x27;is-selected&#x27;, node.dataset.state === stateName));
+      duration.textContent = `${state.duration} ms`;
+      durationNote.textContent = state.durationNote;
+      lock.textContent = state.lock;
+      lockNote.textContent = state.lockNote;
+      hold.textContent = state.hold;
+      holdNote.textContent = state.holdNote;
+      detail.textContent = state.detail;
+      renderChart(stateName);
+    }
+
+    select.addEventListener(&#x27;change&#x27;, () =&gt; selectState(select.value));
+    selectState(&#x27;Idle&#x27;);
+  })();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

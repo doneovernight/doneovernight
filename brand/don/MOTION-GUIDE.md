@@ -2,6 +2,8 @@
 
 Version: `1.0.0-spec`
 
+> Historical status: Phase 1 design reference. The approved runtime motion authority is [`MOTION-BIBLE-v1.0.md`](MOTION-BIBLE-v1.0.md), together with [`STATE-MACHINE.md`](STATE-MACHINE.md), [`ANIMATION-TIMINGS.md`](ANIMATION-TIMINGS.md), and [`IMPLEMENTATION-GUIDE.md`](IMPLEMENTATION-GUIDE.md). When timing, transition, state, cooldown, reduced-motion, or implementation rules differ, the DON Motion System v1.0 documents govern. DON v1.2 visual construction remains locked.
+
 ## 1. Motion character
 
 DON is nearly still.

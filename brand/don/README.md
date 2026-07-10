@@ -18,7 +18,11 @@ Phase 1 is specification only. It contains no website functionality, runtime com
 
 - [`DON-CHARACTER-BIBLE.md`](DON-CHARACTER-BIBLE.md) - identity, role, construction, states, scale, and governance.
 - [`DESIGN-RULES.md`](DESIGN-RULES.md) - exact pixel geometry, palette, lighting, shadows, expressions, and visual prohibitions.
-- [`MOTION-GUIDE.md`](MOTION-GUIDE.md) - frame counts, timing, sequencing, transition, stacking, and reduced-motion rules.
+- [`MOTION-BIBLE-v1.0.md`](MOTION-BIBLE-v1.0.md) - approved motion principles, state behavior, event reactions, and governance.
+- [`STATE-MACHINE.md`](STATE-MACHINE.md) - semantic states, transition graph, priorities, locks, and event routing.
+- [`ANIMATION-TIMINGS.md`](ANIMATION-TIMINGS.md) - approved frame durations, random windows, cooldowns, curves, and sprite sequence budget.
+- [`IMPLEMENTATION-GUIDE.md`](IMPLEMENTATION-GUIDE.md) - renderer, loading, accessibility, platform, performance, testing, and integration gate.
+- [`MOTION-GUIDE.md`](MOTION-GUIDE.md) - historical Phase 1 design reference; superseded for runtime motion by Motion System v1.0.
 - [`VOICE.md`](VOICE.md) - personality, language, behavioral boundaries, and example messages.
 - [`ASSETS/`](ASSETS/) - future-ready asset taxonomy, naming, exports, atlases, and manifests.
 
