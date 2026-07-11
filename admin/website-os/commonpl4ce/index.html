@@ -784,6 +784,22 @@
     }
 
     .operations-calendar-day.is-muted { opacity: .22; pointer-events: none; }
+    .operations-calendar-day.is-today {
+      border-color: rgba(237,230,216,.26);
+      background: rgba(237,230,216,.065);
+      color: rgba(241,234,220,.92);
+      box-shadow: inset 0 0 0 1px rgba(237,230,216,.045);
+    }
+    .operations-calendar-day.is-today::before {
+      content: "";
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(241,234,220,.72);
+    }
     .operations-calendar-day.has-booking::after {
       content: "";
       position: absolute;
@@ -795,7 +811,8 @@
       background: var(--cream);
       transform: translateX(-50%);
     }
-    .operations-calendar-day.is-selected { border-color: rgba(237,230,216,.42); background: rgba(237,230,216,.1); color: var(--text); }
+    .operations-calendar-day.is-selected { border-color: rgba(237,230,216,.5); background: rgba(237,230,216,.14); color: var(--text); }
+    .operations-calendar-day.is-today.is-selected { box-shadow: inset 0 0 0 1px rgba(241,234,220,.14); }
     .calendar-day-bookings { min-height: 54px; border-top: 1px solid rgba(237,230,216,.1); padding-top: 10px; }
 
     .quick-actions { display: grid; gap: 6px; }
@@ -3171,6 +3188,7 @@
       "Future requests in chronological order.": "Toekomstige aanvragen in chronologische volgorde.",
       "Previous month": "Vorige maand",
       "Next month": "Volgende maand",
+      "Today": "Vandaag",
       "No bookings on this day.": "Geen boekingen op deze dag.",
       "booking on this day": "boeking op deze dag",
       "bookings on this day": "boekingen op deze dag",
@@ -4806,14 +4824,17 @@
       const weekdayLabels = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(localeCode(), { weekday: "narrow" }).format(new Date(2024, 0, 1 + index)));
       const monthLabel = cursor.toLocaleDateString(localeCode(), { month: "long", year: "numeric" });
       const selectedKey = state.selectedCalendarDate;
+      const todayKey = localDateKey(new Date());
       const cells = [];
       for (let index = 0; index < leading; index += 1) cells.push(`<button class="operations-calendar-day is-muted" type="button" tabindex="-1" aria-hidden="true"></button>`);
       for (let day = 1; day <= days; day += 1) {
         const date = new Date(year, month, day, 12);
         const key = localDateKey(date);
         const count = bookingsForDate(key).length;
-        const aria = `${date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
-        cells.push(`<button class="operations-calendar-day${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}">${day}</button>`);
+        const isToday = key === todayKey;
+        const dateLabel = date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
+        cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${isToday ? ` aria-current="date"` : ""}>${day}</button>`);
       }
       const selectedBookings = selectedKey ? bookingsForDate(selectedKey) : [];
       const selectedMarkup = selectedKey
