@@ -675,12 +675,162 @@
       letter-spacing: -.03em;
     }
 
+    .metric strong.is-text { max-width: 16ch; font-size: 15px; line-height: 1.2; letter-spacing: 0; }
+
     .split {
       display: grid;
       grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
       gap: 18px;
       align-items: start;
     }
+
+    .operations-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(320px, .96fr) minmax(260px, .72fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .operations-stack { display: grid; gap: 14px; }
+
+    .operations-list { display: grid; gap: 6px; }
+
+    .operations-row {
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 9px;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease;
+    }
+
+    .operations-row:hover,
+    .operations-row:focus-visible {
+      border-color: rgba(237,230,216,.18);
+      background: rgba(237,230,216,.05);
+      outline: 0;
+    }
+
+    .operations-thumb {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 6px;
+      background: rgba(237,230,216,.06);
+      color: rgba(241,234,220,.52);
+      font: 850 10px var(--mono);
+      text-transform: uppercase;
+    }
+
+    .operations-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .operations-copy { min-width: 0; display: grid; gap: 3px; }
+    .operations-copy strong { overflow: hidden; color: rgba(241,234,220,.9); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+    .operations-copy span { overflow: hidden; color: rgba(241,234,220,.5); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .operations-row .status-pill { min-height: 24px; padding-inline: 8px; font-size: 9px; }
+
+    .panel-footer-action {
+      width: 100%;
+      margin-top: 10px;
+      border: 0;
+      border-top: 1px solid rgba(237,230,216,.1);
+      padding: 12px 2px 0;
+      background: transparent;
+      color: rgba(241,234,220,.62);
+      font: 800 10px var(--mono);
+      letter-spacing: .08em;
+      text-align: left;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .operations-calendar { display: grid; gap: 12px; }
+    .operations-calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .operations-calendar-head strong { font-size: 14px; text-transform: capitalize; }
+    .operations-calendar-nav { display: flex; gap: 6px; }
+    .operations-calendar-nav button {
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 6px;
+      background: rgba(237,230,216,.04);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .operations-calendar-weekdays,
+    .operations-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .operations-calendar-weekdays span { color: rgba(241,234,220,.38); font: 800 9px var(--mono); text-align: center; text-transform: uppercase; }
+    .operations-calendar-day {
+      position: relative;
+      aspect-ratio: 1;
+      min-width: 0;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: rgba(237,230,216,.025);
+      color: rgba(241,234,220,.66);
+      font: 750 11px var(--sans);
+      cursor: pointer;
+    }
+
+    .operations-calendar-day.is-muted { opacity: .22; pointer-events: none; }
+    .operations-calendar-day.has-booking::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--cream);
+      transform: translateX(-50%);
+    }
+    .operations-calendar-day.is-selected { border-color: rgba(237,230,216,.42); background: rgba(237,230,216,.1); color: var(--text); }
+    .calendar-day-bookings { min-height: 54px; border-top: 1px solid rgba(237,230,216,.1); padding-top: 10px; }
+
+    .quick-actions { display: grid; gap: 6px; }
+    .quick-action {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      padding: 11px 12px;
+      background: rgba(237,230,216,.025);
+      color: rgba(241,234,220,.78);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .quick-action:disabled { color: rgba(241,234,220,.34); cursor: not-allowed; }
+    .quick-action span { color: rgba(241,234,220,.36); font: 800 9px var(--mono); text-transform: uppercase; }
+
+    .operational-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(12px);
+    }
+    .operational-modal.is-visible { display: grid; }
+    .operational-modal-card { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto; }
+    .operational-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .operational-form .wide { grid-column: 1 / -1; }
 
     .booking-list,
     .activity-list,
@@ -2285,6 +2435,8 @@
       }
       .os-nav-toggle { grid-column: 1 / -1; }
       .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .operations-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .operations-stack { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .split, .reply-workspace, .section-builder, .builder-grid, .hero-workspace-grid, .media-browser-grid, .preview-workspace-grid, .live-preview-grid { grid-template-columns: 1fr; }
       .booking-row, .template-row, .client-row { grid-template-columns: 1fr; }
       .hero-slot-detail, .media-detail { position: static; }
@@ -2302,7 +2454,11 @@
       .os-brand-meta { padding-left: 0; border-left: 0; }
       .os-header-actions { width: 100%; justify-content: space-between; }
       .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form { grid-template-columns: 1fr; }
+      .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form { grid-template-columns: 1fr; }
+      .operations-stack { grid-column: auto; }
+      .operational-form .wide { grid-column: auto; }
+      .operations-row { grid-template-columns: 38px minmax(0, 1fr); }
+      .operations-row .status-pill { grid-column: 2; justify-self: start; }
       .booking-availability-form .field--wide { grid-column: auto; }
       .hero-slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .view-head { align-items: start; flex-direction: column; }
@@ -2376,6 +2532,7 @@
         </button>
         <button type="button" data-view-target="overview" data-nav-icon="OV" aria-selected="true"><span class="nav-label">Overview</span> <span class="nav-count" id="navOverviewCount">0</span></button>
         <button type="button" data-view-target="bookings" data-nav-icon="BK"><span class="nav-label">Bookings</span> <span class="nav-count" id="navBookingsCount">0</span></button>
+        <button type="button" data-view-target="calendar" data-nav-icon="CA"><span class="nav-label">Calendar</span></button>
         <button type="button" data-view-target="messages" data-nav-icon="MS"><span class="nav-label">Messages</span> <span class="nav-count" id="navMessagesCount">0</span></button>
         <button type="button" data-view-target="emails" data-nav-icon="EM"><span class="nav-label">Branded Emails</span></button>
         <button type="button" data-view-target="website" data-nav-icon="WB"><span class="nav-label">Website</span></button>
@@ -2395,30 +2552,66 @@
             </div>
           </div>
           <div class="metric-grid">
-            <button class="metric" type="button" data-overview-target="bookings"><span>New booking requests</span><strong id="metricNew">0</strong></button>
-            <button class="metric" type="button" data-overview-target="messages"><span>Pending replies</span><strong id="metricPending">0</strong></button>
-            <button class="metric" type="button" data-overview-target="portfolio"><span>Published portfolio status</span><strong id="metricPortfolio">Live</strong></button>
-            <button class="metric" type="button" data-overview-target="clients"><span>Known clients</span><strong id="metricClients">0</strong></button>
+            <button class="metric" type="button" data-overview-target="bookings"><span>Total Bookings</span><strong id="metricTotalBookings">0</strong></button>
+            <button class="metric" type="button" data-overview-target="calendar"><span>Upcoming</span><strong id="metricUpcoming">0</strong></button>
+            <button class="metric" type="button" data-overview-filter="completed"><span>Completed</span><strong id="metricCompleted">0</strong></button>
+            <button class="metric" type="button" data-overview-action="invoices"><span>Revenue</span><strong id="metricRevenue">Not connected yet</strong></button>
           </div>
-          <div class="split">
+          <div class="operations-grid">
             <section class="os-panel">
               <div class="panel-head">
                 <div>
-                  <h2>Latest booking requests</h2>
-                  <p>Incoming requests from the public COMMONPL4CE booker.</p>
+                  <h2>Recent Bookings</h2>
+                  <p>Latest real COMMONPL4CE requests.</p>
                 </div>
-                <button class="button small" type="button" data-view-jump="bookings">View all</button>
               </div>
-              <div class="booking-list" id="overviewBookings"></div>
+              <div class="operations-list" id="overviewBookings"></div>
+              <button class="panel-footer-action" type="button" data-view-jump="bookings">View all bookings</button>
             </section>
             <section class="os-panel">
               <div class="panel-head">
                 <div>
-                  <h2>Latest activity</h2>
-                  <p>Real activity is derived from booking records and local drafts.</p>
+                  <h2>Calendar</h2>
+                  <p>Preferred dates from real booking requests.</p>
                 </div>
               </div>
-              <div class="activity-list" id="activityList"></div>
+              <div class="operations-calendar" id="overviewCalendar"></div>
+              <button class="panel-footer-action" type="button" data-view-jump="calendar">View full calendar</button>
+            </section>
+            <div class="operations-stack">
+              <section class="os-panel">
+                <div class="panel-head"><div><h2>Upcoming</h2><p>Next bookings by preferred date.</p></div></div>
+                <div class="operations-list" id="overviewUpcoming"></div>
+                <button class="panel-footer-action" type="button" data-view-jump="calendar">View all upcoming</button>
+              </section>
+              <section class="os-panel">
+                <div class="panel-head"><div><h2>Quick Actions</h2><p>Daily workspace actions.</p></div></div>
+                <div class="quick-actions">
+                  <button class="quick-action" type="button" data-quick-action="new-booking">New Booking <span>Open</span></button>
+                  <button class="quick-action" type="button" disabled>Create Invoice <span>Not connected yet</span></button>
+                  <button class="quick-action" type="button" disabled>Add Client <span>Not connected yet</span></button>
+                </div>
+                <p class="form-note" id="quickActionNote">Invoicing and standalone client creation are not connected yet.</p>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-calendar" data-view="calendar">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Calendar</div>
+              <h1>Upcoming work.</h1>
+              <p>Preferred booking dates arranged in one operational monthly view.</p>
+            </div>
+          </div>
+          <div class="split">
+            <section class="os-panel">
+              <div class="operations-calendar" id="fullCalendar"></div>
+            </section>
+            <section class="os-panel">
+              <div class="panel-head"><div><h2>Upcoming Bookings</h2><p>Future requests in chronological order.</p></div></div>
+              <div class="operations-list" id="calendarUpcoming"></div>
             </section>
           </div>
         </section>
@@ -2438,6 +2631,11 @@
                 <h2>Incoming booking requests</h2>
                 <p>Status updates write through the existing DONEOVERNIGHT task update API when available.</p>
               </div>
+            </div>
+            <div class="website-tabs" role="group" aria-label="Booking filters">
+              <button class="website-tab" type="button" data-booking-filter="all" aria-selected="true">All bookings</button>
+              <button class="website-tab" type="button" data-booking-filter="upcoming" aria-selected="false">Upcoming</button>
+              <button class="website-tab" type="button" data-booking-filter="completed" aria-selected="false">Completed</button>
             </div>
             <div class="booking-list" id="bookingsList"></div>
           </section>
@@ -2858,6 +3056,31 @@
       </section>
     </div>
 
+    <div class="operational-modal" id="newBookingDialog" aria-hidden="true">
+      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="newBookingTitle">
+        <div class="panel-head">
+          <div><h2 id="newBookingTitle">New Booking</h2><p>Create a real COMMONPL4CE booking through the existing intake flow.</p></div>
+          <button class="button ghost small" type="button" data-close-new-booking>Cancel</button>
+        </div>
+        <form class="operational-form" id="newBookingForm">
+          <label class="field"><span>Name</span><input name="name" autocomplete="name" required></label>
+          <label class="field"><span>Brand / company</span><input name="brand" autocomplete="organization" required></label>
+          <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+          <label class="field"><span>Instagram</span><input name="instagram" autocomplete="off"></label>
+          <label class="field"><span>Project type</span><select name="project" required><option value="">Select project type</option><option value="campaign">Campaign</option><option value="fashion">Fashion</option><option value="lifestyle">Lifestyle</option><option value="travel">Travel</option><option value="editorial">Editorial</option><option value="portraits">Portraits</option><option value="other">Other</option></select></label>
+          <label class="field"><span>Location</span><select name="location" required><option value="">Select location</option><option value="netherlands">Netherlands</option><option value="europe">Europe</option><option value="worldwide">Worldwide</option></select></label>
+          <label class="field"><span>Preferred date</span><input name="preferred-date" type="date" required></label>
+          <label class="field"><span>Budget</span><select name="budget" required><option value="">Select budget</option><option value="500">EUR 500+</option><option value="1000">EUR 1000+</option><option value="2500">EUR 2500+</option><option value="5000">EUR 5000+</option></select></label>
+          <label class="field wide"><span>Notes / references</span><textarea name="references"></textarea></label>
+          <p class="form-note wide" id="newBookingStatus" aria-live="polite">This creates a real booking record.</p>
+          <div class="confirm-actions wide">
+            <button class="button ghost small" type="button" data-close-new-booking>Cancel</button>
+            <button class="button primary small" type="submit" id="createBookingButton">Create booking</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <div class="os-toast" id="osToast" role="status" aria-live="polite"></div>
 
     <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true">
@@ -2906,6 +3129,7 @@
       "Expand": "Uitklappen",
       "Overview": "Overzicht",
       "Bookings": "Boekingen",
+      "Calendar": "Kalender",
       "Messages": "Berichten",
       "Messages / Replies": "Berichten / Antwoorden",
       "Branded Emails": "E-mails in huisstijl",
@@ -2920,6 +3144,57 @@
       "Pending replies": "Openstaande antwoorden",
       "Published portfolio status": "Status gepubliceerd portfolio",
       "Known clients": "Bekende klanten",
+      "Total Bookings": "Totaal aantal boekingen",
+      "Upcoming": "Aankomend",
+      "Revenue": "Omzet",
+      "Not connected yet": "Nog niet gekoppeld",
+      "Recent Bookings": "Recente boekingen",
+      "Latest real COMMONPL4CE requests.": "De nieuwste echte COMMONPL4CE-aanvragen.",
+      "View all bookings": "Alle boekingen bekijken",
+      "Preferred dates from real booking requests.": "Voorkeursdatums uit echte boekingsaanvragen.",
+      "View full calendar": "Volledige kalender bekijken",
+      "Next bookings by preferred date.": "Eerstvolgende boekingen op voorkeursdatum.",
+      "View all upcoming": "Alles aankomend bekijken",
+      "Quick Actions": "Snelle acties",
+      "Daily workspace actions.": "Dagelijkse werkruimteacties.",
+      "New Booking": "Nieuwe boeking",
+      "Create Invoice": "Factuur maken",
+      "Add Client": "Klant toevoegen",
+      "Open": "Openen",
+      "Invoicing and standalone client creation are not connected yet.": "Facturatie en losse klantaanmaak zijn nog niet gekoppeld.",
+      "Invoicing is not connected yet.": "Facturatie is nog niet gekoppeld.",
+      "No upcoming bookings.": "Geen aankomende boekingen.",
+      "No completed bookings yet.": "Nog geen afgeronde boekingen.",
+      "Upcoming work.": "Aankomend werk.",
+      "Preferred booking dates arranged in one operational monthly view.": "Voorkeursdatums van boekingen in één operationeel maandoverzicht.",
+      "Upcoming Bookings": "Aankomende boekingen",
+      "Future requests in chronological order.": "Toekomstige aanvragen in chronologische volgorde.",
+      "Previous month": "Vorige maand",
+      "Next month": "Volgende maand",
+      "No bookings on this day.": "Geen boekingen op deze dag.",
+      "booking on this day": "boeking op deze dag",
+      "bookings on this day": "boekingen op deze dag",
+      "Create a real COMMONPL4CE booking through the existing intake flow.": "Maak een echte COMMONPL4CE-boeking via de bestaande intakeflow.",
+      "Name": "Naam",
+      "Select project type": "Selecteer projecttype",
+      "Campaign": "Campagne",
+      "Fashion": "Mode",
+      "Lifestyle": "Lifestyle",
+      "Travel": "Reizen",
+      "Editorial": "Redactioneel",
+      "Portraits": "Portretten",
+      "Other": "Anders",
+      "Select location": "Selecteer locatie",
+      "Netherlands": "Nederland",
+      "Europe": "Europa",
+      "Worldwide": "Wereldwijd",
+      "Select budget": "Selecteer budget",
+      "Notes / references": "Notities / referenties",
+      "This creates a real booking record.": "Dit maakt een echt boekingsrecord aan.",
+      "Create booking": "Boeking maken",
+      "Creating booking...": "Boeking maken…",
+      "Booking created.": "Boeking aangemaakt.",
+      "Booking could not be created.": "Boeking kon niet worden aangemaakt.",
       "Latest booking requests": "Nieuwste boekingsaanvragen",
       "Incoming requests from the public COMMONPL4CE booker.": "Binnenkomende aanvragen via de openbare COMMONPL4CE-booker.",
       "View all": "Alles bekijken",
@@ -3201,6 +3476,14 @@
       "Newsletter": "Nieuwsbrief",
       "Draft section builder": "Conceptsectiebouwer",
       "Booking status": "Boekingsstatus",
+      "Booking filters": "Boekingsfilters",
+      "All bookings": "Alle boekingen",
+      "Completed work will appear here after an explicit status update.": "Afgerond werk verschijnt hier na een expliciete statuswijziging.",
+      "Future preferred dates will appear here.": "Toekomstige voorkeursdatums verschijnen hier.",
+      "No booking requests yet.": "Nog geen boekingsaanvragen.",
+      "Real COMMONPL4CE requests will appear here.": "Echte COMMONPL4CE-aanvragen verschijnen hier.",
+      "Select a booking day to see its requests.": "Selecteer een boekingsdag om de aanvragen te bekijken.",
+      "Booking": "Boeking",
       "Status writes to existing admin task lifecycle.": "Status wordt opgeslagen in de bestaande admin-taaklevenscyclus.",
       "Recently": "Onlangs",
       "Draft saved.": "Concept opgeslagen.",
@@ -3565,6 +3848,7 @@
       trash: [],
       clients: [],
       selectedBookingId: "",
+      bookingFilter: "all",
       drafts: readDrafts(),
       builder: readBuilderDraft(),
       heroFeedback: "",
@@ -3583,7 +3867,9 @@
       authUser: null,
       authSession: null,
       toastTimer: null,
-      activeWebsiteTab: "builder"
+      activeWebsiteTab: "builder",
+      calendarCursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      selectedCalendarDate: ""
     };
 
     const $ = (id) => document.getElementById(id);
@@ -4168,6 +4454,7 @@
         preferredDate: clean(data.preferredDate || data.preferred_date || task.deadline || data.deadline) || parseLine(summary, "Preferred date"),
         budget: normalizeBudget(data.budgetRange || task.client_budget || data.client_budget || data.budget || parseLine(summary, "Budget range")),
         notes: clean(data.references || data.notes || data.links) || parseLine(summary, "References / mood / notes"),
+        thumbnail: clean(data.thumbnail || data.thumbnail_url || data.image || data.image_url || task.thumbnail_url),
         status,
         taskStatus: rawStatus,
         isTrashed,
@@ -4356,8 +4643,7 @@
     function renderAll() {
       renderMetrics();
       renderBookings();
-      renderOverviewBookings();
-      renderActivity();
+      renderOperationalDashboard();
       renderPicker();
       renderClients();
       renderTemplates();
@@ -4432,17 +4718,152 @@
       }
     }
 
+    function parseBookingDate(value) {
+      const text = clean(value);
+      if (!text) return null;
+      const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+      const date = iso
+        ? new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 12)
+        : new Date(text);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function localDateKey(value) {
+      const date = value instanceof Date ? value : parseBookingDate(value);
+      if (!date) return "";
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function upcomingBookings() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return state.bookings
+        .map((booking) => ({ booking, date: parseBookingDate(booking.preferredDate) }))
+        .filter((item) => item.date && item.date >= today && !["Completed", "Archived"].includes(item.booking.status))
+        .sort((left, right) => left.date - right.date)
+        .map((item) => item.booking);
+    }
+
+    function invoiceSummary() {
+      let connected = false;
+      let total = 0;
+      const parseAmount = (value) => {
+        const normalized = String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/,(?=\d{1,2}$)/, ".");
+        const amount = Number.parseFloat(normalized);
+        return Number.isFinite(amount) ? amount : 0;
+      };
+      state.bookings.forEach((booking) => {
+        const task = booking.sourceTask || {};
+        const data = raw(task);
+        const invoices = Array.isArray(data.invoices) ? data.invoices : [];
+        if (invoices.length) {
+          connected = true;
+          invoices.forEach((invoice) => { total += parseAmount(invoice.invoice_amount ?? invoice.amount); });
+          return;
+        }
+        const direct = task.invoice_amount ?? data.invoice_amount ?? data.payment_amount;
+        if (clean(direct)) {
+          connected = true;
+          total += parseAmount(direct);
+        }
+      });
+      return { connected, total };
+    }
+
+    function bookingThumbnailHTML(booking) {
+      if (booking.thumbnail) return `<span class="operations-thumb"><img src="${escapeHTML(booking.thumbnail)}" alt="" loading="lazy" decoding="async"></span>`;
+      const initials = clean(booking.brandCompany || booking.name || "CP").split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("");
+      return `<span class="operations-thumb" aria-hidden="true">${escapeHTML(initials || "CP")}</span>`;
+    }
+
+    function compactBookingHTML(booking) {
+      const date = parseBookingDate(booking.preferredDate);
+      const dateLabel = date ? date.toLocaleDateString(localeCode(), { day: "numeric", month: "short", year: "numeric" }) : displayValue(booking.preferredDate);
+      return `
+        <button class="operations-row" type="button" data-operational-booking="${escapeHTML(booking.id)}">
+          ${bookingThumbnailHTML(booking)}
+          <span class="operations-copy">
+            <strong>${escapeHTML(displayValue(booking.projectType, "Booking"))}</strong>
+            <span>${escapeHTML(displayValue(booking.brandCompany, booking.name))} · ${escapeHTML(dateLabel)}</span>
+          </span>
+          <span class="status-pill ${escapeHTML(lower(booking.status))}">${escapeHTML(booking.status)}</span>
+        </button>`;
+    }
+
+    function bookingsForDate(dateKey) {
+      return state.bookings.filter((booking) => localDateKey(booking.preferredDate) === dateKey);
+    }
+
+    function renderCalendarInto(targetId) {
+      const target = $(targetId);
+      if (!target) return;
+      const cursor = state.calendarCursor;
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth();
+      const first = new Date(year, month, 1);
+      const days = new Date(year, month + 1, 0).getDate();
+      const leading = (first.getDay() + 6) % 7;
+      const weekdayLabels = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(localeCode(), { weekday: "narrow" }).format(new Date(2024, 0, 1 + index)));
+      const monthLabel = cursor.toLocaleDateString(localeCode(), { month: "long", year: "numeric" });
+      const selectedKey = state.selectedCalendarDate;
+      const cells = [];
+      for (let index = 0; index < leading; index += 1) cells.push(`<button class="operations-calendar-day is-muted" type="button" tabindex="-1" aria-hidden="true"></button>`);
+      for (let day = 1; day <= days; day += 1) {
+        const date = new Date(year, month, day, 12);
+        const key = localDateKey(date);
+        const count = bookingsForDate(key).length;
+        const aria = `${date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
+        cells.push(`<button class="operations-calendar-day${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}">${day}</button>`);
+      }
+      const selectedBookings = selectedKey ? bookingsForDate(selectedKey) : [];
+      const selectedMarkup = selectedKey
+        ? (selectedBookings.length ? selectedBookings.map(compactBookingHTML).join("") : `<div class="empty-state"><strong>${escapeHTML(formatDate(selectedKey))}</strong>${t("No bookings on this day.")}</div>`)
+        : `<div class="empty-state"><strong>${escapeHTML(monthLabel)}</strong>${t("Select a booking day to see its requests.")}</div>`;
+      target.innerHTML = `
+        <div class="operations-calendar-head">
+          <strong>${escapeHTML(monthLabel)}</strong>
+          <div class="operations-calendar-nav">
+            <button type="button" data-calendar-direction="-1" aria-label="Previous month">‹</button>
+            <button type="button" data-calendar-direction="1" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="operations-calendar-weekdays" aria-hidden="true">${weekdayLabels.map((label) => `<span>${escapeHTML(label)}</span>`).join("")}</div>
+        <div class="operations-calendar-grid">${cells.join("")}</div>
+        <div class="calendar-day-bookings">${selectedMarkup}</div>`;
+    }
+
+    function renderUpcomingList(targetId, limit = 3) {
+      const target = $(targetId);
+      if (!target) return;
+      const bookings = upcomingBookings().slice(0, limit);
+      target.innerHTML = bookings.length
+        ? bookings.map(compactBookingHTML).join("")
+        : `<div class="empty-state"><strong>No upcoming bookings.</strong>Future preferred dates will appear here.</div>`;
+    }
+
+    function renderOperationalDashboard() {
+      renderOverviewBookings();
+      renderUpcomingList("overviewUpcoming", 3);
+      renderUpcomingList("calendarUpcoming", Number.POSITIVE_INFINITY);
+      renderCalendarInto("overviewCalendar");
+      renderCalendarInto("fullCalendar");
+    }
+
     function renderMetrics() {
-      const newCount = state.bookings.filter((booking) => booking.status === "New").length;
       const pending = state.bookings.filter((booking) => ["New", "Contacted"].includes(booking.status)).length;
-      $("metricNew").textContent = String(newCount);
-      $("metricPending").textContent = String(pending);
-      $("metricClients").textContent = String(state.clients.length);
-      $("navOverviewCount").textContent = String(newCount);
+      const completed = state.bookings.filter((booking) => booking.status === "Completed").length;
+      const invoices = invoiceSummary();
+      $("metricTotalBookings").textContent = formatNumber(state.bookings.length);
+      $("metricUpcoming").textContent = formatNumber(upcomingBookings().length);
+      $("metricCompleted").textContent = formatNumber(completed);
+      $("metricRevenue").textContent = invoices.connected
+        ? new Intl.NumberFormat(localeCode(), { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(invoices.total)
+        : t("Not connected yet");
+      $("metricRevenue").classList.toggle("is-text", !invoices.connected);
+      $("navOverviewCount").textContent = String(state.bookings.length);
       $("navBookingsCount").textContent = String(state.bookings.length);
       $("navMessagesCount").textContent = String(pending);
       $("navClientsCount").textContent = String(state.clients.length);
-      $("metricPortfolio").textContent = "Live";
     }
 
     function bookingHTML(booking, compact = false) {
@@ -4488,23 +4909,148 @@
 
     function renderBookings() {
       const target = $("bookingsList");
-      if (!state.bookings.length) {
-        target.innerHTML = `<div class="empty-state"><strong>No COMMONPL4CE booking requests yet.</strong>Requests from the public /cp form will appear here after submission.</div>`;
+      document.querySelectorAll("[data-booking-filter]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.bookingFilter === state.bookingFilter ? "true" : "false");
+      });
+      const bookings = state.bookingFilter === "completed"
+        ? state.bookings.filter((booking) => booking.status === "Completed")
+        : state.bookingFilter === "upcoming"
+          ? upcomingBookings()
+          : state.bookings;
+      if (!bookings.length) {
+        const message = state.bookingFilter === "completed"
+          ? `<strong>No completed bookings yet.</strong>Completed work will appear here after an explicit status update.`
+          : state.bookingFilter === "upcoming"
+            ? `<strong>No upcoming bookings.</strong>Future preferred dates will appear here.`
+            : `<strong>No COMMONPL4CE booking requests yet.</strong>Requests from the public /cp form will appear here after submission.`;
+        target.innerHTML = `<div class="empty-state">${message}</div>`;
         return;
       }
-      target.innerHTML = state.bookings.map((booking) => bookingHTML(booking)).join("");
+      target.innerHTML = bookings.map((booking) => bookingHTML(booking)).join("");
     }
 
     function renderOverviewBookings() {
       const target = $("overviewBookings");
+      if (!target) return;
       if (!state.bookings.length) {
-        target.innerHTML = `<div class="empty-state"><strong>No new booking requests.</strong>The Website OS is connected and waiting for real /cp submissions.</div>`;
+        target.innerHTML = `<div class="empty-state"><strong>No booking requests yet.</strong>Real COMMONPL4CE requests will appear here.</div>`;
         return;
       }
-      target.innerHTML = state.bookings.slice(0, 3).map((booking) => bookingHTML(booking, true)).join("");
+      target.innerHTML = state.bookings
+        .slice()
+        .sort((left, right) => Date.parse(right.createdAt || 0) - Date.parse(left.createdAt || 0))
+        .slice(0, 5)
+        .map(compactBookingHTML)
+        .join("");
+    }
+
+    function openBooking(bookingId) {
+      state.selectedBookingId = bookingId;
+      state.bookingFilter = "all";
+      renderBookings();
+      switchView("bookings");
+      window.requestAnimationFrame(() => {
+        const card = document.querySelector(`[data-booking-id="${CSS.escape(bookingId)}"]`);
+        card?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+
+    function openNewBookingDialog() {
+      const dialog = $("newBookingDialog");
+      if (!dialog) return;
+      dialog.classList.add("is-visible");
+      dialog.setAttribute("aria-hidden", "false");
+      $("newBookingStatus").textContent = t("This creates a real booking record.");
+      window.setTimeout(() => dialog.querySelector("input[name='name']")?.focus(), 50);
+    }
+
+    function closeNewBookingDialog() {
+      const dialog = $("newBookingDialog");
+      if (!dialog) return;
+      dialog.classList.remove("is-visible");
+      dialog.setAttribute("aria-hidden", "true");
+    }
+
+    function newBookingPayload(form) {
+      const data = new FormData(form);
+      const name = clean(data.get("name"));
+      const brandCompany = clean(data.get("brand"));
+      const email = clean(data.get("email"));
+      const instagram = clean(data.get("instagram"));
+      const projectType = clean(data.get("project"));
+      const location = clean(data.get("location"));
+      const preferredDate = clean(data.get("preferred-date"));
+      const budgetRange = clean(data.get("budget"));
+      const references = clean(data.get("references"));
+      const taskDescription = [
+        `COMMONPL4CE booking request for ${brandCompany || "a new project"}.`,
+        projectType ? `Project type: ${projectType}.` : "",
+        location ? `Location: ${location}.` : "",
+        preferredDate ? `Preferred date: ${preferredDate}.` : "",
+        budgetRange ? `Budget range: €${budgetRange}+. ` : "",
+        instagram ? `Instagram: ${instagram}.` : "",
+        references ? `References / mood / notes: ${references}` : ""
+      ].filter(Boolean).join("\n");
+      return {
+        name,
+        company: brandCompany,
+        brandCompany,
+        email,
+        instagram,
+        task: taskDescription,
+        task_description: taskDescription,
+        taskSummary: taskDescription,
+        projectType,
+        location,
+        preferredDate,
+        deadline: preferredDate,
+        budgetRange,
+        clientBudget: budgetRange,
+        client_budget: budgetRange,
+        budget: budgetRange,
+        notes: references,
+        references,
+        links: references,
+        source: "commonpl4ce_booker",
+        intakeVersion: "commonpl4ce_booker_v1",
+        brand: "COMMONPL4CE",
+        internal_owner: "donovan.vdp@gmail.com",
+        owner_email: "donovan.vdp@gmail.com",
+        recipient_email: "donovan.vdp@gmail.com",
+        notification_recipient: "donovan.vdp@gmail.com",
+        submittedAt: new Date().toISOString()
+      };
+    }
+
+    async function createInternalBooking(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = $("createBookingButton");
+      const status = $("newBookingStatus");
+      if (!form.reportValidity()) return;
+      button.disabled = true;
+      status.textContent = t("Creating booking...");
+      try {
+        const response = await fetch("/api/task-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(newBookingPayload(form))
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) throw new Error(data.error || t("Booking could not be created."));
+        form.reset();
+        closeNewBookingDialog();
+        showToast(t("Booking created."));
+        await loadBookings({ silent: true });
+      } catch (error) {
+        status.textContent = error.message || t("Booking could not be created.");
+      } finally {
+        button.disabled = false;
+      }
     }
 
     function renderActivity() {
+      if (!$("activityList")) return;
       const rows = [];
       state.bookings.slice(0, 6).forEach((booking) => {
         rows.push({
@@ -5956,6 +6502,7 @@
           renderAnalytics();
         });
       }
+      if (view === "calendar") renderOperationalDashboard();
     }
 
     function unlockApp() {
@@ -6064,6 +6611,7 @@
 
     $("changePasswordButton").addEventListener("click", changeWebsitePassword);
     $("logoutOtherDevicesButton").addEventListener("click", logoutOtherDevices);
+    $("newBookingForm").addEventListener("submit", createInternalBooking);
 
     $("refreshButton").addEventListener("click", () => loadBookings());
     $("reloadBookingsButton").addEventListener("click", () => loadBookings());
@@ -6075,15 +6623,78 @@
     });
 
     document.querySelectorAll("[data-view-target]").forEach((button) => {
-      button.addEventListener("click", () => switchView(button.dataset.viewTarget));
+      button.addEventListener("click", () => {
+        if (button.dataset.viewTarget === "bookings") {
+          state.bookingFilter = "all";
+          renderBookings();
+        }
+        switchView(button.dataset.viewTarget);
+      });
     });
 
     document.addEventListener("click", (event) => {
       const jump = event.target.closest("[data-view-jump]");
-      if (jump) switchView(jump.dataset.viewJump);
+      if (jump) {
+        if (jump.dataset.viewJump === "bookings") {
+          state.bookingFilter = "all";
+          renderBookings();
+        }
+        switchView(jump.dataset.viewJump);
+      }
 
       const overviewTarget = event.target.closest("[data-overview-target]");
       if (overviewTarget) switchView(overviewTarget.dataset.overviewTarget);
+
+      const overviewFilter = event.target.closest("[data-overview-filter]");
+      if (overviewFilter) {
+        state.bookingFilter = overviewFilter.dataset.overviewFilter;
+        renderBookings();
+        switchView("bookings");
+      }
+
+      const overviewAction = event.target.closest("[data-overview-action]");
+      if (overviewAction?.dataset.overviewAction === "invoices") showToast(t("Invoicing is not connected yet."));
+
+      const operationalBooking = event.target.closest("[data-operational-booking]");
+      if (operationalBooking) {
+        openBooking(operationalBooking.dataset.operationalBooking);
+        return;
+      }
+
+      const bookingFilter = event.target.closest("[data-booking-filter]");
+      if (bookingFilter) {
+        state.bookingFilter = bookingFilter.dataset.bookingFilter;
+        renderBookings();
+        return;
+      }
+
+      const calendarDirection = event.target.closest("[data-calendar-direction]");
+      if (calendarDirection) {
+        state.calendarCursor = new Date(state.calendarCursor.getFullYear(), state.calendarCursor.getMonth() + Number(calendarDirection.dataset.calendarDirection), 1);
+        state.selectedCalendarDate = "";
+        renderCalendarInto("overviewCalendar");
+        renderCalendarInto("fullCalendar");
+        return;
+      }
+
+      const calendarDate = event.target.closest("[data-calendar-date]");
+      if (calendarDate) {
+        state.selectedCalendarDate = calendarDate.dataset.calendarDate;
+        renderCalendarInto("overviewCalendar");
+        renderCalendarInto("fullCalendar");
+        return;
+      }
+
+      const quickAction = event.target.closest("[data-quick-action]");
+      if (quickAction?.dataset.quickAction === "new-booking") {
+        openNewBookingDialog();
+        return;
+      }
+
+      if (event.target.closest("[data-close-new-booking]")) {
+        closeNewBookingDialog();
+        return;
+      }
 
       const overviewBooking = event.target.closest("[data-overview-booking]");
       if (overviewBooking && !event.target.closest("button, select, input, textarea, a")) {
@@ -6440,6 +7051,10 @@
       if (!document.hidden && document.body.classList.contains("is-unlocked")) {
         loadBookings({ silent: true }).catch(() => {});
       }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && $("newBookingDialog")?.classList.contains("is-visible")) closeNewBookingDialog();
     });
 
     document.querySelectorAll("[data-locale]").forEach((button) => {
