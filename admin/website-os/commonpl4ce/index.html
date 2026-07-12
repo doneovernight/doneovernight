@@ -550,6 +550,7 @@
 
     .view { display: none; gap: 18px; }
     .view.is-active { display: grid; }
+    .view[hidden] { display: none !important; }
 
     .view-head {
       display: flex;
@@ -2550,11 +2551,11 @@
         <button type="button" data-view-target="overview" data-nav-icon="OV" aria-selected="true"><span class="nav-label">Overview</span> <span class="nav-count" id="navOverviewCount">0</span></button>
         <button type="button" data-view-target="bookings" data-nav-icon="BK"><span class="nav-label">Bookings</span> <span class="nav-count" id="navBookingsCount">0</span></button>
         <button type="button" data-view-target="calendar" data-nav-icon="CA"><span class="nav-label">Calendar</span></button>
-        <button type="button" data-view-target="messages" data-nav-icon="MS"><span class="nav-label">Messages</span> <span class="nav-count" id="navMessagesCount">0</span></button>
-        <button type="button" data-view-target="emails" data-nav-icon="EM"><span class="nav-label">Branded Emails</span></button>
+        <button type="button" data-view-target="messages" data-nav-icon="MS" hidden><span class="nav-label">Messages</span> <span class="nav-count" id="navMessagesCount">0</span></button>
+        <button type="button" data-view-target="emails" data-nav-icon="EM" hidden><span class="nav-label">Branded Emails</span></button>
         <button type="button" data-view-target="website" data-nav-icon="WB"><span class="nav-label">Website</span></button>
-        <button type="button" data-view-target="portfolio" data-nav-icon="PF"><span class="nav-label">Portfolio</span></button>
-        <button type="button" data-view-target="clients" data-nav-icon="CL"><span class="nav-label">Clients</span> <span class="nav-count" id="navClientsCount">0</span></button>
+        <button type="button" data-view-target="portfolio" data-nav-icon="PF" hidden><span class="nav-label">Portfolio</span></button>
+        <button type="button" data-view-target="clients" data-nav-icon="CL" hidden><span class="nav-label">Clients</span> <span class="nav-count" id="navClientsCount">0</span></button>
         <button type="button" data-view-target="analytics" data-nav-icon="AN"><span class="nav-label">Analytics</span></button>
         <button type="button" data-view-target="settings" data-nav-icon="ST"><span class="nav-label">Settings</span></button>
       </aside>
@@ -2658,7 +2659,7 @@
           </section>
         </section>
 
-        <section class="view" id="view-messages" data-view="messages">
+        <section class="view" id="view-messages" data-view="messages" hidden aria-hidden="true">
           <div class="view-head">
             <div class="view-title">
               <div class="eyebrow">Messages / Replies</div>
@@ -2707,7 +2708,7 @@
           </section>
         </section>
 
-        <section class="view" id="view-emails" data-view="emails">
+        <section class="view" id="view-emails" data-view="emails" hidden aria-hidden="true">
           <div class="view-head">
             <div class="view-title">
               <div class="eyebrow">Branded Emails</div>
@@ -2936,7 +2937,7 @@
           </section>
         </section>
 
-        <section class="view" id="view-portfolio" data-view="portfolio">
+        <section class="view" id="view-portfolio" data-view="portfolio" hidden aria-hidden="true">
           <div class="view-head">
             <div class="view-title">
               <div class="eyebrow">Portfolio</div>
@@ -2959,7 +2960,7 @@
           </section>
         </section>
 
-        <section class="view" id="view-clients" data-view="clients">
+        <section class="view" id="view-clients" data-view="clients" hidden aria-hidden="true">
           <div class="view-head">
             <div class="view-title">
               <div class="eyebrow">Clients</div>
@@ -3639,7 +3640,8 @@
       "Signed out": "Uitgelogd",
       "Server-side auth": "Server-side authenticatie",
       "HttpOnly cookie": "HttpOnly-cookie",
-      "Phase 3": "Fase 3"
+      "Phase 3": "Fase 3",
+      "This module is not available in production yet.": "Deze module is nog niet beschikbaar in productie."
     };
     const translations = {
       en: Object.fromEntries(Object.keys(DUTCH_TRANSLATIONS).map((key) => [key, key])),
@@ -6545,6 +6547,10 @@
     }
 
     function switchView(view) {
+      if (["messages", "emails", "portfolio", "clients"].includes(view)) {
+        showToast(t("This module is not available in production yet."));
+        return;
+      }
       document.querySelectorAll("[data-view-target]").forEach((button) => {
         button.setAttribute("aria-selected", button.dataset.viewTarget === view ? "true" : "false");
       });
