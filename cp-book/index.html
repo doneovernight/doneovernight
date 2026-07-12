@@ -1305,12 +1305,16 @@
         window.setTimeout(finish, 2900);
       }
 
-      function trackFormProgress(event) {
-        clearFormState();
+      function trackFormStart() {
         if (!formStarted) {
           formStarted = true;
           track('form_start', { form: 'cp_booker' });
         }
+      }
+
+      function trackFormProgress(event) {
+        clearFormState();
+        trackFormStart();
         const fieldName = event.target?.name || event.target?.id || '';
         if (fieldName && !progressedFields.has(fieldName)) {
           progressedFields.add(fieldName);
@@ -1318,6 +1322,7 @@
         }
       }
 
+      form.addEventListener('focusin', trackFormStart);
       form.addEventListener('input', trackFormProgress);
       form.addEventListener('change', trackFormProgress);
 

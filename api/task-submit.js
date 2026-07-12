@@ -1064,7 +1064,7 @@ async function handleCommonplaceNewsletterRequest(req, res, input = {}) {
   }
 }
 
-function summarizeCommonplaceAnalytics(events = [], newsletters = [], bookings = []) {
+function summarizeCommonplaceAnalytics(events = [], newsletters = []) {
   const count = (type, route = "") => events.filter((event) => (
     event.event_type === type && (!route || normalizeCommonplacePublicPath(event.route) === route)
   )).length;
@@ -1074,9 +1074,16 @@ function summarizeCommonplaceAnalytics(events = [], newsletters = [], bookings =
     const depth = clean(event.metadata?.depth);
     if (Object.prototype.hasOwnProperty.call(scrollCounts, depth)) scrollCounts[depth] += 1;
   });
+  // Conversion is only meaningful when both values come from the same tracked funnel.
   const formStarts = count("form_start", "/cp-book");
-  const formSuccess = count("form_submit_success", "/cp-book") || bookings.length;
-  const conversionRate = formStarts ? Math.round((formSuccess / formStarts) * 100) : 0;
+  const formSuccess = count("form_submit_success", "/cp-book");
+  const conversionCoverageComplete = formStarts > 0 && formSuccess <= formStarts;
+  const conversionRate = conversionCoverageComplete ? Math.round((formSuccess / formStarts) * 100) : null;
+  const conversionMessage = formStarts === 0
+    ? "No tracked form starts yet."
+    : formSuccess > formStarts
+      ? "Historical form-start coverage is incomplete."
+      : "";
   return {
     connected: true,
     generatedAt: new Date().toISOString(),
@@ -1088,6 +1095,8 @@ function summarizeCommonplaceAnalytics(events = [], newsletters = [], bookings =
       bookingFormStarts: formStarts,
       bookingFormSubmissions: formSuccess,
       conversionRate,
+      conversionDenominator: "Tracked /cp-book form starts",
+      conversionMessage,
       newsletterStarts: count("newsletter_start"),
       newsletterSignups: newsletters.length || count("newsletter_success")
     },
@@ -1110,7 +1119,7 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
   const since = analyticsRangeStart(range);
 
   try {
-    const [events, newsletters, bookings] = await Promise.all([
+    const [events, newsletters] = await Promise.all([
       supabaseFetch([
         `analytics_events?source=eq.${encodeURIComponent(COMMONPLACE_ANALYTICS_SOURCE)}`,
         "select=event_type,route,metadata,created_at",
@@ -1125,13 +1134,6 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
         "order=created_at.desc",
         "limit=100"
       ].join("&")),
-      supabaseFetch([
-        "task_requests?source=eq.commonpl4ce_booker",
-        "select=task_id,created_at",
-        `created_at=gte.${encodeURIComponent(since)}`,
-        "order=created_at.desc",
-        "limit=1000"
-      ].join("&"))
     ]);
 
     return send(res, 200, {
@@ -1140,8 +1142,7 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
       range,
       analytics: summarizeCommonplaceAnalytics(
         Array.isArray(events) ? events : [],
-        Array.isArray(newsletters) ? newsletters : [],
-        Array.isArray(bookings) ? bookings : []
+        Array.isArray(newsletters) ? newsletters : []
       )
     });
   } catch (error) {

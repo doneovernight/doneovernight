@@ -3478,6 +3478,9 @@
       "Analytics unavailable": "Analytics niet beschikbaar",
       "Connected": "Verbonden",
       "No fake numbers are shown. COMMONPL4CE analytics stay scoped to /cp and /cp-book.": "Er worden geen verzonnen cijfers getoond. COMMONPL4CE-analytics blijven beperkt tot /cp en /cp-book.",
+      "No tracked form starts yet.": "Nog geen bijgehouden formulierstarts.",
+      "Historical form-start coverage is incomplete.": "De historische dekking van formulierstarts is onvolledig.",
+      "Conversion rate / tracked starts": "Conversieratio / bijgehouden starts",
       "Visits /cp": "Bezoeken /cp",
       "Visits /cp-book": "Bezoeken /cp-book",
       "Book CTA clicks": "Klikken op boekings-CTA",
@@ -3673,6 +3676,10 @@
         [/^Assigning to Mobile slot (\d{2})$/, "Toewijzen aan mobiel vak $1"],
         [/^Assigned (.+) to Desktop slot (\d{2})\.$/, "$1 toegewezen aan desktopvak $2."],
         [/^Assigned (.+) to Mobile slot (\d{2})\.$/, "$1 toegewezen aan mobiel vak $2."],
+        [/^Assigned to Desktop slot (\d{2})\.$/, "Toegewezen aan desktopvak $1."],
+        [/^Assigned to Mobile slot (\d{2})\.$/, "Toegewezen aan mobiel vak $1."],
+        [/^Already assigned to Desktop slot (\d{2})\.$/, "Al toegewezen aan desktopvak $1."],
+        [/^Already assigned to Mobile slot (\d{2})\.$/, "Al toegewezen aan mobiel vak $1."],
         [/^Last saved (.+)$/, "Laatst opgeslagen $1"],
         [/^Moved (.+)$/, "Verplaatst op $1"],
         [/^(\d+) of 14$/, "$1 van 14"],
@@ -4616,7 +4623,7 @@
         ["Booker station views", formatNumber(metrics.bookerStationViews || 0)],
         ["Form starts", formatNumber(metrics.bookingFormStarts || 0)],
         ["Form submissions", formatNumber(metrics.bookingFormSubmissions || 0)],
-        ["Conversion rate", `${formatNumber(metrics.conversionRate || 0)}%`],
+        ["Conversion rate / tracked starts", Number.isFinite(metrics.conversionRate) ? `${formatNumber(metrics.conversionRate)}%` : (metrics.conversionMessage || "No tracked form starts yet.")],
         ["Newsletter starts", formatNumber(metrics.newsletterStarts || 0)],
         ["Newsletter signups", formatNumber(metrics.newsletterSignups || 0)]
       ];
@@ -4808,8 +4815,8 @@
         </button>`;
     }
 
-    function bookingsForDate(dateKey) {
-      return state.bookings.filter((booking) => localDateKey(booking.preferredDate) === dateKey);
+    function calendarBookingsForDate(dateKey) {
+      return state.allBookings.filter((booking) => !booking.isTrashed && localDateKey(booking.preferredDate) === dateKey);
     }
 
     function renderCalendarInto(targetId) {
@@ -4830,13 +4837,13 @@
       for (let day = 1; day <= days; day += 1) {
         const date = new Date(year, month, day, 12);
         const key = localDateKey(date);
-        const count = bookingsForDate(key).length;
+        const count = calendarBookingsForDate(key).length;
         const isToday = key === todayKey;
         const dateLabel = date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
         const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
         cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${isToday ? ` aria-current="date"` : ""}>${day}</button>`);
       }
-      const selectedBookings = selectedKey ? bookingsForDate(selectedKey) : [];
+      const selectedBookings = selectedKey ? calendarBookingsForDate(selectedKey) : [];
       const selectedMarkup = selectedKey
         ? (selectedBookings.length ? selectedBookings.map(compactBookingHTML).join("") : `<div class="empty-state"><strong>${escapeHTML(formatDate(selectedKey))}</strong>${t("No bookings on this day.")}</div>`)
         : `<div class="empty-state"><strong>${escapeHTML(monthLabel)}</strong>${t("Select a booking day to see its requests.")}</div>`;
@@ -5639,7 +5646,7 @@
       const isPublishing = state.publishPhase === "publishing";
       const isFailed = state.publishPhase === "failed";
       const isPublished = state.publishPhase === "published" && !diff.hasChanges;
-      const pendingText = diff.hasChanges ? "Changes pending" : "Ready to publish";
+      const pendingText = diff.hasChanges ? "Changes pending" : "No unpublished changes";
       const statusText = isPublishing
         ? "Writing live config."
         : isFailed
@@ -5674,8 +5681,8 @@
       `).join("");
       const publishButton = $("publishWebsiteConfig");
       if (publishButton) {
-        publishButton.disabled = diff.blockedAssets > 0 || isPublishing;
-        publishButton.textContent = isPublishing ? "Publishing..." : diff.blockedAssets ? "Upload storage required" : "Publish live config";
+        publishButton.disabled = !diff.hasChanges || diff.blockedAssets > 0 || isPublishing;
+        publishButton.textContent = isPublishing ? "Publishing..." : diff.blockedAssets ? "Upload storage required" : diff.hasChanges ? "Publish live config" : "No unpublished changes";
         publishButton.classList.toggle("has-unpublished", diff.hasChanges && !isPublishing);
       }
       const publishTab = document.querySelector('[data-website-tab-target="publish"]');
@@ -5711,6 +5718,13 @@
 
     async function publishWebsiteConfig() {
       const diff = siteConfigDiff();
+      if (!diff.hasChanges) {
+        state.publishPhase = "published";
+        state.publishStatus = "No unpublished changes.";
+        state.publishError = "";
+        renderPublishSummary();
+        return;
+      }
       if (diff.blockedAssets) {
         state.publishPhase = "failed";
         state.publishStatus = "Publish failed. Draft is still saved locally.";
@@ -5930,6 +5944,27 @@
         renderMediaLibrary();
         return;
       }
+      const targetName = mediaTargetName(target);
+      const alreadyAssigned = slot.mediaId === asset.id &&
+        (isLocalOnlyMedia(asset)
+          ? Boolean(slot.previewImage)
+          : sameValue(slot.image, asset.path));
+      if (alreadyAssigned) {
+        const message = `Already assigned to ${targetName}.`;
+        state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
+        state.builder.mediaTarget = mediaTargetFrom(target.kind, target.index);
+        state.builder.selectedMediaId = asset.id;
+        state.heroFeedback = message;
+        state.mediaFeedback = message;
+        syncHeroAssetUsage();
+        saveBuilderDraft();
+        renderHeroManager();
+        renderMediaLibrary();
+        renderBuilderPreview(selectedBuilderSection());
+        renderPublishSummary();
+        showToast(message);
+        return;
+      }
       slot.mediaId = asset.id;
       slot.image = isLocalOnlyMedia(asset) ? "" : asset.path;
       slot.alt = asset.alt || slot.alt || asset.filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
@@ -5946,7 +5981,7 @@
       state.builder.selectedHeroSlot = { kind: target.kind, index: target.index };
       state.builder.mediaTarget = mediaTargetFrom(target.kind, target.index);
       state.builder.selectedMediaId = asset.id;
-      const assignedMessage = `Assigned ${asset.filename} to ${mediaTargetName(target)}.`;
+      const assignedMessage = `Assigned to ${targetName}.`;
       state.heroFeedback = isLocalOnlyMedia(asset)
         ? `${asset.filename} assigned as a local draft preview. Upload storage required before this file can go live.`
         : assignedMessage;
@@ -5959,6 +5994,7 @@
       renderMediaLibrary();
       renderBuilderPreview(selectedBuilderSection());
       renderPublishSummary();
+      showToast(assignedMessage);
     }
 
     function syncHeroAssetUsage() {
