@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -13,6 +13,8 @@
   <link rel="preload" as="image" href="/assets/common-place/final/wordmark-intro-commonpl4ces.png">
   <link rel="preload" as="image" media="(min-width: 768px)" href="/assets/common-place/fullscreen/slide-01-opening.jpg">
   <link rel="preload" as="image" media="(max-width: 767px)" href="/assets/common-place/mobile/slide-01-mobile.jpg">
+  <link rel="preload" as="image" media="(min-width: 768px)" href="/assets/common-place/fullscreen/slide-02-yellow.jpg" fetchpriority="low">
+  <link rel="preload" as="image" media="(max-width: 767px)" href="/assets/common-place/mobile/slide-02-mobile.jpg" fetchpriority="low">
   <style>
     :root {
       --black: #060606;
@@ -70,6 +72,16 @@
       font: inherit;
       color: inherit;
     }
+    :where(a, button, input, select, textarea):focus-visible {
+      outline: 2px solid var(--paper);
+      outline-offset: 4px;
+      box-shadow: 0 0 0 4px rgba(237, 230, 216, .16);
+    }
+    .vertical :where(a, button, input, select, textarea):focus-visible,
+    .site-header.is-on-light :where(a, button, input, select, textarea):focus-visible {
+      outline-color: var(--ink);
+      box-shadow: 0 0 0 4px rgba(8, 8, 7, .14);
+    }
 
     .site-header {
       position: fixed;
@@ -88,6 +100,14 @@
       align-items: center;
       gap: clamp(14px, 2vw, 28px);
     }
+    .header-brand > a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+    }
     .site-header.is-visible {
       opacity: 1;
       pointer-events: auto;
@@ -102,6 +122,11 @@
     }
     .book-link {
       position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 44px;
+      min-height: 44px;
       padding: 0;
       border: 0;
       background: transparent;
@@ -116,9 +141,9 @@
     .book-link::after {
       content: "";
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: -6px;
+      left: 6px;
+      right: 6px;
+      bottom: 7px;
       height: 1px;
       background: currentColor;
       opacity: .34;
@@ -129,6 +154,12 @@
     .book-link:hover {
       color: #fff;
       opacity: .88;
+    }
+    .site-header.is-on-light .book-link {
+      color: var(--ink);
+    }
+    .site-header.is-on-light .book-link:hover {
+      color: var(--ink);
     }
     .book-link:hover::after {
       opacity: .72;
@@ -274,12 +305,12 @@
 
     @media (min-width: 980px) {
       .slide--opening img { object-position: center center; }
-      .slide--yellow img { object-position: center center; }
+      .slide--yellow img { object-position: center 20%; }
       .slide--hoodie-front img { object-position: center center; }
-      .slide--chair img { object-position: center center; }
+      .slide--chair img { object-position: center 18%; }
       .slide--duo img { object-position: center center; }
       .slide--couch img { object-position: center center; }
-      .slide--profile img { object-position: center center; }
+      .slide--profile img { object-position: center 16%; }
     }
     .archive-wordmark {
       position: absolute;
@@ -291,6 +322,42 @@
       pointer-events: none;
       opacity: var(--wordmark-opacity);
       will-change: opacity;
+    }
+    .archive-scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(22px, 4vw, 44px);
+      z-index: 86;
+      width: 30px;
+      height: 10px;
+      opacity: .62;
+      pointer-events: none;
+      transform: translateX(-50%);
+      transition: opacity 180ms ease;
+    }
+    .archive-scroll-cue::before {
+      content: "";
+      position: absolute;
+      top: 5px;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: var(--paper);
+    }
+    .archive-scroll-cue::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 0;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--paper);
+      animation: archiveCueDrift 1600ms ease-in-out infinite;
+    }
+    .archive-scroll-cue.is-hidden { opacity: 0; }
+    @keyframes archiveCueDrift {
+      50% { transform: translateX(23px); }
     }
 
     .vertical {
@@ -668,6 +735,11 @@
       line-height: 1.25;
       text-transform: uppercase;
     }
+    .availability .availability-cta {
+      min-height: 44px;
+      align-items: center;
+      margin-top: clamp(24px, 3vw, 36px);
+    }
 
     .cp-newsletter {
       display: grid;
@@ -769,21 +841,32 @@
       color: rgba(248, 244, 235, .64);
     }
     .cp-newsletter-popup-dismiss {
-      width: 30px;
-      height: 30px;
-      border: 1px solid rgba(248, 244, 235, .14);
-      border-radius: 999px;
-      background: rgba(248, 244, 235, .06);
+      position: relative;
+      isolation: isolate;
+      width: 44px;
+      height: 44px;
+      border: 0;
+      background: transparent;
       color: rgba(248, 244, 235, .7);
       cursor: pointer;
       font-size: 18px;
       line-height: 1;
     }
-    .cp-newsletter-popup-dismiss:hover {
+    .cp-newsletter-popup-dismiss::before {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      z-index: -1;
+      border: 1px solid rgba(248, 244, 235, .14);
+      border-radius: 999px;
+      background: rgba(248, 244, 235, .06);
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .cp-newsletter-popup-dismiss:hover::before {
       border-color: rgba(248, 244, 235, .28);
       background: rgba(248, 244, 235, .1);
-      color: var(--paper);
     }
+    .cp-newsletter-popup-dismiss:hover { color: var(--paper); }
     .cp-newsletter-popup .cp-newsletter-form {
       width: 100%;
     }
@@ -927,8 +1010,8 @@
       gap: 8px;
     }
     .calendar-nav button {
-      width: 36px;
-      height: 36px;
+      width: 44px;
+      height: 44px;
       border: 1px solid rgba(237,230,216,.3);
       background: transparent;
       color: var(--paper);
@@ -1250,6 +1333,7 @@
       .intro-screen { display: none; }
       .intro-backdrop::after { display: none; }
       .archive-wordmark { opacity: 1; }
+      .archive-scroll-cue { display: none; }
       .archive-scroll { min-height: auto !important; }
       .archive-pin {
         position: relative;
@@ -1401,11 +1485,13 @@
 
       ready(function () {
         const popup = path === '/cp' ? document.querySelector('[data-newsletter-popup]') : null;
+        const archive = document.getElementById('archive');
         let popupVisible = false;
         let popupClosing = false;
         let popupSuccessTimer = 0;
         let popupExitTimer = 0;
         let popupRevealTimer = 0;
+        let popupTimeReady = false;
 
         function hidePopupAfterExit(target) {
           window.clearTimeout(popupExitTimer);
@@ -1524,11 +1610,15 @@
         function checkPopupScroll() {
           const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
           const depth = window.scrollY / scrollable;
-          if (depth >= 0.35) showPopup();
+          const archiveExited = !archive || archive.getBoundingClientRect().bottom <= window.innerHeight * .84;
+          if (archiveExited && (popupTimeReady || depth >= .35)) showPopup();
         }
 
         window.addEventListener('scroll', checkPopupScroll, { passive: true });
-        window.setTimeout(showPopup, 8000);
+        window.setTimeout(function () {
+          popupTimeReady = true;
+          checkPopupScroll();
+        }, 8000);
         checkPopupScroll();
       });
     })();
@@ -1588,14 +1678,15 @@
     <section class="archive-scroll" id="archive" aria-label="Campaign archive">
       <div class="archive-pin">
       <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+        <div class="archive-scroll-cue" id="archiveScrollCue" aria-hidden="true"></div>
         <div class="archive-rail" id="archiveRail">
           <figure class="archive-frame slide--opening"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-01-opening.jpg"><img src="/assets/common-place/mobile/slide-01-mobile.jpg" alt="Romy standing with her back toward the camera" loading="eager" decoding="async" fetchpriority="high"></picture></figure>
-          <figure class="archive-frame slide--yellow"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-02-yellow.jpg"><img src="/assets/common-place/mobile/slide-02-mobile.jpg" alt="Yellow sweater portrait on film" loading="eager" decoding="async"></picture></figure>
-          <figure class="archive-frame slide--hoodie-front"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-03-hoodie-front.jpg"><img src="/assets/common-place/mobile/slide-03-mobile.jpg" alt="Hoodie portrait seated on a bench" loading="eager" decoding="async"></picture></figure>
-          <figure class="archive-frame slide--chair"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-04-chair.jpg"><img src="/assets/common-place/mobile/slide-04-mobile.jpg" alt="Editorial chair portrait on film" loading="eager" decoding="async"></picture></figure>
-          <figure class="archive-frame slide--duo"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-05-duo.jpg"><img src="/assets/common-place/mobile/slide-05-mobile.jpg" alt="Duo portrait in yellow campaign styling" loading="eager" decoding="async"></picture></figure>
-          <figure class="archive-frame slide--couch"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-06-couch.jpg"><img src="/assets/common-place/mobile/slide-06-mobile.jpg" alt="Campaign image with couch and hoodie" loading="eager" decoding="async"></picture></figure>
-          <figure class="archive-frame slide--profile"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-07-profile.jpg"><img src="/assets/common-place/mobile/slide-07-mobile.jpg" alt="Side profile hoodie campaign image" loading="eager" decoding="async"></picture></figure>
+          <figure class="archive-frame slide--yellow"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-02-yellow.jpg"><img src="/assets/common-place/mobile/slide-02-mobile.jpg" alt="Model in a yellow-sleeved top reclining in a black chair" loading="eager" decoding="async" fetchpriority="low"></picture></figure>
+          <figure class="archive-frame slide--hoodie-front"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-03-hoodie-front.jpg"><img src="/assets/common-place/mobile/slide-03-mobile.jpg" alt="Hooded model seated against a dark studio backdrop" loading="lazy" decoding="async" fetchpriority="low"></picture></figure>
+          <figure class="archive-frame slide--chair"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-04-chair.jpg"><img src="/assets/common-place/mobile/slide-04-mobile.jpg" alt="Model in a yellow-sleeved top and sunglasses seated in a black chair" loading="lazy" decoding="async" fetchpriority="low"></picture></figure>
+          <figure class="archive-frame slide--duo"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-05-duo.jpg"><img src="/assets/common-place/mobile/slide-05-mobile.jpg" alt="Two models in yellow-sleeved tops in a close portrait" loading="lazy" decoding="async" fetchpriority="low"></picture></figure>
+          <figure class="archive-frame slide--couch"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-06-couch.jpg"><img src="/assets/common-place/mobile/slide-06-mobile.jpg" alt="Two models on a cream sofa in yellow and plaid styling" loading="lazy" decoding="async" fetchpriority="low"></picture></figure>
+          <figure class="archive-frame slide--profile"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-07-profile.jpg"><img src="/assets/common-place/mobile/slide-07-mobile.jpg" alt="Model seen from behind in a plaid hooded jacket" loading="lazy" decoding="async" fetchpriority="low"></picture></figure>
         </div>
       </div>
     </section>
@@ -1655,31 +1746,31 @@
           </div>
 
           <div class="novateur-slider-wrap">
-            <div class="novateur-slider" id="novateurSlider" aria-label="Selected client campaign images">
-              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-01.jpg" alt="Novateur campaign image 01" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-02.jpg" alt="Novateur campaign image 02" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-03.jpg" alt="Novateur campaign image 03" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-04.jpg" alt="Novateur campaign image 04" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-05.jpg" alt="Novateur campaign image 05" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-06.jpg" alt="Novateur campaign image 06" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-07.jpg" alt="Novateur campaign image 07" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-08.jpg" alt="Novateur campaign image 08" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-09.jpg" alt="Novateur campaign image 09" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-10.jpg" alt="Novateur campaign image 10" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-11.jpg" alt="Novateur campaign image 11" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-12.jpg" alt="Novateur campaign image 12" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-13.jpg" alt="Novateur campaign image 13" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-14.jpg" alt="Novateur campaign image 14" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-15.jpg" alt="Novateur campaign image 15" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-16.jpg" alt="Novateur campaign image 16" loading="lazy" decoding="async"></figure>
-              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-17.jpg" alt="Novateur campaign image 17" loading="lazy" decoding="async"></figure>
+            <div class="novateur-slider" id="novateurSlider" role="region" aria-label="Selected client campaign images">
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-01.jpg" alt="Model in a yellow-sleeved top reclining in a black chair" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-02.jpg" alt="Two models in yellow-sleeved tops seated on a bench" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-03.jpg" alt="Two models in plaid hooded jackets against wood paneling" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-04.jpg" alt="Model in a yellow-sleeved top and sunglasses seated in a black chair" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-05.jpg" alt="Two models on a cream sofa in yellow and plaid styling" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-06.jpg" alt="Model seen from behind in a plaid hooded jacket" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-07.jpg" alt="Model in a yellow-sleeved top seated in a black chair" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-08.jpg" alt="Hooded model seated against a dark studio backdrop" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-09.jpg" alt="Model in a yellow-sleeved top standing in a studio" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-10.jpg" alt="Model in a plaid hooded jacket beside wood paneling" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-11.jpg" alt="Model standing beside another reclining on a cream sofa" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-12.jpg" alt="Hooded model seated against a dark backdrop" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-13.jpg" alt="Two models in yellow-sleeved tops in a close portrait" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-14.jpg" alt="Model in a yellow-sleeved top seated in a black chair" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-15.jpg" alt="Hooded model seated on a bench" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-16.jpg" alt="Model in a plaid hooded jacket in a front-facing portrait" loading="lazy" decoding="async"></figure>
+              <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-17.jpg" alt="Two models in yellow-sleeved tops seated on wooden steps" loading="lazy" decoding="async"></figure>
             </div>
-            <div class="slider-controls" aria-hidden="true">
+            <div class="slider-controls">
               <button class="novateur-prev" type="button" aria-label="Previous Novateur image">‹</button>
               <button class="novateur-next" type="button" aria-label="Next Novateur image">›</button>
             </div>
           </div>
-          <div class="novateur-film" aria-label="Novateur campaign film">
+          <div class="novateur-film" role="region" aria-label="Novateur campaign film">
             <video autoplay muted loop playsinline preload="metadata">
               <source src="/assets/common-place/novateur/novateur-campaign-film.mp4" type="video/mp4">
             </video>
@@ -1758,6 +1849,7 @@
           <p>Netherlands<br>Europe<br>Worldwide</p>
           <p class="availability-note">Available for campaigns,<br>editorials and selected brand projects.</p>
           <p class="availability-note availability-note--quiet">Limited availability each month.</p>
+          <a class="text-cta availability-cta" href="#booker-station">Start a project</a>
         </div>
       </section>
 
@@ -1825,9 +1917,9 @@
             <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
           </fieldset>
           <p class="cal-note">Select a preferred shoot date.</p>
-          <div class="calendar" aria-label="Calendar date selector">
+          <div class="calendar" role="group" aria-label="Calendar date selector">
             <div class="calendar-head">
-              <h3 class="calendar-title" id="calendarTitle"></h3>
+              <h3 class="calendar-title" id="calendarTitle">Calendar</h3>
               <div class="calendar-nav">
                 <button type="button" id="calendarPrev" aria-label="Previous month">‹</button>
                 <button type="button" id="calendarNext" aria-label="Next month">›</button>
@@ -2241,6 +2333,7 @@
       const rail = document.getElementById('archiveRail');
       const header = document.getElementById('siteHeader');
       const wordmark = document.getElementById('archiveWordmark');
+      const scrollCue = document.getElementById('archiveScrollCue');
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (!archive || !rail || !header || !wordmark || reduceMotion) return;
@@ -2283,6 +2376,7 @@
         rail.style.setProperty('--archive-x', `${x}px`);
         const wordmarkOpacity = clamp(1 - (targetProgress / 0.08), 0, 1);
         wordmark.style.setProperty('--wordmark-opacity', wordmarkOpacity.toFixed(3));
+        scrollCue?.classList.toggle('is-hidden', targetProgress > .01);
 
         const archiveDone = targetProgress >= 0.998 && archive.getBoundingClientRect().bottom <= window.innerHeight + 2;
         header.classList.toggle('is-visible', archiveDone);
