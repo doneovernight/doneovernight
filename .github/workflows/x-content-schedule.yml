@@ -1,0 +1,46 @@
+name: X content schedule
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Scheduled task to invoke"
+        required: true
+        type: choice
+        options: [discovery, publishing]
+
+permissions: {}
+
+concurrency:
+  group: x-content-schedule-${{ github.event.schedule || inputs.task }}
+  cancel-in-progress: false
+
+jobs:
+  discovery:
+    if: github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run discovery
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-discover
+
+  publishing:
+    if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run publishing check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-publish

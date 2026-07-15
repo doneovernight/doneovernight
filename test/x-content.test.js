@@ -4,6 +4,7 @@ const validation = require("../lib/x-content/validation");
 const service = require("../lib/x-content/service");
 const repository = require("../lib/x-content/repository");
 const xClient = require("../lib/x-content/x-client");
+const { getConfig } = require("../lib/x-content/config");
 
 test("weighted X character counting handles text, URLs, emoji, Unicode, newlines, and 280 edge", () => {
   assert.equal(validation.weightedCount("a".repeat(280)).weighted, 280);
@@ -47,6 +48,12 @@ test("X username guard rejects an account other than @doneovernight", async () =
   global.fetch = async () => new Response(JSON.stringify({ data: { id: "1", username: "notdoneovernight" } }), { status: 200, headers: { "Content-Type": "application/json" } });
   await assert.rejects(() => xClient.verifyIdentity(), { code: "X_USERNAME_GUARD_FAILED" });
   global.fetch = fetchOriginal; if (envOriginal === undefined) delete process.env.X_ACCESS_TOKEN; else process.env.X_ACCESS_TOKEN = envOriginal;
+});
+
+test("X configuration recognizes OAuth 1.0a and app-only bearer credentials safely", () => {
+  assert.equal(xClient.authenticationMethod({ xApiKey: "key", xApiSecret: "secret", xAccessToken: "access", xAccessTokenSecret: "access-secret" }), "oauth_1_0a_user_context");
+  assert.equal(getConfig({ xBearerToken: "app-only" }).x.bearerToken, "app-only");
+  assert.equal(xClient.authenticationMethod({ xBearerToken: "app-only" }), "oauth_2_0_app_only");
 });
 
 test("transient X API errors retry while invalid content errors do not", async () => {
