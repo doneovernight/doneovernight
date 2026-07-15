@@ -1,5 +1,6 @@
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const SUPABASE_TIMEOUT_MS = 10_000;
+const xContentRoutes = require("../lib/x-content/routes");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -97,6 +98,9 @@ async function fetchTasks() {
 }
 
 module.exports = async function handler(req, res) {
+  const requestUrl = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+  const xContentRoute = requestUrl.searchParams.get("x_content_route");
+  if (xContentRoute && xContentRoutes[xContentRoute]) return xContentRoutes[xContentRoute](req, res);
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, { success: false, error: "Method not allowed" });
