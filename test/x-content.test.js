@@ -7,6 +7,7 @@ const xClient = require("../lib/x-content/x-client");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
+const routes = require("../lib/x-content/routes");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -158,4 +159,48 @@ test("draft mode, test flag, and idempotency prevent unsafe posts", async () => 
   await assert.rejects(() => service.testPost(), { code: "X_TEST_POST_DISABLED" });
   Object.assign(repository, original);
   for (const [key, value] of Object.entries(savedEnv)) { const envName = key === "start" ? "CONTENT_PUBLISH_START" : key === "end" ? "CONTENT_PUBLISH_END" : "X_ALLOW_TEST_POST"; if (value === undefined) delete process.env[envName]; else process.env[envName] = value; }
+});
+
+function responseCapture() {
+  return { statusCode: 0, headers: {}, payload: null, setHeader(name, value) { this.headers[name] = value; }, end(value) { this.payload = JSON.parse(value); } };
+}
+async function callAdmin(body) {
+  const res = responseCapture(); await routes.admin({ method: "POST", body, headers: {} }, res); return res;
+}
+
+test("X content review route rejects unauthorized access", async () => {
+  const response = await callAdmin({ action: "list" });
+  assert.equal(response.statusCode, 401); assert.equal(response.payload.success, false);
+});
+
+test("X content review actions approve, reject, regenerate, and require typed publish confirmation", async () => {
+  const originalFetch = global.fetch; const original = { approveDraft: service.approveDraft, rejectDraft: service.rejectDraft, regenerateDraft: service.regenerateDraft, publishApprovedDraft: service.publishApprovedDraft };
+  const calls = []; global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+  service.approveDraft = async (id) => { calls.push(["approve", id]); return { id, status: "approved" }; };
+  service.rejectDraft = async (id, reason) => { calls.push(["reject", id, reason]); return { id, status: "rejected" }; };
+  service.regenerateDraft = async (id) => { calls.push(["regenerate", id]); return { previous_draft_id: id, status: "queued" }; };
+  service.publishApprovedDraft = async (id) => { calls.push(["publish", id]); return { published: false }; };
+  try {
+    assert.equal((await callAdmin({ action: "approve", draft_id: "draft-1", admin_key: "valid" })).payload.result.status, "approved");
+    assert.equal((await callAdmin({ action: "reject", draft_id: "draft-2", reason: "Not timely", admin_key: "valid" })).payload.result.status, "rejected");
+    assert.equal((await callAdmin({ action: "regenerate", draft_id: "draft-3", admin_key: "valid" })).payload.result.status, "queued");
+    const missingConfirmation = await callAdmin({ action: "publish_now", draft_id: "draft-4", admin_key: "valid" });
+    assert.equal(missingConfirmation.statusCode, 400); assert.equal(calls.some(([action]) => action === "publish"), false);
+    assert.equal((await callAdmin({ action: "publish_now", draft_id: "draft-4", publish_confirmation: "PUBLISH", admin_key: "valid" })).payload.success, true);
+    assert.deepEqual(calls, [["approve", "draft-1"], ["reject", "draft-2", "Not timely"], ["regenerate", "draft-3"], ["publish", "draft-4"]]);
+  } finally { global.fetch = originalFetch; Object.assign(service, original); }
+});
+
+test("approved-draft publishing rejects non-approved drafts and preserves idempotency", async () => {
+  const original = { createRun: repository.createRun, finishRun: repository.finishRun, getSetting: repository.getSetting, getDraft: repository.getDraft, publicationsToday: repository.publicationsToday, recentDrafts: repository.recentDrafts, getPublication: repository.getPublication, createPublication: repository.createPublication };
+  const xOriginal = { verifyIdentity: xClient.verifyIdentity, publish: xClient.publish }; const saved = { start: process.env.CONTENT_PUBLISH_START, end: process.env.CONTENT_PUBLISH_END };
+  process.env.CONTENT_PUBLISH_START = "00:00"; process.env.CONTENT_PUBLISH_END = "23:59";
+  let published = 0; repository.createRun = async () => ({ id: "run" }); repository.finishRun = async () => ({}); repository.getSetting = async () => ({ value: "approve" }); repository.publicationsToday = async () => []; repository.recentDrafts = async () => [];
+  xClient.verifyIdentity = async () => ({ username: "doneovernight" }); xClient.publish = async () => { published += 1; return { data: { data: { id: "post" } } }; };
+  try {
+    repository.getDraft = async () => ({ id: "queued", status: "queued" });
+    assert.equal((await service.publishApprovedDraft("queued")).skipped, "Only an approved draft can be published");
+    repository.getDraft = async () => ({ id: "approved", status: "approved", text: "A practical deployment lesson with enough substance to remain useful and safely within X limits." }); repository.getPublication = async () => ({ status: "publishing" }); repository.createPublication = async () => { throw new Error("must not create publication"); };
+    assert.match((await service.publishApprovedDraft("approved")).skipped, /Idempotency guard/); assert.equal(published, 0);
+  } finally { Object.assign(repository, original); Object.assign(xClient, xOriginal); if (saved.start === undefined) delete process.env.CONTENT_PUBLISH_START; else process.env.CONTENT_PUBLISH_START = saved.start; if (saved.end === undefined) delete process.env.CONTENT_PUBLISH_END; else process.env.CONTENT_PUBLISH_END = saved.end; }
 });
