@@ -130,6 +130,11 @@ test("OAuth 1.0a signer matches X's published HMAC-SHA1 signature vector", () =>
   assert.match(header, /oauth_signature="Ls93hJiZbQ3akF3HF3x1Bz8%2FzU4%3D"/);
 });
 
+test("OAuth 2.0 PKCE authorization requests only the required scopes and never includes the verifier", () => {
+  const xClient = require("../lib/x-content/x-client"); const url = new URL(xClient.buildOAuth2AuthorizationUrl({ clientId: "client-id", redirectUri: "https://doneovernight.com/api/x-content-oauth/callback", state: "state", verifier: "server-only-verifier" }));
+  assert.equal(url.origin + url.pathname, "https://x.com/i/oauth2/authorize"); assert.equal(url.searchParams.get("scope"), "tweet.read tweet.write users.read offline.access"); assert.equal(url.searchParams.get("code_challenge_method"), "S256"); assert.equal(url.searchParams.has("code_verifier"), false);
+});
+
 test("transient X API errors retry while invalid content errors do not", async () => {
   const fetchOriginal = global.fetch; const tokenOriginal = process.env.X_ACCESS_TOKEN; const refreshOriginal = process.env.X_REFRESH_TOKEN;
   process.env.X_ACCESS_TOKEN = "test-token"; delete process.env.X_REFRESH_TOKEN;

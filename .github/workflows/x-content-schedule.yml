@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity]
+        options: [discovery, publishing, identity, oauth_start]
 
 permissions: {}
 
@@ -57,3 +57,16 @@ jobs:
           curl --fail --silent --show-error
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-verify-identity
+
+  oauth_start:
+    if: inputs.task == 'oauth_start'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Start OAuth 2.0 PKCE authorization
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-oauth/start
