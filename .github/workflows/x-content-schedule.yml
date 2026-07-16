@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, oauth_start]
+        options: [discovery, publishing, identity, oauth_start, oauth_status]
 
 permissions: {}
 
@@ -70,3 +70,16 @@ jobs:
           curl --fail-with-body --silent --show-error
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-oauth/start
+
+  oauth_status:
+    if: inputs.task == 'oauth_status'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect OAuth 2.0 runtime metadata
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-oauth/status
