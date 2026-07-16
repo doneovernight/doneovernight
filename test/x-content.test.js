@@ -6,6 +6,7 @@ const repository = require("../lib/x-content/repository");
 const xClient = require("../lib/x-content/x-client");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
+const { schema } = require("../lib/x-content/generate");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -57,6 +58,10 @@ test("source registry contains only verified official feeds for the repaired sou
   assert.equal(REGISTRY.some((source) => source.publisher === "Anthropic"), false);
   assert.equal(REGISTRY.find((source) => source.publisher === "Supabase")?.url, "https://supabase.com/rss.xml");
   assert.equal(REGISTRY.find((source) => source.publisher === "n8n")?.url, "https://blog.n8n.io/rss/");
+});
+
+test("OpenAI strict JSON schema requires its nullable optional_cta field", () => {
+  assert.equal(schema.required.includes("optional_cta"), true);
 });
 
 test("backfill generates approval-gated drafts for persisted undrafted candidates and never publishes", async () => {
