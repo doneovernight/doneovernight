@@ -44,7 +44,7 @@
       <p id="error" role="alert"></p>
     </section>
     <section id="app">
-      <div class="head"><div><div class="eyebrow">DONEOVERNIGHT · X content</div><h1>Review queue</h1><p class="muted">Approve only marks a draft approved. Publishing requires the separate typed confirmation.</p></div><button id="logout">Log out</button></div>
+      <div class="head"><div><div class="eyebrow">DONEOVERNIGHT · X content</div><h1>Review queue</h1><p class="muted">Approve only marks a draft approved. Publishing requires the separate typed confirmation.</p></div><div class="actions"><button id="regenerateAll">Regenerate all legacy drafts</button><button id="logout">Log out</button></div></div>
       <p id="summary" class="status"></p>
       <div id="drafts"></div>
     </section>
@@ -69,6 +69,7 @@
     async function open() { try { await load(); gate.style.display='none'; app.style.display='block'; error.textContent=''; } catch (err) { error.textContent='Admin access was denied.'; } }
     document.querySelector('#login').addEventListener('submit', async (event) => { event.preventDefault(); sessionStorage.setItem(KEY, document.querySelector('#key').value.trim()); await open(); });
     document.querySelector('#logout').addEventListener('click', () => { sessionStorage.removeItem(KEY); app.style.display='none'; gate.style.display='block'; });
+    document.querySelector('#regenerateAll').addEventListener('click', async (event) => { if (!confirm('Legacy drafts will be excluded and up to five new V2 approval drafts will be generated. Nothing will be published.')) return; try { event.currentTarget.disabled=true; await request('regenerate_all_legacy'); await load(); } catch (err) { alert(err.message); } finally { event.currentTarget.disabled=false; } });
     drafts.addEventListener('click', async (event) => { const button = event.target.closest('button[data-action]'); if (!button) return; const id = button.dataset.id, action = button.dataset.action; try { button.disabled=true; if (action === 'reject') { const reason = prompt('Rejection reason', 'Rejected by operator'); if (reason === null) return; await request('reject',{draft_id:id,reason}); } else if (action === 'regenerate') { if (!confirm('Generate a replacement draft. The current draft will be rejected only if the replacement passes all gates.')) return; await request('regenerate',{draft_id:id}); } else if (action === 'publish') { if (!confirm('This is the first confirmation. Continue to the final typed confirmation?')) return; if (prompt('Type PUBLISH to create a public X post.') !== 'PUBLISH') return; await request('publish_now',{draft_id:id,publish_confirmation:'PUBLISH'}); } else await request('approve',{draft_id:id}); await load(); } catch (err) { alert(err.message); } finally { button.disabled=false; } });
     if (sessionStorage.getItem(KEY)) open();
   </script>

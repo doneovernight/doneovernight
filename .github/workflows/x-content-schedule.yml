@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, oauth_start]
+        options: [discovery, publishing, identity, oauth_start, regenerate_legacy]
 
 permissions: {}
 
@@ -81,3 +81,16 @@ jobs:
           curl --fail-with-body --silent --show-error
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-oauth/start
+
+  regenerate_legacy:
+    if: inputs.task == 'regenerate_legacy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Regenerate up to five legacy drafts for approval
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-regenerate-legacy

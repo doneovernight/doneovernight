@@ -80,6 +80,19 @@ test("V2 editorial gate enforces a single original source, natural verified ment
   assert.equal(invalid.ok, false);
 });
 
+test("V2 hard language gate rejects article summaries, formulaic language, and generic conclusions", () => {
+  const candidate = { publisher: "GitHub", officialX: "github" };
+  const post = "GitHub released a new update for automation. Builder implication: this matters for every team. The durable advantage is using it now.\n\nSource:\nGitHub";
+  const result = editorial.validateEditorialDraft({ post_text: post, post_type: "builder_insight", confidence: 0.95, scores: { insight: 0.95, novelty: 0.95, repost: 0.95, save: 0.95, educational: 0.95, brand: 0.95 } }, candidate, 0.74);
+  assert.equal(result.ok, false); assert.ok(result.errors.some((error) => /summary|formulaic|generic/i.test(error)));
+});
+
+test("legacy detection excludes V1 drafts with no V2 scores or an overlong V2 body", () => {
+  assert.equal(editorial.isLegacyDraft({ weighted_character_count: 220, model_output: {} }), true);
+  assert.equal(editorial.isLegacyDraft({ weighted_character_count: 241, model_output: { v2: { scores: { insight: 0.9, novelty: 0.9, repost: 0.9, save: 0.9, educational: 0.9, brand: 0.9 } } } }), true);
+  assert.equal(editorial.isLegacyDraft({ weighted_character_count: 220, model_output: { v2: { scores: { insight: 0.9, novelty: 0.9, repost: 0.9, save: 0.9, educational: 0.9, brand: 0.9 } } } }), false);
+});
+
 test("reply inbox classifier never treats reposts as a monitored interaction", () => {
   assert.equal(editorial.classifyInteraction("Could you share how the recovery check works?"), "question");
   assert.equal(editorial.classifyInteraction("This automation is broken after the last release"), "bug");
@@ -110,6 +123,29 @@ test("V2 backfill enforces its five-draft cap without attempting publication", a
   const result = await service.backfillDrafts(backfillConfig, { repository: repo, generateDraft: backfillGenerator, notify: async () => {} });
   assert.equal(result.attempted, 5); assert.equal(result.drafts, 5); assert.equal(result.limited, 1);
   assert.equal(repo.publicationAttempts, 0);
+});
+
+test("legacy batch excludes V1 drafts and generates a materially new approval-only replacement", async () => {
+  const candidate = freshCandidate("legacy"); const legacy = { id: "legacy-draft", candidate_id: candidate.id, text: "Official update: the workflow now supports a new release. This matters for teams.\n\nSource:\ntopic-legacy", weighted_character_count: 110, status: "queued", topic_cluster: candidate.topic_cluster, created_at: new Date().toISOString(), model_output: {} }; const drafts = [legacy]; const created = []; let publicationAttempts = 0;
+  const repo = {
+    listDrafts: async () => drafts,
+    recentCandidates: async () => [candidate],
+    draftsForCandidates: async () => drafts,
+    publicationsForDrafts: async () => [],
+    recentDrafts: async () => [...drafts, ...created],
+    updateDraft: async (id, changes) => { const draft = drafts.find((row) => row.id === id); Object.assign(draft, changes); return draft; },
+    createDraft: async (draft) => { const row = { id: `replacement-${created.length + 1}`, created_at: new Date().toISOString(), ...draft }; created.push(row); return row; },
+    createPublication: async () => { publicationAttempts += 1; }
+  };
+  const result = await service.regenerateAllLegacyDrafts({ repository: repo, config: backfillConfig, generateDraft: backfillGenerator, notify: async () => {} });
+  assert.equal(result.legacy_excluded, 1); assert.equal(result.generated.length, 1); assert.equal(legacy.status, "rejected"); assert.equal(result.generated[0].status, "queued"); assert.equal(publicationAttempts, 0);
+});
+
+test("single-draft regeneration rejects a minor paraphrase instead of queueing it", async () => {
+  const candidate = freshCandidate("material"); const original = "Most teams do not need another dashboard. They need fewer handoffs that fail silently. When ownership is visible, the workflow shows where recovery is needed before customers find the gap.\n\nSource:\ntopic-material";
+  const generator = async () => ({ post_text: original, post_type: "builder_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.source_url], why_it_fits: "Original operating lesson", scores: { insight: 0.9, novelty: 0.85, repost: 0.86, save: 0.9, educational: 0.9, brand: 0.9 } });
+  const result = await service.generateAndStoreDraft(candidate, backfillConfig, { repository: backfillRepository([candidate]), generateDraft: generator, notify: async () => {}, requireMaterialImprovementFrom: original });
+  assert.equal(result.status, "rejected"); assert.match(result.draft.rejection_reason, /too similar/i);
 });
 
 test("publishing guards enforce daily cap, minimum interval, and time windows", async () => {
@@ -189,21 +225,23 @@ test("X content review route rejects unauthorized access", async () => {
   assert.equal(response.statusCode, 401); assert.equal(response.payload.success, false);
 });
 
-test("X content review actions approve, reject, regenerate, and require typed publish confirmation", async () => {
-  const originalFetch = global.fetch; const original = { approveDraft: service.approveDraft, rejectDraft: service.rejectDraft, regenerateDraft: service.regenerateDraft, publishApprovedDraft: service.publishApprovedDraft };
+test("X content review actions approve, reject, regenerate legacy drafts, and require typed publish confirmation", async () => {
+  const originalFetch = global.fetch; const original = { approveDraft: service.approveDraft, rejectDraft: service.rejectDraft, regenerateDraft: service.regenerateDraft, regenerateAllLegacyDrafts: service.regenerateAllLegacyDrafts, publishApprovedDraft: service.publishApprovedDraft };
   const calls = []; global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
   service.approveDraft = async (id) => { calls.push(["approve", id]); return { id, status: "approved" }; };
   service.rejectDraft = async (id, reason) => { calls.push(["reject", id, reason]); return { id, status: "rejected" }; };
   service.regenerateDraft = async (id) => { calls.push(["regenerate", id]); return { previous_draft_id: id, status: "queued" }; };
+  service.regenerateAllLegacyDrafts = async () => { calls.push(["regenerate_all_legacy"]); return { legacy_excluded: 1, generated: [] }; };
   service.publishApprovedDraft = async (id) => { calls.push(["publish", id]); return { published: false }; };
   try {
     assert.equal((await callAdmin({ action: "approve", draft_id: "draft-1", admin_key: "valid" })).payload.result.status, "approved");
     assert.equal((await callAdmin({ action: "reject", draft_id: "draft-2", reason: "Not timely", admin_key: "valid" })).payload.result.status, "rejected");
     assert.equal((await callAdmin({ action: "regenerate", draft_id: "draft-3", admin_key: "valid" })).payload.result.status, "queued");
+    assert.equal((await callAdmin({ action: "regenerate_all_legacy", admin_key: "valid" })).payload.result.legacy_excluded, 1);
     const missingConfirmation = await callAdmin({ action: "publish_now", draft_id: "draft-4", admin_key: "valid" });
     assert.equal(missingConfirmation.statusCode, 400); assert.equal(calls.some(([action]) => action === "publish"), false);
     assert.equal((await callAdmin({ action: "publish_now", draft_id: "draft-4", publish_confirmation: "PUBLISH", admin_key: "valid" })).payload.success, true);
-    assert.deepEqual(calls, [["approve", "draft-1"], ["reject", "draft-2", "Not timely"], ["regenerate", "draft-3"], ["publish", "draft-4"]]);
+    assert.deepEqual(calls, [["approve", "draft-1"], ["reject", "draft-2", "Not timely"], ["regenerate", "draft-3"], ["regenerate_all_legacy"], ["publish", "draft-4"]]);
   } finally { global.fetch = originalFetch; Object.assign(service, original); }
 });
 
