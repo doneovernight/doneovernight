@@ -11,6 +11,10 @@ on:
         required: true
         type: choice
         options: [discovery, publishing, identity, oauth_start, regenerate_legacy]
+      draft_limit:
+        description: "Optional legacy replacement limit (1-5)"
+        required: false
+        type: string
 
 permissions: {}
 
@@ -93,4 +97,4 @@ jobs:
         run: >-
           curl --fail --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
-          https://doneovernight.com/api/x-content-regenerate-legacy
+          https://doneovernight.com/api/x-content-regenerate-legacy?limit=${{ inputs.draft_limit || '5' }}

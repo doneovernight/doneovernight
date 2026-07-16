@@ -141,6 +141,14 @@ test("legacy batch excludes V1 drafts and generates a materially new approval-on
   assert.equal(result.legacy_excluded, 1); assert.equal(result.generated.length, 1); assert.equal(legacy.status, "rejected"); assert.equal(result.generated[0].status, "queued"); assert.equal(publicationAttempts, 0);
 });
 
+test("legacy batch can fill a shortfall with a distinct same-topic draft while keeping duplicate and quality gates", async () => {
+  const candidate = freshCandidate("f"); const active = { id: "active-v2", candidate_id: "other", text: "A different operating insight with unrelated words, clear ownership, and a recovery rule that keeps work visible.\n\nSource:\nOther", weighted_character_count: 180, status: "queued", topic_cluster: candidate.topic_cluster, created_at: new Date().toISOString(), model_output: { v2: { scores: { insight: 0.9, novelty: 0.9, repost: 0.9, save: 0.9, educational: 0.9, brand: 0.9 } } } }; const created = [];
+  const repo = { listDrafts: async () => [active], recentCandidates: async () => [candidate], draftsForCandidates: async () => [], publicationsForDrafts: async () => [], recentDrafts: async () => [active, ...created], updateDraft: async () => {}, createDraft: async (draft) => { const row = { id: "fallback-v2", created_at: new Date().toISOString(), ...draft }; created.push(row); return row; } };
+  const fallbackGenerator = async () => ({ post_text: "Automation breaks at handoffs, not in code. Give each transition an owner, a visible state, and a recovery path. When work stalls, show the decision that stopped it before the team reconstructs the story.", post_type: "builder_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.source_url], why_it_fits: "Original operating lesson", scores: { insight: 0.9, novelty: 0.82, repost: 0.84, save: 0.9, educational: 0.9, brand: 0.92 } });
+  const result = await service.regenerateAllLegacyDrafts({ repository: repo, config: { ...backfillConfig, v2DraftBatchSize: 1 }, generateDraft: fallbackGenerator, notify: async () => {} });
+  assert.equal(result.generated.length, 1); assert.equal(result.generated[0].status, "queued");
+});
+
 test("single-draft regeneration rejects a minor paraphrase instead of queueing it", async () => {
   const candidate = freshCandidate("material"); const original = "Most teams do not need another dashboard. They need fewer handoffs that fail silently. When ownership is visible, the workflow shows where recovery is needed before customers find the gap.\n\nSource:\ntopic-material";
   const generator = async () => ({ post_text: original, post_type: "builder_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.source_url], why_it_fits: "Original operating lesson", scores: { insight: 0.9, novelty: 0.85, repost: 0.86, save: 0.9, educational: 0.9, brand: 0.9 } });
