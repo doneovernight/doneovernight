@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, supabase_diagnostics]
+        options: [discovery, publishing, identity]
 
 permissions: {}
 
@@ -57,16 +57,3 @@ jobs:
           curl --fail --silent --show-error
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-verify-identity
-
-  supabase_diagnostics:
-    if: inputs.task == 'supabase_diagnostics'
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Inspect Supabase runtime metadata
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          curl --fail --silent --show-error
-          -H "Authorization: Bearer ${CRON_SECRET}"
-          https://doneovernight.com/api/x-content-supabase-diagnostics
