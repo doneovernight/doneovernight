@@ -8,6 +8,7 @@ const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
+const editorial = require("../lib/x-content/editorial");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -30,8 +31,8 @@ function backfillRepository(candidates, existingDrafts = [], publications = []) 
     get publicationAttempts() { return publicationAttempts; }
   };
 }
-const backfillConfig = { mode: "approve", publicationThreshold: 0.68 };
-const backfillGenerator = async (candidate) => ({ post_text: generatedPost(candidate.id), post_type: "practical_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.sourceUrl], why_it_fits: "Official source" });
+const backfillConfig = { mode: "approve", publicationThreshold: 0.68, editorialThreshold: 0.74, v2DraftBatchSize: 5 };
+const backfillGenerator = async (candidate) => { const unique = Array.from({ length: 10 }, (_, index) => `${candidate.id}${index}`).join(" "); return { post_text: `${unique}. Most teams need fewer handoffs. When ownership and recovery are visible, automation reduces work instead of hiding it.`, post_type: "builder_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.sourceUrl], why_it_fits: "Original operating lesson", scores: { insight: 0.9, novelty: 0.82, repost: 0.84, save: 0.9, educational: 0.9, brand: 0.92 } }; };
 
 test("weighted X character counting handles text, URLs, emoji, Unicode, newlines, and 280 edge", () => {
   assert.equal(validation.weightedCount("a".repeat(280)).weighted, 280);
@@ -65,9 +66,24 @@ test("OpenAI strict JSON schema requires its nullable optional_cta field", () =>
   assert.equal(schema.required.includes("optional_cta"), true);
 });
 
-test("new X drafts target 180–245 weighted characters while retaining the 280 validator maximum", () => {
-  assert.equal(DRAFT_TARGET, "180–245");
+test("new X drafts target 180–220 weighted characters with a 240 V2 hard maximum and retained 280 emergency validator", () => {
+  assert.equal(DRAFT_TARGET, "180–220");
   assert.equal(validation.validatePostText("a".repeat(280)).ok, true);
+});
+
+test("V2 editorial gate enforces a single original source, natural verified mention, and all quality scores", () => {
+  const candidate = { publisher: "GitHub", officialX: "github" };
+  const post = "Most teams do not need more automation. They need fewer handoffs that fail silently. @github makes the delivery layer visible; the real advantage is knowing who owns recovery when it breaks.\n\nSource:\nGitHub";
+  const valid = editorial.validateEditorialDraft({ post_text: post, post_type: "builder_insight", confidence: 0.9, scores: { insight: 0.9, novelty: 0.82, repost: 0.85, save: 0.9, educational: 0.88, brand: 0.92 } }, candidate, 0.74);
+  assert.equal(valid.ok, true);
+  const invalid = editorial.validateEditorialDraft({ post_text: `${post}\nhttps://example.com`, post_type: "builder_insight", confidence: 0.9, scores: { insight: 0.9, novelty: 0.82, repost: 0.85, save: 0.9, educational: 0.88, brand: 0.92 } }, candidate, 0.74);
+  assert.equal(invalid.ok, false);
+});
+
+test("reply inbox classifier never treats reposts as a monitored interaction", () => {
+  assert.equal(editorial.classifyInteraction("Could you share how the recovery check works?"), "question");
+  assert.equal(editorial.classifyInteraction("This automation is broken after the last release"), "bug");
+  assert.equal(editorial.classifyInteraction("Free followers, click here for crypto airdrop"), "spam");
 });
 
 test("backfill generates approval-gated drafts for persisted undrafted candidates and never publishes", async () => {
@@ -89,10 +105,10 @@ test("backfill skips rejected and stale candidates", async () => {
   assert.equal(result.attempted, 0); assert.equal(result.skipped.rejected, 1); assert.equal(result.skipped.stale, 1);
 });
 
-test("backfill enforces its three-draft cap without attempting publication", async () => {
-  const candidates = ["one", "two", "three", "four"].map((id) => freshCandidate(id)); const repo = backfillRepository(candidates);
+test("V2 backfill enforces its five-draft cap without attempting publication", async () => {
+  const candidates = ["one", "two", "three", "four", "five", "six"].map((id) => freshCandidate(id)); const repo = backfillRepository(candidates);
   const result = await service.backfillDrafts(backfillConfig, { repository: repo, generateDraft: backfillGenerator, notify: async () => {} });
-  assert.equal(result.attempted, 3); assert.equal(result.drafts, 3); assert.equal(result.limited, 1);
+  assert.equal(result.attempted, 5); assert.equal(result.drafts, 5); assert.equal(result.limited, 1);
   assert.equal(repo.publicationAttempts, 0);
 });
 

@@ -29,8 +29,18 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
           curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-discover
+
+      - name: Collect approval-only engagement drafts and analytics
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-engagement
 
   publishing:
     if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
@@ -42,6 +52,7 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
           curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-publish
 
