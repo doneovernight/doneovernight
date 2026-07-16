@@ -5,6 +5,31 @@ const service = require("../lib/x-content/service");
 const repository = require("../lib/x-content/repository");
 const xClient = require("../lib/x-content/x-client");
 const { getConfig } = require("../lib/x-content/config");
+const { REGISTRY } = require("../lib/x-content/sources");
+
+const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
+const generatedPost = (id) => ({
+  one: "Durable automation starts with explicit state. When every transition is visible, a failed job becomes a repairable event instead of a mystery.",
+  two: "A database change earns trust when rollback is part of the release plan. Fast delivery matters most when recovery is equally deliberate.",
+  three: "Good interfaces make system limits legible. Clear feedback lets an operator choose the next step instead of guessing at hidden state.",
+  four: "Testing a workflow means rehearsing failure paths, not only happy paths. Recovery checks turn reliability from a claim into evidence.",
+  existing: "An existing review draft already represents this candidate, so a second draft would add duplicate work rather than new signal.",
+  drafted: "An existing review draft already represents this candidate, so a second draft would add duplicate work rather than new signal."
+}[id] || `Practical operating guidance for ${id}: make each workflow state visible, reviewable, and recoverable before it reaches production.`);
+function backfillRepository(candidates, existingDrafts = [], publications = []) {
+  const created = []; let publicationAttempts = 0;
+  return {
+    recentCandidates: async () => candidates,
+    draftsForCandidates: async (ids) => existingDrafts.filter((draft) => ids.includes(draft.candidate_id)),
+    publicationsForDrafts: async (ids) => publications.filter((publication) => ids.includes(publication.draft_id)),
+    recentDrafts: async () => [...existingDrafts, ...created],
+    createDraft: async (draft) => { const row = { id: `draft-${created.length + 1}`, created_at: new Date().toISOString(), ...draft }; created.push(row); return row; },
+    createPublication: async () => { publicationAttempts += 1; },
+    get publicationAttempts() { return publicationAttempts; }
+  };
+}
+const backfillConfig = { mode: "approve", publicationThreshold: 0.68 };
+const backfillGenerator = async (candidate) => ({ post_text: generatedPost(candidate.id), post_type: "practical_insight", confidence: 0.9, topic_cluster: candidate.topic_cluster, factual_claims: [], source_references: [candidate.sourceUrl], why_it_fits: "Official source" });
 
 test("weighted X character counting handles text, URLs, emoji, Unicode, newlines, and 280 edge", () => {
   assert.equal(validation.weightedCount("a".repeat(280)).weighted, 280);
@@ -26,6 +51,38 @@ test("source validation rejects weak and malicious source content", () => {
 test("semantic duplicate score separates repeated and unrelated angles", () => {
   assert.ok(service.jaccard("Vercel releases a new AI gateway for builders", "Vercel releases an AI gateway for software builders") > 0.6);
   assert.ok(service.jaccard("Vercel releases a new AI gateway", "Supabase row-level security protects customer data") < 0.25);
+});
+
+test("source registry contains only verified official feeds for the repaired sources", () => {
+  assert.equal(REGISTRY.some((source) => source.publisher === "Anthropic"), false);
+  assert.equal(REGISTRY.find((source) => source.publisher === "Supabase")?.url, "https://supabase.com/rss.xml");
+  assert.equal(REGISTRY.find((source) => source.publisher === "n8n")?.url, "https://blog.n8n.io/rss/");
+});
+
+test("backfill generates approval-gated drafts for persisted undrafted candidates and never publishes", async () => {
+  const repo = backfillRepository([freshCandidate("one")]);
+  const result = await service.backfillDrafts(backfillConfig, { repository: repo, generateDraft: backfillGenerator, notify: async () => {} });
+  assert.equal(result.drafts, 1); assert.equal(result.attempted, 1); assert.equal(result.sample.status, "queued");
+  assert.equal(repo.publicationAttempts, 0);
+});
+
+test("backfill skips candidates that already have a draft", async () => {
+  const candidate = freshCandidate("drafted"); const existing = { id: "existing", candidate_id: candidate.id, text: generatedPost("existing"), topic_cluster: candidate.topic_cluster, status: "queued", created_at: new Date().toISOString() };
+  const result = await service.backfillDrafts(backfillConfig, { repository: backfillRepository([candidate], [existing]), generateDraft: backfillGenerator, notify: async () => {} });
+  assert.equal(result.drafts, 0); assert.equal(result.skipped.existing_draft, 1);
+});
+
+test("backfill skips rejected and stale candidates", async () => {
+  const rejected = freshCandidate("rejected", { status: "rejected" }); const stale = freshCandidate("stale", { created_at: new Date(Date.now() - 8 * 86_400_000).toISOString() });
+  const result = await service.backfillDrafts(backfillConfig, { repository: backfillRepository([rejected, stale]), generateDraft: backfillGenerator, notify: async () => {} });
+  assert.equal(result.attempted, 0); assert.equal(result.skipped.rejected, 1); assert.equal(result.skipped.stale, 1);
+});
+
+test("backfill enforces its three-draft cap without attempting publication", async () => {
+  const candidates = ["one", "two", "three", "four"].map((id) => freshCandidate(id)); const repo = backfillRepository(candidates);
+  const result = await service.backfillDrafts(backfillConfig, { repository: repo, generateDraft: backfillGenerator, notify: async () => {} });
+  assert.equal(result.attempted, 3); assert.equal(result.drafts, 3); assert.equal(result.limited, 1);
+  assert.equal(repo.publicationAttempts, 0);
 });
 
 test("publishing guards enforce daily cap, minimum interval, and time windows", async () => {
