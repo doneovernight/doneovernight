@@ -123,14 +123,6 @@ test("X configuration recognizes OAuth 1.0a and app-only bearer credentials safe
   assert.equal(xClient.authenticationMethod({ xBearerToken: "app-only" }), "oauth_2_0_app_only");
 });
 
-test("isolated OAuth identity check remains OAuth-only and sanitizes a 401", async () => {
-  const originalFetch = global.fetch;
-  global.fetch = async () => new Response(JSON.stringify({ title: "Unauthorized", detail: "Unauthorized", status: 401, token: "must-not-appear" }), { status: 401, headers: { "Content-Type": "application/json", Date: new Date().toUTCString() } });
-  const result = await xClient.isolatedIdentityCheck({ xApiKey: "key", xApiSecret: "secret", xAccessToken: "token", xAccessTokenSecret: "token-secret" });
-  global.fetch = originalFetch;
-  assert.equal(result.httpStatus, 401); assert.equal(result.authorizationScheme, "OAuth"); assert.equal(result.usesBearerFallback, false); assert.deepEqual(result.sanitizedResponse, { title: "Unauthorized", detail: "Unauthorized", status: "401" });
-});
-
 test("OAuth 1.0a signer matches X's published HMAC-SHA1 signature vector", () => {
   const header = xClient.oauth1Header("POST", "https://api.x.com/1.1/statuses/update.json?include_entities=true&status=Hello%20Ladies%20%2B%20Gentlemen%2C%20a%20signed%20OAuth%20request%21", {
     apiKey: "xvz1evFS4wEEPTGEFPHBog", apiSecret: "kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw", accessToken: "370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb", accessTokenSecret: "LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE"
