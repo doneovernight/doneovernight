@@ -322,6 +322,11 @@ test("legacy scheduled publishing is inert outside both autonomous switches whil
   try { assert.equal((await service.publishApprovedDraft("approved-draft")).published, false); assert.equal(publishCalls, 1); } finally { service.publishApprovedDraft = original; }
 });
 
+test("V3 scheduled publishing check returns before a run insert or X client when shadowed", async () => {
+  let runs = 0; let xCalls = 0; const original = repository.createRun; repository.createRun = async () => { runs += 1; };
+  try { const result = await service.autonomyPublishingCheck({ config: { mode: "approve", autonomy: { mode: "shadow", publishEnabled: false } }, xClient: { publish: async () => { xCalls += 1; } } }); assert.match(result.skipped, /requires CONTENT_AUTONOMY_MODE=auto/); assert.equal(runs, 0); assert.equal(xCalls, 0); } finally { repository.createRun = original; }
+});
+
 test("V3 final publish guard verifies identity, length, approval, and idempotency", async () => {
   const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let created = 0; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { created += 1; return { id: "publication" }; }, updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async () => ({}) };
   const client = { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; return { data: { data: { id: "post" } } }; } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.equal(result.published, true); assert.equal(created, 1); assert.equal(published, 1);
