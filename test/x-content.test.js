@@ -12,6 +12,7 @@ const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
 const autonomy = require("../lib/x-content/autonomy");
 const learning = require("../lib/x-content/learning");
+const radar = require("../lib/x-content/radar");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -296,9 +297,9 @@ test("V3 autonomy decisions use decision_key and preserve the decision_key upser
 });
 
 test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
-  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "discovery", "engagement", "publishing"];
+  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "discovery", "engagement", "publishing", "radar"];
   assert.deepEqual([...repository.PRODUCTION_RUN_TYPES].sort(), expected);
-  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8");
+  const sql = `${fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260717_social_intelligence_engine.sql"), "utf8")}`;
   for (const runType of expected) assert.match(sql, new RegExp(`'${runType}'`));
 
   const originalFetch = global.fetch;
@@ -319,6 +320,27 @@ test("production run types stay explicitly aligned between application validatio
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
     if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
   }
+});
+
+test("Social Radar ranks attributed official evidence, protects screenshots, and creates review-only platform objects", () => {
+  const item = { id: "radar", sourceUrl: "https://official.example/release", sourceName: "Official Labs", sourceKind: "official_rss", title: "New API security release for deployment workflows", summary: "A new API release changes infrastructure security and workflow recovery.", publishedAt: new Date().toISOString(), authority: 1, attribution: "Source: Official Labs" };
+  const analysis = radar.scoreTrend(item); assert.ok(["generate", "immediate_priority"].includes(analysis.recommendation)); assert.ok(analysis.sharing_reasons.includes("infrastructure_change")); assert.ok(radar.validateAttribution(item));
+  const evidence = radar.screenshotEvidence({ sourceUrl: item.sourceUrl, attribution: item.attribution, ocrText: "A release screenshot is evidence, not copy." }); assert.equal(evidence.ok, true); assert.equal(evidence.evidence.discussion_signals.copied_text_allowed, false);
+  assert.equal(radar.screenshotEvidence({ sourceUrl: item.sourceUrl }).ok, false);
+  const object = radar.canonicalEditorialObject(item, analysis); assert.equal(object.status, "review"); assert.equal(object.canonical_brief.publishable, false); assert.match(object.commentary_angle, /operating consequence/);
+  const adaptation = radar.adaptCanonicalObject(object, "x"); assert.equal(adaptation.status, "review"); assert.equal(adaptation.adaptation.max_characters, 240); assert.equal(adaptation.adaptation.publishable, false);
+  assert.equal(radar.qualityGate("Builder implication: ship it").ok, false);
+});
+
+test("Social Radar persists ranked findings and viral-pattern evidence without drafting or publishing", async () => {
+  const writes = { runs: 0, radar: [], objects: [], patterns: [] };
+  const repo = {
+    listRadarItems: async () => [], createRun: async (kind) => { writes.runs += 1; assert.equal(kind, "radar"); return { id: "run" }; }, finishRun: async () => ({}),
+    recentCandidates: async () => [{ id: "candidate", status: "accepted", source_url: "https://official.example/release", headline: "New API security release for deployment workflows", evidence_summary: "A new API release changes infrastructure security and workflow recovery.", topic_cluster: "Official Labs", authority_score: 1, created_at: new Date().toISOString(), entities: ["Official Labs"] }],
+    createRadarItem: async (row) => { writes.radar.push(row); return { id: "radar", ...row }; }, createEditorialObject: async (row) => { writes.objects.push(row); return row; }, listPerformanceMemory: async () => [{ metrics: { bookmark_count: 2, quote_count: 1, retweet_count: 3, reply_count: 1 } }], createSocialPatternObservation: async (row) => { writes.patterns.push(row); return row; }
+  };
+  const result = await service.socialRadarCycle({ repository: repo, now: Date.now() });
+  assert.equal(result.published, false); assert.equal(writes.runs, 1); assert.equal(writes.radar.length, 1); assert.equal(writes.objects.length, 1); assert.equal(writes.patterns.length, 1); assert.equal(writes.objects[0].status, "review");
 });
 
 test("metric collection persists checkpoints and performance memory without an X write", async () => {

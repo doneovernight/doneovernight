@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
+        options: [discovery, radar, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -36,6 +36,15 @@ jobs:
           -o /dev/null
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-discover
+
+      - name: Rank the Social Radar
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-radar
 
       - name: Collect approval-only engagement drafts and analytics
         env:
@@ -90,6 +99,19 @@ jobs:
           curl --fail --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy
+
+  radar:
+    if: inputs.task == 'radar'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Rank the Social Radar
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-radar
 
   autonomy_publish:
     if: inputs.task == 'autonomy_publish'
