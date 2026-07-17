@@ -295,6 +295,60 @@ test("V3 autonomy decisions use decision_key and preserve the decision_key upser
   finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; }
 });
 
+test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
+  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "discovery", "engagement", "publishing"];
+  assert.deepEqual([...repository.PRODUCTION_RUN_TYPES].sort(), expected);
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8");
+  for (const runType of expected) assert.match(sql, new RegExp(`'${runType}'`));
+
+  const originalFetch = global.fetch;
+  const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  const persisted = [];
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  global.fetch = async (_url, options) => {
+    persisted.push(JSON.parse(options.body).run_type);
+    return new Response("[]", { status: 201, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    for (const runType of expected) await repository.createRun(runType);
+    assert.deepEqual(persisted.sort(), expected);
+    await assert.rejects(() => repository.createRun("unsupported_run"), { code: "X_AGENT_RUN_TYPE_INVALID" });
+  } finally {
+    global.fetch = originalFetch;
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+  }
+});
+
+test("metric collection persists checkpoints and performance memory without an X write", async () => {
+  const now = new Date("2026-07-17T12:00:00Z").getTime();
+  const checkpoints = [];
+  const performance = [];
+  let xReads = 0;
+  const result = await autonomy.collectMetricCheckpoints({
+    now,
+    repository: {
+      listPublishedPublications: async () => [{ id: "publication", draft_id: "draft", x_post_id: "existing-post", published_at: new Date(now - 8 * 3600000).toISOString() }],
+      createMetricCheckpoint: async (row) => { checkpoints.push(row); return row; },
+      savePerformanceMemory: async (row) => { performance.push(row); return row; }
+    },
+    xClient: {
+      getPostMetrics: async () => {
+        xReads += 1;
+        return { data: { data: { public_metrics: { impression_count: 100, like_count: 4, reply_count: 1, quote_count: 1, retweet_count: 2, bookmark_count: 3 } } } };
+      },
+      publish: async () => { throw new Error("must not publish"); }
+    }
+  });
+  assert.equal(result.checkpoints, 2);
+  assert.equal(result.performance_examples, 2);
+  assert.equal(xReads, 2);
+  assert.deepEqual(checkpoints.map((row) => row.checkpoint_hours), [1, 6]);
+  assert.equal(performance.length, 2);
+  assert.ok(performance.every((row) => row.publication_id === "publication" && row.final_score === .11));
+});
+
 test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", () => {
   const now = Date.now(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
   const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
