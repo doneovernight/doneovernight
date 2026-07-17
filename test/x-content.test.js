@@ -310,6 +310,18 @@ test("auto publishing requires both switches and never attempts X in shadow", as
   const disabled = await autonomy.processScheduled({ repository: { getSetting: async () => null }, config: autonomyConfig("auto", false) }); assert.match(disabled.skipped, /requires auto mode/);
 });
 
+test("legacy scheduled publishing is inert outside both autonomous switches while manual publishing remains separate", async () => {
+  let scheduledCalls = 0; let publishCalls = 0;
+  const processScheduled = async () => { scheduledCalls += 1; return { published: false, skipped: "no_due_schedule" }; };
+  const shadow = await service.scheduledPublishingCheck({ config: { mode: "approve", autonomy: { mode: "shadow", publishEnabled: false } }, processScheduled });
+  const approve = await service.scheduledPublishingCheck({ config: { mode: "approve", autonomy: { mode: "off", publishEnabled: false } }, processScheduled });
+  const incompleteAuto = await service.scheduledPublishingCheck({ config: { mode: "approve", autonomy: { mode: "auto", publishEnabled: false } }, processScheduled });
+  assert.match(shadow.skipped, /requires CONTENT_AUTONOMY_MODE=auto/); assert.match(approve.skipped, /requires CONTENT_AUTONOMY_MODE=auto/); assert.match(incompleteAuto.skipped, /requires CONTENT_AUTONOMY_MODE=auto/); assert.equal(scheduledCalls, 0);
+  await service.scheduledPublishingCheck({ config: { mode: "approve", autonomy: { mode: "auto", publishEnabled: true } }, processScheduled }); assert.equal(scheduledCalls, 1);
+  const original = service.publishApprovedDraft; service.publishApprovedDraft = async () => { publishCalls += 1; return { published: false }; };
+  try { assert.equal((await service.publishApprovedDraft("approved-draft")).published, false); assert.equal(publishCalls, 1); } finally { service.publishApprovedDraft = original; }
+});
+
 test("V3 final publish guard verifies identity, length, approval, and idempotency", async () => {
   const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let created = 0; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { created += 1; return { id: "publication" }; }, updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async () => ({}) };
   const client = { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; return { data: { data: { id: "post" } } }; } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.equal(result.published, true); assert.equal(created, 1); assert.equal(published, 1);

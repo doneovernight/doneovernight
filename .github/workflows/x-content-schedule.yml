@@ -69,15 +69,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Run publishing check
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
-          -H "Authorization: Bearer ${CRON_SECRET}"
-          https://doneovernight.com/api/x-content-publish
-
       - name: Run guarded autonomous publishing check
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
