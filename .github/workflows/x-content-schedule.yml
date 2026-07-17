@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, oauth_start, regenerate_legacy]
+        options: [discovery, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -46,6 +46,24 @@ jobs:
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-engagement
 
+      - name: Run autonomy shadow decisions
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy
+
+      - name: Collect autonomy metric checkpoints
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-metrics
+
   publishing:
     if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
@@ -59,6 +77,54 @@ jobs:
           -o /dev/null
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-publish
+
+      - name: Run guarded autonomous publishing check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-publish
+
+  autonomy:
+    if: inputs.task == 'autonomy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run a shadow decision cycle
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy
+
+  autonomy_publish:
+    if: inputs.task == 'autonomy_publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run guarded autonomous publishing check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-publish
+
+  autonomy_metrics:
+    if: inputs.task == 'autonomy_metrics'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Collect autonomy metrics and evaluate learning
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-metrics
 
   identity:
     if: inputs.task == 'identity'

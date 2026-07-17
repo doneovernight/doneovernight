@@ -9,6 +9,7 @@ const { REGISTRY } = require("../lib/x-content/sources");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
+const autonomy = require("../lib/x-content/autonomy");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -265,4 +266,47 @@ test("approved-draft publishing rejects non-approved drafts and preserves idempo
     repository.getDraft = async () => ({ id: "approved", status: "approved", text: "A practical deployment lesson with enough substance to remain useful and safely within X limits." }); repository.getPublication = async () => ({ status: "publishing" }); repository.createPublication = async () => { throw new Error("must not create publication"); };
     assert.match((await service.publishApprovedDraft("approved")).skipped, /Idempotency guard/); assert.equal(published, 0);
   } finally { Object.assign(repository, original); Object.assign(xClient, xOriginal); if (saved.start === undefined) delete process.env.CONTENT_PUBLISH_START; else process.env.CONTENT_PUBLISH_START = saved.start; if (saved.end === undefined) delete process.env.CONTENT_PUBLISH_END; else process.env.CONTENT_PUBLISH_END = saved.end; }
+});
+
+function autonomyConfig(mode = "shadow", publishEnabled = false) {
+  return { timezone: "Europe/Amsterdam", autonomy: { mode, publishEnabled, dailyCap: 2, weeklyCap: 8, minimumIntervalMinutes: 240, topicCooldownHours: 24, sourceLimit48Hours: 2, allowOvernight: false, windows: "09:00-12:00,13:00-17:30", thresholds: { brand: .92, insight: .88, educational: .84, performance: .85, sourceReliability: .95, risk: .1, maxWeightedLength: 230 } } };
+}
+function autonomyDraft(id = "auto-draft", changes = {}) {
+  return { id, candidate_id: "candidate", status: "queued", text: "Automation fails at handoffs. Give each transition an owner and recovery path, then the team can fix the constraint before it becomes a customer problem. That is the difference between a workflow and a black box.\n\nSource:\nGitHub", weighted_character_count: 220, duplicate_score: 0, topic_cluster: "operations", created_at: new Date().toISOString(), updated_at: new Date().toISOString(), source_references: ["https://github.com/features/actions"], model_output: { v2: { scores: { insight: .93, novelty: .9, repost: .91, save: .93, educational: .9, brand: .95 } } }, ...changes };
+}
+function autonomyCandidate(id = "candidate") { return { id, source_url: "https://github.com/features/actions", headline: "GitHub Actions workflow reliability", topic_cluster: "operations", publisher: "GitHub", evidence_summary: "Official release documentation with concrete implementation details.", authority_score: 1, created_at: new Date().toISOString() }; }
+
+test("V3 thresholds permit only strong, official, fresh queued drafts", () => {
+  const draft = autonomyDraft(); const candidate = autonomyCandidate(); const pass = autonomy.evaluateDraft({ draft, candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
+  assert.equal(pass.would_auto_approve, true); assert.equal(pass.objective, "operator_attraction");
+  const weak = autonomy.evaluateDraft({ draft: autonomyDraft("weak", { model_output: { v2: { scores: { insight: .8, novelty: .9, repost: .9, save: .9, educational: .9, brand: .95 } } } }), candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
+  assert.equal(weak.would_auto_approve, false); assert.ok(weak.blocking_thresholds.includes("insight_score"));
+});
+
+test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", () => {
+  const now = Date.now(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
+  const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
+});
+
+test("shadow decisions write schedules without publishing or changing draft approval", async () => {
+  const draft = autonomyDraft(); const candidate = autonomyCandidate(); const calls = { published: 0, schedules: [], decisions: [] }; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], getSetting: async () => null, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => { calls.decisions.push(row); return { id: "decision" }; }, createAutonomySchedule: async (row) => { calls.schedules.push(row); return { id: "schedule", ...row }; }, recordAutonomyAudit: async () => ({}) };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), now: new Date("2026-07-20T08:00:00Z").getTime(), notify: async () => {} });
+  assert.equal(result.published, false); assert.equal(calls.decisions.length, 1); assert.equal(calls.schedules[0].status, "shadow"); assert.equal(draft.status, "queued"); assert.equal(calls.published, 0);
+});
+
+test("auto publishing requires both switches and never attempts X in shadow", async () => {
+  let calls = 0; const result = await autonomy.processScheduled({ repository: { getSetting: async () => null }, xClient: { verifyIdentity: async () => { calls += 1; }, publish: async () => { calls += 1; } }, config: autonomyConfig("shadow", true) });
+  assert.match(result.skipped, /requires auto mode/); assert.equal(calls, 0);
+  const disabled = await autonomy.processScheduled({ repository: { getSetting: async () => null }, config: autonomyConfig("auto", false) }); assert.match(disabled.skipped, /requires auto mode/);
+});
+
+test("V3 final publish guard verifies identity, length, approval, and idempotency", async () => {
+  const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let created = 0; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { created += 1; return { id: "publication" }; }, updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async () => ({}) };
+  const client = { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; return { data: { data: { id: "post" } } }; } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.equal(result.published, true); assert.equal(created, 1); assert.equal(published, 1);
+});
+
+test("V3 X failures activate a safe stop and metric learning stays conservative and reversible", async () => {
+  const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let stopped = false; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => ({ id: "publication" }), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async (key, value) => { if (key === autonomy.SAFE_STOP_KEY && value === "true") stopped = true; } }; const client = { verifyIdentity: async () => { throw Object.assign(new Error("X unavailable"), { category: "authentication" }); } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.match(result.skipped, /safe stop/); assert.equal(stopped, true);
+  const insufficient = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => [] } }); assert.equal(insufficient.adjusted, false); assert.match(insufficient.reason, /10/);
+  const checkpoints = Array.from({ length: 10 }, (_, index) => ({ publication_id: `p${index}`, normalized_performance: .2 })); let created; const learning = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => checkpoints, listLearningVersions: async () => [{ version: 1, status: "active", weights: { prediction: 1 } }], createLearningVersion: async (row) => { created = row; return row; } } }); assert.equal(learning.adjusted, true); assert.ok(Math.abs(created.weights.prediction - 1) <= .05);
 });
