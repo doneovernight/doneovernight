@@ -283,6 +283,16 @@ test("V3 thresholds permit only strong, official, fresh queued drafts", () => {
   assert.equal(weak.would_auto_approve, false); assert.ok(weak.blocking_thresholds.includes("insight_score"));
 });
 
+test("V3 autonomy decisions use decision_key and preserve the decision_key upsert target", async () => {
+  const decision = autonomy.evaluateDraft({ draft: autonomyDraft(), candidate: autonomyCandidate(), source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
+  assert.ok(decision.decision_key); assert.equal(Object.hasOwn(decision, "key"), false);
+  const originalFetch = global.fetch; const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY }; let captured;
+  process.env.SUPABASE_URL = "https://example.supabase.co"; process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  global.fetch = async (url, options) => { captured = { url: String(url), payload: JSON.parse(options.body) }; return new Response("[]", { status: 201, headers: { "Content-Type": "application/json" } }); };
+  try { await repository.createAutonomyDecision(decision); assert.equal(new URL(captured.url).searchParams.get("on_conflict"), "decision_key"); assert.ok(captured.payload.decision_key); assert.equal(Object.hasOwn(captured.payload, "key"), false); }
+  finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; }
+});
+
 test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", () => {
   const now = Date.now(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
   const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
