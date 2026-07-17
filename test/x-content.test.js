@@ -10,6 +10,7 @@ const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
 const autonomy = require("../lib/x-content/autonomy");
+const learning = require("../lib/x-content/learning");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -238,19 +239,19 @@ test("X content review actions approve, reject, regenerate legacy drafts, and re
   const originalFetch = global.fetch; const original = { approveDraft: service.approveDraft, rejectDraft: service.rejectDraft, regenerateDraft: service.regenerateDraft, regenerateAllLegacyDrafts: service.regenerateAllLegacyDrafts, publishApprovedDraft: service.publishApprovedDraft };
   const calls = []; global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
   service.approveDraft = async (id) => { calls.push(["approve", id]); return { id, status: "approved" }; };
-  service.rejectDraft = async (id, reason) => { calls.push(["reject", id, reason]); return { id, status: "rejected" }; };
+  service.rejectDraft = async (id, feedback) => { calls.push(["reject", id, feedback]); return { id, status: "rejected" }; };
   service.regenerateDraft = async (id) => { calls.push(["regenerate", id]); return { previous_draft_id: id, status: "queued" }; };
   service.regenerateAllLegacyDrafts = async () => { calls.push(["regenerate_all_legacy"]); return { legacy_excluded: 1, generated: [] }; };
   service.publishApprovedDraft = async (id) => { calls.push(["publish", id]); return { published: false }; };
   try {
     assert.equal((await callAdmin({ action: "approve", draft_id: "draft-1", admin_key: "valid" })).payload.result.status, "approved");
-    assert.equal((await callAdmin({ action: "reject", draft_id: "draft-2", reason: "Not timely", admin_key: "valid" })).payload.result.status, "rejected");
+    assert.equal((await callAdmin({ action: "reject", draft_id: "draft-2", reasons: ["Too generic"], editor_comments: "Not timely", admin_key: "valid" })).payload.result.status, "rejected");
     assert.equal((await callAdmin({ action: "regenerate", draft_id: "draft-3", admin_key: "valid" })).payload.result.status, "queued");
     assert.equal((await callAdmin({ action: "regenerate_all_legacy", admin_key: "valid" })).payload.result.legacy_excluded, 1);
     const missingConfirmation = await callAdmin({ action: "publish_now", draft_id: "draft-4", admin_key: "valid" });
     assert.equal(missingConfirmation.statusCode, 400); assert.equal(calls.some(([action]) => action === "publish"), false);
     assert.equal((await callAdmin({ action: "publish_now", draft_id: "draft-4", publish_confirmation: "PUBLISH", admin_key: "valid" })).payload.success, true);
-    assert.deepEqual(calls, [["approve", "draft-1"], ["reject", "draft-2", "Not timely"], ["regenerate", "draft-3"], ["regenerate_all_legacy"], ["publish", "draft-4"]]);
+    assert.deepEqual(calls, [["approve", "draft-1"], ["reject", "draft-2", { reasons: ["Too generic"], comments: "Not timely", operator: "doneovernight_admin" }], ["regenerate", "draft-3"], ["regenerate_all_legacy"], ["publish", "draft-4"]]);
   } finally { global.fetch = originalFetch; Object.assign(service, original); }
 });
 
@@ -336,4 +337,35 @@ test("V3 X failures activate a safe stop and metric learning stays conservative 
   const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let stopped = false; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => ({ id: "publication" }), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async (key, value) => { if (key === autonomy.SAFE_STOP_KEY && value === "true") stopped = true; } }; const client = { verifyIdentity: async () => { throw Object.assign(new Error("X unavailable"), { category: "authentication" }); } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.match(result.skipped, /safe stop/); assert.equal(stopped, true);
   const insufficient = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => [] } }); assert.equal(insufficient.adjusted, false); assert.match(insufficient.reason, /10/);
   const checkpoints = Array.from({ length: 10 }, (_, index) => ({ publication_id: `p${index}`, normalized_performance: .2 })); let created; const learning = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => checkpoints, listLearningVersions: async () => [{ version: 1, status: "active", weights: { prediction: 1 } }], createLearningVersion: async (row) => { created = row; return row; } } }); assert.equal(learning.adjusted, true); assert.ok(Math.abs(created.weights.prediction - 1) <= .05);
+});
+
+test("V4 learning builds DONEOVERNIGHT preferences, predicts approval, and reports reject patterns", () => {
+  const feedback = [
+    { action: "approve", format: "framework", topic: "github", source_url: "https://github.com", metadata: { weighted_character_count: 198 }, created_at: new Date().toISOString() },
+    { action: "approve", format: "framework", topic: "github", source_url: "https://github.com", metadata: { weighted_character_count: 204 }, created_at: new Date().toISOString() },
+    { action: "reject", format: "observation", topic: "google", source_url: "https://blog.google", reasons: ["Too much summary", "No original insight"], metadata: { weighted_character_count: 232 }, created_at: new Date().toISOString() },
+    { action: "regenerate", format: "observation", topic: "google", source_url: "https://blog.google", reasons: ["Too much summary"], metadata: { weighted_character_count: 228 }, created_at: new Date().toISOString() }
+  ];
+  const profile = learning.buildEditorProfile(feedback, []);
+  assert.equal(profile.preferences.profile, "DONEOVERNIGHT"); assert.equal(profile.preferences.rejects_article_summaries, true); assert.equal(profile.preferences.values_original_insight, true);
+  const weak = learning.predictApproval({ text: "A short summary of an announcement that says little about the actual operating lesson and keeps adding filler to make the post visibly longer than the target.", format: "observation", topic: "google", sourceUrl: "https://blog.google", scores: { insight: .5, brand: .7, educational: .6 }, feedback, similarDrafts: [{ id: "similar" }] });
+  assert.equal(weak.should_regenerate, true); assert.ok(weak.reasons.length >= 3);
+  const report = learning.weeklyReport(feedback, [{ final_score: .2 }]);
+  assert.equal(report.weight_changes.maximum_change, .05); assert.equal(report.weight_changes.applied, false); assert.ok(report.reject_reasons.some((row) => row.reason === "Too much summary"));
+});
+
+test("V4 editor feedback records required reasons and preserves an audit trail without publishing", async () => {
+  const original = { getDraft: repository.getDraft, getCandidate: repository.getCandidate, updateDraft: repository.updateDraft, recordEditorFeedback: repository.recordEditorFeedback, listEditorFeedback: repository.listEditorFeedback, listPerformanceMemory: repository.listPerformanceMemory, getEditorProfile: repository.getEditorProfile, saveEditorProfile: repository.saveEditorProfile };
+  const draft = autonomyDraft("feedback", { status: "queued" }); const events = []; let posts = 0;
+  Object.assign(repository, { getDraft: async () => draft, getCandidate: async () => autonomyCandidate(), updateDraft: async (_id, changes) => ({ ...draft, ...changes }), recordEditorFeedback: async (row) => { events.push(row); return { id: "feedback", ...row }; }, listEditorFeedback: async () => events, listPerformanceMemory: async () => [], getEditorProfile: async () => null, saveEditorProfile: async (row) => row });
+  try {
+    await assert.rejects(() => service.rejectDraft(draft.id, { reasons: [] }), /Select at least one/);
+    await service.rejectDraft(draft.id, { reasons: ["Too much summary", "Weak hook"], comments: "Needs a sharper point", operator: "editor" });
+    assert.equal(events.length, 1); assert.equal(events[0].action, "reject"); assert.deepEqual(events[0].reasons, ["Too much summary", "Weak hook"]); assert.equal(events[0].operator, "editor"); assert.equal(posts, 0);
+  } finally { Object.assign(repository, original); }
+});
+
+test("V4 shadow learning persists only profile and weekly report recommendations", async () => {
+  let profile; let report; const result = await service.learningShadowCycle({ repository: { listEditorFeedback: async () => [{ action: "approve", format: "framework", metadata: { weighted_character_count: 200 }, created_at: new Date().toISOString() }], listPerformanceMemory: async () => [], getEditorProfile: async () => ({ version: 2 }), saveEditorProfile: async (row) => { profile = row; return row; }, saveLearningReport: async (row) => { report = row; return row; } } });
+  assert.equal(result.mode, "shadow"); assert.equal(result.thresholds_changed, false); assert.equal(result.publishing_changed, false); assert.equal(profile.version, 3); assert.equal(report.weight_changes.maximum_change, .05);
 });
