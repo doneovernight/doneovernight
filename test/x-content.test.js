@@ -13,6 +13,7 @@ const editorial = require("../lib/x-content/editorial");
 const autonomy = require("../lib/x-content/autonomy");
 const learning = require("../lib/x-content/learning");
 const radar = require("../lib/x-content/radar");
+const telegramControl = require("../lib/x-content/telegram-control");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -440,6 +441,54 @@ test("V4 editor feedback records required reasons and preserves an audit trail w
     await service.rejectDraft(draft.id, { reasons: ["Too much summary", "Weak hook"], comments: "Needs a sharper point", operator: "editor" });
     assert.equal(events.length, 1); assert.equal(events[0].action, "reject"); assert.deepEqual(events[0].reasons, ["Too much summary", "Weak hook"]); assert.equal(events[0].operator, "editor"); assert.equal(posts, 0);
   } finally { Object.assign(repository, original); }
+});
+
+test("Telegram Control requires both configured chat and user IDs and rejects forged callback payloads", () => {
+  const config = telegramControl.controlConfig({ TELEGRAM_BOT_TOKEN: "test", TELEGRAM_X_ADMIN_CHAT_IDS: "100", TELEGRAM_X_ADMIN_USER_IDS: "200", TELEGRAM_WEBHOOK_SECRET: "webhook", TELEGRAM_CONTROL_SECRET: "signing" });
+  assert.equal(telegramControl.isAllowedAdmin("100", "200", config), true);
+  assert.equal(telegramControl.isAllowedAdmin("100", "201", config), false);
+  assert.equal(telegramControl.webhookAuthorized({ headers: { "x-telegram-bot-api-secret-token": "webhook" } }, config), true);
+  assert.equal(telegramControl.webhookAuthorized({ headers: { "x-telegram-bot-api-secret-token": "wrong" } }, config), false);
+  assert.equal(telegramControl.parseCallback("tc.forged.bad"), null);
+});
+
+test("Telegram review cards are concise, metadata-rich, and never invoke publishing", async () => {
+  let published = 0; const events = []; let sent;
+  const repo = { createTelegramControlEvent: async (row) => { events.push(row); return row; }, attachTelegramMessage: async () => ({}) };
+  const config = telegramControl.controlConfig({ TELEGRAM_BOT_TOKEN: "test", TELEGRAM_X_ADMIN_CHAT_IDS: "100", TELEGRAM_X_ADMIN_USER_IDS: "200", TELEGRAM_CONTROL_SECRET: "signing" });
+  const draft = { id: "draft", text: "A review-ready operating insight with a clear takeaway and a trustworthy official source.", weighted_character_count: 190, post_type: "practical_insight", topic_cluster: "operations", model_output: { v2: { scores: { insight: .92, save: .89, repost: .87, educational: .9, brand: .94 } } } };
+  const card = await telegramControl.reviewCard({ repo, transport: { sendTelegramMessage: async (payload) => { sent = payload; return { sent: true, messageId: 7 }; } }, draft, chatId: "100", userId: "200", config, candidate: { headline: "Official release", source_url: "https://official.example/release" } });
+  assert.equal(card.sent, true); assert.equal(events.length, 4); assert.match(sent.text, /Weighted: 190/); assert.match(sent.text, /Official release/); assert.equal(published, 0);
+});
+
+test("Telegram approve and reject are idempotent control actions: approve never publishes and reject persists a selected reason", async () => {
+  const draft = { id: "draft", status: "queued", text: "A clear and useful operating insight.", weighted_character_count: 185, post_type: "practical_insight", topic_cluster: "operations", model_output: { v2: { scores: {} } } }; const events = []; const calls = { approve: 0, reject: [] };
+  const repo = {
+    getDraft: async () => draft, getCandidate: async () => ({ headline: "Official release", source_url: "https://official.example/release" }), latestDecisionForDraft: async () => null, listAutonomySchedules: async () => [],
+    createTelegramControlEvent: async (row) => { events.push(row); return row; }, attachTelegramMessage: async () => ({}), recordAutonomyAudit: async () => ({}), updateDraft: async (_id, changes) => ({ ...draft, ...changes })
+  };
+  const config = telegramControl.controlConfig({ TELEGRAM_BOT_TOKEN: "test", TELEGRAM_X_ADMIN_CHAT_IDS: "100", TELEGRAM_X_ADMIN_USER_IDS: "200", TELEGRAM_CONTROL_SECRET: "signing" });
+  const transport = { editTelegramMessage: async () => ({ edited: true }), sendTelegramMessage: async () => ({ sent: true, messageId: 8 }) };
+  const update = { callback_query: { message: { chat: { id: "100" }, message_id: 7 }, from: { id: "200" } } };
+  const svc = { approveDraft: async () => { calls.approve += 1; return { ...draft, status: "approved" }; }, rejectDraft: async (_id, options) => { calls.reject.push(options); return { ...draft, status: "rejected" }; } };
+  const approved = await telegramControl.handleAction({ action: "approve", draft_id: draft.id, chat_id: "100", user_id: "200" }, update, { repo, svc, transport, config });
+  assert.equal(approved.action, "approved"); assert.equal(calls.approve, 1); assert.equal(typeof svc.publishApprovedDraft, "undefined");
+  const rejected = await telegramControl.handleAction({ action: "reject_reason", draft_id: draft.id, chat_id: "100", user_id: "200", payload: { reason: "Weak hook" }, notes: "Sharper opening" }, update, { repo, svc, transport, config });
+  assert.equal(rejected.reason, "Weak hook"); assert.deepEqual(calls.reject[0].reasons, ["Weak hook"]); assert.equal(calls.reject[0].comments, "Sharper opening");
+});
+
+test("Telegram publish requires a second confirmation, while scheduling remains shadow-safe and Amsterdam-aware", async () => {
+  const draft = { id: "draft", status: "approved", text: "A clear and useful operating insight.", weighted_character_count: 185, post_type: "practical_insight", topic_cluster: "operations", model_output: { v2: { scores: {} } } }; let publishes = 0; const events = [];
+  const repo = { getDraft: async () => draft, getCandidate: async () => null, latestDecisionForDraft: async () => null, listAutonomySchedules: async () => [], createTelegramControlEvent: async (row) => { events.push(row); return row; }, attachTelegramMessage: async () => ({}), recordAutonomyAudit: async () => ({}) };
+  const config = telegramControl.controlConfig({ TELEGRAM_BOT_TOKEN: "test", TELEGRAM_X_ADMIN_CHAT_IDS: "100", TELEGRAM_X_ADMIN_USER_IDS: "200", TELEGRAM_CONTROL_SECRET: "signing" });
+  const transport = { editTelegramMessage: async () => ({ edited: true }), sendTelegramMessage: async () => ({ sent: true, messageId: 8 }) }; const update = { callback_query: { message: { chat: { id: "100" }, message_id: 7 }, from: { id: "200" } } };
+  const svc = { scheduleDraft: async (_id, at) => ({ id: "schedule", scheduled_for: at, status: "shadow" }), publishApprovedDraft: async () => { publishes += 1; return { published: false, skipped: "test guard" }; } };
+  const started = await telegramControl.handleAction({ action: "publish_start", draft_id: draft.id, chat_id: "100", user_id: "200" }, update, { repo, svc, transport, config });
+  assert.equal(started.action, "publish_confirmation_requested"); assert.equal(publishes, 0);
+  const scheduled = await telegramControl.handleAction({ action: "schedule_tomorrow", draft_id: draft.id, chat_id: "100", user_id: "200", payload: { scheduled_for: telegramControl.amsterdamTomorrow() } }, update, { repo, svc, transport, config });
+  assert.equal(scheduled.status, "shadow"); assert.equal(publishes, 0);
+  const confirmed = await telegramControl.handleAction({ action: "publish_confirm", draft_id: draft.id, chat_id: "100", user_id: "200" }, update, { repo, svc, transport, config });
+  assert.equal(confirmed.published, false); assert.equal(publishes, 1);
 });
 
 test("V4 shadow learning persists only profile and weekly report recommendations", async () => {
