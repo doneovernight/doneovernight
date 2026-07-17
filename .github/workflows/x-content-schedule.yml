@@ -10,7 +10,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics, latest_publication_diagnostic]
+        options: [discovery, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -116,19 +116,6 @@ jobs:
           curl --fail --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-metrics
-
-  latest_publication_diagnostic:
-    if: inputs.task == 'latest_publication_diagnostic'
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Read the latest published record
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          curl --fail --silent --show-error
-          -H "Authorization: Bearer ${CRON_SECRET}"
-          https://doneovernight.com/api/x-content-latest-publication-diagnostic
 
   identity:
     if: inputs.task == 'identity'
