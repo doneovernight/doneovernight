@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const validation = require("../lib/x-content/validation");
 const service = require("../lib/x-content/service");
 const repository = require("../lib/x-content/repository");
@@ -368,4 +369,26 @@ test("V4 editor feedback records required reasons and preserves an audit trail w
 test("V4 shadow learning persists only profile and weekly report recommendations", async () => {
   let profile; let report; const result = await service.learningShadowCycle({ repository: { listEditorFeedback: async () => [{ action: "approve", format: "framework", metadata: { weighted_character_count: 200 }, created_at: new Date().toISOString() }], listPerformanceMemory: async () => [], getEditorProfile: async () => ({ version: 2 }), saveEditorProfile: async (row) => { profile = row; return row; }, saveLearningReport: async (row) => { report = row; return row; } } });
   assert.equal(result.mode, "shadow"); assert.equal(result.thresholds_changed, false); assert.equal(result.publishing_changed, false); assert.equal(profile.version, 3); assert.equal(report.weight_changes.maximum_change, .05);
+});
+
+test("Command Center keeps all eight operational views, deliberate empty states, and no fake analytics", () => {
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  for (const view of ["Overview", "Review Queue", "Publish Queue", "Performance", "Replies", "Learning", "Sources", "System"]) assert.match(page, new RegExp(view));
+  assert.match(page, /persisted X analytics only/); assert.match(page, /No persisted analytics/); assert.match(page, /SHADOW PROPOSAL/); assert.doesNotMatch(page, /fake analytics/i); assert.doesNotMatch(page, /mock metrics/i);
+});
+
+test("Command Center rejects cross-origin admin writes and retains typed manual publish protection", async () => {
+  const originalFetch = global.fetch; global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+  try {
+    const res = responseCapture(); await routes.admin({ method: "POST", body: { action: "command_center", admin_key: "valid" }, headers: { origin: "https://attacker.example", host: "doneovernight.com" } }, res);
+    assert.equal(res.statusCode, 403); assert.equal(res.payload.success, false);
+    const publish = await callAdmin({ action: "publish_now", draft_id: "draft-4", admin_key: "valid" }); assert.equal(publish.statusCode, 400);
+  } finally { global.fetch = originalFetch; }
+});
+
+test("Command Center draft edits reject invalid weighted content without an X write", async () => {
+  const original = { getDraft: repository.getDraft, getCandidate: repository.getCandidate, getSetting: repository.getSetting, updateDraft: repository.updateDraft }; const xOriginal = xClient.publish; let updated = 0; let published = 0;
+  repository.getDraft = async () => autonomyDraft("editable"); repository.getCandidate = async () => autonomyCandidate(); repository.getSetting = async () => null; repository.updateDraft = async () => { updated += 1; }; xClient.publish = async () => { published += 1; };
+  try { await assert.rejects(() => service.editDraft("editable", "x".repeat(281)), /280|character|weighted/i); assert.equal(updated, 0); assert.equal(published, 0); }
+  finally { Object.assign(repository, original); xClient.publish = xOriginal; }
 });
