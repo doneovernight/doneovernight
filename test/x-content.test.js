@@ -11,6 +11,7 @@ const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
 const autonomy = require("../lib/x-content/autonomy");
+const autonomyAudit = require("../lib/x-content/autonomy-audit");
 const learning = require("../lib/x-content/learning");
 const radar = require("../lib/x-content/radar");
 const telegramControl = require("../lib/x-content/telegram-control");
@@ -289,6 +290,32 @@ test("V3 thresholds permit only strong, official, fresh queued drafts", () => {
   assert.equal(weak.would_auto_approve, false); assert.ok(weak.blocking_thresholds.includes("insight_score"));
 });
 
+test("controlled autonomous defaults enforce the authorized 2-to-5 daily policy without changing content gates", () => {
+  const config = getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true });
+  assert.equal(config.autonomy.minimumDailyTarget, 2);
+  assert.deepEqual(config.autonomy.preferredDailyRange, [3, 4]);
+  assert.equal(config.autonomy.dailyCap, 5);
+  assert.equal(config.autonomy.weeklyCap, 20);
+  assert.equal(config.autonomy.minimumIntervalMinutes, 180);
+  assert.equal(config.autonomy.topicCooldownHours, 18);
+  assert.equal(config.autonomy.sourceLimitHours, 24);
+  assert.equal(config.autonomy.sourceLimit, 2);
+  assert.equal(config.autonomy.windows, "08:00-22:00");
+  assert.equal(config.autonomy.thresholds.maxWeightedLength, 230);
+});
+
+test("autonomy audit records system context and strips secret-shaped payload fields", async () => {
+  let saved;
+  await autonomyAudit.record({ recordAutonomyAudit: async (row) => { saved = row; return row; } }, { event_type: "cycle_started", run_id: "run", draft_id: "draft", mode: "auto", reason: "all gates passed", payload: { token: "never-store", authorization: "never-store", checked: true } });
+  assert.equal(saved.actor, "system"); assert.equal(saved.mode, "auto"); assert.equal(saved.run_id, "run"); assert.equal(saved.draft_id, "draft"); assert.equal(saved.reason, "all gates passed"); assert.equal(saved.payload.checked, true); assert.equal(Object.hasOwn(saved.payload, "token"), false); assert.equal(Object.hasOwn(saved.payload, "authorization"), false);
+});
+
+test("autonomy audit migration is additive and retains service-role-only server access", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260719_x_growth_director_autonomy_audit.sql"), "utf8");
+  for (const column of ["run_id", "publication_id", "mode", "actor", "reason"]) assert.match(sql, new RegExp(`add column if not exists ${column}`));
+  assert.match(sql, /enable row level security/); assert.match(sql, /grant select, insert, update, delete[\s\S]*service_role/);
+});
+
 test("V3 autonomy decisions use decision_key and preserve the decision_key upsert target", async () => {
   const decision = autonomy.evaluateDraft({ draft: autonomyDraft(), candidate: autonomyCandidate(), source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
   assert.ok(decision.decision_key); assert.equal(Object.hasOwn(decision, "key"), false);
@@ -380,9 +407,9 @@ test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", (
 });
 
 test("shadow decisions write schedules without publishing or changing draft approval", async () => {
-  const draft = autonomyDraft(); const candidate = autonomyCandidate(); const calls = { published: 0, schedules: [], decisions: [] }; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], getSetting: async () => null, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => { calls.decisions.push(row); return { id: "decision" }; }, createAutonomySchedule: async (row) => { calls.schedules.push(row); return { id: "schedule", ...row }; }, recordAutonomyAudit: async () => ({}) };
+  const draft = autonomyDraft(); const candidate = autonomyCandidate(); const calls = { published: 0, schedules: [], decisions: [], audits: [] }; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], getSetting: async () => null, setSetting: async () => ({}), getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => { calls.decisions.push(row); return { id: "decision" }; }, createAutonomySchedule: async (row) => { calls.schedules.push(row); return { id: "schedule", ...row }; }, recordAutonomyAudit: async (row) => { calls.audits.push(row); return row; } };
   const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), now: new Date("2026-07-20T08:00:00Z").getTime(), notify: async () => {} });
-  assert.equal(result.published, false); assert.equal(calls.decisions.length, 1); assert.equal(calls.schedules[0].status, "shadow"); assert.equal(draft.status, "queued"); assert.equal(calls.published, 0);
+  assert.equal(result.published, false); assert.equal(calls.decisions.length, 1); assert.equal(calls.schedules[0].status, "shadow"); assert.equal(draft.status, "queued"); assert.equal(calls.published, 0); assert.ok(calls.audits.some((row) => row.event_type === "cycle_started")); assert.ok(calls.audits.some((row) => row.event_type === "decision_created")); assert.ok(calls.audits.some((row) => row.event_type === "schedule_proposed")); assert.ok(calls.audits.some((row) => row.event_type === "cycle_completed")); assert.ok(calls.audits.every((row) => row.actor === "system" && row.mode === "shadow"));
 });
 
 test("auto publishing requires both switches and never attempts X in shadow", async () => {
@@ -409,8 +436,15 @@ test("V3 scheduled publishing check returns before a run insert or X client when
 });
 
 test("V3 final publish guard verifies identity, length, approval, and idempotency", async () => {
-  const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let created = 0; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { created += 1; return { id: "publication" }; }, updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => ({}), setSetting: async () => ({}) };
-  const client = { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; return { data: { data: { id: "post" } } }; } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.equal(result.published, true); assert.equal(created, 1); assert.equal(published, 1);
+  const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let created = 0; let notifications = 0; const audits = []; const repo = { getSetting: async () => null, setSetting: async () => ({}), listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { created += 1; return { id: "publication" }; }, updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async (row) => { audits.push(row); return row; } };
+  const client = { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; return { data: { data: { id: "post" } } }; } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => { notifications += 1; } }); assert.equal(result.published, true); assert.equal(created, 1); assert.equal(published, 1); assert.equal(notifications, 0); assert.ok(audits.some((row) => row.event_type === "publish_attempted")); assert.ok(audits.some((row) => row.event_type === "publish_succeeded"));
+});
+
+test("autonomous publishing fails closed before an X write when required audit persistence is unavailable", async () => {
+  const draft = autonomyDraft("audit-required", { status: "approved" }); const candidate = autonomyCandidate(); let published = 0; let stopped = false;
+  const repo = { getSetting: async () => null, setSetting: async (key) => { if (key === autonomy.SAFE_STOP_KEY) stopped = true; }, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => ({ id: "publication" }), updatePublication: async () => ({}), updateDraft: async () => ({}), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async () => { throw new Error("audit unavailable"); } };
+  const result = await autonomy.processScheduled({ repository: repo, xClient: { verifyIdentity: async () => ({ username: "doneovernight" }), publish: async () => { published += 1; } }, config: autonomyConfig("auto", true), notify: async () => {} });
+  assert.match(result.skipped, /safe stop/i); assert.equal(published, 0); assert.equal(stopped, true);
 });
 
 test("V3 X failures activate a safe stop and metric learning stays conservative and reversible", async () => {
@@ -522,8 +556,9 @@ test("Command Center draft edits reject invalid weighted content without an X wr
 
 test("Growth Director proposes adaptive cadence and content mix without changing production safeguards", () => {
   const now = Date.now(); const drafts = [autonomyDraft("growth-one", { status: "queued", quality_score: .9, post_type: "build_note" }), autonomyDraft("growth-two", { status: "queued", quality_score: .86, post_type: "practical_insight" })];
-  const snapshot = growth.strategySnapshot({ drafts, publications: [], performance: [{ normalized_performance: .08 }], now, config: autonomyConfig("shadow", false) });
-  assert.equal(snapshot.mode, "shadow"); assert.equal(snapshot.cadence.minimum, 1); assert.ok(snapshot.cadence.preferred >= 2 && snapshot.cadence.preferred <= 4); assert.equal(snapshot.cadence.hard_maximum, 5); assert.match(snapshot.recommendations.join(" "), /Do not alter publishing mode/);
+  const config = autonomyConfig("shadow", false); config.autonomy.dailyCap = 5; config.autonomy.minimumDailyTarget = 2; config.autonomy.preferredDailyRange = [3, 4];
+  const snapshot = growth.strategySnapshot({ drafts, publications: [], performance: [{ normalized_performance: .08 }], now, config });
+  assert.equal(snapshot.mode, "shadow"); assert.equal(snapshot.cadence.minimum, 2); assert.ok(snapshot.cadence.preferred >= 2 && snapshot.cadence.preferred <= 4); assert.equal(snapshot.cadence.hard_maximum, 5); assert.match(snapshot.recommendations.join(" "), /Do not alter publishing mode/);
 });
 
 test("Growth Director visual, repost, and engagement decisions remain review-only and attributed", () => {
@@ -542,7 +577,7 @@ test("Growth Director persists shadow decisions and daily briefing data without 
   };
   const result = await growth.runCycle({ repository: repo, config: autonomyConfig("shadow", false), now: Date.now() });
   assert.equal(result.published, false); assert.equal(result.safeguards.auto_publish, false); assert.equal(result.safeguards.auto_repost, false); assert.equal(result.safeguards.auto_reply, false); assert.equal(result.safeguards.visual_attachment, false); assert.equal(saved.snapshots.length, 1); assert.ok(saved.decisions.some((row) => row.decision_type === "visual")); assert.ok(saved.decisions.some((row) => row.decision_type === "repost"));
-  const brief = growth.dailyBrief({ publications: [], performance: [], interactions: [], sources: [], schedules: [], now: Date.now() }); assert.match(growth.dailyBriefText(brief), /DONEOVERNIGHT Daily/); assert.equal(brief.report.message, "No action required. Shadow safeguards and approval gating remain active.");
+  const brief = growth.dailyBrief({ publications: [], performance: [], interactions: [], sources: [], schedules: [], now: Date.now() }); const text = growth.dailyBriefText(brief); assert.match(text, /DONEOVERNIGHT Daily/); assert.match(text, /followers unavailable/); assert.match(text, /Performance:/); assert.equal(brief.report.message, "No action required. Approval and kill-switch safeguards remain active.");
 });
 
 test("Growth Intelligence computes long-term health, gaps, and experiments without optimizing for posting volume", () => {
