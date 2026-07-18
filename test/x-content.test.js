@@ -15,6 +15,7 @@ const learning = require("../lib/x-content/learning");
 const radar = require("../lib/x-content/radar");
 const telegramControl = require("../lib/x-content/telegram-control");
 const growth = require("../lib/x-content/growth-director");
+const intelligence = require("../lib/x-content/growth-intelligence");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -299,9 +300,9 @@ test("V3 autonomy decisions use decision_key and preserve the decision_key upser
 });
 
 test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
-  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "daily_brief", "discovery", "engagement", "growth_director", "publishing", "radar"];
+  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "daily_brief", "discovery", "engagement", "executive_report", "growth_director", "growth_intelligence", "publishing", "radar"];
   assert.deepEqual([...repository.PRODUCTION_RUN_TYPES].sort(), expected);
-  const sql = `${fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260717_social_intelligence_engine.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260719_x_growth_director.sql"), "utf8")}`;
+  const sql = `${fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260717_social_intelligence_engine.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260719_x_growth_director.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260719_x_growth_intelligence.sql"), "utf8")}`;
   for (const runType of expected) assert.match(sql, new RegExp(`'${runType}'`));
 
   const originalFetch = global.fetch;
@@ -542,4 +543,27 @@ test("Growth Director persists shadow decisions and daily briefing data without 
   const result = await growth.runCycle({ repository: repo, config: autonomyConfig("shadow", false), now: Date.now() });
   assert.equal(result.published, false); assert.equal(result.safeguards.auto_publish, false); assert.equal(result.safeguards.auto_repost, false); assert.equal(result.safeguards.auto_reply, false); assert.equal(result.safeguards.visual_attachment, false); assert.equal(saved.snapshots.length, 1); assert.ok(saved.decisions.some((row) => row.decision_type === "visual")); assert.ok(saved.decisions.some((row) => row.decision_type === "repost"));
   const brief = growth.dailyBrief({ publications: [], performance: [], interactions: [], sources: [], schedules: [], now: Date.now() }); assert.match(growth.dailyBriefText(brief), /DONEOVERNIGHT Daily/); assert.equal(brief.report.message, "No action required. Shadow safeguards and approval gating remain active.");
+});
+
+test("Growth Intelligence computes long-term health, gaps, and experiments without optimizing for posting volume", () => {
+  const accountHealth = intelligence.health({ drafts: [autonomyDraft("intelligence", { quality_score: .9, post_type: "build_note" })], publications: [], performance: [{ normalized_performance: .08, views: 100 }], feedback: [{ action: "approve" }] });
+  assert.ok(accountHealth.authority_score >= .8); assert.ok(accountHealth.trust_score >= .5);
+  const detected = intelligence.gaps({ radarItems: [{ source_name: "Vercel", recommended_format: "system_design" }, { source_name: "GitHub", recommended_format: "system_design" }], drafts: [] });
+  assert.ok(detected.length); assert.match(detected[0].explanation, /no matching explanation-first draft/i);
+  const proposed = intelligence.experiments({ health: accountHealth }); assert.equal(proposed.length, 3); assert.ok(proposed.every((row) => row.status === "proposed"));
+});
+
+test("Growth Intelligence appends strategic memory and creates only shadow calendar, series, and experiment proposals", async () => {
+  const writes = { memory: [], health: [], competitor: [], gaps: [], series: [], calendar: [], experiments: [] };
+  const repo = {
+    listDrafts: async () => [autonomyDraft("memory", { quality_score: .9, post_type: "build_note" })], listPublications: async () => [], listPerformanceMemory: async () => [{ normalized_performance: .07, topic: "systems", metrics: {} }], listEditorFeedback: async () => [{ action: "approve" }], listRadarItems: async () => [{ id: "radar", source_name: "Vercel", source_url: "https://vercel.com/changelog", title: "Official API release", scores: { momentum: .9 } }],
+    createGrowthMemory: async (row) => { writes.memory.push(row); return row; }, createAccountHealthSnapshot: async (row) => { writes.health.push(row); return row; }, saveCompetitorObservation: async (row) => { writes.competitor.push(row); return row; }, saveGrowthGap: async (row) => { writes.gaps.push(row); return row; }, saveGrowthSeries: async (row) => { const saved = { id: `series-${writes.series.length}`, ...row }; writes.series.push(saved); return saved; }, saveGrowthCalendarEntry: async (row) => { writes.calendar.push(row); return row; }, saveGrowthExperiment: async (row) => { writes.experiments.push(row); return row; }
+  };
+  const result = await intelligence.run({ repository: repo, now: Date.now() });
+  assert.equal(result.published, false); assert.equal(result.safeguards.auto_publish, false); assert.equal(result.safeguards.auto_reply, false); assert.equal(result.safeguards.auto_repost, false); assert.ok(writes.memory.length); assert.equal(writes.series.length, 4); assert.equal(writes.calendar.length, 7); assert.equal(writes.experiments.length, 3); assert.ok(writes.calendar.every((row) => row.status === "shadow_proposal"));
+});
+
+test("Growth Intelligence executive reports preserve authority priorities and disclose missing business attribution", () => {
+  const accountHealth = intelligence.health({ drafts: [], publications: [], performance: [], feedback: [] }); const report = intelligence.executiveReport({ accountHealth, memories: [], gaps: [{ topic: "system_design" }], competitors: [], series: [] });
+  assert.match(report.recommendations.join(" "), /Reduce cadence proposals|Do not increase cadence solely for reach/); assert.equal(report.report.business_impact.measured, false);
 });

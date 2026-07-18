@@ -6,13 +6,15 @@ on:
     - cron: "*/15 * * * *"
     # One of these is 08:00 Europe/Amsterdam across CET/CEST; the route checks local time.
     - cron: "0 6,7 * * *"
+    - cron: "0 6,7 * * 1"
+    - cron: "0 6,7 1 * *"
   workflow_dispatch:
     inputs:
       task:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, radar, growth, daily_brief, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
+        options: [discovery, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -97,6 +99,34 @@ jobs:
           -o /dev/null
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-daily-brief
+
+  intelligence:
+    if: github.event.schedule == '0 6,7 * * 1' || inputs.task == 'intelligence'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run weekly Growth Intelligence in shadow mode
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-intelligence
+
+  executive_report:
+    if: github.event.schedule == '0 6,7 1 * *' || inputs.task == 'executive_report'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Produce monthly executive report when due
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-executive-report
 
   publishing:
     if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
