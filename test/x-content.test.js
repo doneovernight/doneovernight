@@ -412,6 +412,22 @@ test("shadow decisions write schedules without publishing or changing draft appr
   assert.equal(result.published, false); assert.equal(calls.decisions.length, 1); assert.equal(calls.schedules[0].status, "shadow"); assert.equal(draft.status, "queued"); assert.equal(calls.published, 0); assert.ok(calls.audits.some((row) => row.event_type === "cycle_started")); assert.ok(calls.audits.some((row) => row.event_type === "decision_created")); assert.ok(calls.audits.some((row) => row.event_type === "schedule_proposed")); assert.ok(calls.audits.some((row) => row.event_type === "cycle_completed")); assert.ok(calls.audits.every((row) => row.actor === "system" && row.mode === "shadow"));
 });
 
+test("auto mode promotes a qualifying pre-existing shadow schedule without publishing", async () => {
+  const draft = autonomyDraft("shadow-to-auto"); const candidate = autonomyCandidate(); const updates = { draft: [], schedule: [] }; const audits = []; let created = 0;
+  const repo = {
+    listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [{ id: "shadow-schedule", draft_id: draft.id, status: "shadow", scheduled_for: "2026-07-20T08:00:00.000Z" }],
+    getSetting: async () => null, setSetting: async () => ({}), getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }),
+    createAutonomyDecision: async () => ({ id: "decision" }), createAutonomySchedule: async () => { created += 1; },
+    updateDraft: async (_id, patch) => { updates.draft.push(patch); Object.assign(draft, patch); return draft; },
+    updateAutonomySchedule: async (id, patch) => { updates.schedule.push({ id, patch }); return { id, ...patch }; },
+    recordAutonomyAudit: async (row) => { audits.push(row); return row; }
+  };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("auto", true), now: new Date("2026-07-20T08:00:00Z").getTime() });
+  assert.equal(created, 0); assert.equal(result.published, false); assert.equal(result.scheduled.length, 1);
+  assert.equal(updates.draft[0].status, "approved"); assert.equal(updates.schedule[0].id, "shadow-schedule"); assert.equal(updates.schedule[0].patch.status, "scheduled");
+  assert.ok(audits.some((row) => row.event_type === "draft_auto_approved")); assert.ok(audits.some((row) => row.event_type === "schedule_proposed" && row.reason === "promoted_from_shadow"));
+});
+
 test("auto publishing requires both switches and never attempts X in shadow", async () => {
   let calls = 0; const result = await autonomy.processScheduled({ repository: { getSetting: async () => null }, xClient: { verifyIdentity: async () => { calls += 1; }, publish: async () => { calls += 1; } }, config: autonomyConfig("shadow", true) });
   assert.match(result.skipped, /requires auto mode/); assert.equal(calls, 0);
