@@ -14,6 +14,7 @@ const autonomy = require("../lib/x-content/autonomy");
 const learning = require("../lib/x-content/learning");
 const radar = require("../lib/x-content/radar");
 const telegramControl = require("../lib/x-content/telegram-control");
+const growth = require("../lib/x-content/growth-director");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -298,9 +299,9 @@ test("V3 autonomy decisions use decision_key and preserve the decision_key upser
 });
 
 test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
-  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "discovery", "engagement", "publishing", "radar"];
+  const expected = ["analytics", "autonomy", "autonomy_metrics", "autonomy_publish", "daily_brief", "discovery", "engagement", "growth_director", "publishing", "radar"];
   assert.deepEqual([...repository.PRODUCTION_RUN_TYPES].sort(), expected);
-  const sql = `${fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260717_social_intelligence_engine.sql"), "utf8")}`;
+  const sql = `${fs.readFileSync(require.resolve("../supabase/migrations/20260717_x_agent_run_types.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260717_social_intelligence_engine.sql"), "utf8")}\n${fs.readFileSync(require.resolve("../supabase/migrations/20260719_x_growth_director.sql"), "utf8")}`;
   for (const runType of expected) assert.match(sql, new RegExp(`'${runType}'`));
 
   const originalFetch = global.fetch;
@@ -373,7 +374,7 @@ test("metric collection persists checkpoints and performance memory without an X
 });
 
 test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", () => {
-  const now = Date.now(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
+  const now = new Date("2026-07-20T12:00:00Z").getTime(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
   const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
 });
 
@@ -516,4 +517,29 @@ test("Command Center draft edits reject invalid weighted content without an X wr
   repository.getDraft = async () => autonomyDraft("editable"); repository.getCandidate = async () => autonomyCandidate(); repository.getSetting = async () => null; repository.updateDraft = async () => { updated += 1; }; xClient.publish = async () => { published += 1; };
   try { await assert.rejects(() => service.editDraft("editable", "x".repeat(281)), /280|character|weighted/i); assert.equal(updated, 0); assert.equal(published, 0); }
   finally { Object.assign(repository, original); xClient.publish = xOriginal; }
+});
+
+test("Growth Director proposes adaptive cadence and content mix without changing production safeguards", () => {
+  const now = Date.now(); const drafts = [autonomyDraft("growth-one", { status: "queued", quality_score: .9, post_type: "build_note" }), autonomyDraft("growth-two", { status: "queued", quality_score: .86, post_type: "practical_insight" })];
+  const snapshot = growth.strategySnapshot({ drafts, publications: [], performance: [{ normalized_performance: .08 }], now, config: autonomyConfig("shadow", false) });
+  assert.equal(snapshot.mode, "shadow"); assert.equal(snapshot.cadence.minimum, 1); assert.ok(snapshot.cadence.preferred >= 2 && snapshot.cadence.preferred <= 4); assert.equal(snapshot.cadence.hard_maximum, 5); assert.match(snapshot.recommendations.join(" "), /Do not alter publishing mode/);
+});
+
+test("Growth Director visual, repost, and engagement decisions remain review-only and attributed", () => {
+  const visual = growth.visualDecision({ text: "Architecture decisions fail at hidden handoffs. Make the recovery path visible.", post_type: "system_design", model_output: { v2: { scores: { save: .9 } } } });
+  assert.equal(visual.recommendation, "architecture_graphic"); assert.equal(visual.attachment_allowed, false); assert.equal(visual.requires_human_review, true);
+  const repost = growth.repostDecision({ source_name: "GitHub", scores: { authority: 1, builder_relevance: .95, novelty: .9, importance: .9 } });
+  assert.equal(repost.recommendation, "quote"); assert.equal(repost.publishable, false);
+  assert.equal(growth.engagementDecision({ classification: "spam", text: "free followers", confidence: 1 }).recommendation, "ignore");
+});
+
+test("Growth Director persists shadow decisions and daily briefing data without publishing, replying, or reposting", async () => {
+  const saved = { snapshots: [], decisions: [] }; const draft = autonomyDraft("growth-persist", { status: "queued", quality_score: .9 });
+  const repo = {
+    listDrafts: async () => [draft], listPublications: async () => [], listPerformanceMemory: async () => [], listRadarItems: async () => [{ id: "radar-item", source_name: "Vercel", source_url: "https://vercel.com/changelog", scores: { authority: 1, builder_relevance: .9, novelty: .9, importance: .9 } }], listInteractions: async () => [{ id: "reply", classification: "question", text: "How does recovery work for operators?", confidence: .9 }], listSources: async () => [],
+    saveGrowthStrategySnapshot: async (row) => { saved.snapshots.push(row); return row; }, saveGrowthDecision: async (row) => { saved.decisions.push(row); return row; }
+  };
+  const result = await growth.runCycle({ repository: repo, config: autonomyConfig("shadow", false), now: Date.now() });
+  assert.equal(result.published, false); assert.equal(result.safeguards.auto_publish, false); assert.equal(result.safeguards.auto_repost, false); assert.equal(result.safeguards.auto_reply, false); assert.equal(result.safeguards.visual_attachment, false); assert.equal(saved.snapshots.length, 1); assert.ok(saved.decisions.some((row) => row.decision_type === "visual")); assert.ok(saved.decisions.some((row) => row.decision_type === "repost"));
+  const brief = growth.dailyBrief({ publications: [], performance: [], interactions: [], sources: [], schedules: [], now: Date.now() }); assert.match(growth.dailyBriefText(brief), /DONEOVERNIGHT Daily/); assert.equal(brief.report.message, "No action required. Shadow safeguards and approval gating remain active.");
 });

@@ -4,13 +4,15 @@ on:
   schedule:
     - cron: "0 */2 * * *"
     - cron: "*/15 * * * *"
+    # One of these is 08:00 Europe/Amsterdam across CET/CEST; the route checks local time.
+    - cron: "0 6,7 * * *"
   workflow_dispatch:
     inputs:
       task:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, radar, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
+        options: [discovery, radar, growth, daily_brief, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -73,6 +75,29 @@ jobs:
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-metrics
 
+      - name: Run Growth Director in shadow mode
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-growth
+
+  daily_brief:
+    if: github.event.schedule == '0 6,7 * * *' || inputs.task == 'daily_brief'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Deliver the quiet Amsterdam daily brief when due
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -o /dev/null
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-daily-brief
+
   publishing:
     if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
@@ -112,6 +137,19 @@ jobs:
           curl --fail --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-radar
+
+  growth:
+    if: inputs.task == 'growth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run Growth Director in shadow mode
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-growth
 
   autonomy_publish:
     if: inputs.task == 'autonomy_publish'
