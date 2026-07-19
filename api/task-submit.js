@@ -250,7 +250,8 @@ function commonplaceBookingDateFromRecord(record = {}) {
 function commonplaceBookingStillReservesDate(record = {}) {
   const status = clean(record.status || record.raw_payload?.status).toLowerCase();
   const visibility = clean(record.raw_payload?.website_os_visibility).toLowerCase();
-  return visibility !== "trashed" && !record.raw_payload?.deleted_at &&
+  const isTest = record.raw_payload?.website_os_test_record === true || record.raw_payload?.test_record === true;
+  return !isTest && visibility !== "trashed" && !record.raw_payload?.deleted_at &&
     !["archived", "cancelled", "rejected", "completed", "delivered", "trashed"].includes(status);
 }
 
@@ -1175,7 +1176,7 @@ async function handleCommonplaceNewsletterRequest(req, res, input = {}) {
   }
 }
 
-function summarizeCommonplaceAnalytics(events = [], newsletters = []) {
+function summarizeCommonplaceAnalytics(events = [], newsletters = [], testBookings = []) {
   const count = (type, route = "") => events.filter((event) => (
     event.event_type === type && (!route || normalizeCommonplacePublicPath(event.route) === route)
   )).length;
@@ -1186,8 +1187,11 @@ function summarizeCommonplaceAnalytics(events = [], newsletters = []) {
     if (Object.prototype.hasOwnProperty.call(scrollCounts, depth)) scrollCounts[depth] += 1;
   });
   // Conversion is only meaningful when both values come from the same tracked funnel.
-  const formStarts = count("form_start", "/cp-book");
-  const formSuccess = count("form_submit_success", "/cp-book");
+  const testBookingCount = testBookings.filter((booking) => (
+    booking.raw_payload?.website_os_test_record === true || booking.raw_payload?.test_record === true
+  )).length;
+  const formSuccess = Math.max(0, count("form_submit_success", "/cp-book") - testBookingCount);
+  const formStarts = Math.max(formSuccess, count("form_start", "/cp-book") - testBookingCount);
   const conversionCoverageComplete = formStarts > 0 && formSuccess <= formStarts;
   const conversionRate = conversionCoverageComplete ? Math.round((formSuccess / formStarts) * 100) : null;
   const conversionMessage = formStarts === 0
@@ -1209,7 +1213,8 @@ function summarizeCommonplaceAnalytics(events = [], newsletters = []) {
       conversionDenominator: "Tracked /cp-book form starts",
       conversionMessage,
       newsletterStarts: count("newsletter_start"),
-      newsletterSignups: newsletters.length || count("newsletter_success")
+      newsletterSignups: newsletters.length || count("newsletter_success"),
+      testBookingsExcluded: testBookingCount
     },
     scrollDropoff: scrollCounts,
     recentSignups: newsletters.slice(0, 8).map((row) => ({
@@ -1230,7 +1235,7 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
   const since = analyticsRangeStart(range);
 
   try {
-    const [events, newsletters] = await Promise.all([
+    const [events, newsletters, testBookings] = await Promise.all([
       supabaseFetch([
         `analytics_events?source=eq.${encodeURIComponent(COMMONPLACE_ANALYTICS_SOURCE)}`,
         "select=event_type,route,metadata,created_at",
@@ -1245,6 +1250,13 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
         "order=created_at.desc",
         "limit=100"
       ].join("&")),
+      supabaseFetch([
+        `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_BOOKING_SOURCE)}`,
+        "select=raw_payload,created_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=500"
+      ].join("&")),
     ]);
 
     return send(res, 200, {
@@ -1253,7 +1265,8 @@ async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
       range,
       analytics: summarizeCommonplaceAnalytics(
         Array.isArray(events) ? events : [],
-        Array.isArray(newsletters) ? newsletters : []
+        Array.isArray(newsletters) ? newsletters : [],
+        Array.isArray(testBookings) ? testBookings : []
       )
     });
   } catch (error) {

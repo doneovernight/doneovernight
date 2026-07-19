@@ -95,6 +95,15 @@ function isCommonplaceTask(task = {}) {
     workspace === "cp";
 }
 
+function taskReference(task = {}) {
+  return clean(task.task_id || task.taskId || task.id || task.raw_payload?.task_id);
+}
+
+function isWebsiteOsTestTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  return raw.website_os_test_record === true || raw.test_record === true;
+}
+
 async function fetchTasks() {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
@@ -167,11 +176,18 @@ module.exports = async function handler(req, res) {
     const invoices = authorized.mode === "website_os"
       ? await listScopedRecords(authorized.current, "invoice", { order: "created_at.desc", limit: 200 })
       : [];
+    const testBookingRefs = new Set(
+      (Array.isArray(scopedTasks) ? scopedTasks : [])
+        .filter(isWebsiteOsTestTask)
+        .map(taskReference)
+        .filter(Boolean)
+    );
+    const productionInvoices = invoices.filter((invoice) => !testBookingRefs.has(clean(invoice.booking_task_id)));
     return send(res, 200, {
       success: true,
       tasks: enrichedTasks,
-      invoices,
-      invoiceSummary: summarizeInvoices(invoices)
+      invoices: productionInvoices,
+      invoiceSummary: summarizeInvoices(productionInvoices)
     });
   } catch (error) {
     if (error.message === "Invalid JSON") {

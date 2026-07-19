@@ -2711,6 +2711,8 @@
               <button class="website-tab" type="button" data-booking-filter="all" aria-selected="true">All bookings</button>
               <button class="website-tab" type="button" data-booking-filter="upcoming" aria-selected="false">Upcoming</button>
               <button class="website-tab" type="button" data-booking-filter="completed" aria-selected="false">Completed</button>
+              <button class="website-tab" type="button" data-booking-filter="archived" aria-selected="false">Archived</button>
+              <button class="website-tab" type="button" data-booking-filter="test" aria-selected="false">Test records</button>
             </div>
             <div class="booking-list" id="bookingsList"></div>
           </section>
@@ -3630,6 +3632,13 @@
       "Booking status": "Boekingsstatus",
       "Booking filters": "Boekingsfilters",
       "All bookings": "Alle boekingen",
+      "Test records": "Testrecords",
+      "Test records are excluded from invoicing and revenue.": "Testrecords tellen niet mee voor facturatie en omzet.",
+      "No archived bookings.": "Geen gearchiveerde boekingen.",
+      "Archived records remain available here with their history.": "Gearchiveerde records blijven hier met hun geschiedenis beschikbaar.",
+      "No test records.": "Geen testrecords.",
+      "Bookings explicitly marked as test appear here.": "Boekingen die expliciet als test zijn gemarkeerd verschijnen hier.",
+      "Test bookings excluded": "Uitgesloten testboekingen",
       "Completed work will appear here after an explicit status update.": "Afgerond werk verschijnt hier na een expliciete statuswijziging.",
       "Future preferred dates will appear here.": "Toekomstige voorkeursdatums verschijnen hier.",
       "No booking requests yet.": "Nog geen boekingsaanvragen.",
@@ -4005,6 +4014,8 @@
       tasks: [],
       allBookings: [],
       bookings: [],
+      archivedBookings: [],
+      testBookings: [],
       invoices: [],
       invoiceSummary: { connected: true, invoiceCount: 0, activeCount: 0, paidCount: 0, revenueCents: 0, accountingRule: "paid_subtotal_excluding_vat" },
       trash: [],
@@ -4028,6 +4039,7 @@
       analyticsMessage: "Analytics not connected yet",
       authUser: null,
       authSession: null,
+      recordActionsPending: new Set(),
       toastTimer: null,
       activeWebsiteTab: "builder",
       calendarCursor: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -4700,6 +4712,14 @@
       renderSecuritySettings();
     }
 
+    function syncBookingCollections() {
+      const visible = state.allBookings.filter((booking) => !booking.isTrashed);
+      state.trash = state.allBookings.filter((booking) => booking.isTrashed);
+      state.testBookings = visible.filter((booking) => booking.isTest);
+      state.archivedBookings = visible.filter((booking) => !booking.isTest && booking.status === "Archived");
+      state.bookings = visible.filter((booking) => !booking.isTest && booking.status !== "Archived");
+    }
+
     async function loadBookings({ silent = false } = {}) {
       if (!silent) setSync("Loading bookings");
       const response = await fetch(ADMIN_TASKS_ENDPOINT, {
@@ -4718,8 +4738,7 @@
         ? data.invoiceSummary
         : { connected: true, invoiceCount: 0, activeCount: 0, paidCount: 0, revenueCents: 0, accountingRule: "paid_subtotal_excluding_vat" };
       state.allBookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
-      state.trash = state.allBookings.filter((booking) => booking.isTrashed);
-      state.bookings = state.allBookings.filter((booking) => !booking.isTrashed);
+      syncBookingCollections();
       state.clients = buildClients(state.bookings);
       if (!state.selectedBookingId && state.bookings[0]) state.selectedBookingId = state.bookings[0].id;
       if (state.selectedBookingId && !state.bookings.some((booking) => booking.id === state.selectedBookingId)) {
@@ -4774,7 +4793,8 @@
         ["Form submissions", formatNumber(metrics.bookingFormSubmissions || 0)],
         ["Conversion rate / tracked starts", Number.isFinite(metrics.conversionRate) ? `${formatNumber(metrics.conversionRate)}%` : (metrics.conversionMessage || "No tracked form starts yet.")],
         ["Newsletter starts", formatNumber(metrics.newsletterStarts || 0)],
-        ["Newsletter signups", formatNumber(metrics.newsletterSignups || 0)]
+        ["Newsletter signups", formatNumber(metrics.newsletterSignups || 0)],
+        ["Test bookings excluded", formatNumber(metrics.testBookingsExcluded || 0)]
       ];
       target.innerHTML = `
         <div class="detail-grid">
@@ -4948,6 +4968,7 @@
     }
 
     function bookingInvoiceHTML(booking) {
+      if (booking.isTest) return `<div class="form-note">Test records are excluded from invoicing and revenue.</div>`;
       const invoices = invoicesForBooking(booking.taskId || booking.id);
       if (!invoices.length) {
         return `<button class="button small" type="button" data-create-invoice-for="${escapeHTML(booking.id)}">Create invoice</button>`;
@@ -4986,7 +5007,7 @@
     }
 
     function calendarBookingsForDate(dateKey) {
-      return state.allBookings.filter((booking) => !booking.isTrashed && localDateKey(booking.preferredDate) === dateKey);
+      return state.bookings.filter((booking) => localDateKey(booking.preferredDate) === dateKey);
     }
 
     function calendarBlockedDates() {
@@ -5107,6 +5128,7 @@
 
     function bookingHTML(booking, compact = false) {
       const statusMeta = bookingStatusMeta(booking);
+      const isArchived = booking.status === "Archived";
       const statusOptions = ["New", "Contacted", "Confirmed", "Completed", "Archived", "Cancelled", "Declined"].map((status) =>
         `<option value="${status}"${booking.status === status ? " selected" : ""}>${status}</option>`
       ).join("");
@@ -5137,7 +5159,7 @@
             <button class="button small" type="button" data-draft-for="${escapeHTML(booking.id)}">Draft reply</button>
             ${bookingInvoiceHTML(booking)}
             <div class="record-actions">
-              <button class="button ghost small" type="button" data-record-action="archive" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">Archive</button>
+              <button class="button ghost small" type="button" data-record-action="archive" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}"${isArchived ? " disabled" : ""}>${isArchived ? "Archived" : "Archive"}</button>
               <button class="button ghost small" type="button" data-record-action="${booking.isTest ? "unmark_test" : "mark_test"}" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">${booking.isTest ? "Unmark test" : "Mark test"}</button>
               <button class="button danger small" type="button" data-record-action="trash" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">Move to Trash</button>
             </div>
@@ -5156,13 +5178,21 @@
         ? state.bookings.filter((booking) => booking.status === "Completed")
         : state.bookingFilter === "upcoming"
           ? upcomingBookings()
-          : state.bookings;
+          : state.bookingFilter === "archived"
+            ? state.archivedBookings
+            : state.bookingFilter === "test"
+              ? state.testBookings
+              : state.bookings;
       if (!bookings.length) {
         const message = state.bookingFilter === "completed"
           ? `<strong>No completed bookings yet.</strong>Completed work will appear here after an explicit status update.`
           : state.bookingFilter === "upcoming"
             ? `<strong>No upcoming bookings.</strong>Future preferred dates will appear here.`
-            : `<strong>No COMMONPL4CE booking requests yet.</strong>Requests from the public /cp form will appear here after submission.`;
+            : state.bookingFilter === "archived"
+              ? `<strong>No archived bookings.</strong>Archived records remain available here with their history.`
+              : state.bookingFilter === "test"
+                ? `<strong>No test records.</strong>Bookings explicitly marked as test appear here.`
+                : `<strong>No COMMONPL4CE booking requests yet.</strong>Requests from the public /cp form will appear here after submission.`;
         target.innerHTML = `<div class="empty-state">${message}</div>`;
         return;
       }
@@ -6739,6 +6769,7 @@
     }
 
     async function runRecordAction({ recordId, recordType = "booking", action }) {
+      const booking = state.allBookings.find((item) => item.id === recordId || item.taskId === recordId);
       const response = await fetch(COMMONPLACE_RECORD_ACTION_API, {
         method: "POST",
         credentials: "same-origin",
@@ -6749,6 +6780,7 @@
           record_id: recordId,
           record_type: recordType,
           record_action: action,
+          expected_updated_at: booking?.updatedAt || "",
           confirm: action === "permanent_delete" ? "PERMANENT_DELETE" : ""
         })
       });
@@ -6759,36 +6791,70 @@
       return data;
     }
 
+    function setRecordActionPending(recordId, pending) {
+      document.querySelectorAll(`[data-record-id="${CSS.escape(recordId)}"]`).forEach((button) => {
+        button.disabled = pending || button.dataset.recordAction === "archive" && button.textContent.trim() === "Archived";
+      });
+    }
+
+    function applyRecordActionResult(recordId, data = {}) {
+      if (data.deleted === true) {
+        state.tasks = state.tasks.filter((task) => taskRef(task) !== recordId && clean(task.id) !== recordId);
+      } else if (data.record && typeof data.record === "object") {
+        const index = state.tasks.findIndex((task) => taskRef(task) === recordId || clean(task.id) === recordId);
+        if (index >= 0) state.tasks[index] = data.record;
+      }
+      state.allBookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
+      syncBookingCollections();
+      state.clients = buildClients(state.bookings);
+      if (state.selectedBookingId && !state.bookings.some((booking) => booking.id === state.selectedBookingId)) {
+        state.selectedBookingId = state.bookings[0]?.id || "";
+      }
+      renderAll();
+    }
+
     async function handleRecordAction({ recordId, recordType = "booking", action }) {
+      if (state.recordActionsPending.has(recordId)) {
+        showToast("This record is already being updated.");
+        return;
+      }
+      state.recordActionsPending.add(recordId);
+      setRecordActionPending(recordId, true);
       const isTrash = action === "trash";
       const isPermanent = action === "permanent_delete";
-      if (isTrash) {
-        const ok = await askConfirmation({
-          title: recordType === "message" ? "Move this message to Trash?" : "Move this booking to Trash?",
-          body: "This removes it from the active workspace. It can be restored later.",
-          confirmLabel: "Move to Trash"
-        });
-        if (!ok) return;
+      try {
+        if (isTrash) {
+          const ok = await askConfirmation({
+            title: recordType === "message" ? "Move this message to Trash?" : "Move this booking to Trash?",
+            body: "This removes it from the active workspace. It can be restored later.",
+            confirmLabel: "Move to Trash"
+          });
+          if (!ok) return;
+        }
+        if (isPermanent) {
+          const ok = await askConfirmation({
+            title: "Permanently delete this record?",
+            body: "This cannot be undone. Recovery is impossible after permanent deletion.",
+            confirmLabel: "Permanently delete"
+          });
+          if (!ok) return;
+        }
+        const data = await runRecordAction({ recordId, recordType, action });
+        applyRecordActionResult(recordId, data);
+        const labels = {
+          archive: recordType === "message" ? "Message thread archived." : "Booking archived.",
+          trash: recordType === "message" ? "Message moved to Trash." : "Booking moved to Trash.",
+          restore: "Record restored.",
+          permanent_delete: "Record permanently deleted.",
+          mark_test: "Record marked as test.",
+          unmark_test: "Test label removed."
+        };
+        showToast(labels[action] || "Record updated.");
+        await loadBookings({ silent: true }).catch(() => renderAll());
+      } finally {
+        state.recordActionsPending.delete(recordId);
+        setRecordActionPending(recordId, false);
       }
-      if (isPermanent) {
-        const ok = await askConfirmation({
-          title: "Permanently delete this record?",
-          body: "This cannot be undone. Recovery is impossible after permanent deletion.",
-          confirmLabel: "Permanently delete"
-        });
-        if (!ok) return;
-      }
-      await runRecordAction({ recordId, recordType, action });
-      const labels = {
-        archive: recordType === "message" ? "Message thread archived." : "Booking archived.",
-        trash: recordType === "message" ? "Message moved to Trash." : "Booking moved to Trash.",
-        restore: "Record restored.",
-        permanent_delete: "Record permanently deleted.",
-        mark_test: "Record marked as test.",
-        unmark_test: "Test label removed."
-      };
-      showToast(labels[action] || "Record updated.");
-      await loadBookings({ silent: true }).catch(() => renderAll());
     }
 
     async function deleteTestRecords() {
@@ -7045,7 +7111,7 @@
       });
     });
 
-    document.addEventListener("click", (event) => {
+    document.addEventListener("click", async (event) => {
       const jump = event.target.closest("[data-view-jump]");
       if (jump) {
         if (jump.dataset.viewJump === "bookings") {
@@ -7290,6 +7356,52 @@
         });
         return;
       }
+
+      const recordAction = event.target.closest("[data-record-action]");
+      if (recordAction) {
+        const button = recordAction;
+        try {
+          await handleRecordAction({
+            recordId: button.dataset.recordId,
+            recordType: button.dataset.recordType || "booking",
+            action: button.dataset.recordAction
+          });
+        } catch (error) {
+          showToast(error.message || "Record action failed.");
+        }
+        return;
+      }
+
+      const trashAction = event.target.closest("[data-trash-action]");
+      if (trashAction) {
+        const button = trashAction;
+        try {
+          await handleRecordAction({
+            recordId: button.dataset.recordId,
+            recordType: button.dataset.recordType || "booking",
+            action: button.dataset.trashAction
+          });
+        } catch (error) {
+          showToast(error.message || "Trash action failed.");
+        }
+        return;
+      }
+
+      const messageAction = event.target.closest("[data-message-action]");
+      if (messageAction) {
+        const booking = selectedBooking();
+        if (!booking) return;
+        try {
+          await handleRecordAction({
+            recordId: booking.id,
+            recordType: "message",
+            action: messageAction.dataset.messageAction
+          });
+        } catch (error) {
+          showToast(error.message || "Message action failed.");
+        }
+        return;
+      }
     });
 
     $("addBuilderSection").addEventListener("click", addBuilderSection);
@@ -7359,62 +7471,6 @@
       const mediaField = event.target.closest("[data-media-field]");
       if (mediaField) {
         updateSelectedMediaAsset(mediaField.dataset.mediaField, mediaField.value);
-        return;
-      }
-
-      const recordAction = event.target.closest("[data-record-action]");
-      if (recordAction) {
-        const button = recordAction;
-        button.disabled = true;
-        try {
-          await handleRecordAction({
-            recordId: button.dataset.recordId,
-            recordType: button.dataset.recordType || "booking",
-            action: button.dataset.recordAction
-          });
-        } catch (error) {
-          showToast(error.message || "Record action failed.");
-        } finally {
-          button.disabled = false;
-        }
-        return;
-      }
-
-      const trashAction = event.target.closest("[data-trash-action]");
-      if (trashAction) {
-        const button = trashAction;
-        button.disabled = true;
-        try {
-          await handleRecordAction({
-            recordId: button.dataset.recordId,
-            recordType: button.dataset.recordType || "booking",
-            action: button.dataset.trashAction
-          });
-        } catch (error) {
-          showToast(error.message || "Trash action failed.");
-        } finally {
-          button.disabled = false;
-        }
-        return;
-      }
-
-      const messageAction = event.target.closest("[data-message-action]");
-      if (messageAction) {
-        const booking = selectedBooking();
-        if (!booking) return;
-        const button = messageAction;
-        button.disabled = true;
-        try {
-          await handleRecordAction({
-            recordId: booking.id,
-            recordType: "message",
-            action: button.dataset.messageAction
-          });
-        } catch (error) {
-          showToast(error.message || "Message action failed.");
-        } finally {
-          button.disabled = false;
-        }
         return;
       }
 

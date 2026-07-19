@@ -14,7 +14,8 @@ const {
   createScopedRecord,
   getScopedRecord,
   listScopedRecords,
-  updateScopedRecord
+  updateScopedRecord,
+  writeAuditEvent
 } = require("../lib/website-os-repository");
 const {
   buildInvoiceStatusPatch,
@@ -412,6 +413,13 @@ function isCommonplaceBookingTask(task = {}) {
     source === "commonpl4ce_booker_v1" ||
     intakeVersion === "commonpl4ce_booker_v1" ||
     summary.includes("COMMONPL4CE booking request");
+}
+
+function isCommonpl4ceWorkspaceBooking(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const declaredWorkspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
+  if (declaredWorkspace && !["cp", "commonpl4ce"].includes(declaredWorkspace)) return false;
+  return isCommonplaceBookingTask(task);
 }
 
 function isWebsiteOsStatusOnlyUpdate(input = {}) {
@@ -1119,11 +1127,14 @@ async function sendClientAdminAction(taskId, input = {}) {
   };
 }
 
-async function patchTask(taskId, patch) {
+async function patchTask(taskId, patch, { expectedUpdatedAt = "" } = {}) {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
-  const taskFilter = buildTaskFilter(taskId);
+  const taskFilter = [
+    buildTaskFilter(taskId),
+    expectedUpdatedAt ? `updated_at=eq.${encodeURIComponent(expectedUpdatedAt)}` : ""
+  ].filter(Boolean).join("&");
 
   try {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}`, {
@@ -1150,9 +1161,11 @@ async function patchTask(taskId, patch) {
     const rows = await response.json();
     const updatedTask = Array.isArray(rows) ? rows[0] : null;
     if (!updatedTask) {
-      const error = new Error("Task not found");
-      error.code = "TASK_NOT_FOUND";
-      error.statusCode = 404;
+      const error = new Error(expectedUpdatedAt
+        ? "Record changed in another session. Reload and try again."
+        : "Task not found");
+      error.code = expectedUpdatedAt ? "RECORD_ACTION_CONFLICT" : "TASK_NOT_FOUND";
+      error.statusCode = expectedUpdatedAt ? 409 : 404;
       throw error;
     }
     return updatedTask;
@@ -1595,47 +1608,63 @@ function commonpl4ceAuditEntry({ current, task, recordType, action, previousStat
   };
 }
 
-async function writeCommonpl4ceRecordAudit(entry = {}) {
-  await supabaseRest("analytics_events", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      event_type: "website_os_record_action",
-      task_id: clean(entry.record_id).slice(0, 100),
-      source: "commonpl4ce",
-      route: "admin.doneovernight.com/cp",
-      referrer: "",
-      session_id: "",
-      user_agent_hash: "",
-      metadata: {
-        workspace: clean(entry.workspace),
-        record_id: clean(entry.record_id),
-        record_type: clean(entry.record_type),
-        action: clean(entry.action),
-        actor_user_id: clean(entry.actor_user_id),
-        actor_role: clean(entry.actor_role),
-        previous_status: clean(entry.previous_status)
-      }
-    })
+async function writeCommonpl4ceRecordAudit(current, entry = {}, previousRecord = {}, nextRecord = {}) {
+  await writeAuditEvent(current, {
+    entityType: clean(entry.record_type) || "booking",
+    entityId: clean(entry.record_id),
+    action: clean(entry.action),
+    previousState: {
+      status: clean(previousRecord.status),
+      is_test: previousRecord.raw_payload?.website_os_test_record === true,
+      deleted_at: clean(previousRecord.raw_payload?.deleted_at),
+      updated_at: clean(previousRecord.updated_at)
+    },
+    nextState: {
+      status: clean(nextRecord.status),
+      is_test: nextRecord.raw_payload?.website_os_test_record === true,
+      deleted_at: clean(nextRecord.raw_payload?.deleted_at),
+      updated_at: clean(nextRecord.updated_at)
+    },
+    metadata: {
+      workspace: "cp",
+      actor_role: clean(entry.actor_role),
+      previous_status: clean(entry.previous_status)
+    }
   });
 }
 
 async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   const action = clean(input.record_action || input.recordAction || input.operation).toLowerCase();
   const recordType = clean(input.record_type || input.recordType).toLowerCase() === "message" ? "message" : "booking";
+  const allowedActions = new Set(["archive", "trash", "restore", "mark_test", "unmark_test", "permanent_delete"]);
+  if (!allowedActions.has(action)) {
+    const error = new Error("Unsupported record action");
+    error.code = "UNSUPPORTED_RECORD_ACTION";
+    error.statusCode = 400;
+    throw error;
+  }
   const roles = action === "permanent_delete" ? ["Owner"] : ["Owner", "Admin"];
   const current = await requireWebsiteOsSession(req, { slug: "cp", roles });
   const task = await loadTask(taskId);
-  if (!task || !isCommonplaceBookingTask(task)) {
+  if (!task || !isCommonpl4ceWorkspaceBooking(task)) {
     const error = new Error("Record not found");
     error.code = "RECORD_NOT_FOUND";
     error.statusCode = 404;
     throw error;
   }
 
+  const expectedUpdatedAt = clean(input.expected_updated_at || input.expectedUpdatedAt);
+  if (expectedUpdatedAt && clean(task.updated_at) !== expectedUpdatedAt) {
+    const error = new Error("Record changed in another session. Reload and try again.");
+    error.code = "RECORD_ACTION_CONFLICT";
+    error.statusCode = 409;
+    throw error;
+  }
+
   const now = new Date().toISOString();
   const previousStatus = clean(task.status || task.raw_payload?.status || "new");
   const rawPayload = commonpl4ceRecordRaw(task);
+  const isTrashed = previousStatus.toLowerCase() === "trashed" || clean(rawPayload.website_os_visibility).toLowerCase() === "trashed" || Boolean(rawPayload.deleted_at);
   const auditEntry = commonpl4ceAuditEntry({ current, task, recordType, action, previousStatus });
   const previousAudit = Array.isArray(rawPayload.website_os_audit) ? rawPayload.website_os_audit : [];
   const baseRawPayload = {
@@ -1647,6 +1676,12 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   };
 
   if (action === "archive") {
+    if (isTrashed) {
+      const error = new Error("Trashed records must be restored before archiving");
+      error.code = "RECORD_ACTION_CONFLICT";
+      error.statusCode = 409;
+      throw error;
+    }
     const updated = await patchTask(taskId, {
       status: "archived",
       raw_payload: {
@@ -1657,12 +1692,18 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
         archived_by: clean(current.user.id || "")
       },
       updated_at: now
-    });
-    await writeCommonpl4ceRecordAudit(auditEntry).catch(() => {});
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
     return { action, record: updated, message: "Record archived." };
   }
 
   if (action === "trash") {
+    if (isTrashed) {
+      const error = new Error("Record is already in Trash");
+      error.code = "RECORD_ALREADY_TRASHED";
+      error.statusCode = 409;
+      throw error;
+    }
     const updated = await patchTask(taskId, {
       status: "trashed",
       raw_payload: {
@@ -1675,12 +1716,18 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
         website_os_visibility: "trashed"
       },
       updated_at: now
-    });
-    await writeCommonpl4ceRecordAudit(auditEntry).catch(() => {});
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
     return { action, record: updated, message: "Record moved to Trash." };
   }
 
   if (action === "restore") {
+    if (!isTrashed) {
+      const error = new Error("Only trashed records can be restored");
+      error.code = "RECORD_NOT_TRASHED";
+      error.statusCode = 409;
+      throw error;
+    }
     const restoredStatus = clean(rawPayload.previous_status) || "new";
     const updated = await patchTask(taskId, {
       status: restoredStatus === "trashed" ? "new" : restoredStatus,
@@ -1689,16 +1736,28 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
         restored_at: now,
         restored_by: clean(current.user.id || ""),
         previous_status: previousStatus,
+        deleted_at: "",
+        deleted_by: "",
+        delete_reason: "",
         website_os_visibility: "active"
       },
       updated_at: now
-    });
-    await writeCommonpl4ceRecordAudit(auditEntry).catch(() => {});
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
     return { action, record: updated, message: "Record restored." };
   }
 
   if (action === "mark_test" || action === "unmark_test") {
+    if (isTrashed) {
+      const error = new Error("Restore the record before changing its test status");
+      error.code = "RECORD_ACTION_CONFLICT";
+      error.statusCode = 409;
+      throw error;
+    }
     const isTest = action === "mark_test";
+    if ((rawPayload.website_os_test_record === true) === isTest) {
+      return { action, record: task, unchanged: true, message: isTest ? "Record is already marked as test." : "Test label is already removed." };
+    }
     const updated = await patchTask(taskId, {
       raw_payload: {
         ...baseRawPayload,
@@ -1706,8 +1765,8 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
         test_record: isTest
       },
       updated_at: now
-    });
-    await writeCommonpl4ceRecordAudit(auditEntry).catch(() => {});
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
     return { action, record: updated, message: isTest ? "Record marked as test." : "Test label removed." };
   }
 
@@ -1718,14 +1777,12 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
       error.statusCode = 400;
       throw error;
     }
-    const isTrashed = clean(task.status).toLowerCase() === "trashed" || clean(rawPayload.website_os_visibility).toLowerCase() === "trashed" || Boolean(rawPayload.deleted_at);
     if (!isTrashed) {
       const error = new Error("Only trashed records can be permanently deleted");
       error.code = "RECORD_NOT_TRASHED";
       error.statusCode = 409;
       throw error;
     }
-    await writeCommonpl4ceRecordAudit(auditEntry);
     const archivedForDelete = await patchTask(taskId, {
       status: "archived",
       raw_payload: {
@@ -1735,15 +1792,11 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
         permanent_delete_requested_by: clean(current.user.id || "")
       },
       updated_at: now
-    });
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, archivedForDelete);
     await deleteTaskRow(archivedForDelete);
     return { action, deleted: true, message: "Record permanently deleted." };
   }
-
-  const error = new Error("Unsupported record action");
-  error.code = "UNSUPPORTED_RECORD_ACTION";
-  error.statusCode = 400;
-  throw error;
 }
 
 function websiteOsBookingFromTask(task = {}) {
@@ -1877,7 +1930,7 @@ module.exports = async function handler(req, res) {
         invoiceSummary: summarizeInvoices(invoices)
       });
     }
-    const taskId = clean(input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
+    const taskId = clean(input.record_id || input.recordId || input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
     if (!taskId) {
       return send(res, 400, {
         success: false,
@@ -2085,9 +2138,15 @@ module.exports = async function handler(req, res) {
     }
 
     console.warn(`Admin task update error: ${error.code || error.message}`);
+    const safeActionError = [
+      "RECORD_",
+      "WEBSITE_OS_",
+      "PERMANENT_DELETE_",
+      "UNSUPPORTED_RECORD_ACTION"
+    ].some((prefix) => clean(error.code).startsWith(prefix));
     return send(res, error.statusCode || 500, {
       success: false,
-      error: clean(error.code).startsWith("INVOICE_") ? error.message : "Could not update task",
+      error: clean(error.code).startsWith("INVOICE_") || safeActionError ? error.message : "Could not update task",
       code: error.code || "ADMIN_TASK_UPDATE_FAILED",
       ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
       ...(error.emailResult ? { emailResult: error.emailResult } : {}),
