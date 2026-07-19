@@ -85,12 +85,12 @@ test("new X drafts target 180–220 weighted characters with a 240 V2 hard maxim
 test("account activity summary counts actual original posts by Amsterdam day and excludes replies and reposts", () => {
   const now = Date.parse("2026-07-19T10:00:00.000Z");
   const summary = accountActivity.activitySummary([
-    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
-    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", publication_origin: "agent_original", is_reply: false, is_repost: false },
-    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
-    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
-    { x_post_id: "reply", created_at: "2026-07-19T07:00:00.000Z", publication_origin: "reply", is_reply: true, is_repost: false },
-    { x_post_id: "repost", created_at: "2026-07-19T07:30:00.000Z", publication_origin: "repost", is_reply: false, is_repost: true }
+    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", classification: "agent_original", publication_origin: "agent", is_reply: false, is_repost: false },
+    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "reply", created_at: "2026-07-19T07:00:00.000Z", classification: "reply", publication_origin: "unknown", is_reply: true, is_repost: false },
+    { x_post_id: "repost", created_at: "2026-07-19T07:30:00.000Z", classification: "repost", publication_origin: "unknown", is_reply: false, is_repost: true }
   ], { now, status: { last_success_at: "2026-07-19T09:00:00.000Z" } });
   assert.equal(summary.posts_today, 3);
   assert.equal(summary.known_total_posts, 4);
@@ -129,8 +129,11 @@ test("read-only account activity sync deduplicates X IDs, classifies agent and m
   assert.equal(result.synced, true);
   assert.equal(result.identity.username, "doneovernight");
   assert.equal(rows.length, 4);
-  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent_original");
-  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual_original");
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").classification, "agent_original");
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").classification, "manual_original");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").ingestion_source, "authenticated_timeline");
   assert.equal(result.posts_today, 2);
   assert.equal(result.agent_published_today, 1);
   assert.equal(result.manual_posts_today, 1);
@@ -139,7 +142,7 @@ test("read-only account activity sync deduplicates X IDs, classifies agent and m
 });
 
 test("failed account activity sync preserves known values as stale and identity mismatches fail closed", async () => {
-  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false, is_currently_visible: true }];
+  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", classification: "manual_original", publication_origin: "manual", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, is_currently_visible: true }];
   const settings = { [accountActivity.SYNC_SETTING]: JSON.stringify({ last_success_at: "2026-07-19T09:30:00.000Z" }) }; let writes = 0; let timelineCalls = 0;
   const repo = {
     listAccountActivity: async () => known,
@@ -183,9 +186,9 @@ test("first account activity state is explicitly unavailable until an authentica
 test("analytics persists idempotent hourly snapshots for agent and manual originals without publishing", async () => {
   const snapshots = []; const memory = []; let publishCalls = 0;
   const activity = [
-    { x_post_id: "agent-1", publication_origin: "agent_original", is_reply: false, is_repost: false, current: true },
-    { x_post_id: "manual-1", publication_origin: "manual_original", is_reply: false, is_repost: false, current: true },
-    { x_post_id: "reply-1", publication_origin: "reply", is_reply: true, is_repost: false, current: true }
+    { x_post_id: "agent-1", classification: "agent_original", publication_origin: "agent", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "manual-1", classification: "manual_original", publication_origin: "manual", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "reply-1", classification: "reply", publication_origin: "unknown", ingestion_source: "authenticated_timeline", is_reply: true, is_repost: false, current: true }
   ];
   const repo = {
     listPublishedPublications: async () => [{ id: "publication-1", draft_id: "draft-1", x_post_id: "agent-1" }],
@@ -215,6 +218,35 @@ test("analytics migration keeps manual rows nullable, deduplicates snapshots, an
   assert.match(migration, /x_post_analytics_post_snapshot_key_idx/i);
   assert.match(migration, /x_post_performance_memory_x_post_id_idx/i);
   assert.match(migration, /grant select, insert, update, delete/i);
+});
+
+test("account activity writes keep classification, publication ownership, and ingestion provenance separate", () => {
+  const agent = accountActivity.activityRow({ id: "agent", text: "agent" }, { accountId: "42", agentPostIds: new Set(["agent"]), now: Date.now() });
+  const manual = accountActivity.activityRow({ id: "manual", text: "manual" }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  const reply = accountActivity.activityRow({ id: "reply", in_reply_to_user_id: "other" }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  const repost = accountActivity.activityRow({ id: "repost", referenced_tweets: [{ type: "retweeted", id: "source" }] }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  assert.deepEqual([agent.classification, agent.publication_origin, agent.ingestion_source], ["agent_original", "agent", "authenticated_timeline"]);
+  assert.deepEqual([manual.classification, manual.publication_origin, manual.ingestion_source], ["manual_original", "manual", "authenticated_timeline"]);
+  assert.deepEqual([reply.classification, reply.publication_origin, reply.ingestion_source], ["reply", "unknown", "authenticated_timeline"]);
+  assert.deepEqual([repost.classification, repost.publication_origin, repost.ingestion_source], ["repost", "unknown", "authenticated_timeline"]);
+});
+
+test("corrected migration preserves the failing row semantics and is rerunnable", () => {
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260721_x_account_activity_analytics.sql"), "utf8");
+  assert.match(migration, /add column if not exists classification text/i);
+  assert.match(migration, /add column if not exists ingestion_source text/i);
+  assert.match(migration, /publication_origin in \('agent', 'manual', 'unknown'\)/i);
+  assert.match(migration, /classification in \('agent_original', 'manual_original', 'reply', 'repost'\)/i);
+  assert.match(migration, /ingestion_source in \('authenticated_timeline', 'agent_publish', 'backfill', 'reconciliation'\)/i);
+  assert.match(migration, /where publication\.x_post_id = x_account_activity\.x_post_id/i);
+  assert.match(migration, /drop constraint if exists x_account_activity_publication_origin_check/i);
+  assert.match(migration, /drop column if exists source_kind/i);
+  const failingRow = { x_post_id: "2077997876836221094", classification: "agent_original", publication_origin: "authenticated_timeline" };
+  const normalized = { ...failingRow, publication_origin: "agent", ingestion_source: "authenticated_timeline" };
+  assert.equal(normalized.x_post_id, failingRow.x_post_id);
+  assert.equal(normalized.classification, "agent_original");
+  assert.equal(normalized.publication_origin, "agent");
+  assert.equal(normalized.ingestion_source, "authenticated_timeline");
 });
 
 test("V2 editorial gate enforces a single original source, natural verified mention, and all quality scores", () => {
