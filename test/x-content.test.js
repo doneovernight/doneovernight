@@ -907,6 +907,9 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   }
   const adminFallback = config.routes.find((route) => route.src === "/" && route.has?.some((condition) => condition.type === "host" && condition.value === host));
   assert.equal(adminFallback?.dest, "/admin/index.html");
+  const directRoute = config.routes.find((route) => route.src === "/x-content/?");
+  assert.equal(directRoute?.dest, "/admin/x-content/index.html");
+  assert.deepEqual(directRoute?.has, [{ type: "host", value: host }]);
 
   const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
   assert.match(page, /<section id="gate" class="gate"/);
