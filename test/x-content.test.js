@@ -20,6 +20,9 @@ const growth = require("../lib/x-content/growth-director");
 const intelligence = require("../lib/x-content/growth-intelligence");
 const navigationLinks = require("../lib/x-content/navigation-links");
 const { collectAnalytics } = require("../lib/x-content/engagement");
+const tenantContext = require("../lib/x-content/tenant-context");
+
+process.env.X_CONTENT_ALLOW_TEST_CONTEXT = "true";
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -516,11 +519,12 @@ test("autonomy audit migration is additive and retains service-role-only server 
 test("V3 autonomy decisions use decision_key and preserve the decision_key upsert target", async () => {
   const decision = autonomy.evaluateDraft({ draft: autonomyDraft(), candidate: autonomyCandidate(), source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
   assert.ok(decision.decision_key); assert.equal(Object.hasOwn(decision, "key"), false);
-  const originalFetch = global.fetch; const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY }; let captured;
+  const originalFetch = global.fetch; const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, flag: process.env.X_WORKSPACE_SCOPING_ENABLED }; let captured;
   process.env.SUPABASE_URL = "https://example.supabase.co"; process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
   global.fetch = async (url, options) => { captured = { url: String(url), payload: JSON.parse(options.body) }; return new Response("[]", { status: 201, headers: { "Content-Type": "application/json" } }); };
-  try { await repository.createAutonomyDecision(decision); assert.equal(new URL(captured.url).searchParams.get("on_conflict"), "decision_key"); assert.ok(captured.payload.decision_key); assert.equal(Object.hasOwn(captured.payload, "key"), false); }
-  finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; }
+  try { await repository.createAutonomyDecision(decision); assert.equal(new URL(captured.url).searchParams.get("on_conflict"), "workspace_id,decision_key"); assert.ok(captured.payload.decision_key); assert.equal(Object.hasOwn(captured.payload, "key"), false); }
+  finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; if (saved.flag === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = saved.flag; }
 });
 
 test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
@@ -547,6 +551,102 @@ test("production run types stay explicitly aligned between application validatio
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
     if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
   }
+});
+
+test("Phase 1 repository requests are workspace-scoped and reject mismatched payloads", async () => {
+  const originalFetch = global.fetch;
+  const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, flag: process.env.X_WORKSPACE_SCOPING_ENABLED };
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  const captured = [];
+  global.fetch = async (url, options = {}) => {
+    captured.push({ url: String(url), body: options.body ? JSON.parse(options.body) : null });
+    return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await tenantContext.run({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "test", role: "owner" }, async () => {
+      await repository.getDraft("draft-1");
+      await repository.recordSource({ source_url: "https://official.example/source", title: "Source", publisher: "Official", evidence_summary: "Evidence", confidence: 1 });
+      await assert.rejects(() => repository.recordSource({ workspace_id: "00000000-0000-4000-8000-000000000099", source_url: "https://official.example/other", title: "Source", publisher: "Official", evidence_summary: "Evidence", confidence: 1 }), { code: "WORKSPACE_SCOPE_MISMATCH" });
+    });
+    const getRequest = captured.find((entry) => entry.url.includes("x_drafts"));
+    assert.match(getRequest.url, /workspace_id=eq\.00000000-0000-4000-8000-000000000002/);
+    const sourceRequest = captured.find((entry) => entry.url.includes("x_sources"));
+    assert.equal(sourceRequest.body.workspace_id, tenantContext.SEEDED_WORKSPACE_ID);
+    assert.equal(new URL(sourceRequest.url).searchParams.get("on_conflict"), "workspace_id,source_url");
+  } finally {
+    global.fetch = originalFetch;
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+    if (saved.flag === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = saved.flag;
+  }
+});
+
+test("Phase 1 repository fails closed without a workspace context", async () => {
+  const previous = process.env.X_CONTENT_ALLOW_TEST_CONTEXT;
+  delete process.env.X_CONTENT_ALLOW_TEST_CONTEXT;
+  try {
+    await assert.rejects(() => repository.getDraft("draft-without-context"), { code: "WORKSPACE_CONTEXT_REQUIRED" });
+  } finally {
+    if (previous === undefined) delete process.env.X_CONTENT_ALLOW_TEST_CONTEXT; else process.env.X_CONTENT_ALLOW_TEST_CONTEXT = previous;
+  }
+});
+
+test("Phase 1 rejects forged, expired, and revoked operator context while accepting an active grant", () => {
+  const now = Date.parse("2026-07-19T12:00:00.000Z");
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T13:00:00.000Z" }, now), true);
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T11:00:00.000Z" }, now), false);
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T13:00:00.000Z", revoked_at: "2026-07-19T11:30:00.000Z" }, now), false);
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  try {
+    assert.throws(() => tenantContext.resolveBoundaryContext({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "operator", role: "operator", operatorGrant: { expires_at: new Date(Date.now() - 3_600_000).toISOString() } }), { code: "WORKSPACE_OPERATOR_GRANT_REQUIRED" });
+    assert.doesNotThrow(() => tenantContext.resolveBoundaryContext({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "operator", role: "operator", operatorGrant: { expires_at: new Date(Date.now() + 3_600_000).toISOString() } }));
+  } finally {
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 routes preserve DONEOVERNIGHT compatibility while workspace scoping is disabled", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  delete process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const original = { heartbeat: service.heartbeat };
+  service.heartbeat = async () => ({ accountActivity: { posts_today: 0 } });
+  const response = responseCapture();
+  try {
+    await routes.heartbeat({ method: "GET", headers: {} }, response);
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.payload.success, true);
+  } finally {
+    service.heartbeat = original.heartbeat;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 routes do not trust a client-supplied workspace ID when cutover is enabled", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  const response = responseCapture();
+  try {
+    await routes.heartbeat({ method: "GET", headers: {}, body: { workspace_id: tenantContext.SEEDED_WORKSPACE_ID } }, response);
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.payload.code, "WORKSPACE_CONTEXT_REQUIRED");
+  } finally {
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 migration defines the seeded tenant, workspace ownership, and strategy-ready scoped uniqueness", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260722_x_multi_tenant_foundation.sql"), "utf8");
+  for (const table of ["organizations", "workspaces", "workspace_members", "x_accounts", "workspace_operator_grants", "x_sources", "x_topic_candidates", "x_source_controls", "x_radar_items", "x_editorial_objects", "x_draft_learning_metadata", "x_post_performance_memory"]) assert.match(sql, new RegExp(`workspace_id`));
+  assert.match(sql, /2037306333813235713/);
+  assert.match(sql, /00000000-0000-4000-8000-000000000002/);
+  assert.match(sql, /x_sources_workspace_source_url_uidx/);
+  assert.match(sql, /x_topic_candidates_workspace_source_url_uidx/);
+  assert.match(sql, /x_post_analytics_workspace_snapshot_uidx/);
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /is_workspace_member/);
 });
 
 test("Social Radar ranks attributed official evidence, protects screenshots, and creates review-only platform objects", () => {
