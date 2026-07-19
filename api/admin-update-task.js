@@ -10,6 +10,17 @@ const {
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
 const { requireWebsiteOsSession } = require("../lib/website-os-auth");
+const {
+  createScopedRecord,
+  getScopedRecord,
+  listScopedRecords,
+  updateScopedRecord
+} = require("../lib/website-os-repository");
+const {
+  buildInvoiceStatusPatch,
+  normalizeInvoiceInput,
+  summarizeInvoices
+} = require("../lib/website-os-invoices");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -379,7 +390,7 @@ async function verifyAdminOrWebsiteOsSession(req, adminKey) {
     slug: "cp",
     roles: ["Owner", "Admin", "Editor"]
   });
-  return { mode: "website_os", workspaceSlug: current.workspace.slug };
+  return { mode: "website_os", workspaceSlug: current.workspace.slug, current };
 }
 
 function isCommonplaceTask(task = {}) {
@@ -410,6 +421,10 @@ function isWebsiteOsStatusOnlyUpdate(input = {}) {
 
 function isCommonplaceRecordActionRequest(input = {}) {
   return clean(input.action || input.intent) === "commonpl4ce_record_action";
+}
+
+function isCommonplaceInvoiceActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_invoice_action";
 }
 
 function buildTaskFilter(taskId) {
@@ -1731,6 +1746,111 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   throw error;
 }
 
+function websiteOsBookingFromTask(task = {}) {
+  const raw = commonpl4ceRecordRaw(task);
+  return {
+    id: clean(task.id),
+    taskId: commonpl4ceRecordRef(task),
+    name: clean(raw.name || raw.contact_name || task.name || task.client_name),
+    email: clean(raw.email || raw.contact_email || task.email || task.client_email),
+    brandCompany: clean(raw.brand || raw.brand_company || raw.company || task.company),
+    status: clean(task.status || raw.status || "new").toLowerCase()
+  };
+}
+
+function assertInvoiceRole(current, roles) {
+  if (!roles.includes(clean(current?.user?.role))) {
+    const error = new Error("Invoice permission denied");
+    error.code = "INVOICE_PERMISSION_DENIED";
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+async function handleCommonpl4ceInvoiceAction(current, input = {}) {
+  assertInvoiceRole(current, ["Owner", "Admin"]);
+  const operation = clean(input.invoice_action || input.invoiceAction || input.operation).toLowerCase();
+
+  if (operation === "create") {
+    const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
+    if (!taskId) {
+      const error = new Error("Booking task id is required");
+      error.code = "INVOICE_BOOKING_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    const task = await loadTask(taskId);
+    if (!task || !isCommonplaceBookingTask(task)) {
+      const error = new Error("Booking not found in this workspace");
+      error.code = "INVOICE_BOOKING_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const booking = websiteOsBookingFromTask(task);
+    if (["archived", "trashed", "cancelled", "rejected"].includes(booking.status)) {
+      const error = new Error("Archived, trashed or cancelled bookings cannot be invoiced");
+      error.code = "INVOICE_BOOKING_INELIGIBLE";
+      error.statusCode = 409;
+      throw error;
+    }
+    const previous = await listScopedRecords(current, "invoice", {
+      filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+      order: "created_at.desc",
+      limit: 25
+    });
+    const activeInvoice = previous.find((invoice) => invoice.status !== "cancelled");
+    const allowDuplicate = input.allow_duplicate === true || input.allowDuplicate === true;
+    if (activeInvoice && !allowDuplicate) {
+      const error = new Error(`Booking already has invoice ${activeInvoice.invoice_number}`);
+      error.code = "INVOICE_DUPLICATE";
+      error.statusCode = 409;
+      throw error;
+    }
+    if (allowDuplicate) {
+      assertInvoiceRole(current, ["Owner"]);
+      if (clean(input.duplicate_confirmation || input.duplicateConfirmation) !== "ALLOW_DUPLICATE_INVOICE") {
+        const error = new Error("Explicit duplicate invoice confirmation is required");
+        error.code = "INVOICE_DUPLICATE_CONFIRMATION_REQUIRED";
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+    const values = normalizeInvoiceInput(input, booking);
+    const now = new Date().toISOString();
+    const invoice = await createScopedRecord(current, "invoice", {
+      ...values,
+      allow_duplicate: allowDuplicate,
+      duplicate_approved_by: allowDuplicate ? current.user.id : null,
+      duplicate_approved_at: allowDuplicate ? now : null,
+      updated_by: current.user.id
+    }, { action: "invoice_created" });
+    return { operation, invoice };
+  }
+
+  if (operation === "update_status") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const patch = buildInvoiceStatusPatch(invoice, input.status);
+    delete patch.updated_by;
+    const updated = await updateScopedRecord(current, "invoice", invoice.id, {
+      ...patch,
+      updated_by: current.user.id
+    }, { action: `invoice_status_${clean(input.status).toLowerCase()}` });
+    return { operation, invoice: updated };
+  }
+
+  const error = new Error("Unsupported invoice action");
+  error.code = "INVOICE_ACTION_UNSUPPORTED";
+  error.statusCode = 400;
+  throw error;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "PATCH") {
     res.setHeader("Allow", "POST, PATCH");
@@ -1740,6 +1860,23 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     const authContext = await verifyAdminOrWebsiteOsSession(req, input.admin_key || req.headers["x-admin-key"]);
+    if (isCommonplaceInvoiceActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "INVOICE_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleCommonpl4ceInvoiceAction(authContext.current, input);
+      const invoices = await listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 });
+      return send(res, 200, {
+        success: true,
+        ...result,
+        invoices,
+        invoiceSummary: summarizeInvoices(invoices)
+      });
+    }
     const taskId = clean(input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
     if (!taskId) {
       return send(res, 400, {
@@ -1950,7 +2087,7 @@ module.exports = async function handler(req, res) {
     console.warn(`Admin task update error: ${error.code || error.message}`);
     return send(res, error.statusCode || 500, {
       success: false,
-      error: "Could not update task",
+      error: clean(error.code).startsWith("INVOICE_") ? error.message : "Could not update task",
       code: error.code || "ADMIN_TASK_UPDATE_FAILED",
       ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
       ...(error.emailResult ? { emailResult: error.emailResult } : {}),

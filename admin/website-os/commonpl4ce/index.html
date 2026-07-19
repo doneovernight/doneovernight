@@ -857,6 +857,30 @@
     .operational-modal-card { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto; }
     .operational-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .operational-form .wide { grid-column: 1 / -1; }
+    .invoice-line-items { display: grid; gap: 8px; }
+    .invoice-line-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 90px 120px 34px;
+      gap: 8px;
+      align-items: end;
+      padding: 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.12);
+    }
+    .invoice-line-item .field { min-width: 0; }
+    .invoice-line-item-remove { width: 34px; min-height: 38px; padding: 0; }
+    .invoice-record {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 7px;
+      background: rgba(237,230,216,.035);
+    }
+    .invoice-record-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .invoice-record-head strong { font-size: 12px; }
+    .invoice-record-meta { color: var(--muted); font-size: 11px; line-height: 1.45; }
 
     .booking-list,
     .activity-list,
@@ -976,6 +1000,10 @@
     .status-pill.confirmed { color: var(--success); }
     .status-pill.completed { color: #d5ddcf; }
     .status-pill.archived { color: rgba(241,234,220,.42); }
+    .status-pill.sent { color: #e6d0a6; }
+    .status-pill.paid { color: var(--success); border-color: rgba(168,199,174,.32); }
+    .status-pill.overdue { color: #e7b3a4; border-color: rgba(231,179,164,.3); }
+    .status-pill.cancelled { color: rgba(241,234,220,.42); }
 
     .phase-note,
     .empty-state,
@@ -2484,6 +2512,8 @@
       .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form { grid-template-columns: 1fr; }
       .operations-stack { grid-column: auto; }
       .operational-form .wide { grid-column: auto; }
+      .invoice-line-item { grid-template-columns: minmax(0, 1fr) 74px; }
+      .invoice-line-item .field:first-child { grid-column: 1 / -1; }
       .operations-row { grid-template-columns: 38px minmax(0, 1fr); }
       .operations-row .status-pill { grid-column: 2; justify-self: start; }
       .booking-availability-form .field--wide { grid-column: auto; }
@@ -2615,10 +2645,10 @@
                 <div class="panel-head"><div><h2>Quick Actions</h2><p>Daily workspace actions.</p></div></div>
                 <div class="quick-actions">
                   <button class="quick-action" type="button" data-quick-action="new-booking">New Booking <span>Open</span></button>
-                  <button class="quick-action" type="button" disabled>Create Invoice <span>Not connected yet</span></button>
+                  <button class="quick-action" id="quickCreateInvoice" type="button" data-quick-action="create-invoice">Create Invoice <span>Open</span></button>
                   <button class="quick-action" type="button" disabled>Add Client <span>Not connected yet</span></button>
                 </div>
-                <p class="form-note" id="quickActionNote">Invoicing and standalone client creation are not connected yet.</p>
+                <p class="form-note" id="quickActionNote">Revenue is recognized from paid invoice subtotals. Standalone client creation is not connected yet.</p>
               </section>
             </div>
           </div>
@@ -3108,6 +3138,34 @@
       </section>
     </div>
 
+    <div class="operational-modal" id="invoiceDialog" aria-hidden="true">
+      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="invoiceDialogTitle">
+        <div class="panel-head">
+          <div><h2 id="invoiceDialogTitle">Create Invoice</h2><p id="invoiceDialogBooking">Create a persisted draft invoice from this booking.</p></div>
+          <button class="button ghost small" type="button" data-close-invoice>Cancel</button>
+        </div>
+        <form class="operational-form" id="invoiceForm">
+          <input id="invoiceBookingId" name="booking_id" type="hidden">
+          <label class="field"><span>Customer name</span><input id="invoiceCustomerName" name="customer_name" required></label>
+          <label class="field"><span>Customer email</span><input id="invoiceCustomerEmail" name="customer_email" type="email" required></label>
+          <label class="field"><span>Company</span><input id="invoiceCustomerCompany" name="customer_company"></label>
+          <label class="field"><span>VAT number</span><input id="invoiceCustomerVat" name="customer_vat_number"></label>
+          <label class="field wide"><span>Billing address</span><textarea id="invoiceCustomerAddress" name="customer_address" rows="2"></textarea></label>
+          <div class="wide invoice-line-items" id="invoiceLineItems"></div>
+          <button class="button ghost small wide" id="addInvoiceLineItem" type="button">Add line item</button>
+          <label class="field"><span>VAT %</span><input id="invoiceVatRate" name="vat_rate" type="number" min="0" max="100" step="0.01" value="21" required></label>
+          <label class="field"><span>Issue date</span><input id="invoiceIssueDate" name="issue_date" type="date" required></label>
+          <label class="field"><span>Due date</span><input id="invoiceDueDate" name="due_date" type="date" required></label>
+          <div class="field"><span>Total</span><strong id="invoiceCalculatedTotal">EUR 0.00</strong></div>
+          <p class="form-note wide" id="invoiceDialogStatus" aria-live="polite">Invoice starts as Draft. Revenue is counted only after it is marked Paid, excluding VAT.</p>
+          <div class="confirm-actions wide">
+            <button class="button ghost small" type="button" data-close-invoice>Cancel</button>
+            <button class="button primary small" type="submit" id="createInvoiceButton">Create draft invoice</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <div class="os-toast" id="osToast" role="status" aria-live="polite"></div>
 
     <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true">
@@ -3186,6 +3244,38 @@
       "Daily workspace actions.": "Dagelijkse werkruimteacties.",
       "New Booking": "Nieuwe boeking",
       "Create Invoice": "Factuur maken",
+      "Create invoice": "Factuur maken",
+      "Create draft invoice": "Conceptfactuur maken",
+      "Create a persisted draft invoice from this booking.": "Maak vanuit deze boeking een opgeslagen conceptfactuur.",
+      "Revenue is recognized from paid invoice subtotals. Standalone client creation is not connected yet.": "Omzet wordt geboekt op basis van betaalde factuursubtotalen. Losse klantaanmaak is nog niet gekoppeld.",
+      "Revenue counts paid invoice subtotals, excluding VAT.": "Omzet telt betaalde factuursubtotalen, exclusief btw.",
+      "No eligible booking": "Geen geschikte boeking",
+      "Customer name": "Klantnaam",
+      "Customer email": "E-mailadres klant",
+      "Company": "Bedrijf",
+      "VAT number": "Btw-nummer",
+      "Billing address": "Factuuradres",
+      "Add line item": "Factuurregel toevoegen",
+      "Description": "Omschrijving",
+      "Quantity": "Aantal",
+      "Unit price EUR": "Prijs per stuk EUR",
+      "Remove line item": "Factuurregel verwijderen",
+      "Issue date": "Factuurdatum",
+      "Due date": "Vervaldatum",
+      "Total": "Totaal",
+      "Invoice starts as Draft. Revenue is counted only after it is marked Paid, excluding VAT.": "De factuur start als concept. Omzet wordt pas geteld wanneer deze als betaald is gemarkeerd, exclusief btw.",
+      "Creating persisted draft invoice...": "Opgeslagen conceptfactuur maken…",
+      "Invoice could not be created.": "Factuur kon niet worden gemaakt.",
+      "Invoice status": "Factuurstatus",
+      "Invoice status could not be updated.": "Factuurstatus kon niet worden bijgewerkt.",
+      "Select an eligible booking first.": "Selecteer eerst een geschikte boeking.",
+      "already exists for this booking.": "bestaat al voor deze boeking.",
+      "created as Draft.": "aangemaakt als concept.",
+      "An invoice requires at least one line item.": "Een factuur heeft minimaal één factuurregel nodig.",
+      "Sent": "Verzonden",
+      "Paid": "Betaald",
+      "Overdue": "Te laat",
+      "Cancelled": "Geannuleerd",
       "Add Client": "Klant toevoegen",
       "Open": "Openen",
       "Invoicing and standalone client creation are not connected yet.": "Facturatie en losse klantaanmaak zijn nog niet gekoppeld.",
@@ -3894,6 +3984,8 @@
       tasks: [],
       allBookings: [],
       bookings: [],
+      invoices: [],
+      invoiceSummary: { connected: true, invoiceCount: 0, activeCount: 0, paidCount: 0, revenueCents: 0, accountingRule: "paid_subtotal_excluding_vat" },
       trash: [],
       clients: [],
       selectedBookingId: "",
@@ -4596,6 +4688,10 @@
         throw new Error(data?.error || "Could not load admin tasks");
       }
       state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      state.invoices = Array.isArray(data.invoices) ? data.invoices : [];
+      state.invoiceSummary = data.invoiceSummary && typeof data.invoiceSummary === "object"
+        ? data.invoiceSummary
+        : { connected: true, invoiceCount: 0, activeCount: 0, paidCount: 0, revenueCents: 0, accountingRule: "paid_subtotal_excluding_vat" };
       state.allBookings = state.tasks.filter(isWorkspaceBooking).map(normalizeBooking);
       state.trash = state.allBookings.filter((booking) => booking.isTrashed);
       state.bookings = state.allBookings.filter((booking) => !booking.isTrashed);
@@ -4798,29 +4894,49 @@
     }
 
     function invoiceSummary() {
-      let connected = false;
-      let total = 0;
-      const parseAmount = (value) => {
-        const normalized = String(value ?? "").replace(/[^0-9,.-]/g, "").replace(/,(?=\d{1,2}$)/, ".");
-        const amount = Number.parseFloat(normalized);
-        return Number.isFinite(amount) ? amount : 0;
+      return state.invoiceSummary || { connected: true, revenueCents: 0 };
+    }
+
+    function invoicesForBooking(bookingId) {
+      return state.invoices.filter((invoice) => clean(invoice.booking_task_id) === clean(bookingId));
+    }
+
+    function activeInvoiceForBooking(bookingId) {
+      return invoicesForBooking(bookingId).find((invoice) => invoice.status !== "cancelled") || null;
+    }
+
+    function formatMoneyCents(value) {
+      return new Intl.NumberFormat(localeCode(), { style: "currency", currency: "EUR" }).format(Number(value || 0) / 100);
+    }
+
+    function invoiceStatusOptions(invoice) {
+      const transitions = {
+        draft: ["draft", "sent", "cancelled"],
+        sent: ["sent", "paid", "overdue", "cancelled"],
+        overdue: ["overdue", "paid", "cancelled"],
+        paid: ["paid"],
+        cancelled: ["cancelled"]
       };
-      state.bookings.forEach((booking) => {
-        const task = booking.sourceTask || {};
-        const data = raw(task);
-        const invoices = Array.isArray(data.invoices) ? data.invoices : [];
-        if (invoices.length) {
-          connected = true;
-          invoices.forEach((invoice) => { total += parseAmount(invoice.invoice_amount ?? invoice.amount); });
-          return;
-        }
-        const direct = task.invoice_amount ?? data.invoice_amount ?? data.payment_amount;
-        if (clean(direct)) {
-          connected = true;
-          total += parseAmount(direct);
-        }
-      });
-      return { connected, total };
+      return (transitions[invoice.status] || [invoice.status]).map((status) =>
+        `<option value="${escapeHTML(status)}"${status === invoice.status ? " selected" : ""}>${escapeHTML(t(status[0].toUpperCase() + status.slice(1)))}</option>`
+      ).join("");
+    }
+
+    function bookingInvoiceHTML(booking) {
+      const invoices = invoicesForBooking(booking.taskId || booking.id);
+      if (!invoices.length) {
+        return `<button class="button small" type="button" data-create-invoice-for="${escapeHTML(booking.id)}">Create invoice</button>`;
+      }
+      return invoices.map((invoice) => `
+        <div class="invoice-record">
+          <div class="invoice-record-head">
+            <strong>${escapeHTML(invoice.invoice_number || "Draft invoice")}</strong>
+            <span class="status-pill ${escapeHTML(invoice.status)}">${escapeHTML(t(invoice.status[0].toUpperCase() + invoice.status.slice(1)))}</span>
+          </div>
+          <div class="invoice-record-meta">${escapeHTML(formatMoneyCents(invoice.total_cents))} incl. VAT · due ${escapeHTML(formatDate(invoice.due_date))}</div>
+          <select data-invoice-status="${escapeHTML(invoice.id)}" aria-label="Invoice status"${["paid", "cancelled"].includes(invoice.status) ? " disabled" : ""}>${invoiceStatusOptions(invoice)}</select>
+        </div>
+      `).join("") + (activeInvoiceForBooking(booking.taskId || booking.id) ? "" : `<button class="button small" type="button" data-create-invoice-for="${escapeHTML(booking.id)}">Create invoice</button>`);
     }
 
     function bookingThumbnailHTML(booking) {
@@ -4930,9 +5046,16 @@
       $("metricUpcoming").textContent = formatNumber(upcomingBookings().length);
       $("metricCompleted").textContent = formatNumber(completed);
       $("metricRevenue").textContent = invoices.connected
-        ? new Intl.NumberFormat(localeCode(), { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(invoices.total)
+        ? new Intl.NumberFormat(localeCode(), { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number(invoices.revenueCents || 0) / 100)
         : t("Not connected yet");
       $("metricRevenue").classList.toggle("is-text", !invoices.connected);
+      const quickInvoice = $("quickCreateInvoice");
+      if (quickInvoice) {
+        const eligible = state.bookings.some((booking) => !activeInvoiceForBooking(booking.taskId || booking.id));
+        quickInvoice.disabled = !eligible;
+        const stateLabel = quickInvoice.querySelector("span");
+        if (stateLabel) stateLabel.textContent = eligible ? t("Open") : t("No eligible booking");
+      }
       $("navOverviewCount").textContent = String(state.bookings.length);
       $("navBookingsCount").textContent = String(state.bookings.length);
       $("navMessagesCount").textContent = String(pending);
@@ -4969,6 +5092,7 @@
             ${booking.isTest ? `<span class="status-pill">Test record</span>` : ""}
             <select data-status-select="${escapeHTML(booking.id)}" aria-label="Booking status">${statusOptions}</select>
             <button class="button small" type="button" data-draft-for="${escapeHTML(booking.id)}">Draft reply</button>
+            ${bookingInvoiceHTML(booking)}
             <div class="record-actions">
               <button class="button ghost small" type="button" data-record-action="archive" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">Archive</button>
               <button class="button ghost small" type="button" data-record-action="${booking.isTest ? "unmark_test" : "mark_test"}" data-record-type="booking" data-record-id="${escapeHTML(booking.id)}">${booking.isTest ? "Unmark test" : "Mark test"}</button>
@@ -5042,6 +5166,143 @@
       if (!dialog) return;
       dialog.classList.remove("is-visible");
       dialog.setAttribute("aria-hidden", "true");
+    }
+
+    function isoDateInput(date) {
+      const value = date instanceof Date ? date : new Date(date);
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    }
+
+    function invoiceLineItemHTML(item = {}) {
+      return `
+        <div class="invoice-line-item" data-invoice-line-item>
+          <label class="field"><span>Description</span><input name="line_description" value="${escapeHTML(item.description || "Photography services")}" required></label>
+          <label class="field"><span>Quantity</span><input name="line_quantity" type="number" min="0.01" max="10000" step="0.01" value="${escapeHTML(item.quantity || "1")}" required></label>
+          <label class="field"><span>Unit price EUR</span><input name="line_unit_price" type="number" min="0.01" step="0.01" value="${escapeHTML(item.unitPrice || "")}" required></label>
+          <button class="button ghost small invoice-line-item-remove" type="button" data-remove-invoice-line aria-label="Remove line item">×</button>
+        </div>`;
+    }
+
+    function addInvoiceLineItem(item = {}) {
+      $("invoiceLineItems")?.insertAdjacentHTML("beforeend", invoiceLineItemHTML(item));
+      updateInvoiceCalculatedTotal();
+    }
+
+    function invoiceLineItemsFromForm() {
+      return Array.from(document.querySelectorAll("[data-invoice-line-item]")).map((row) => ({
+        description: clean(row.querySelector("[name='line_description']")?.value),
+        quantity: Number(row.querySelector("[name='line_quantity']")?.value),
+        unit_price: clean(row.querySelector("[name='line_unit_price']")?.value)
+      }));
+    }
+
+    function updateInvoiceCalculatedTotal() {
+      const subtotal = invoiceLineItemsFromForm().reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0);
+      const vatRate = Number($("invoiceVatRate")?.value || 0);
+      const total = subtotal + (subtotal * vatRate / 100);
+      if ($("invoiceCalculatedTotal")) $("invoiceCalculatedTotal").textContent = new Intl.NumberFormat(localeCode(), { style: "currency", currency: "EUR" }).format(total || 0);
+    }
+
+    function openInvoiceDialog(bookingId) {
+      const booking = state.bookings.find((item) => item.id === bookingId || item.taskId === bookingId);
+      if (!booking) return showToast(t("Select an eligible booking first."));
+      const active = activeInvoiceForBooking(booking.taskId || booking.id);
+      if (active) return showToast(`${active.invoice_number} ${t("already exists for this booking.")}`);
+      const dialog = $("invoiceDialog");
+      if (!dialog) return;
+      const issue = new Date();
+      const due = new Date(issue);
+      due.setDate(due.getDate() + 14);
+      $("invoiceBookingId").value = booking.id;
+      $("invoiceCustomerName").value = booking.name || "";
+      $("invoiceCustomerEmail").value = booking.email || "";
+      $("invoiceCustomerCompany").value = booking.brandCompany === "New project" ? "" : booking.brandCompany || "";
+      $("invoiceCustomerVat").value = "";
+      $("invoiceCustomerAddress").value = "";
+      $("invoiceIssueDate").value = isoDateInput(issue);
+      $("invoiceDueDate").value = isoDateInput(due);
+      $("invoiceVatRate").value = "21";
+      $("invoiceLineItems").replaceChildren();
+      addInvoiceLineItem({ description: booking.projectType || "Photography services", quantity: 1 });
+      $("invoiceDialogBooking").textContent = `${booking.name} · ${booking.taskId || booking.id}`;
+      $("invoiceDialogStatus").textContent = t("Invoice starts as Draft. Revenue is counted only after it is marked Paid, excluding VAT.");
+      dialog.classList.add("is-visible");
+      dialog.setAttribute("aria-hidden", "false");
+      window.setTimeout(() => $("invoiceCustomerName")?.focus(), 50);
+    }
+
+    function closeInvoiceDialog() {
+      const dialog = $("invoiceDialog");
+      if (!dialog) return;
+      dialog.classList.remove("is-visible");
+      dialog.setAttribute("aria-hidden", "true");
+    }
+
+    function applyInvoiceResponse(data) {
+      state.invoices = Array.isArray(data.invoices) ? data.invoices : state.invoices;
+      if (data.invoiceSummary && typeof data.invoiceSummary === "object") state.invoiceSummary = data.invoiceSummary;
+      renderMetrics();
+      renderBookings();
+      renderOverviewBookings();
+    }
+
+    async function createInvoice(event) {
+      event.preventDefault();
+      const booking = state.bookings.find((item) => item.id === $("invoiceBookingId").value);
+      if (!booking) return;
+      const button = $("createInvoiceButton");
+      button.disabled = true;
+      $("invoiceDialogStatus").textContent = t("Creating persisted draft invoice...");
+      try {
+        const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            action: "commonpl4ce_invoice_action",
+            invoice_action: "create",
+            workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
+            task_id: booking.taskId || booking.id,
+            customer_name: $("invoiceCustomerName").value,
+            customer_email: $("invoiceCustomerEmail").value,
+            customer_company: $("invoiceCustomerCompany").value,
+            customer_address: $("invoiceCustomerAddress").value,
+            customer_vat_number: $("invoiceCustomerVat").value,
+            line_items: invoiceLineItemsFromForm(),
+            vat_rate: $("invoiceVatRate").value,
+            issue_date: $("invoiceIssueDate").value,
+            due_date: $("invoiceDueDate").value
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) throw new Error(data.error || "Invoice could not be created.");
+        applyInvoiceResponse(data);
+        closeInvoiceDialog();
+        showToast(`${data.invoice.invoice_number} ${t("created as Draft.")}`);
+      } catch (error) {
+        $("invoiceDialogStatus").textContent = error.message || t("Invoice could not be created.");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function updateInvoiceStatus(invoiceId, nextStatus) {
+      const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_invoice_action",
+          invoice_action: "update_status",
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
+          invoice_id: invoiceId,
+          status: nextStatus
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) throw new Error(data.error || "Invoice status could not be updated.");
+      applyInvoiceResponse(data);
+      showToast(`${data.invoice.invoice_number} · ${data.invoice.status}`);
     }
 
     function newBookingPayload(form) {
@@ -6719,6 +6980,7 @@
     $("changePasswordButton").addEventListener("click", changeWebsitePassword);
     $("logoutOtherDevicesButton").addEventListener("click", logoutOtherDevices);
     $("newBookingForm").addEventListener("submit", createInternalBooking);
+    $("invoiceForm").addEventListener("submit", createInvoice);
 
     $("refreshButton").addEventListener("click", () => loadBookings());
     $("reloadBookingsButton").addEventListener("click", () => loadBookings());
@@ -6760,7 +7022,10 @@
       }
 
       const overviewAction = event.target.closest("[data-overview-action]");
-      if (overviewAction?.dataset.overviewAction === "invoices") showToast(t("Invoicing is not connected yet."));
+      if (overviewAction?.dataset.overviewAction === "invoices") {
+        switchView("bookings");
+        showToast(t("Revenue counts paid invoice subtotals, excluding VAT."));
+      }
 
       const operationalBooking = event.target.closest("[data-operational-booking]");
       if (operationalBooking) {
@@ -6821,9 +7086,39 @@
         openNewBookingDialog();
         return;
       }
+      if (quickAction?.dataset.quickAction === "create-invoice") {
+        const booking = state.bookings.find((item) => !activeInvoiceForBooking(item.taskId || item.id));
+        openInvoiceDialog(booking?.id || "");
+        return;
+      }
 
       if (event.target.closest("[data-close-new-booking]")) {
         closeNewBookingDialog();
+        return;
+      }
+
+      if (event.target.closest("[data-close-invoice]")) {
+        closeInvoiceDialog();
+        return;
+      }
+
+      const createInvoiceButton = event.target.closest("[data-create-invoice-for]");
+      if (createInvoiceButton) {
+        openInvoiceDialog(createInvoiceButton.dataset.createInvoiceFor);
+        return;
+      }
+
+      if (event.target.closest("#addInvoiceLineItem")) {
+        addInvoiceLineItem();
+        return;
+      }
+
+      const removeInvoiceLine = event.target.closest("[data-remove-invoice-line]");
+      if (removeInvoiceLine) {
+        const rows = document.querySelectorAll("[data-invoice-line-item]");
+        if (rows.length <= 1) return showToast(t("An invoice requires at least one line item."));
+        removeInvoiceLine.closest("[data-invoice-line-item]")?.remove();
+        updateInvoiceCalculatedTotal();
         return;
       }
 
@@ -7079,6 +7374,21 @@
         return;
       }
 
+      const invoiceStatus = event.target.closest("[data-invoice-status]");
+      if (invoiceStatus) {
+        const previous = state.invoices.find((invoice) => invoice.id === invoiceStatus.dataset.invoiceStatus)?.status || "draft";
+        invoiceStatus.disabled = true;
+        try {
+          await updateInvoiceStatus(invoiceStatus.dataset.invoiceStatus, invoiceStatus.value);
+        } catch (error) {
+          invoiceStatus.value = previous;
+          showToast(error.message || t("Invoice status could not be updated."));
+        } finally {
+          invoiceStatus.disabled = false;
+        }
+        return;
+      }
+
       const select = event.target.closest("[data-status-select]");
       if (!select) return;
       const previous = state.bookings.find((booking) => booking.id === select.dataset.statusSelect)?.status || "New";
@@ -7093,6 +7403,7 @@
     });
 
     document.addEventListener("input", (event) => {
+      if (event.target.closest("#invoiceForm")) updateInvoiceCalculatedTotal();
       const contentField = event.target.closest("[data-content-field]");
       if (contentField) {
         updateWebsiteContentField(contentField.dataset.contentField, contentField.value);
@@ -7186,6 +7497,7 @@
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && $("newBookingDialog")?.classList.contains("is-visible")) closeNewBookingDialog();
+      if (event.key === "Escape" && $("invoiceDialog")?.classList.contains("is-visible")) closeInvoiceDialog();
     });
 
     document.querySelectorAll("[data-locale]").forEach((button) => {

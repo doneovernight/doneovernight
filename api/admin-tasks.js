@@ -4,6 +4,8 @@ const { buildSecureReviewUrl } = require("../lib/review-token");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const xContentRoutes = require("../lib/x-content/routes");
 const { requireWebsiteOsSession } = require("../lib/website-os-auth");
+const { listScopedRecords } = require("../lib/website-os-repository");
+const { summarizeInvoices } = require("../lib/website-os-invoices");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -78,7 +80,7 @@ async function verifyAdminOrWebsiteOsSession(req, adminKey) {
     slug: "cp",
     roles: ["Owner", "Admin", "Editor", "Viewer"]
   });
-  return { mode: "website_os", workspaceSlug: current.workspace.slug };
+  return { mode: "website_os", workspaceSlug: current.workspace.slug, current };
 }
 
 function isCommonplaceTask(task = {}) {
@@ -153,7 +155,15 @@ module.exports = async function handler(req, res) {
       ? (Array.isArray(tasks) ? tasks.filter(isCommonplaceTask) : [])
       : tasks;
     const enrichedTasks = Array.isArray(scopedTasks) ? await Promise.all(scopedTasks.map(enrichTask)) : [];
-    return send(res, 200, { success: true, tasks: enrichedTasks });
+    const invoices = authorized.mode === "website_os"
+      ? await listScopedRecords(authorized.current, "invoice", { order: "created_at.desc", limit: 200 })
+      : [];
+    return send(res, 200, {
+      success: true,
+      tasks: enrichedTasks,
+      invoices,
+      invoiceSummary: summarizeInvoices(invoices)
+    });
   } catch (error) {
     if (error.message === "Invalid JSON") {
       return send(res, 400, { success: false, error: "Invalid JSON", code: "INVALID_JSON" });
