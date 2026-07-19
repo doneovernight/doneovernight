@@ -5,6 +5,7 @@ const validation = require("../lib/x-content/validation");
 const service = require("../lib/x-content/service");
 const repository = require("../lib/x-content/repository");
 const xClient = require("../lib/x-content/x-client");
+const accountActivity = require("../lib/x-content/account-activity");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
@@ -17,6 +18,11 @@ const radar = require("../lib/x-content/radar");
 const telegramControl = require("../lib/x-content/telegram-control");
 const growth = require("../lib/x-content/growth-director");
 const intelligence = require("../lib/x-content/growth-intelligence");
+const navigationLinks = require("../lib/x-content/navigation-links");
+const { collectAnalytics } = require("../lib/x-content/engagement");
+const tenantContext = require("../lib/x-content/tenant-context");
+
+process.env.X_CONTENT_ALLOW_TEST_CONTEXT = "true";
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -77,6 +83,200 @@ test("OpenAI strict JSON schema requires its nullable optional_cta field", () =>
 test("new X drafts target 180–220 weighted characters with a 240 V2 hard maximum and retained 280 emergency validator", () => {
   assert.equal(DRAFT_TARGET, "180–220");
   assert.equal(validation.validatePostText("a".repeat(280)).ok, true);
+});
+
+test("account activity summary counts actual original posts by Amsterdam day and excludes replies and reposts", () => {
+  const now = Date.parse("2026-07-19T10:00:00.000Z");
+  const summary = accountActivity.activitySummary([
+    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", classification: "agent_original", publication_origin: "agent", is_reply: false, is_repost: false },
+    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", classification: "manual_original", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "reply", created_at: "2026-07-19T07:00:00.000Z", classification: "reply", publication_origin: "unknown", is_reply: true, is_repost: false },
+    { x_post_id: "repost", created_at: "2026-07-19T07:30:00.000Z", classification: "repost", publication_origin: "unknown", is_reply: false, is_repost: true }
+  ], { now, status: { last_success_at: "2026-07-19T09:00:00.000Z" } });
+  assert.equal(summary.posts_today, 3);
+  assert.equal(summary.known_total_posts, 4);
+  assert.equal(summary.agent_published_today, 1);
+  assert.equal(summary.manual_posts_today, 2);
+  assert.equal(summary.replies_today, 1);
+  assert.equal(summary.reposts_today, 1);
+});
+
+test("read-only account activity sync deduplicates X IDs, classifies agent and manual posts, and never publishes", async () => {
+  const rows = []; const settings = {}; let publishCalls = 0; let markCalls = 0;
+  const repo = {
+    listAccountActivity: async () => rows,
+    getSetting: async (key) => settings[key] ? { value: settings[key] } : null,
+    setSetting: async (key, value) => { settings[key] = value; },
+    listPublishedPublications: async () => [{ x_post_id: "agent-1" }],
+    markAccountActivityNotCurrent: async () => { markCalls += 1; rows.forEach((row) => { row.is_currently_visible = false; }); },
+    upsertAccountActivity: async (incoming) => { for (const row of incoming) { const index = rows.findIndex((item) => item.x_post_id === row.x_post_id); if (index >= 0) rows[index] = { ...rows[index], ...row }; else rows.push(row); } return incoming; }
+  };
+  let page = 0;
+  const client = {
+    verifyIdentity: async () => ({ username: "doneovernight", userId: "42" }),
+    getUserPosts: async () => {
+      page += 1;
+      if (page === 1) return { data: { data: [
+        { id: "agent-1", text: "Agent original", created_at: "2026-07-19T08:00:00.000Z" },
+        { id: "manual-1", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z" },
+        { id: "reply-1", text: "Reply", created_at: "2026-07-19T09:10:00.000Z", in_reply_to_user_id: "other" },
+        { id: "repost-1", text: "Repost", created_at: "2026-07-19T09:20:00.000Z", referenced_tweets: [{ type: "retweeted", id: "source" }] }
+      ], meta: { next_token: "next" } } };
+      return { data: { data: [{ id: "manual-1", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z" }], meta: {} } };
+    },
+    publish: async () => { publishCalls += 1; }
+  };
+  const result = await accountActivity.syncAccountActivity({ repository: repo, xClient: client, now: Date.parse("2026-07-19T10:00:00.000Z") });
+  assert.equal(result.synced, true);
+  assert.equal(result.identity.username, "doneovernight");
+  assert.equal(rows.length, 4);
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").classification, "agent_original");
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").classification, "manual_original");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").ingestion_source, "authenticated_timeline");
+  assert.equal(result.posts_today, 2);
+  assert.equal(result.agent_published_today, 1);
+  assert.equal(result.manual_posts_today, 1);
+  assert.equal(markCalls, 1);
+  assert.equal(publishCalls, 0);
+});
+
+test("failed account activity sync preserves known values as stale and identity mismatches fail closed", async () => {
+  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", classification: "manual_original", publication_origin: "manual", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, is_currently_visible: true }];
+  const settings = { [accountActivity.SYNC_SETTING]: JSON.stringify({ last_success_at: "2026-07-19T09:30:00.000Z" }) }; let writes = 0; let timelineCalls = 0;
+  const repo = {
+    listAccountActivity: async () => known,
+    getSetting: async (key) => settings[key] ? { value: settings[key] } : null,
+    setSetting: async (key, value) => { settings[key] = value; writes += 1; },
+    listPublishedPublications: async () => [],
+    markAccountActivityNotCurrent: async () => { throw new Error("must not write after an identity failure"); },
+    upsertAccountActivity: async () => { throw new Error("must not write after an identity failure"); }
+  };
+  const mismatch = await accountActivity.syncAccountActivity({ repository: repo, now: Date.parse("2026-07-19T10:00:00.000Z"), xClient: { verifyIdentity: async () => ({ username: "wrong-account", userId: "99" }), getUserPosts: async () => { timelineCalls += 1; } } });
+  assert.equal(mismatch.synced, false);
+  assert.equal(mismatch.stale, true);
+  assert.equal(mismatch.posts_today, 1);
+  assert.equal(mismatch.code, "X_USERNAME_GUARD_FAILED");
+  assert.equal(timelineCalls, 0);
+  assert.equal(writes, 1);
+});
+
+test("account activity uses the official authenticated user timeline endpoint and dashboard labels known totals", () => {
+  const clientSource = fs.readFileSync(require.resolve("../lib/x-content/x-client"), "utf8");
+  const dashboard = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260720_x_account_activity.sql"), "utf8");
+  assert.match(clientSource, /\/2\/users\/\$\{encodeURIComponent\(userId\)\}\/tweets/);
+  assert.match(clientSource, /referenced_tweets/);
+  assert.match(clientSource, /non_public_metrics/);
+  assert.match(dashboard, /Known total posts/);
+  assert.match(dashboard, /Manual posts today/);
+  assert.match(dashboard, /Last X sync/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /grant select, insert, update, delete.*service_role/i);
+});
+
+test("first account activity state is explicitly unavailable until an authenticated sync succeeds", () => {
+  const summary = accountActivity.activitySummary([], { status: {} });
+  assert.equal(summary.never_synced, true);
+  assert.equal(summary.stale, true);
+  assert.equal(summary.posts_today, null);
+  assert.equal(summary.known_total_posts, null);
+});
+
+test("analytics persists idempotent hourly snapshots for agent and manual originals without publishing", async () => {
+  const snapshots = []; const memory = []; let publishCalls = 0;
+  const activity = [
+    { x_post_id: "agent-1", classification: "agent_original", publication_origin: "agent", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "manual-1", classification: "manual_original", publication_origin: "manual", ingestion_source: "authenticated_timeline", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "reply-1", classification: "reply", publication_origin: "unknown", ingestion_source: "authenticated_timeline", is_reply: true, is_repost: false, current: true }
+  ];
+  const repo = {
+    listPublishedPublications: async () => [{ id: "publication-1", draft_id: "draft-1", x_post_id: "agent-1" }],
+    listAccountActivity: async () => activity,
+    latestAnalyticsForPost: async (id) => snapshots.find((row) => row.x_post_id === id) || null,
+    createAnalytics: async (row) => { const prior = snapshots.find((item) => item.x_post_id === row.x_post_id && item.snapshot_key === row.snapshot_key); if (prior) Object.assign(prior, row); else snapshots.push(row); return row; },
+    savePerformanceMemory: async (row) => { const prior = memory.find((item) => item.x_post_id === row.x_post_id); if (prior) Object.assign(prior, row); else memory.push(row); return row; }
+  };
+  const client = {
+    verifyIdentity: async () => ({ username: "doneovernight", userId: "42" }),
+    getUserMetrics: async () => ({ data: { data: { public_metrics: { followers_count: 99 } } } }),
+    getPostMetrics: async (id) => ({ data: { data: { id, public_metrics: { impression_count: 100, like_count: 4, reply_count: 1, retweet_count: 2, quote_count: 1, bookmark_count: 3 } } } }),
+    publish: async () => { publishCalls += 1; }
+  };
+  const now = Date.parse("2026-07-19T10:24:00.000Z");
+  const first = await collectAnalytics({ repository: repo, xClient: client, now });
+  const second = await collectAnalytics({ repository: repo, xClient: client, now });
+  assert.equal(first.snapshots, 2); assert.equal(first.agent_posts, 1); assert.equal(first.manual_posts, 1);
+  assert.equal(second.snapshots, 2); assert.equal(snapshots.length, 2); assert.equal(memory.length, 2);
+  assert.equal(snapshots.find((row) => row.x_post_id === "manual-1").publication_id, null);
+  assert.equal(publishCalls, 0);
+});
+
+test("performance memory uses update-or-insert because x_post_id has a partial unique index", async () => {
+  const originalFetch = global.fetch;
+  const originalUrl = process.env.SUPABASE_URL;
+  const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const calls = [];
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method || "GET" });
+    if (String(url).includes("x_post_performance_memory?x_post_id=")) return new Response("[]", { status: 200 });
+    return new Response(JSON.stringify([{ id: "memory-1" }]), { status: 201, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await repository.savePerformanceMemory({ x_post_id: "post-1", topic: "systems", views: 1 });
+    assert.match(calls[0].url, /x_post_performance_memory\?x_post_id=eq\.post-1/);
+    assert.equal(calls[0].method, "GET");
+    assert.equal(calls[1].method, "POST");
+    assert.equal(calls[1].url.endsWith("/x_post_performance_memory"), true);
+    assert.equal(calls[1].url.includes("on_conflict"), false);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = originalUrl;
+    if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+  }
+});
+
+test("analytics migration keeps manual rows nullable, deduplicates snapshots, and grants service role access", () => {
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260721_x_account_activity_analytics.sql"), "utf8");
+  assert.match(migration, /alter column publication_id drop not null/i);
+  assert.match(migration, /x_post_analytics_post_snapshot_key_idx/i);
+  assert.match(migration, /x_post_performance_memory_x_post_id_idx/i);
+  assert.match(migration, /grant select, insert, update, delete/i);
+});
+
+test("account activity writes keep classification, publication ownership, and ingestion provenance separate", () => {
+  const agent = accountActivity.activityRow({ id: "agent", text: "agent" }, { accountId: "42", agentPostIds: new Set(["agent"]), now: Date.now() });
+  const manual = accountActivity.activityRow({ id: "manual", text: "manual" }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  const reply = accountActivity.activityRow({ id: "reply", in_reply_to_user_id: "other" }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  const repost = accountActivity.activityRow({ id: "repost", referenced_tweets: [{ type: "retweeted", id: "source" }] }, { accountId: "42", agentPostIds: new Set(), now: Date.now() });
+  assert.deepEqual([agent.classification, agent.publication_origin, agent.ingestion_source], ["agent_original", "agent", "authenticated_timeline"]);
+  assert.deepEqual([manual.classification, manual.publication_origin, manual.ingestion_source], ["manual_original", "manual", "authenticated_timeline"]);
+  assert.deepEqual([reply.classification, reply.publication_origin, reply.ingestion_source], ["reply", "unknown", "authenticated_timeline"]);
+  assert.deepEqual([repost.classification, repost.publication_origin, repost.ingestion_source], ["repost", "unknown", "authenticated_timeline"]);
+});
+
+test("corrected migration preserves the failing row semantics and is rerunnable", () => {
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260721_x_account_activity_analytics.sql"), "utf8");
+  assert.match(migration, /add column if not exists classification text/i);
+  assert.match(migration, /add column if not exists ingestion_source text/i);
+  assert.match(migration, /publication_origin in \('agent', 'manual', 'unknown'\)/i);
+  assert.match(migration, /classification in \('agent_original', 'manual_original', 'reply', 'repost'\)/i);
+  assert.match(migration, /ingestion_source in \('authenticated_timeline', 'agent_publish', 'backfill', 'reconciliation'\)/i);
+  assert.match(migration, /add column if not exists topic text/i);
+  assert.match(migration, /where publication\.x_post_id = x_account_activity\.x_post_id/i);
+  assert.match(migration, /drop constraint if exists x_account_activity_publication_origin_check/i);
+  assert.match(migration, /drop column if exists source_kind/i);
+  const failingRow = { x_post_id: "2077997876836221094", classification: "agent_original", publication_origin: "authenticated_timeline" };
+  const normalized = { ...failingRow, publication_origin: "agent", ingestion_source: "authenticated_timeline" };
+  assert.equal(normalized.x_post_id, failingRow.x_post_id);
+  assert.equal(normalized.classification, "agent_original");
+  assert.equal(normalized.publication_origin, "agent");
+  assert.equal(normalized.ingestion_source, "authenticated_timeline");
 });
 
 test("V2 editorial gate enforces a single original source, natural verified mention, and all quality scores", () => {
@@ -319,11 +519,12 @@ test("autonomy audit migration is additive and retains service-role-only server 
 test("V3 autonomy decisions use decision_key and preserve the decision_key upsert target", async () => {
   const decision = autonomy.evaluateDraft({ draft: autonomyDraft(), candidate: autonomyCandidate(), source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
   assert.ok(decision.decision_key); assert.equal(Object.hasOwn(decision, "key"), false);
-  const originalFetch = global.fetch; const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY }; let captured;
+  const originalFetch = global.fetch; const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, flag: process.env.X_WORKSPACE_SCOPING_ENABLED }; let captured;
   process.env.SUPABASE_URL = "https://example.supabase.co"; process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
   global.fetch = async (url, options) => { captured = { url: String(url), payload: JSON.parse(options.body) }; return new Response("[]", { status: 201, headers: { "Content-Type": "application/json" } }); };
-  try { await repository.createAutonomyDecision(decision); assert.equal(new URL(captured.url).searchParams.get("on_conflict"), "decision_key"); assert.ok(captured.payload.decision_key); assert.equal(Object.hasOwn(captured.payload, "key"), false); }
-  finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; }
+  try { await repository.createAutonomyDecision(decision); assert.equal(new URL(captured.url).searchParams.get("on_conflict"), "workspace_id,decision_key"); assert.ok(captured.payload.decision_key); assert.equal(Object.hasOwn(captured.payload, "key"), false); }
+  finally { global.fetch = originalFetch; if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url; if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key; if (saved.flag === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = saved.flag; }
 });
 
 test("production run types stay explicitly aligned between application validation and the database constraint", async () => {
@@ -350,6 +551,102 @@ test("production run types stay explicitly aligned between application validatio
     if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
     if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
   }
+});
+
+test("Phase 1 repository requests are workspace-scoped and reject mismatched payloads", async () => {
+  const originalFetch = global.fetch;
+  const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SERVICE_ROLE_KEY, flag: process.env.X_WORKSPACE_SCOPING_ENABLED };
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  const captured = [];
+  global.fetch = async (url, options = {}) => {
+    captured.push({ url: String(url), body: options.body ? JSON.parse(options.body) : null });
+    return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await tenantContext.run({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "test", role: "owner" }, async () => {
+      await repository.getDraft("draft-1");
+      await repository.recordSource({ source_url: "https://official.example/source", title: "Source", publisher: "Official", evidence_summary: "Evidence", confidence: 1 });
+      await assert.rejects(() => repository.recordSource({ workspace_id: "00000000-0000-4000-8000-000000000099", source_url: "https://official.example/other", title: "Source", publisher: "Official", evidence_summary: "Evidence", confidence: 1 }), { code: "WORKSPACE_SCOPE_MISMATCH" });
+    });
+    const getRequest = captured.find((entry) => entry.url.includes("x_drafts"));
+    assert.match(getRequest.url, /workspace_id=eq\.00000000-0000-4000-8000-000000000002/);
+    const sourceRequest = captured.find((entry) => entry.url.includes("x_sources"));
+    assert.equal(sourceRequest.body.workspace_id, tenantContext.SEEDED_WORKSPACE_ID);
+    assert.equal(new URL(sourceRequest.url).searchParams.get("on_conflict"), "workspace_id,source_url");
+  } finally {
+    global.fetch = originalFetch;
+    if (saved.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = saved.url;
+    if (saved.key === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.key;
+    if (saved.flag === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = saved.flag;
+  }
+});
+
+test("Phase 1 repository fails closed without a workspace context", async () => {
+  const previous = process.env.X_CONTENT_ALLOW_TEST_CONTEXT;
+  delete process.env.X_CONTENT_ALLOW_TEST_CONTEXT;
+  try {
+    await assert.rejects(() => repository.getDraft("draft-without-context"), { code: "WORKSPACE_CONTEXT_REQUIRED" });
+  } finally {
+    if (previous === undefined) delete process.env.X_CONTENT_ALLOW_TEST_CONTEXT; else process.env.X_CONTENT_ALLOW_TEST_CONTEXT = previous;
+  }
+});
+
+test("Phase 1 rejects forged, expired, and revoked operator context while accepting an active grant", () => {
+  const now = Date.parse("2026-07-19T12:00:00.000Z");
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T13:00:00.000Z" }, now), true);
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T11:00:00.000Z" }, now), false);
+  assert.equal(tenantContext.operatorGrantActive({ expires_at: "2026-07-19T13:00:00.000Z", revoked_at: "2026-07-19T11:30:00.000Z" }, now), false);
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  try {
+    assert.throws(() => tenantContext.resolveBoundaryContext({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "operator", role: "operator", operatorGrant: { expires_at: new Date(Date.now() - 3_600_000).toISOString() } }), { code: "WORKSPACE_OPERATOR_GRANT_REQUIRED" });
+    assert.doesNotThrow(() => tenantContext.resolveBoundaryContext({ workspaceId: tenantContext.SEEDED_WORKSPACE_ID, principalId: "operator", role: "operator", operatorGrant: { expires_at: new Date(Date.now() + 3_600_000).toISOString() } }));
+  } finally {
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 routes preserve DONEOVERNIGHT compatibility while workspace scoping is disabled", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  delete process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const original = { heartbeat: service.heartbeat };
+  service.heartbeat = async () => ({ accountActivity: { posts_today: 0 } });
+  const response = responseCapture();
+  try {
+    await routes.heartbeat({ method: "GET", headers: {} }, response);
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.payload.success, true);
+  } finally {
+    service.heartbeat = original.heartbeat;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 routes do not trust a client-supplied workspace ID when cutover is enabled", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  const response = responseCapture();
+  try {
+    await routes.heartbeat({ method: "GET", headers: {}, body: { workspace_id: tenantContext.SEEDED_WORKSPACE_ID } }, response);
+    assert.equal(response.statusCode, 403);
+    assert.equal(response.payload.code, "WORKSPACE_CONTEXT_REQUIRED");
+  } finally {
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("Phase 1 migration defines the seeded tenant, workspace ownership, and strategy-ready scoped uniqueness", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260722_x_multi_tenant_foundation.sql"), "utf8");
+  for (const table of ["organizations", "workspaces", "workspace_members", "x_accounts", "workspace_operator_grants", "x_sources", "x_topic_candidates", "x_source_controls", "x_radar_items", "x_editorial_objects", "x_draft_learning_metadata", "x_post_performance_memory"]) assert.match(sql, new RegExp(`workspace_id`));
+  assert.match(sql, /2037306333813235713/);
+  assert.match(sql, /00000000-0000-4000-8000-000000000002/);
+  assert.match(sql, /x_sources_workspace_source_url_uidx/);
+  assert.match(sql, /x_topic_candidates_workspace_source_url_uidx/);
+  assert.match(sql, /x_post_analytics_workspace_snapshot_uidx/);
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /is_workspace_member/);
 });
 
 test("Social Radar ranks attributed official evidence, protects screenshots, and creates review-only platform objects", () => {
@@ -552,6 +849,51 @@ test("Command Center keeps all eight operational views, deliberate empty states,
   const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
   for (const view of ["Overview", "Review Queue", "Publish Queue", "Performance", "Replies", "Learning", "Sources", "System"]) assert.match(page, new RegExp(view));
   assert.match(page, /persisted X analytics only/); assert.match(page, /No persisted analytics/); assert.match(page, /SHADOW PROPOSAL/); assert.doesNotMatch(page, /fake analytics/i); assert.doesNotMatch(page, /mock metrics/i);
+});
+
+test("Command Center navigation permits only verified X posts, persisted sources, and exact reply conversations", () => {
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345", xPostUrl: "https://x.com/doneovernight/status/1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345", xPostUrl: "https://x.com/another-account/status/1845123456789012345" }), null);
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "missing" }), null);
+  assert.equal(navigationLinks.trustedSourceUrl("https://github.com/features/actions", "https://github.com/features/actions"), "https://github.com/features/actions");
+  assert.equal(navigationLinks.trustedSourceUrl("https://github.com/features/actions", "https://github.com/changelog"), null);
+  assert.equal(navigationLinks.trustedSourceUrl("javascript:alert(1)", "javascript:alert(1)"), null);
+  assert.equal(navigationLinks.xConversationUrl("1845123456789012345"), "https://x.com/i/status/1845123456789012345");
+  assert.equal(navigationLinks.xConversationUrl("data:invalid"), null);
+});
+
+test("Command Center cards keep safe direct-navigation actions separate from publishing", () => {
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(page, /Open @doneovernight on X/);
+  assert.match(page, /href="https:\/\/x\.com\/doneovernight" target="_blank" rel="noopener noreferrer"/);
+  assert.match(page, /Open source/); assert.match(page, /Source unavailable/);
+  assert.match(page, /Open on X/); assert.match(page, /Post URL unavailable/);
+  assert.match(page, /Open schedule/); assert.match(page, /Conversation unavailable/);
+  assert.match(page, /rel="noopener noreferrer"/);
+  assert.match(page, /source_verified/); assert.match(page, /doneovernight\/status/);
+  assert.doesNotMatch(page, /data-navigation-publish/);
+});
+
+test("admin X Content routes resolve both slash forms to the protected login without invoking an action", () => {
+  const config = JSON.parse(fs.readFileSync(require.resolve("../vercel.json"), "utf8"));
+  const host = "admin\\.doneovernight\\.com";
+  const xContentRoutes = config.rewrites.filter((route) => ["/x-content", "/x-content/"].includes(route.source));
+  assert.equal(xContentRoutes.length, 2);
+  for (const route of xContentRoutes) {
+    assert.equal(route.destination, "/admin/x-content/index.html");
+    assert.deepEqual(route.has, [{ type: "host", value: host }]);
+  }
+  const adminFallback = config.routes.find((route) => route.src === "/" && route.has?.some((condition) => condition.type === "host" && condition.value === host));
+  assert.equal(adminFallback?.dest, "/admin/index.html");
+
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(page, /<section id="gate" class="gate"/);
+  assert.match(page, /<div id="app">/);
+  assert.match(page, /#app\{display:none/);
+  assert.match(page, /if\(sessionStorage\.getItem\(KEY\)\)open\(\)/);
+  assert.match(page, /\$\('#gate'\)\.style\.display='none';\$\('#app'\)\.style\.display='block'/);
+  assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
 });
 
 test("Command Center rejects cross-origin admin writes and retains typed manual publish protection", async () => {
