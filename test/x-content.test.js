@@ -637,6 +637,27 @@ test("Phase 1 routes do not trust a client-supplied workspace ID when cutover is
   }
 });
 
+test("Phase 1 internal admin boundary supplies only the seeded workspace after cutover", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  const adminTasks = require("../api/admin-tasks");
+  const original = routes.heartbeat;
+  let receivedContext;
+  routes.heartbeat = async (req, res) => {
+    receivedContext = req.tenantContext;
+    res.statusCode = 200;
+    res.end(JSON.stringify({ success: true }));
+  };
+  try {
+    await adminTasks({ method: "GET", url: "/api/admin-tasks?x_content_route=heartbeat", headers: {} }, responseCapture());
+    assert.equal(receivedContext.workspaceId, tenantContext.SEEDED_WORKSPACE_ID);
+    assert.equal(receivedContext.compatibility, true);
+  } finally {
+    routes.heartbeat = original;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
 test("Phase 1 migration defines the seeded tenant, workspace ownership, and strategy-ready scoped uniqueness", () => {
   const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260722_x_multi_tenant_foundation.sql"), "utf8");
   for (const table of ["organizations", "workspaces", "workspace_members", "x_accounts", "workspace_operator_grants", "x_sources", "x_topic_candidates", "x_source_controls", "x_radar_items", "x_editorial_objects", "x_draft_learning_metadata", "x_post_performance_memory"]) assert.match(sql, new RegExp(`workspace_id`));
