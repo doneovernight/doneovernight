@@ -802,17 +802,31 @@
       border-radius: 50%;
       background: rgba(241,234,220,.72);
     }
-    .operations-calendar-day.has-booking::after {
-      content: "";
+    .calendar-day-number {
+      position: relative;
+      z-index: 1;
+    }
+    .calendar-status-indicators {
       position: absolute;
       left: 50%;
       bottom: 4px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: var(--cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      max-width: calc(100% - 8px);
       transform: translateX(-50%);
     }
+    .calendar-status-dot {
+      width: 4px;
+      height: 4px;
+      flex: 0 0 4px;
+      border-radius: 50%;
+    }
+    .calendar-status-dot.is-pending { background: #dca15d; }
+    .calendar-status-dot.is-confirmed { background: #83b98f; }
+    .calendar-status-dot.is-cancelled { background: #d8796e; }
+    .calendar-status-dot.is-neutral { background: #8f918d; }
     .operations-calendar-day.is-blocked {
       border-color: rgba(237,230,216,.12);
       background: repeating-linear-gradient(135deg, rgba(237,230,216,.045) 0 3px, rgba(237,230,216,.015) 3px 7px);
@@ -1000,6 +1014,10 @@
     .status-pill.confirmed { color: var(--success); }
     .status-pill.completed { color: #d5ddcf; }
     .status-pill.archived { color: rgba(241,234,220,.42); }
+    .booking-status-pill.is-pending { color: #e7b36f; border-color: rgba(220,161,93,.34); }
+    .booking-status-pill.is-confirmed { color: #a8cdb0; border-color: rgba(131,185,143,.34); }
+    .booking-status-pill.is-cancelled { color: #e49a91; border-color: rgba(216,121,110,.34); }
+    .booking-status-pill.is-neutral { color: #b1b2ae; border-color: rgba(143,145,141,.3); }
     .status-pill.sent { color: #e6d0a6; }
     .status-pill.paid { color: var(--success); border-color: rgba(168,199,174,.32); }
     .status-pill.overdue { color: #e7b3a4; border-color: rgba(231,179,164,.3); }
@@ -3187,6 +3205,7 @@
     </footer>
   </main>
 
+  <script src="/assets/common-place/website-os-booking-status.js"></script>
   <script>
     const WEBSITE_OS_AUTH_API = "/api/task-submit";
     const WEBSITE_OS_WORKSPACE_SLUG = "cp";
@@ -3560,6 +3579,7 @@
       "New": "Nieuw",
       "Contacted": "Contact opgenomen",
       "Confirmed": "Bevestigd",
+      "Declined": "Afgewezen",
       "Completed": "Afgerond",
       "Archived": "Gearchiveerd",
       "Not provided": "Niet opgegeven",
@@ -3980,6 +4000,7 @@
     const workspace = WEBSITE_OS_WORKSPACES.commonpl4ce;
     const clean = (value) => String(value ?? "").trim();
     const lower = (value) => clean(value).toLowerCase();
+    const BOOKING_STATUS = window.COMMONPL4CE_BOOKING_STATUS;
     const state = {
       tasks: [],
       allBookings: [],
@@ -4617,12 +4638,14 @@
     }
 
     function normalizeWebsiteStatus(status) {
-      const value = lower(status);
-      if (["archived", "cancelled", "rejected"].includes(value)) return "Archived";
-      if (["completed", "delivered"].includes(value)) return "Completed";
-      if (["project_active", "execution_active", "workspace_active", "workspace_ready", "operators_assigned", "payment_confirmed", "awaiting_start", "confirmed"].includes(value)) return "Confirmed";
-      if (["needs_info", "under_review", "review_in_progress", "contacted", "quoted", "quote_sent", "execution_plan_ready"].includes(value)) return "Contacted";
-      return "New";
+      return BOOKING_STATUS.status(status);
+    }
+
+    function bookingStatusMeta(bookingOrStatus) {
+      const persistedStatus = typeof bookingOrStatus === "object"
+        ? bookingOrStatus.taskStatus || bookingOrStatus.status
+        : bookingOrStatus;
+      return BOOKING_STATUS.presentation(persistedStatus);
     }
 
     const STATUS_TO_TASK_STATUS = {
@@ -4630,7 +4653,9 @@
       "Contacted": "needs_info",
       "Confirmed": "project_active",
       "Completed": "completed",
-      "Archived": "archived"
+      "Archived": "archived",
+      "Cancelled": "cancelled",
+      "Declined": "rejected"
     };
 
     function formatDate(value) {
@@ -4888,7 +4913,7 @@
       today.setHours(0, 0, 0, 0);
       return state.bookings
         .map((booking) => ({ booking, date: parseBookingDate(booking.preferredDate) }))
-        .filter((item) => item.date && item.date >= today && !["Completed", "Archived"].includes(item.booking.status))
+        .filter((item) => item.date && item.date >= today && !["cancelled", "neutral"].includes(bookingStatusMeta(item.booking).group))
         .sort((left, right) => left.date - right.date)
         .map((item) => item.booking);
     }
@@ -4948,6 +4973,7 @@
     function compactBookingHTML(booking) {
       const date = parseBookingDate(booking.preferredDate);
       const dateLabel = date ? date.toLocaleDateString(localeCode(), { day: "numeric", month: "short", year: "numeric" }) : displayValue(booking.preferredDate);
+      const statusMeta = bookingStatusMeta(booking);
       return `
         <button class="operations-row" type="button" data-operational-booking="${escapeHTML(booking.id)}">
           ${bookingThumbnailHTML(booking)}
@@ -4955,7 +4981,7 @@
             <strong>${escapeHTML(displayValue(booking.projectType, "Booking"))}</strong>
             <span>${escapeHTML(displayValue(booking.brandCompany, booking.name))} · ${escapeHTML(dateLabel)}</span>
           </span>
-          <span class="status-pill ${escapeHTML(lower(booking.status))}">${escapeHTML(booking.status)}</span>
+          <span class="status-pill booking-status-pill ${escapeHTML(statusMeta.className)}">${escapeHTML(t(booking.status))}</span>
         </button>`;
     }
 
@@ -4965,6 +4991,21 @@
 
     function calendarBlockedDates() {
       return new Set(normalizeSiteConfig({ bookingAvailability: state.builder.bookingAvailability }).bookingAvailability.blockedDates);
+    }
+
+    function bookingStatusSummary(bookings) {
+      const summary = BOOKING_STATUS.summarize(bookings.map((booking) => booking.taskStatus || booking.status));
+      const bookingLabel = summary.total === 1 ? t("booking on this day") : t("bookings on this day");
+      const statuses = summary.statuses.map(({ label, count }) => `${count} ${t(label)}`).join(", ");
+      return `${summary.total} ${bookingLabel}${statuses ? `: ${statuses}` : ""}`;
+    }
+
+    function calendarStatusIndicators(bookings) {
+      if (!bookings.length) return "";
+      const summary = BOOKING_STATUS.summarize(bookings.map((booking) => booking.taskStatus || booking.status));
+      return `<span class="calendar-status-indicators" aria-hidden="true">${summary.groups
+        .map(({ className }) => `<span class="calendar-status-dot ${escapeHTML(className)}"></span>`)
+        .join("")}</span>`;
     }
 
     function renderCalendarInto(targetId) {
@@ -4986,12 +5027,14 @@
       for (let day = 1; day <= days; day += 1) {
         const date = new Date(year, month, day, 12);
         const key = localDateKey(date);
-        const count = calendarBookingsForDate(key).length;
+        const bookings = calendarBookingsForDate(key);
+        const count = bookings.length;
         const isToday = key === todayKey;
         const isBlocked = blockedDates.has(key);
         const dateLabel = date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-        const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${isBlocked ? `, ${t("Unavailable")}` : ""}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
-        cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${isBlocked ? " is-blocked" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${isToday ? ` aria-current="date"` : ""}>${day}</button>`);
+        const statusSummary = count ? bookingStatusSummary(bookings) : "";
+        const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${isBlocked ? `, ${t("Unavailable")}` : ""}${statusSummary ? `, ${statusSummary}` : ""}`;
+        cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${isBlocked ? " is-blocked" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${statusSummary ? ` title="${escapeHTML(statusSummary)}"` : ""}${isToday ? ` aria-current="date"` : ""}><span class="calendar-day-number">${day}</span>${calendarStatusIndicators(bookings)}</button>`);
       }
       const selectedBookings = selectedKey ? calendarBookingsForDate(selectedKey) : [];
       let selectedMarkup = selectedKey
@@ -5039,7 +5082,7 @@
     }
 
     function renderMetrics() {
-      const pending = state.bookings.filter((booking) => ["New", "Contacted"].includes(booking.status)).length;
+      const pending = state.bookings.filter((booking) => bookingStatusMeta(booking).group === "pending").length;
       const completed = state.bookings.filter((booking) => booking.status === "Completed").length;
       const invoices = invoiceSummary();
       $("metricTotalBookings").textContent = formatNumber(state.bookings.length);
@@ -5063,8 +5106,8 @@
     }
 
     function bookingHTML(booking, compact = false) {
-      const statusClass = lower(booking.status);
-      const statusOptions = ["New", "Contacted", "Confirmed", "Completed", "Archived"].map((status) =>
+      const statusMeta = bookingStatusMeta(booking);
+      const statusOptions = ["New", "Contacted", "Confirmed", "Completed", "Archived", "Cancelled", "Declined"].map((status) =>
         `<option value="${status}"${booking.status === status ? " selected" : ""}>${status}</option>`
       ).join("");
       return `
@@ -5088,7 +5131,7 @@
             ${compact ? "" : `<div class="booking-notes">${escapeHTML(displayValue(booking.notes, "No notes or references provided."))}</div>`}
           </div>
           <div class="booking-actions">
-            <span class="status-pill ${escapeHTML(statusClass)}">${escapeHTML(booking.status)}</span>
+            <span class="status-pill booking-status-pill ${escapeHTML(statusMeta.className)}">${escapeHTML(t(booking.status))}</span>
             ${booking.isTest ? `<span class="status-pill">Test record</span>` : ""}
             <select data-status-select="${escapeHTML(booking.id)}" aria-label="Booking status">${statusOptions}</select>
             <button class="button small" type="button" data-draft-for="${escapeHTML(booking.id)}">Draft reply</button>
@@ -6815,6 +6858,7 @@
       booking.status = nextStatus;
       booking.taskStatus = mappedStatus;
       if (note) note.textContent = "Status saved.";
+      renderOperationalDashboard();
       await loadBookings({ silent: true }).catch(() => renderAll());
     }
 
