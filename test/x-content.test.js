@@ -554,6 +554,27 @@ test("Command Center keeps all eight operational views, deliberate empty states,
   assert.match(page, /persisted X analytics only/); assert.match(page, /No persisted analytics/); assert.match(page, /SHADOW PROPOSAL/); assert.doesNotMatch(page, /fake analytics/i); assert.doesNotMatch(page, /mock metrics/i);
 });
 
+test("admin X Content routes resolve both slash forms to the protected login without invoking an action", () => {
+  const config = JSON.parse(fs.readFileSync(require.resolve("../vercel.json"), "utf8"));
+  const host = "admin\\.doneovernight\\.com";
+  const xContentRoutes = config.rewrites.filter((route) => ["/x-content", "/x-content/"].includes(route.source));
+  assert.equal(xContentRoutes.length, 2);
+  for (const route of xContentRoutes) {
+    assert.equal(route.destination, "/admin/x-content/index.html");
+    assert.deepEqual(route.has, [{ type: "host", value: host }]);
+  }
+  const adminFallback = config.routes.find((route) => route.src === "/" && route.has?.some((condition) => condition.type === "host" && condition.value === host));
+  assert.equal(adminFallback?.dest, "/admin/index.html");
+
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(page, /<section id="gate" class="gate"/);
+  assert.match(page, /<div id="app">/);
+  assert.match(page, /#app\{display:none/);
+  assert.match(page, /if\(sessionStorage\.getItem\(KEY\)\)open\(\)/);
+  assert.match(page, /\$\('#gate'\)\.style\.display='none';\$\('#app'\)\.style\.display='block'/);
+  assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
+});
+
 test("Command Center rejects cross-origin admin writes and retains typed manual publish protection", async () => {
   const originalFetch = global.fetch; global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
   try {
