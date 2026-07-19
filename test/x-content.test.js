@@ -18,6 +18,7 @@ const radar = require("../lib/x-content/radar");
 const telegramControl = require("../lib/x-content/telegram-control");
 const growth = require("../lib/x-content/growth-director");
 const intelligence = require("../lib/x-content/growth-intelligence");
+const navigationLinks = require("../lib/x-content/navigation-links");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -642,6 +643,30 @@ test("Command Center keeps all eight operational views, deliberate empty states,
   const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
   for (const view of ["Overview", "Review Queue", "Publish Queue", "Performance", "Replies", "Learning", "Sources", "System"]) assert.match(page, new RegExp(view));
   assert.match(page, /persisted X analytics only/); assert.match(page, /No persisted analytics/); assert.match(page, /SHADOW PROPOSAL/); assert.doesNotMatch(page, /fake analytics/i); assert.doesNotMatch(page, /mock metrics/i);
+});
+
+test("Command Center navigation permits only verified X posts, persisted sources, and exact reply conversations", () => {
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345", xPostUrl: "https://x.com/doneovernight/status/1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345", xPostUrl: "https://x.com/another-account/status/1845123456789012345" }), null);
+  assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "missing" }), null);
+  assert.equal(navigationLinks.trustedSourceUrl("https://github.com/features/actions", "https://github.com/features/actions"), "https://github.com/features/actions");
+  assert.equal(navigationLinks.trustedSourceUrl("https://github.com/features/actions", "https://github.com/changelog"), null);
+  assert.equal(navigationLinks.trustedSourceUrl("javascript:alert(1)", "javascript:alert(1)"), null);
+  assert.equal(navigationLinks.xConversationUrl("1845123456789012345"), "https://x.com/i/status/1845123456789012345");
+  assert.equal(navigationLinks.xConversationUrl("data:invalid"), null);
+});
+
+test("Command Center cards keep safe direct-navigation actions separate from publishing", () => {
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(page, /Open @doneovernight on X/);
+  assert.match(page, /href="https:\/\/x\.com\/doneovernight" target="_blank" rel="noopener noreferrer"/);
+  assert.match(page, /Open source/); assert.match(page, /Source unavailable/);
+  assert.match(page, /Open on X/); assert.match(page, /Post URL unavailable/);
+  assert.match(page, /Open schedule/); assert.match(page, /Conversation unavailable/);
+  assert.match(page, /rel="noopener noreferrer"/);
+  assert.match(page, /source_verified/); assert.match(page, /doneovernight\/status/);
+  assert.doesNotMatch(page, /data-navigation-publish/);
 });
 
 test("admin X Content routes resolve both slash forms to the protected login without invoking an action", () => {
