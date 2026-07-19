@@ -568,7 +568,7 @@ async function readCommonplaceContentBundle(context) {
 
 function contentRpcError(error) {
   const detail = `${error?.message || ""} ${error?.detail || ""}`;
-  if (/CONTENT_DRAFT_CONFLICT|40001/i.test(detail)) {
+  if (/CONTENT_DRAFT_CONFLICT|40001|P0001/i.test(detail)) {
     error.statusCode = 409;
     error.code = "CONTENT_DRAFT_CONFLICT";
     error.message = "This draft changed on another device. Reload before saving again.";

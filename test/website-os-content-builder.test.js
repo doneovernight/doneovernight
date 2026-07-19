@@ -47,6 +47,7 @@ test("migration imports the complete live FAQ in order and keeps booking on cp-b
 
 test("content API enforces session roles, optimistic revisions and atomic publish confirmation", () => {
   const api = read("api/task-submit.js");
+  const conflictMigration = read("supabase/migrations/062_website_os_content_conflict_errors.sql");
   assert.match(api, /searchParams\.get\("commonpl4ce_content"\) === "1"/);
   assert.match(api, /requireWebsiteOsSession\(req, \{ slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG/);
   assert.match(api, /p_expected_revision: expectedRevision/);
@@ -55,6 +56,8 @@ test("content API enforces session roles, optimistic revisions and atomic publis
   assert.match(api, /CONTENT_LOCAL_MEDIA_BLOCKED/);
   assert.match(api, /workspace_id=eq\.\$\{encodeURIComponent\(context\.workspace\.id\)\}/);
   assert.match(api, /COMMONPLACE_CONTENT_MEDIA_BUCKET/);
+  assert.match(conflictMigration, /CONTENT_DRAFT_CONFLICT'.*errcode = 'P0001'/s);
+  assert.doesNotMatch(conflictMigration, /CONTENT_DRAFT_CONFLICT'.*errcode = '40001'/s);
 });
 
 test("Website OS exposes FAQ, section-specific editors, server drafts and version rollback", () => {
