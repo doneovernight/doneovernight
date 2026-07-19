@@ -1,0 +1,160 @@
+{
+  "routes": [
+    {
+      "url": "https://doneovernight.com/cp",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "commonpl4ce",
+      "notes": "Public COMMONPL4CE website must stay public.",
+      "mustContain": [
+        "COMMONPL4CE",
+        "booker-station",
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "Join the CP newsletter",
+        "data-newsletter-popup"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE Website OS",
+        "WEBSITE ACCESS",
+        "DONEOVERNIGHT admin-safe fallback marker"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/cp-book",
+      "expectedStatus": 200,
+      "routeType": "booking",
+      "owner": "commonpl4ce",
+      "notes": "Standalone COMMONPL4CE booking page for Instagram, QR codes, bio links and direct client links.",
+      "mustContain": [
+        "Book a Shoot | COMMONPL4CE",
+        "booker-station",
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "Join the CP newsletter"
+      ],
+      "mustContainAny": [
+        [
+          "cpBookerForm",
+          "Booking temporarily unavailable."
+        ],
+        [
+          "commonpl4ce_booker",
+          "Booking status"
+        ],
+        [
+          "commonpl4ce_booker_v1",
+          "Booking status"
+        ],
+        [
+          "/api/task-submit",
+          "Booking status"
+        ]
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE booking offline marker",
+        "DONEOVERNIGHT admin-safe fallback marker",
+        "COMMONPL4CE Website OS",
+        "data-newsletter-popup"
+      ]
+    },
+    {
+      "url": "https://admin.doneovernight.com/cp",
+      "expectedStatus": 200,
+      "routeType": "admin",
+      "owner": "commonpl4ce",
+      "notes": "Admin COMMONPL4CE must show Website OS, never public /cp.",
+      "mustContain": [
+        "COMMONPL4CE Website OS",
+        "WEBSITE ACCESS",
+        "data-commonpl4ce-analytics-panel"
+      ],
+      "mustNotContain": [
+        "booker-station",
+        "Booking page temporarily offline.",
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "canonical\" href=\"https://doneovernight.com/cp",
+        "data-newsletter-popup"
+      ]
+    },
+    {
+      "url": "https://admin.doneovernight.com/__route-safety-missing__",
+      "expectedStatus": 200,
+      "routeType": "admin",
+      "owner": "doneovernight",
+      "notes": "Unknown admin routes must land on admin-safe fallback only.",
+      "mustContain": [
+        "Admin route not available.",
+        "DONEOVERNIGHT admin-safe fallback marker"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE",
+        "booker-station",
+        "WEBSITE ACCESS",
+        "COMMONPL4CE_ANALYTICS_SCOPE"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "doneovernight",
+      "notes": "Main DONEOVERNIGHT homepage must not load COMMONPL4CE analytics.",
+      "mustContain": [
+        "DONEOVERNIGHT"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "commonpl4ce_newsletter",
+        "data-commonpl4ce-analytics-panel",
+        "data-newsletter-popup"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/start",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "doneovernight",
+      "notes": "Start surface must not load COMMONPL4CE analytics.",
+      "mustContain": [
+        "DONEOVERNIGHT"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "commonpl4ce_newsletter",
+        "data-commonpl4ce-analytics-panel",
+        "data-newsletter-popup"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/task",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "doneovernight",
+      "notes": "Task/ask surface must not load COMMONPL4CE analytics.",
+      "mustContain": [
+        "DONEOVERNIGHT"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "commonpl4ce_newsletter",
+        "data-commonpl4ce-analytics-panel",
+        "data-newsletter-popup"
+      ]
+    },
+    {
+      "url": "https://doneovernight.com/mosyaamosya",
+      "expectedStatus": 200,
+      "routeType": "public",
+      "owner": "mosyaamosya",
+      "notes": "Mina public page must not load COMMONPL4CE analytics.",
+      "mustContain": [
+        "Mina"
+      ],
+      "mustNotContain": [
+        "COMMONPL4CE_ANALYTICS_SCOPE",
+        "commonpl4ce_newsletter",
+        "data-commonpl4ce-analytics-panel",
+        "data-newsletter-popup"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book a Shoot | COMMONPL4CE</title>
+  <meta name="description" content="Book a COMMONPL4CE campaign, editorial or lifestyle shoot.">
+  <link rel="canonical" href="https://doneovernight.com/cp-book">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/common-place/final/cp-favicon-32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/common-place/final/cp-favicon-96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/common-place/final/cp-apple-touch-icon.png">
+  <style>
+    :root {
+      --black: #060606;
+      --ink: #0a0a09;
+      --paper: #ede6d8;
+      --light: #f1eadc;
+      --muted: rgba(237, 230, 216, .64);
+      --line: rgba(237, 230, 216, .18);
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+      --type-label-size: 11px;
+      --type-label-weight: 850;
+      --type-label-tracking: .16em;
+      --type-body-size: clamp(17px, 1.45vw, 22px);
+      --type-body-line: 1.34;
+      --type-display-weight: 850;
+    }
+
+    * { box-sizing: border-box; }
+    html {
+      min-height: 100%;
+      background: var(--black);
+      scroll-behavior: smooth;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--black);
+      color: var(--paper);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      pointer-events: none;
+      opacity: .08;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea {
+      border-radius: 0;
+      font: inherit;
+      color: inherit;
+    }
+
+    .site-header {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: clamp(16px, 2.4vw, 30px);
+    }
+    .header-logo {
+      width: clamp(34px, 4vw, 50px);
+      height: auto;
+    }
+    .book-link {
+      position: relative;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--paper);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: color 180ms ease, opacity 180ms ease;
+    }
+    .book-link::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -6px;
+      height: 1px;
+      background: currentColor;
+      opacity: .34;
+      transform: scaleX(.42);
+      transform-origin: center;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .book-link:hover {
+      color: #fff;
+      opacity: .88;
+    }
+    .book-link:hover::after {
+      opacity: .72;
+      transform: scaleX(1);
+    }
+
+    .success-flash-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: none;
+      background: var(--black);
+      pointer-events: none;
+    }
+    .success-flash-backdrop::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .success-flash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      pointer-events: none;
+    }
+    .success-flash-lockup {
+      display: grid;
+      justify-items: center;
+      gap: clamp(18px, 3vw, 34px);
+      opacity: 0;
+    }
+    .success-flash-lockup img {
+      width: min(82vw, 1040px);
+      height: auto;
+    }
+    .success-flash-copy {
+      margin: 0;
+      color: var(--paper);
+      font-size: clamp(15px, 2.8vw, 34px);
+      font-weight: var(--type-display-weight);
+      line-height: .92;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .success-flash-backdrop.is-visible,
+    .success-flash-screen.is-visible {
+      display: grid;
+      animation: introExit 340ms ease 2380ms forwards;
+    }
+    .success-flash-backdrop.is-visible::after {
+      animation: cameraFlash 180ms ease 2180ms forwards;
+    }
+    .success-flash-screen.is-visible .success-flash-lockup {
+      animation: introLogo 950ms ease 180ms forwards;
+    }
+    .success-flash-backdrop.is-hidden,
+    .success-flash-screen.is-hidden {
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      animation: none;
+    }
+
+    @keyframes introLogo {
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes introExit {
+      to {
+        opacity: 0;
+        visibility: hidden;
+      }
+    }
+    @keyframes cameraFlash {
+      0% { opacity: 0; }
+      28% { opacity: .92; }
+      100% { opacity: 0; }
+    }
+
+    .dark-section {
+      background: var(--ink);
+      color: var(--paper);
+      padding: clamp(92px, 12vw, 176px) clamp(20px, 8vw, 140px);
+    }
+    .booking {
+      min-height: calc(100vh - 154px);
+      display: grid;
+      grid-template-columns: minmax(220px, .62fr) minmax(0, 1fr);
+      gap: clamp(34px, 7vw, 120px);
+      align-items: start;
+    }
+    .booking.is-booking-offline {
+      min-height: calc(100vh - 154px);
+      grid-template-columns: minmax(0, 580px);
+      justify-content: center;
+      text-align: center;
+    }
+    .booking-offline-card {
+      width: min(100%, 580px);
+      margin: 0 auto;
+      border: 1px solid rgba(237, 230, 216, .16);
+      background:
+        radial-gradient(circle at top, rgba(237, 230, 216, .12), transparent 28rem),
+        rgba(237, 230, 216, .055);
+      padding: clamp(34px, 6vw, 58px);
+      backdrop-filter: blur(18px);
+    }
+    .booking-offline-card img {
+      width: min(250px, 76%);
+      margin: 0 auto 28px;
+      opacity: .94;
+    }
+    .booking-offline-card .step-label {
+      display: block;
+      margin-bottom: 18px;
+    }
+    .booking-offline-card .section-title {
+      max-width: 440px;
+      margin: 0 auto 18px;
+      font-size: clamp(30px, 5vw, 58px);
+      letter-spacing: 0;
+      line-height: .96;
+    }
+    .booking-offline-card .body-copy {
+      max-width: 430px;
+      margin: 0 auto;
+    }
+    .booking-offline-card .cal-button {
+      width: auto;
+      min-width: 190px;
+      margin-top: 30px;
+    }
+    .cp-newsletter {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding-top: clamp(72px, 9vw, 128px);
+      padding-bottom: clamp(72px, 9vw, 128px);
+    }
+    .cp-newsletter-card {
+      width: min(100%, 560px);
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+    }
+    .cp-newsletter-form {
+      width: min(100%, 420px);
+      display: none;
+      gap: 12px;
+    }
+    .cp-newsletter.is-open .cp-newsletter-form {
+      display: grid;
+    }
+    .cp-newsletter.is-open .cp-newsletter-toggle {
+      display: none;
+    }
+    .cp-newsletter-status {
+      min-height: 1.4em;
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: .12em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .cp-newsletter.is-success .cp-newsletter-form,
+    .cp-newsletter.is-success .cp-newsletter-toggle {
+      display: none;
+    }
+    .section-title {
+      margin: 0;
+      font-size: clamp(38px, 6.4vw, 104px);
+      font-weight: var(--type-display-weight);
+      line-height: .86;
+      letter-spacing: -.045em;
+      text-transform: uppercase;
+    }
+    .body-copy {
+      max-width: 660px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: var(--type-body-size);
+      font-weight: 400;
+      line-height: var(--type-body-line);
+    }
+    .intake {
+      display: grid;
+      gap: 30px;
+    }
+    .step {
+      border: 0;
+      border-top: 1px solid var(--line);
+      padding: 18px 0 0;
+      margin: 0;
+    }
+    .step-label {
+      display: block;
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: var(--type-label-tracking);
+      line-height: 1.25;
+      text-transform: uppercase;
+    }
+    .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+    .choice-row input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .choice-row span,
+    .field {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      border: 1px solid rgba(237,230,216,.3);
+      padding: 11px 14px;
+      background: transparent;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .choice-row input:checked + span,
+    .choice-row span:hover,
+    .field:focus {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.07);
+      outline: none;
+    }
+    .field {
+      width: 100%;
+      appearance: none;
+    }
+    textarea.field {
+      min-height: 116px;
+      resize: vertical;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .calendar {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    .calendar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .calendar-title {
+      margin: 0;
+      color: var(--paper);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: var(--type-label-tracking);
+      text-transform: uppercase;
+    }
+    .calendar-nav {
+      display: inline-flex;
+      gap: 8px;
+    }
+    .calendar-nav button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(237,230,216,.3);
+      background: transparent;
+      color: var(--paper);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .calendar-nav button:hover {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.07);
+    }
+    .calendar-weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .calendar-weekdays span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .calendar-day {
+      min-height: 42px;
+      border: 1px solid rgba(237,230,216,.2);
+      background: transparent;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .calendar-day:hover,
+    .calendar-day.is-selected {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.1);
+    }
+    .calendar-day.is-muted {
+      color: rgba(237,230,216,.32);
+      cursor: default;
+    }
+    .calendar-day.is-muted:hover {
+      border-color: rgba(237,230,216,.2);
+      background: transparent;
+    }
+    .form-success,
+    .form-error {
+      display: none;
+      margin: 18px 0 0;
+      font-family: var(--serif);
+      font-size: clamp(18px, 1.8vw, 24px);
+      line-height: 1.22;
+    }
+    .form-success {
+      color: var(--paper);
+    }
+    .form-preview-note {
+      display: none;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .intake.is-preview .form-preview-note {
+      display: block;
+    }
+    .form-error {
+      color: #f0a9a0;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .intake.is-success .form-success,
+    .intake.is-error .form-error {
+      display: block;
+    }
+    .field.is-invalid,
+    .step.is-invalid .choice-row span {
+      border-color: rgba(240,169,160,.78);
+    }
+    .cal-block {
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .cal-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 14px 18px;
+      border: 0;
+      background: var(--paper);
+      color: var(--black);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+    }
+    .cal-button:hover:not(:disabled) {
+      opacity: .92;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .2);
+    }
+    .cal-button:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+    .cal-button:disabled {
+      cursor: wait;
+      opacity: .58;
+    }
+    .intake.is-error {
+      animation: formShake 220ms ease;
+    }
+    @keyframes formShake {
+      0%, 100% { transform: translateX(0); }
+      28% { transform: translateX(-4px); }
+      58% { transform: translateX(3px); }
+      82% { transform: translateX(-2px); }
+    }
+    .cal-note {
+      max-width: 520px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: var(--type-body-size);
+      line-height: var(--type-body-line);
+    }
+    .booking-confirmation {
+      display: none;
+      min-height: calc(100vh - 154px);
+      align-content: center;
+    }
+    .booking-confirmation-inner {
+      width: min(100%, 760px);
+      display: grid;
+      gap: 20px;
+    }
+    .confirmation-note {
+      margin: 0;
+      max-width: 540px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: var(--type-label-weight);
+      letter-spacing: .12em;
+      line-height: 1.5;
+      text-transform: uppercase;
+    }
+    .confirmation-link {
+      width: fit-content;
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(237,230,216,.3);
+      padding: 14px 18px;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: border-color 180ms ease, background 180ms ease;
+    }
+    .confirmation-link:hover {
+      border-color: rgba(237,230,216,.84);
+      background: rgba(237,230,216,.07);
+    }
+    body.has-confirmation .booking {
+      display: none;
+    }
+    body.has-confirmation .booking-confirmation {
+      display: grid;
+    }
+    .footer {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: clamp(24px, 4vw, 52px);
+      justify-items: start;
+      align-items: center;
+      min-height: clamp(154px, 17vw, 238px);
+      overflow: hidden;
+      isolation: isolate;
+      padding: clamp(24px, 4vw, 44px);
+      background: #080807;
+      color: var(--paper);
+      border-top: 1px solid var(--line);
+    }
+    .footer-wordmark {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: clamp(-96px, -6.4vw, -54px);
+      width: min(92vw, 960px);
+      max-width: none;
+      height: auto;
+      margin: 0 auto;
+      opacity: .11;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .footer-brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2.2vw, 28px);
+      flex-wrap: wrap;
+    }
+    .footer-contact-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: var(--type-label-tracking);
+      text-transform: uppercase;
+    }
+    .footer-contact {
+      display: flex;
+      position: relative;
+      z-index: 1;
+      align-items: center;
+      gap: 14px;
+      color: var(--muted);
+    }
+    .footer-contact a {
+      display: inline-flex;
+      width: 36px;
+      height: 36px;
+      align-items: center;
+      justify-content: center;
+      color: rgba(237, 230, 216, .72);
+    }
+    .footer-contact a:hover {
+      color: var(--paper);
+    }
+    .footer-contact svg {
+      width: 26px;
+      height: 26px;
+      stroke: currentColor;
+    }
+    .footer-availability {
+      margin: 0;
+      color: rgba(237, 230, 216, .48);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: var(--type-label-tracking);
+      text-transform: uppercase;
+    }
+    .footer-credit {
+      display: grid;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+      align-self: center;
+      justify-items: start;
+      color: var(--muted);
+      font-size: var(--type-label-size);
+      font-weight: var(--type-label-weight);
+      letter-spacing: var(--type-label-tracking);
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+    .footer-credit:hover {
+      color: var(--paper);
+    }
+    .footer-credit img {
+      width: clamp(118px, 14vw, 184px);
+      height: auto;
+    }
+
+    @media (max-width: 760px) {
+      .dark-section {
+        padding: 92px 20px 82px;
+      }
+      .booking {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer {
+        grid-template-columns: 1fr;
+        min-height: 230px;
+      }
+      .footer-contact a {
+        width: 32px;
+        height: 32px;
+      }
+      .footer-contact svg {
+        width: 24px;
+        height: 24px;
+      }
+      .footer-credit {
+        justify-items: start;
+        align-self: start;
+      }
+      .footer-wordmark {
+        bottom: -52px;
+        width: 132vw;
+        max-width: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .success-flash-backdrop,
+      .success-flash-screen,
+      .success-flash-backdrop::after {
+        display: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="success-flash-backdrop" id="successFlashBackdrop" aria-hidden="true"></div>
+  <div class="success-flash-screen" id="successFlashScreen" aria-hidden="true">
+    <div class="success-flash-lockup">
+      <img src="/assets/common-place/final/wordmark-intro-commonpl4ces.png" alt="">
+      <p class="success-flash-copy">WE SHOOT COMMONPLACES.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const COMMONPL4CE_ANALYTICS_SCOPE = 'commonpl4ce';
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      const sessionKey = 'commonpl4ce_analytics_session';
+      const sessionId = sessionStorage.getItem(sessionKey) || (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+      sessionStorage.setItem(sessionKey, sessionId);
+
+      function track(eventType, metadata) {
+        fetch('/api/track-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            action: 'track_event',
+            source: COMMONPL4CE_ANALYTICS_SCOPE,
+            event_type: eventType,
+            path,
+            session_id: sessionId,
+            metadata: metadata || {}
+          }),
+          keepalive: true
+        }).catch(function () {});
+      }
+
+      window.commonpl4ceTrack = track;
+      track('page_view');
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      ready(function () {
+        const seenDepths = new Set();
+        function checkScrollDepth() {
+          const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          const depth = Math.min(100, Math.round((window.scrollY / scrollable) * 100));
+          [25, 50, 75, 100].forEach(function (mark) {
+            if (depth >= mark && !seenDepths.has(mark)) {
+              seenDepths.add(mark);
+              track('scroll_depth', { depth: String(mark) });
+            }
+          });
+          if (seenDepths.size === 4) window.removeEventListener('scroll', checkScrollDepth);
+        }
+
+        window.addEventListener('scroll', checkScrollDepth, { passive: true });
+        checkScrollDepth();
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (!['/cp', '/cp-book'].includes(path)) return;
+
+      function ready(callback) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', callback, { once: true });
+        } else {
+          callback();
+        }
+      }
+
+      function track(eventType, metadata) {
+        if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(eventType, metadata);
+      }
+
+      ready(function () {
+        const root = document.querySelector('[data-cp-newsletter]');
+        if (!root) return;
+        const toggle = root.querySelector('[data-newsletter-toggle]');
+        const form = root.querySelector('[data-newsletter-form]');
+        const email = root.querySelector('[data-newsletter-email]');
+        const status = root.querySelector('[data-newsletter-status]');
+
+        toggle?.addEventListener('click', function () {
+          root.classList.add('is-open');
+          if (status) status.textContent = '';
+          track('newsletter_start');
+          window.setTimeout(function () { email?.focus(); }, 60);
+        });
+
+        form?.addEventListener('submit', async function (event) {
+          event.preventDefault();
+          const value = String(email?.value || '').trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            if (status) status.textContent = 'Please add a valid email.';
+            return;
+          }
+          track('newsletter_submit');
+          const button = form.querySelector('button[type="submit"]');
+          if (button) button.disabled = true;
+          try {
+            const response = await fetch('/api/task-submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                action: 'commonpl4ce_newsletter_signup',
+                source: 'commonpl4ce_newsletter',
+                intakeVersion: 'commonpl4ce_newsletter_v1',
+                email: value,
+                path
+              })
+            });
+            const result = await response.json().catch(function () { return {}; });
+            if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
+            root.classList.add('is-success');
+            if (status) status.textContent = 'Thank you. You\u2019re on the list.';
+            track('newsletter_success');
+          } catch (error) {
+            if (status) status.textContent = error.message || 'Newsletter is not connected yet.';
+            if (button) button.disabled = false;
+          }
+        });
+      });
+    })();
+  </script>
+
+  <header class="site-header" aria-label="COMMONPL4CE">
+    <a href="/cp" aria-label="COMMONPL4CE home">
+      <img class="header-logo" src="/assets/common-place/final/cp-header-small.png" alt="COMMONPL4CE">
+    </a>
+    <a class="book-link" href="/cp">Archive</a>
+  </header>
+
+  <main>
+    <section class="dark-section booking" id="booker-station" aria-labelledby="booker-title">
+      <div>
+        <h1 class="section-title" id="booker-title">Book a shoot</h1>
+        <p class="body-copy">Tell me what you have in mind.</p>
+      </div>
+      <form class="intake" id="cpBookerForm">
+        <div class="form-grid">
+          <label class="step">
+            <span class="step-label">Name</span>
+            <input class="field" name="name" type="text" autocomplete="name" required>
+          </label>
+          <label class="step">
+            <span class="step-label">Brand / company</span>
+            <input class="field" name="brand" type="text" autocomplete="organization" required>
+          </label>
+          <label class="step">
+            <span class="step-label">Email</span>
+            <input class="field" name="email" type="email" autocomplete="email" required>
+          </label>
+          <label class="step">
+            <span class="step-label">Instagram</span>
+            <input class="field" name="instagram" type="text" autocomplete="off">
+          </label>
+        </div>
+        <fieldset class="step">
+          <legend class="step-label">Project type</legend>
+          <div class="choice-row">
+            <label><input type="radio" name="project" value="campaign"><span>Campaign</span></label>
+            <label><input type="radio" name="project" value="fashion"><span>Fashion</span></label>
+            <label><input type="radio" name="project" value="lifestyle"><span>Lifestyle</span></label>
+            <label><input type="radio" name="project" value="travel"><span>Travel</span></label>
+            <label><input type="radio" name="project" value="editorial"><span>Editorial</span></label>
+            <label><input type="radio" name="project" value="portraits"><span>Portraits</span></label>
+            <label><input type="radio" name="project" value="other"><span>Other</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="step">
+          <legend class="step-label">Location</legend>
+          <div class="choice-row">
+            <label><input type="radio" name="location" value="netherlands"><span>Netherlands</span></label>
+            <label><input type="radio" name="location" value="europe"><span>Europe</span></label>
+            <label><input type="radio" name="location" value="worldwide"><span>Worldwide</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="step">
+          <legend class="step-label">Preferred date</legend>
+          <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
+        </fieldset>
+        <p class="cal-note">Select a preferred shoot date.</p>
+        <div class="calendar" role="group" aria-label="Calendar date selector">
+          <div class="calendar-head">
+            <h3 class="calendar-title" id="calendarTitle">Calendar</h3>
+            <div class="calendar-nav">
+              <button type="button" id="calendarPrev" aria-label="Previous month">&lsaquo;</button>
+              <button type="button" id="calendarNext" aria-label="Next month">&rsaquo;</button>
+            </div>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+        <fieldset class="step">
+          <legend class="step-label">Budget range</legend>
+          <div class="choice-row">
+            <label><input type="radio" name="budget" value="500"><span>&euro;500+</span></label>
+            <label><input type="radio" name="budget" value="1000"><span>&euro;1.000+</span></label>
+            <label><input type="radio" name="budget" value="2500"><span>&euro;2.500+</span></label>
+            <label><input type="radio" name="budget" value="5000"><span>&euro;5.000+</span></label>
+          </div>
+        </fieldset>
+        <label class="step">
+          <span class="step-label">References / mood / notes</span>
+          <textarea class="field" name="references" placeholder="Add links or describe the feeling"></textarea>
+        </label>
+        <div class="cal-block">
+          <button class="cal-button" type="submit">Send request</button>
+          <p class="cal-note">This sends a note about your project. The shoot is only confirmed after we speak.</p>
+          <p class="form-success" id="bookerSuccess" role="status">Request received.<br>CP will reply with availability and direction.</p>
+          <p class="form-preview-note" id="bookerPreviewNote">Your request is ready. Please email CP directly if you do not receive a reply.</p>
+          <p class="form-error" id="bookerError" role="alert"></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="dark-section booking-confirmation" id="bookingConfirmation" aria-labelledby="confirmation-title" aria-live="polite">
+      <div class="booking-confirmation-inner">
+        <h1 class="section-title" id="confirmation-title">Thank you for your request.</h1>
+        <p class="body-copy">We received your booking request. We&rsquo;ll review the direction and get back to you as soon as possible.</p>
+        <p class="confirmation-note">A confirmation email will be added soon. For now, your request has been sent.</p>
+        <a class="confirmation-link" href="/cp">Back to COMMONPL4CE</a>
+      </div>
+    </section>
+
+    <section class="dark-section cp-newsletter" data-cp-newsletter aria-label="COMMONPL4CE newsletter">
+      <div class="cp-newsletter-card">
+        <p class="step-label">Newsletter</p>
+        <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+        <form class="cp-newsletter-form" data-newsletter-form>
+          <label class="step">
+            <span class="step-label">Email</span>
+            <input class="field" data-newsletter-email type="email" autocomplete="email" required>
+          </label>
+          <button class="cal-button" type="submit">Join</button>
+        </form>
+        <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img class="footer-wordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
+    <div class="footer-brand">
+      <p class="footer-contact-label">Contact</p>
+      <nav class="footer-contact" aria-label="COMMONPL4CE contact">
+        <a href="https://instagram.com/commonpl4ce" aria-label="COMMONPL4CE Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5"></rect>
+            <circle cx="12" cy="12" r="4.2"></circle>
+            <circle cx="17.2" cy="6.8" r=".8" fill="currentColor" stroke="none"></circle>
+          </svg>
+        </a>
+        <a href="mailto:book@commonpl4ce.com" aria-label="Email COMMONPL4CE">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect>
+            <path d="m4.5 7 7.5 6 7.5-6"></path>
+          </svg>
+        </a>
+      </nav>
+      <p class="footer-availability">Available worldwide</p>
+    </div>
+    <a class="footer-credit" href="https://ask.doneovernight.com">
+      <span>Powered by</span>
+      <img src="/brand/doneovernight-white.png" alt="DONEOVERNIGHT">
+    </a>
+  </footer>
+
+  <script>
+    (function () {
+      const form = document.getElementById('cpBookerForm');
+      const calendarGrid = document.getElementById('calendarGrid');
+      const calendarTitle = document.getElementById('calendarTitle');
+      const preferredDate = document.getElementById('preferredDate');
+      const previous = document.getElementById('calendarPrev');
+      const next = document.getElementById('calendarNext');
+      const submitButton = form.querySelector('.cal-button');
+      const errorMessage = document.getElementById('bookerError');
+      const flashBackdrop = document.getElementById('successFlashBackdrop');
+      const flashScreen = document.getElementById('successFlashScreen');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const SITE_CONFIG_API = '/api/task-submit?commonpl4ce_site_config=1';
+      const SITE_CONFIG_FALLBACK = '/assets/common-place/config/site-content.json';
+      const DEFAULT_BOOKING_AVAILABILITY = {
+        status: 'online',
+        offlineHeading: 'Booking temporarily unavailable.',
+        offlineMessage: 'Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.',
+        offlineCtaLabel: 'Visit COMMONPL4CE',
+        offlineCtaLink: '/cp'
+      };
+
+      if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
+      if (submitButton) submitButton.disabled = true;
+
+      const today = new Date();
+      let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      let selectedDate = null;
+      let isSubmitting = false;
+      let formStarted = false;
+      const progressedFields = new Set();
+
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      function renderCalendar() {
+        calendarGrid.innerHTML = '';
+        calendarTitle.textContent = visibleMonth.toLocaleDateString(undefined, {
+          month: 'long',
+          year: 'numeric'
+        });
+
+        const year = visibleMonth.getFullYear();
+        const month = visibleMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const leadingBlanks = (firstDay.getDay() + 6) % 7;
+
+        for (let i = 0; i < leadingBlanks; i += 1) {
+          const blank = document.createElement('button');
+          blank.type = 'button';
+          blank.className = 'calendar-day is-muted';
+          blank.tabIndex = -1;
+          blank.setAttribute('aria-hidden', 'true');
+          calendarGrid.appendChild(blank);
+        }
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const date = new Date(year, month, day);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'calendar-day';
+          button.textContent = String(day);
+          button.setAttribute('aria-label', date.toLocaleDateString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          }));
+
+          if (selectedDate && formatDate(selectedDate) === formatDate(date)) {
+            button.classList.add('is-selected');
+          }
+
+          button.addEventListener('click', function () {
+            selectedDate = date;
+            preferredDate.value = formatDate(date);
+            renderCalendar();
+          });
+
+          calendarGrid.appendChild(button);
+        }
+      }
+
+      previous.addEventListener('click', function () {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
+        renderCalendar();
+      });
+
+      next.addEventListener('click', function () {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
+        renderCalendar();
+      });
+
+      const field = (name) => form.elements[name];
+      const selectedRadio = (name) => form.querySelector(`input[name="${name}"]:checked`);
+      const clean = (value) => String(value || '').trim();
+      const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(value));
+      const escapeHTML = (value) => clean(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+      const normalizeBookingAvailability = (value = {}) => {
+        const ctaLink = clean(value.offlineCtaLink || value.ctaLink) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink;
+        return {
+          status: clean(value.status).toLowerCase() === 'offline' ? 'offline' : 'online',
+          offlineHeading: clean(value.offlineHeading || value.heading) || DEFAULT_BOOKING_AVAILABILITY.offlineHeading,
+          offlineMessage: clean(value.offlineMessage || value.message) || DEFAULT_BOOKING_AVAILABILITY.offlineMessage,
+          offlineCtaLabel: clean(value.offlineCtaLabel || value.ctaLabel) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLabel,
+          offlineCtaLink: ctaLink.startsWith('/') || /^https?:\/\//i.test(ctaLink) ? ctaLink : DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink
+        };
+      };
+      const humanMessage = (value, fallback = 'Request could not be sent. Please try again.') => {
+        if (!value) return fallback;
+        if (typeof value === 'string') return clean(value) || fallback;
+        if (value instanceof Error) return humanMessage(value.message, fallback);
+        if (typeof value === 'object') {
+          return humanMessage(value.message || value.error || value.code || value.statusText, fallback);
+        }
+        return fallback;
+      };
+      const track = (eventType, metadata) => {
+        if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(eventType, metadata || {});
+      };
+
+      async function fetchBookingAvailability() {
+        const apiConfig = await fetch(SITE_CONFIG_API, { cache: 'no-store' })
+          .then((response) => response.ok ? response.json() : null)
+          .then((data) => data && data.success === true ? data.config : null)
+          .catch(() => null);
+        if (apiConfig) return normalizeBookingAvailability(apiConfig.bookingAvailability);
+
+        const staticConfig = await fetch(SITE_CONFIG_FALLBACK, { cache: 'no-store' })
+          .then((response) => response.ok ? response.json() : null)
+          .catch(() => null);
+        return normalizeBookingAvailability(staticConfig?.bookingAvailability);
+      }
+
+      function renderBookingOffline(booking) {
+        const section = document.getElementById('booker-station');
+        if (!section) return;
+        form.querySelectorAll('input, textarea, button, select').forEach((field) => {
+          field.disabled = true;
+        });
+        section.classList.add('is-booking-offline');
+        section.innerHTML = `
+          <article class="booking-offline-card">
+            <img src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+            <span class="step-label">Booking status</span>
+            <h1 class="section-title">${escapeHTML(booking.offlineHeading)}</h1>
+            <p class="body-copy">${escapeHTML(booking.offlineMessage)}</p>
+            <a class="cal-button" href="${escapeHTML(booking.offlineCtaLink)}">${escapeHTML(booking.offlineCtaLabel)}</a>
+          </article>
+        `;
+      }
+
+      fetchBookingAvailability().then((booking) => {
+        if (booking.status === 'offline') {
+          renderBookingOffline(booking);
+          return;
+        }
+        if (submitButton) submitButton.disabled = false;
+      }).catch(() => {
+        if (submitButton) submitButton.disabled = false;
+      });
+
+      function clearFormState() {
+        form.classList.remove('is-error', 'is-preview');
+        form.querySelectorAll('.is-invalid').forEach((element) => element.classList.remove('is-invalid'));
+        if (errorMessage) errorMessage.textContent = '';
+      }
+
+      function markInvalid(element) {
+        if (!element) return;
+        element.classList.add('is-invalid');
+      }
+
+      function validateForm() {
+        const projectFieldset = form.querySelector('input[name="project"]')?.closest('fieldset');
+        const locationFieldset = form.querySelector('input[name="location"]')?.closest('fieldset');
+        const budgetFieldset = form.querySelector('input[name="budget"]')?.closest('fieldset');
+        const invalid = [];
+
+        [
+          ['name', 'Name'],
+          ['brand', 'Brand / company'],
+          ['email', 'Email'],
+          ['preferred-date', 'Preferred date']
+        ].forEach(([name, label]) => {
+          const input = field(name);
+          if (!clean(input?.value)) {
+            markInvalid(input);
+            invalid.push(label);
+          }
+        });
+
+        if (field('email')?.value && !isValidEmail(field('email').value)) {
+          markInvalid(field('email'));
+          invalid.push('Valid email');
+        }
+
+        if (!selectedRadio('project')) {
+          markInvalid(projectFieldset);
+          invalid.push('Project type');
+        }
+        if (!selectedRadio('location')) {
+          markInvalid(locationFieldset);
+          invalid.push('Location');
+        }
+        if (!selectedRadio('budget')) {
+          markInvalid(budgetFieldset);
+          invalid.push('Budget range');
+        }
+
+        return {
+          valid: invalid.length === 0,
+          message: invalid.length ? `Please complete: ${Array.from(new Set(invalid)).join(', ')}.` : ''
+        };
+      }
+
+      function buildPayload() {
+        const references = clean(field('references')?.value);
+        const projectType = selectedRadio('project')?.value || '';
+        const location = selectedRadio('location')?.value || '';
+        const preferredDateValue = clean(field('preferred-date')?.value);
+        const budgetRange = selectedRadio('budget')?.value || '';
+        const brandCompany = clean(field('brand')?.value);
+        const instagram = clean(field('instagram')?.value);
+        const taskDescription = [
+          `COMMONPL4CE booking request for ${brandCompany || 'a new project'}.`,
+          projectType ? `Project type: ${projectType}.` : '',
+          location ? `Location: ${location}.` : '',
+          preferredDateValue ? `Preferred date: ${preferredDateValue}.` : '',
+          budgetRange ? `Budget range: €${budgetRange}+. ` : '',
+          instagram ? `Instagram: ${instagram}.` : '',
+          references ? `References / mood / notes: ${references}` : ''
+        ].filter(Boolean).join('\n');
+
+        return {
+          name: clean(field('name')?.value),
+          company: brandCompany,
+          brandCompany,
+          email: clean(field('email')?.value),
+          instagram,
+          task: taskDescription,
+          task_description: taskDescription,
+          taskSummary: taskDescription,
+          projectType,
+          location,
+          preferredDate: preferredDateValue,
+          deadline: preferredDateValue,
+          budgetRange,
+          clientBudget: budgetRange,
+          client_budget: budgetRange,
+          budget: budgetRange,
+          notes: references,
+          references,
+          links: references,
+          source: 'commonpl4ce_booker',
+          intakeVersion: 'commonpl4ce_booker_v1',
+          brand: 'COMMONPL4CE',
+          internal_owner: 'donovan.vdp@gmail.com',
+          owner_email: 'donovan.vdp@gmail.com',
+          recipient_email: 'donovan.vdp@gmail.com',
+          notification_recipient: 'donovan.vdp@gmail.com',
+          submittedAt: new Date().toISOString()
+        };
+      }
+
+      function showConfirmation() {
+        document.body.classList.add('has-confirmation');
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      }
+
+      function showSuccessFlash() {
+        if (reduceMotion || !flashBackdrop || !flashScreen) {
+          showConfirmation();
+          return;
+        }
+
+        let confirmed = false;
+        function finish() {
+          if (confirmed) return;
+          confirmed = true;
+          flashBackdrop.classList.add('is-hidden');
+          flashScreen.classList.add('is-hidden');
+          showConfirmation();
+        }
+
+        flashBackdrop.classList.remove('is-hidden');
+        flashScreen.classList.remove('is-hidden');
+        flashBackdrop.classList.add('is-visible');
+        flashScreen.classList.add('is-visible');
+        flashScreen.addEventListener('animationend', function onAnimationEnd(event) {
+          if (event.animationName !== 'introExit') return;
+          flashScreen.removeEventListener('animationend', onAnimationEnd);
+          finish();
+        });
+        window.setTimeout(finish, 2900);
+      }
+
+      function trackFormStart() {
+        if (!formStarted) {
+          formStarted = true;
+          track('form_start', { form: 'cp_booker' });
+        }
+      }
+
+      function trackFormProgress(event) {
+        clearFormState();
+        trackFormStart();
+        const fieldName = event.target?.name || event.target?.id || '';
+        if (fieldName && !progressedFields.has(fieldName)) {
+          progressedFields.add(fieldName);
+          track('field_progress', { field: fieldName });
+        }
+      }
+
+      form.addEventListener('focusin', trackFormStart);
+      form.addEventListener('input', trackFormProgress);
+      form.addEventListener('change', trackFormProgress);
+
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (isSubmitting || form.classList.contains('is-success')) return;
+
+        track('form_submit_attempt', { form: 'cp_booker' });
+        clearFormState();
+        const validation = validateForm();
+        if (!validation.valid) {
+          form.classList.add('is-error');
+          if (errorMessage) errorMessage.textContent = validation.message;
+          track('form_submit_error', { status: 'validation' });
+          return;
+        }
+
+        isSubmitting = true;
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Sending';
+        }
+
+        try {
+          const response = await fetch('/api/task-submit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(buildPayload())
+          });
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok || result.success !== true) {
+            throw new Error(humanMessage(result.error || result.message || result, 'Request could not be sent. Please try again.'));
+          }
+
+          form.classList.add('is-success');
+          if (result.previewMode === true) {
+            form.classList.add('is-preview');
+          }
+          if (submitButton) {
+            submitButton.textContent = 'Request sent';
+          }
+          track('form_submit_success', { form: 'cp_booker' });
+          showSuccessFlash();
+        } catch (error) {
+          form.classList.add('is-error');
+          if (errorMessage) {
+            errorMessage.textContent = humanMessage(error, 'Request could not be sent. Please try again.');
+          }
+          track('form_submit_error', { status: 'api' });
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Send request';
+          }
+          isSubmitting = false;
+        }
+      });
+
+      renderCalendar();
+    })();
+  </script>
+</body>
+</html>

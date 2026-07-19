@@ -15,6 +15,16 @@ const {
   supabaseFetch,
   workspaceSessionMatchesRequest
 } = require("../lib/ops");
+const {
+  changeWebsiteOsPassword,
+  getWebsiteOsSession,
+  loginWebsiteOsUser,
+  logoutOtherWebsiteOsSessions,
+  logoutWebsiteOsUser,
+  publicUser,
+  publicWorkspace,
+  requireWebsiteOsSession
+} = require("../lib/website-os-auth");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
@@ -75,6 +85,80 @@ const HQ_SESSION_COOKIE = "doneovernight_hq_session";
 const HQ_SESSION_TTL_SECONDS = Number(process.env.HQ_SESSION_TTL_SECONDS || 60 * 60 * 24);
 const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
+const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
+const COMMONPLACE_NEWSLETTER_SOURCE = "commonpl4ce_newsletter";
+const COMMONPLACE_NEWSLETTER_VERSION = "commonpl4ce_newsletter_v1";
+const COMMONPLACE_ALLOWED_ANALYTICS_PATHS = new Set(["/cp", "/cp-book"]);
+const COMMONPLACE_ANALYTICS_EVENTS = new Set([
+  "page_view",
+  "hero_view",
+  "scroll_depth",
+  "booker_station_view",
+  "book_cta_click",
+  "project_section_view",
+  "newsletter_start",
+  "newsletter_submit",
+  "newsletter_success",
+  "form_start",
+  "field_progress",
+  "form_submit_attempt",
+  "form_submit_success",
+  "form_submit_error"
+]);
+const COMMONPLACE_SITE_CONFIG_DEFAULT = {
+  version: 1,
+  workspace: "commonpl4ce",
+  updatedAt: "2026-07-09T00:00:00.000Z",
+  hero: {
+    desktop: [
+      ["/assets/common-place/fullscreen/slide-01-opening.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/fullscreen/slide-02-yellow.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-03-hoodie-front.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-04-chair.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-05-duo.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-06-couch.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-07-profile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `desktop_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" })),
+    mobile: [
+      ["/assets/common-place/mobile/slide-01-mobile.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/mobile/slide-02-mobile.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-03-mobile.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-04-mobile.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-05-mobile.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-06-mobile.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-07-mobile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `mobile_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" }))
+  },
+  content: {
+    heroLine: "Available for campaigns, editorials and selected brand projects.",
+    storyTitle: "Shot with feeling.",
+    storyLeadPrimary: "CP creates visual stories for brands, campaigns and people who want their imagery to feel real.",
+    storyLeadSecondary: "Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.",
+    storySmallLine: "For brands that need more than clean content: imagery with mood, memory and presence.",
+    aboutKicker: "Behind the Film",
+    aboutTitle: "Romy Peters",
+    aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
+    behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
+    aboutBodySecondary: "Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.",
+    socials: "Instagram: @commonpl4ce",
+    contactEmail: "book@commonpl4ce.com",
+    availability: "Netherlands\nEurope\nWorldwide",
+    availabilityNote: "Available for campaigns,\neditorials and selected brand projects.",
+    availabilityQuiet: "Limited availability each month.",
+    bookingCtaText: "Start your project",
+    footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
+    footerAvailability: "Available worldwide"
+  },
+  bookingAvailability: {
+    status: "online",
+    offlineHeading: "Booking temporarily unavailable.",
+    offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
+    offlineCtaLabel: "Visit COMMONPL4CE",
+    offlineCtaLink: "/cp"
+  }
+};
 const hqLoginAttempts = new Map();
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
@@ -110,6 +194,188 @@ const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCommonplaceBookingAvailability(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT.bookingAvailability;
+  const status = clean(source.status).toLowerCase() === "offline" ? "offline" : "online";
+  const offlineCtaLink = clean(source.offlineCtaLink || source.ctaLink) || fallback.offlineCtaLink;
+  return {
+    status,
+    offlineHeading: clean(source.offlineHeading || source.heading) || fallback.offlineHeading,
+    offlineMessage: clean(source.offlineMessage || source.message) || fallback.offlineMessage,
+    offlineCtaLabel: clean(source.offlineCtaLabel || source.ctaLabel) || fallback.offlineCtaLabel,
+    offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : fallback.offlineCtaLink
+  };
+}
+
+function normalizeCommonplaceSiteConfig(config = {}) {
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT;
+  const source = config && typeof config === "object" ? config : {};
+  const normalizeHero = (kind) => {
+    const slots = Array.isArray(source.hero?.[kind]) && source.hero[kind].length ? source.hero[kind] : fallback.hero[kind];
+    return slots.concat(fallback.hero[kind]).slice(0, 7).map((slot = {}, index) => ({
+      ...fallback.hero[kind][index],
+      ...slot,
+      id: clean(slot.id) || `${kind}_hero_${index + 1}`,
+      src: clean(slot.src || slot.image) || fallback.hero[kind][index].src,
+      alt: clean(slot.alt) || fallback.hero[kind][index].alt,
+      status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : "Ready"
+    }));
+  };
+  return {
+    ...fallback,
+    ...source,
+    version: Number(source.version || fallback.version) || fallback.version,
+    workspace: "commonpl4ce",
+    updatedAt: clean(source.updatedAt) || fallback.updatedAt,
+    hero: {
+      desktop: normalizeHero("desktop"),
+      mobile: normalizeHero("mobile")
+    },
+    content: {
+      ...fallback.content,
+      ...(source.content && typeof source.content === "object" ? source.content : {})
+    },
+    bookingAvailability: normalizeCommonplaceBookingAvailability(source.bookingAvailability)
+  };
+}
+
+function isCommonplaceSiteConfigRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") return true;
+  } catch (error) {}
+  return input.action === COMMONPLACE_SITE_CONFIG_SOURCE || input.intent === COMMONPLACE_SITE_CONFIG_SOURCE;
+}
+
+async function verifyAdminKey(adminKey) {
+  if (!clean(adminKey)) return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ admin_key: adminKey }),
+      signal: controller.signal
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    return data?.success === true;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function verifyAdminOrWebsiteOsSession(req, adminKey, roles = ["Owner", "Admin", "Editor"]) {
+  if (clean(adminKey)) return verifyAdminKey(adminKey);
+  await requireWebsiteOsSession(req, { slug: "cp", roles });
+  return true;
+}
+
+async function readCommonplaceSiteConfigRecord() {
+  const rows = await supabaseFetch([
+    `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_SITE_CONFIG_SOURCE)}`,
+    "select=*",
+    "order=updated_at.desc",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+function configFromCommonplaceRecord(record = {}) {
+  return normalizeCommonplaceSiteConfig(record.raw_payload?.config || record.raw_payload || COMMONPLACE_SITE_CONFIG_DEFAULT);
+}
+
+async function handleCommonplaceSiteConfigGet(req, res) {
+  try {
+    const record = await readCommonplaceSiteConfigRecord();
+    const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
+    return send(res, 200, {
+      success: true,
+      config,
+      source: record ? "task_requests" : "default",
+      publishedAt: record?.updated_at || config.updatedAt || null
+    });
+  } catch (error) {
+    return send(res, 200, {
+      success: true,
+      config: normalizeCommonplaceSiteConfig(),
+      source: "default",
+      warning: error.code || error.message || "config_store_unavailable"
+    });
+  }
+}
+
+async function handleCommonplaceSiteConfigPost(req, res, input = {}) {
+  const authorized = await verifyAdminOrWebsiteOsSession(req, input.admin_key || input.adminKey || req.headers["x-admin-key"], ["Owner", "Admin", "Editor"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+  const config = normalizeCommonplaceSiteConfig({
+    ...(input.config || {}),
+    updatedAt: new Date().toISOString()
+  });
+  const rawPayload = {
+    source: COMMONPLACE_SITE_CONFIG_SOURCE,
+    config,
+    published_at: config.updatedAt,
+    workspace: "commonpl4ce"
+  };
+  const existing = await readCommonplaceSiteConfigRecord().catch(() => null);
+  let row = null;
+
+  if (existing?.id || existing?.task_id) {
+    const filter = existing.id
+      ? `id=eq.${encodeURIComponent(existing.id)}`
+      : `task_id=eq.${encodeURIComponent(existing.task_id)}`;
+    const rows = await supabaseFetch(`task_requests?${filter}&select=*`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        updated_at: config.updatedAt,
+        status: "published",
+        queue_state: "website_config",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  } else {
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: config.updatedAt,
+        updated_at: config.updatedAt,
+        status: "published",
+        payment_status: "not_required",
+        queue_state: "website_config",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE Website OS",
+        email: "book@commonpl4ce.com",
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        source: COMMONPLACE_SITE_CONFIG_SOURCE,
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  }
+
+  return send(res, 200, {
+    success: true,
+    config: row ? configFromCommonplaceRecord(row) : config,
+    source: "task_requests",
+    publishedAt: row?.updated_at || config.updatedAt
+  });
 }
 
 const EMAIL_TYPO_DOMAIN_SUGGESTIONS = {
@@ -448,6 +714,60 @@ function safeAnalyticsMetadata(input = {}) {
   return output;
 }
 
+function requestHost(req, input = {}) {
+  const raw = clean(input.host || req.headers["x-forwarded-host"] || req.headers.host).toLowerCase();
+  return raw.split(",")[0].trim();
+}
+
+function normalizeCommonplacePublicPath(value = "", fallback = "") {
+  const raw = clean(value || fallback);
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw, "https://doneovernight.com");
+    const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  } catch (error) {
+    const pathname = raw.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  }
+}
+
+function resolveCommonplaceAnalyticsPath(req, input = {}) {
+  return normalizeCommonplacePublicPath(
+    input.path || input.route || input.pathname || input.page_path || input.url,
+    req.headers.referer || ""
+  );
+}
+
+function isCommonplaceAnalyticsInput(input = {}) {
+  return clean(input.source || input.scope || input.workspace).toLowerCase() === COMMONPLACE_ANALYTICS_SOURCE ||
+    input.action === "commonpl4ce_analytics_event" ||
+    input.intent === "commonpl4ce_analytics_event";
+}
+
+function normalizeCommonplaceAnalyticsEvent(value = "") {
+  const normalized = clean(value).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return COMMONPLACE_ANALYTICS_EVENTS.has(normalized) ? normalized : "";
+}
+
+function safeCommonplaceAnalyticsMetadata(input = {}) {
+  const metadata = safeAnalyticsMetadata(input);
+  const output = {};
+  const allowed = new Set(["depth", "section", "field", "label", "button", "status", "source_path", "form"]);
+  Object.entries(metadata).forEach(([key, value]) => {
+    if (!allowed.has(key)) return;
+    if (key === "depth" && !["25", "50", "75", "100"].includes(String(value))) return;
+    output[key] = value;
+  });
+  return output;
+}
+
+function analyticsRangeStart(range = "7d") {
+  const now = Date.now();
+  const days = range === "24h" ? 1 : range === "30d" ? 30 : 7;
+  return new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function hashAnalyticsUserAgent(value = "") {
   const safe = clean(value).slice(0, 500);
   if (!safe) return "";
@@ -462,7 +782,75 @@ function isTrackEventRequest(req, input = {}) {
   return input.action === "track_event" || input.intent === "track_event";
 }
 
+async function handleCommonplaceTrackEventRequest(req, res, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics disabled on admin hosts" });
+  }
+
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics path rejected" });
+  }
+
+  const eventType = normalizeCommonplaceAnalyticsEvent(input.event_type || input.eventType || input.name || input.event);
+  if (!eventType) {
+    return send(res, 400, { success: false, error: "Unsupported COMMONPL4CE event type" });
+  }
+
+  const metadata = safeCommonplaceAnalyticsMetadata(input.metadata || input.props || {});
+  if (eventType === "scroll_depth" && !["25", "50", "75", "100"].includes(String(metadata.depth || ""))) {
+    return send(res, 400, { success: false, error: "Invalid scroll depth" });
+  }
+
+  const row = {
+    event_type: eventType,
+    task_id: "",
+    source: COMMONPLACE_ANALYTICS_SOURCE,
+    route: path,
+    referrer: stripAnalyticsUrl(input.referrer || input.referrer_url || ""),
+    session_id: clean(input.session_id || input.sessionId).slice(0, 120),
+    user_agent_hash: hashAnalyticsUserAgent(req.headers["user-agent"] || ""),
+    metadata
+  };
+
+  try {
+    await supabaseFetch(ANALYTICS_EVENT_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(row)
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: true,
+      reason: "stored",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_ANALYTICS_STORE_FAILED]", {
+      event_type: eventType,
+      path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: false,
+      reason: error.statusCode ? `supabase_http_${error.statusCode}` : "analytics_not_configured",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  }
+}
+
 async function handleTrackEventRequest(req, res, input = {}) {
+  if (isCommonplaceAnalyticsInput(input)) {
+    return handleCommonplaceTrackEventRequest(req, res, input);
+  }
+
   const eventType = normalizeAnalyticsEventType(input.event_type || input.eventType || input.name || input.event);
   if (!eventType) {
     return send(res, 400, { success: false, error: "Unsupported event type" });
@@ -504,6 +892,267 @@ async function handleTrackEventRequest(req, res, input = {}) {
       stored: false,
       reason: error.statusCode ? `supabase_http_${error.statusCode}` : "tracking_failed",
       event_type: eventType
+    });
+  }
+}
+
+function isCommonplaceNewsletterRequest(input = {}) {
+  return input.action === "commonpl4ce_newsletter_signup" ||
+    input.intent === "commonpl4ce_newsletter_signup" ||
+    clean(input.source).toLowerCase() === COMMONPLACE_NEWSLETTER_SOURCE;
+}
+
+function isCommonplaceAnalyticsSummaryRequest(input = {}) {
+  return input.action === "commonpl4ce_analytics_summary" ||
+    input.intent === "commonpl4ce_analytics_summary";
+}
+
+function isWebsiteOsAuthRequest(input = {}) {
+  return input.action === "website_os_auth" || input.intent === "website_os_auth";
+}
+
+function assertWebsiteOsAdminHost(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
+  if (host && host !== "admin.doneovernight.com" && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+    const error = new Error("Website OS auth is only available on the admin host.");
+    error.statusCode = 403;
+    error.code = "ADMIN_HOST_REQUIRED";
+    throw error;
+  }
+}
+
+async function handleWebsiteOsAuthRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  const action = clean(input.auth_action || input.authAction).toLowerCase();
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || "cp");
+
+  if (action === "login") {
+    const result = await loginWebsiteOsUser(res, {
+      slug: workspaceSlug,
+      email: input.email,
+      password: input.password
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "session") {
+    const current = await getWebsiteOsSession(req, { slug: workspaceSlug });
+    if (!current) {
+      return send(res, 401, {
+        success: false,
+        authenticated: false,
+        error: "Website OS session required",
+        code: "WEBSITE_OS_SESSION_REQUIRED"
+      });
+    }
+    return send(res, 200, {
+      success: true,
+      authenticated: true,
+      workspace: publicWorkspace(current.workspace),
+      user: publicUser(current.user),
+      session: {
+        expiresAt: current.session.expires_at,
+        lastActivity: current.session.last_activity,
+        createdAt: current.session.created_at
+      }
+    });
+  }
+
+  if (action === "logout") {
+    await logoutWebsiteOsUser(req, res);
+    return send(res, 200, { success: true });
+  }
+
+  if (action === "change_password") {
+    if (clean(input.new_password || input.newPassword) !== clean(input.confirm_password || input.confirmPassword)) {
+      return send(res, 400, {
+        success: false,
+        error: "New passwords do not match.",
+        code: "PASSWORD_CONFIRMATION_MISMATCH"
+      });
+    }
+    const result = await changeWebsiteOsPassword(req, {
+      slug: workspaceSlug,
+      currentPassword: input.current_password || input.currentPassword,
+      newPassword: input.new_password || input.newPassword
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "logout_other_devices") {
+    const result = await logoutOtherWebsiteOsSessions(req, { slug: workspaceSlug });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  return send(res, 400, { success: false, error: "Unsupported Website OS auth action" });
+}
+
+function validateCommonplacePublicRequest(req, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE public action disabled on admin hosts" };
+  }
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE path rejected" };
+  }
+  return { ok: true, path };
+}
+
+async function handleCommonplaceNewsletterRequest(req, res, input = {}) {
+  const publicRequest = validateCommonplacePublicRequest(req, input);
+  if (!publicRequest.ok) {
+    return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error });
+  }
+
+  const email = normalizeEmailValue(input.email);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return send(res, 400, { success: false, error: "Valid email required" });
+  }
+
+  const now = new Date().toISOString();
+  const rawPayload = {
+    source: COMMONPLACE_NEWSLETTER_SOURCE,
+    intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+    path: publicRequest.path,
+    submittedAt: now,
+    consent: clean(input.consent) || "newsletter_signup"
+  };
+
+  try {
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: now,
+        updated_at: now,
+        status: "new",
+        payment_status: "not_required",
+        queue_state: "newsletter",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE newsletter signup",
+        email,
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE newsletter signup",
+        task_summary: `Newsletter signup from ${publicRequest.path}`,
+        source: COMMONPLACE_NEWSLETTER_SOURCE,
+        raw_payload: rawPayload
+      })
+    });
+    const row = Array.isArray(rows) ? rows[0] : null;
+    return send(res, 200, {
+      success: true,
+      stored: true,
+      source: COMMONPLACE_NEWSLETTER_SOURCE,
+      intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+      id: row?.task_id || row?.id || ""
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_NEWSLETTER_STORE_FAILED]", {
+      path: publicRequest.path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 503, {
+      success: false,
+      stored: false,
+      error: "Newsletter storage is not connected yet",
+      code: error.statusCode ? `supabase_http_${error.statusCode}` : "newsletter_not_configured"
+    });
+  }
+}
+
+function summarizeCommonplaceAnalytics(events = [], newsletters = []) {
+  const count = (type, route = "") => events.filter((event) => (
+    event.event_type === type && (!route || normalizeCommonplacePublicPath(event.route) === route)
+  )).length;
+  const scrollCounts = { 25: 0, 50: 0, 75: 0, 100: 0 };
+  events.forEach((event) => {
+    if (event.event_type !== "scroll_depth") return;
+    const depth = clean(event.metadata?.depth);
+    if (Object.prototype.hasOwnProperty.call(scrollCounts, depth)) scrollCounts[depth] += 1;
+  });
+  // Conversion is only meaningful when both values come from the same tracked funnel.
+  const formStarts = count("form_start", "/cp-book");
+  const formSuccess = count("form_submit_success", "/cp-book");
+  const conversionCoverageComplete = formStarts > 0 && formSuccess <= formStarts;
+  const conversionRate = conversionCoverageComplete ? Math.round((formSuccess / formStarts) * 100) : null;
+  const conversionMessage = formStarts === 0
+    ? "No tracked form starts yet."
+    : formSuccess > formStarts
+      ? "Historical form-start coverage is incomplete."
+      : "";
+  return {
+    connected: true,
+    generatedAt: new Date().toISOString(),
+    metrics: {
+      cpVisits: count("page_view", "/cp"),
+      cpBookVisits: count("page_view", "/cp-book"),
+      bookCtaClicks: count("book_cta_click"),
+      bookerStationViews: count("booker_station_view"),
+      bookingFormStarts: formStarts,
+      bookingFormSubmissions: formSuccess,
+      conversionRate,
+      conversionDenominator: "Tracked /cp-book form starts",
+      conversionMessage,
+      newsletterStarts: count("newsletter_start"),
+      newsletterSignups: newsletters.length || count("newsletter_success")
+    },
+    scrollDropoff: scrollCounts,
+    recentSignups: newsletters.slice(0, 8).map((row) => ({
+      email: clean(row.email),
+      createdAt: row.created_at || row.updated_at || "",
+      path: normalizeCommonplacePublicPath(row.raw_payload?.path || row.route || "")
+    }))
+  };
+}
+
+async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
+  const authorized = await verifyAdminOrWebsiteOsSession(req, input.admin_key || input.adminKey || req.headers["x-admin-key"], ["Owner", "Admin", "Editor", "Viewer"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+
+  const range = ["24h", "7d", "30d"].includes(clean(input.range)) ? clean(input.range) : "7d";
+  const since = analyticsRangeStart(range);
+
+  try {
+    const [events, newsletters] = await Promise.all([
+      supabaseFetch([
+        `analytics_events?source=eq.${encodeURIComponent(COMMONPLACE_ANALYTICS_SOURCE)}`,
+        "select=event_type,route,metadata,created_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=1000"
+      ].join("&")),
+      supabaseFetch([
+        `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_NEWSLETTER_SOURCE)}`,
+        "select=email,raw_payload,created_at,updated_at",
+        `created_at=gte.${encodeURIComponent(since)}`,
+        "order=created_at.desc",
+        "limit=100"
+      ].join("&")),
+    ]);
+
+    return send(res, 200, {
+      success: true,
+      connected: true,
+      range,
+      analytics: summarizeCommonplaceAnalytics(
+        Array.isArray(events) ? events : [],
+        Array.isArray(newsletters) ? newsletters : []
+      )
+    });
+  } catch (error) {
+    return send(res, 200, {
+      success: true,
+      connected: false,
+      range,
+      analytics: null,
+      message: "Analytics not connected yet",
+      reason: error.code || error.message || "analytics_store_unavailable"
     });
   }
 }
@@ -2537,6 +3186,9 @@ async function getConnectedOperatorMetadata(input = {}) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") {
+      return handleCommonplaceSiteConfigGet(req, res);
+    }
     if (url.searchParams.get("ask_security_config") === "1") {
       const config = askVerificationConfig();
       return send(res, 200, {
@@ -2590,6 +3242,30 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (isWebsiteOsAuthRequest(input)) {
+      try {
+        return await handleWebsiteOsAuthRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.message || "Website OS auth failed",
+          code: error.code || "WEBSITE_OS_AUTH_FAILED"
+        });
+      }
+    }
+
+    if (isCommonplaceSiteConfigRequest(req, input)) {
+      return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
+    if (isCommonplaceAnalyticsSummaryRequest(input)) {
+      return handleCommonplaceAnalyticsSummaryRequest(req, res, input);
+    }
+
+    if (isCommonplaceNewsletterRequest(input)) {
+      return handleCommonplaceNewsletterRequest(req, res, input);
+    }
+
     if (isJourneyConfirmationRequest(req, input)) {
       return handleJourneyConfirmationRequest(req, res, input);
     }
