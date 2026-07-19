@@ -228,10 +228,24 @@ begin
 end $$;
 
 -- Phase 2 strategy tables will consume this ownership boundary without changing
--- the content pipeline contract: workspace_content_strategies,
--- workspace_content_pillars, workspace_topic_preferences,
--- workspace_topic_exclusions, and workspace_source_preferences. No strategy
--- engine or client UI is created in Phase 1.
+-- the content pipeline contract. They are intentionally not created in Phase 1:
+--
+--   workspace_content_strategies (primary/secondary niches, audience,
+--     expertise level, geography, language, business objectives,
+--     promotional boundaries, content-type mix, seasonal/campaign topics)
+--   workspace_content_pillars (workspace_id, name, description, priority)
+--   workspace_topic_preferences (workspace_id, topic, priority_weight,
+--     preferred_content_types, active_from, active_until)
+--   workspace_topic_exclusions (workspace_id, topic/pattern, reason,
+--     active_from, active_until)
+--   workspace_source_preferences (workspace_id, source/account/domain,
+--     trust_level, excluded, reason)
+--
+-- Every future strategy relation must use workspace_id as its ownership key;
+-- natural keys must be unique per workspace, never globally. Phase 2 will
+-- resolve the active workspace strategy before discovery, drafting, scheduling,
+-- analytics, or learning and pass the resolved snapshot through the existing
+-- tenant context. No strategy engine or client UI is created in Phase 1.
 create index if not exists x_candidates_workspace_topic_idx on public.x_topic_candidates(workspace_id, topic_cluster, created_at desc);
 create index if not exists x_drafts_workspace_topic_idx on public.x_drafts(workspace_id, topic_cluster, created_at desc);
 create index if not exists x_growth_gaps_workspace_topic_idx on public.x_growth_gaps(workspace_id, topic, created_at desc);

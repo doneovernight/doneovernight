@@ -6,6 +6,7 @@ const xContentRoutes = require("../lib/x-content/routes");
 const { requireWebsiteOsSession } = require("../lib/website-os-auth");
 const { listScopedRecords } = require("../lib/website-os-repository");
 const { summarizeInvoices } = require("../lib/website-os-invoices");
+const tenantContext = require("../lib/x-content/tenant-context");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -136,7 +137,15 @@ async function enrichTask(task = {}) {
 module.exports = async function handler(req, res) {
   const requestUrl = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
   const xContentRoute = requestUrl.searchParams.get("x_content_route");
-  if (xContentRoute && xContentRoutes[xContentRoute]) return xContentRoutes[xContentRoute](req, res);
+  if (xContentRoute && xContentRoutes[xContentRoute]) {
+    // The legacy internal admin/cron boundary is the only Phase 1 compatibility
+    // adapter. It supplies the seeded workspace after the cutover flag is on;
+    // shared repositories still require an explicit context and never default.
+    const routedRequest = tenantContext.workspaceScopingEnabled() && !req.tenantContext
+      ? { ...req, tenantContext: tenantContext.seededCompatibilityContext() }
+      : req;
+    return xContentRoutes[xContentRoute](routedRequest, res);
+  }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, { success: false, error: "Method not allowed" });
