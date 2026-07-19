@@ -5,6 +5,7 @@ const validation = require("../lib/x-content/validation");
 const service = require("../lib/x-content/service");
 const repository = require("../lib/x-content/repository");
 const xClient = require("../lib/x-content/x-client");
+const accountActivity = require("../lib/x-content/account-activity");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
@@ -77,6 +78,95 @@ test("OpenAI strict JSON schema requires its nullable optional_cta field", () =>
 test("new X drafts target 180–220 weighted characters with a 240 V2 hard maximum and retained 280 emergency validator", () => {
   assert.equal(DRAFT_TARGET, "180–220");
   assert.equal(validation.validatePostText("a".repeat(280)).ok, true);
+});
+
+test("account activity summary counts actual original posts by Amsterdam day and excludes replies and reposts", () => {
+  const now = Date.parse("2026-07-19T10:00:00.000Z");
+  const summary = accountActivity.activitySummary([
+    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", publication_origin: "agent", is_reply: false, is_repost: false },
+    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "reply", created_at: "2026-07-19T07:00:00.000Z", publication_origin: "reply", is_reply: true, is_repost: false },
+    { x_post_id: "repost", created_at: "2026-07-19T07:30:00.000Z", publication_origin: "repost", is_reply: false, is_repost: true }
+  ], { now });
+  assert.equal(summary.posts_today, 3);
+  assert.equal(summary.known_total_posts, 4);
+  assert.equal(summary.agent_published_today, 1);
+  assert.equal(summary.manual_posts_today, 2);
+  assert.equal(summary.replies_today, 1);
+  assert.equal(summary.reposts_today, 1);
+});
+
+test("read-only account activity sync deduplicates X IDs, classifies agent and manual posts, and never publishes", async () => {
+  const rows = []; const settings = {}; let publishCalls = 0; let markCalls = 0;
+  const repo = {
+    listAccountActivity: async () => rows,
+    getSetting: async (key) => settings[key] ? { value: settings[key] } : null,
+    setSetting: async (key, value) => { settings[key] = value; },
+    listPublishedPublications: async () => [{ x_post_id: "agent-1" }],
+    markAccountActivityNotCurrent: async () => { markCalls += 1; rows.forEach((row) => { row.is_currently_visible = false; }); },
+    upsertAccountActivity: async (incoming) => { for (const row of incoming) { const index = rows.findIndex((item) => item.x_post_id === row.x_post_id); if (index >= 0) rows[index] = { ...rows[index], ...row }; else rows.push(row); } return incoming; }
+  };
+  let page = 0;
+  const client = {
+    verifyIdentity: async () => ({ username: "doneovernight", userId: "42" }),
+    getUserPosts: async () => {
+      page += 1;
+      if (page === 1) return { data: { data: [
+        { id: "agent-1", text: "Agent original", created_at: "2026-07-19T08:00:00.000Z" },
+        { id: "manual-1", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z" },
+        { id: "reply-1", text: "Reply", created_at: "2026-07-19T09:10:00.000Z", in_reply_to_user_id: "other" },
+        { id: "repost-1", text: "Repost", created_at: "2026-07-19T09:20:00.000Z", referenced_tweets: [{ type: "retweeted", id: "source" }] }
+      ], meta: { next_token: "next" } } };
+      return { data: { data: [{ id: "manual-1", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z" }], meta: {} } };
+    },
+    publish: async () => { publishCalls += 1; }
+  };
+  const result = await accountActivity.syncAccountActivity({ repository: repo, xClient: client, now: Date.parse("2026-07-19T10:00:00.000Z") });
+  assert.equal(result.synced, true);
+  assert.equal(result.identity.username, "doneovernight");
+  assert.equal(rows.length, 4);
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual");
+  assert.equal(result.posts_today, 2);
+  assert.equal(result.agent_published_today, 1);
+  assert.equal(result.manual_posts_today, 1);
+  assert.equal(markCalls, 1);
+  assert.equal(publishCalls, 0);
+});
+
+test("failed account activity sync preserves known values as stale and identity mismatches fail closed", async () => {
+  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false, is_currently_visible: true }];
+  const settings = {}; let writes = 0; let timelineCalls = 0;
+  const repo = {
+    listAccountActivity: async () => known,
+    getSetting: async (key) => settings[key] ? { value: settings[key] } : null,
+    setSetting: async (key, value) => { settings[key] = value; writes += 1; },
+    listPublishedPublications: async () => [],
+    markAccountActivityNotCurrent: async () => { throw new Error("must not write after an identity failure"); },
+    upsertAccountActivity: async () => { throw new Error("must not write after an identity failure"); }
+  };
+  const mismatch = await accountActivity.syncAccountActivity({ repository: repo, now: Date.parse("2026-07-19T10:00:00.000Z"), xClient: { verifyIdentity: async () => ({ username: "wrong-account", userId: "99" }), getUserPosts: async () => { timelineCalls += 1; } } });
+  assert.equal(mismatch.synced, false);
+  assert.equal(mismatch.stale, true);
+  assert.equal(mismatch.posts_today, 1);
+  assert.equal(mismatch.code, "X_USERNAME_GUARD_FAILED");
+  assert.equal(timelineCalls, 0);
+  assert.equal(writes, 1);
+});
+
+test("account activity uses the official authenticated user timeline endpoint and dashboard labels known totals", () => {
+  const clientSource = fs.readFileSync(require.resolve("../lib/x-content/x-client"), "utf8");
+  const dashboard = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260720_x_account_activity.sql"), "utf8");
+  assert.match(clientSource, /\/2\/users\/\$\{encodeURIComponent\(userId\)\}\/tweets/);
+  assert.match(clientSource, /referenced_tweets/);
+  assert.match(dashboard, /Known total posts/);
+  assert.match(dashboard, /Manual posts today/);
+  assert.match(dashboard, /Last X sync/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /grant select, insert, update, delete.*service_role/i);
 });
 
 test("V2 editorial gate enforces a single original source, natural verified mention, and all quality scores", () => {
