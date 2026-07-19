@@ -707,6 +707,21 @@ test("Phase 1 migration defines the seeded tenant, workspace ownership, and stra
   assert.match(sql, /is_workspace_member/);
 });
 
+test("Phase 1 repair migration explicitly repairs x_agent_runs and is rerunnable", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260723_x_multi_tenant_workspace_repair.sql"), "utf8");
+  assert.match(sql, /'x_agent_runs'/);
+  assert.match(sql, /add column if not exists workspace_id uuid/);
+  assert.match(sql, /set workspace_id = \$1 where workspace_id is null/);
+  assert.match(sql, /current_table \|\| '_workspace_idx'/);
+  assert.match(sql, /current_table \|\| '_workspace_id_fkey'/);
+  assert.doesNotMatch(sql, /c\.table_name = table_name/);
+  assert.match(sql, /non_uuid_count integer/);
+  assert.doesNotMatch(sql, /if \(select count/);
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /create unique index if not exists x_topic_candidates_workspace_source_url_uidx/);
+  assert.match(sql, /on conflict \(workspace_id, username\) do nothing/);
+});
+
 test("Social Radar ranks attributed official evidence, protects screenshots, and creates review-only platform objects", () => {
   const item = { id: "radar", sourceUrl: "https://official.example/release", sourceName: "Official Labs", sourceKind: "official_rss", title: "New API security release for deployment workflows", summary: "A new API release changes infrastructure security and workflow recovery.", publishedAt: new Date().toISOString(), authority: 1, attribution: "Source: Official Labs" };
   const analysis = radar.scoreTrend(item); assert.ok(["generate", "immediate_priority"].includes(analysis.recommendation)); assert.ok(analysis.sharing_reasons.includes("infrastructure_change")); assert.ok(radar.validateAttribution(item));
