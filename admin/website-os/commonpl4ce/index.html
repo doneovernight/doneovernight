@@ -4791,8 +4791,12 @@
         const asset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId);
         return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || isLocalOnlyMedia(asset);
       }).length;
-      const publishedSections = Array.isArray(published.sections) ? published.sections : [];
-      const draftSections = Array.isArray(draft.sections) ? draft.sections : [];
+      const comparableSection = (section = {}) => {
+        const { system, ...content } = section;
+        return content;
+      };
+      const publishedSections = builderFromSiteConfig(published, state.builder.mediaLibrary, state.builder).sections.map(comparableSection);
+      const draftSections = (Array.isArray(draft.sections) ? draft.sections : []).map(comparableSection);
       const sectionIds = [...new Set(draftSections.concat(publishedSections).map((section) => section.id))];
       const sectionChangeNames = sectionIds.filter((id) => JSON.stringify(draftSections.find((section) => section.id === id) || null) !== JSON.stringify(publishedSections.find((section) => section.id === id) || null)).map((id) => draftSections.find((section) => section.id === id)?.name || publishedSections.find((section) => section.id === id)?.name || id);
       const sectionChanges = sectionChangeNames.length;
