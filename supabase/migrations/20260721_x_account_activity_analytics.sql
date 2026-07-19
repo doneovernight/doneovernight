@@ -8,8 +8,12 @@
 begin;
 
 alter table public.x_account_activity
-  add column if not exists classification text,
-  add column if not exists ingestion_source text,
+  add column if not exists classification text;
+
+alter table public.x_account_activity
+  add column if not exists ingestion_source text;
+
+alter table public.x_account_activity
   add column if not exists source_kind text;
 
 -- Preserve any partial-migration provenance column before retiring it. The old
@@ -26,6 +30,13 @@ set ingestion_source = coalesce(
   end
 )
 where ingestion_source is null;
+
+-- Establish agent ownership before deriving classification so a legacy row that
+-- matches an agent publication cannot be misclassified as manual.
+update public.x_account_activity
+set publication_origin = 'agent'
+from public.x_publications publication
+where publication.x_post_id = x_account_activity.x_post_id;
 
 -- Classify first. This accepts the partially written failing row where
 -- classification is already agent_original and publication_origin was used
@@ -47,8 +58,12 @@ where classification is null
 -- Remove it before normalizing ownership to agent/manual/unknown; otherwise an
 -- existing reply or repost would make the normalization update fail.
 alter table public.x_account_activity
-  drop constraint if exists x_account_activity_publication_origin_check,
-  drop constraint if exists x_account_activity_classification_check,
+  drop constraint if exists x_account_activity_publication_origin_check;
+
+alter table public.x_account_activity
+  drop constraint if exists x_account_activity_classification_check;
+
+alter table public.x_account_activity
   drop constraint if exists x_account_activity_ingestion_source_check;
 
 -- A matching agent publication determines ownership. Unmatched timeline
@@ -75,18 +90,32 @@ set ingestion_source = case
 end;
 
 alter table public.x_account_activity
-  alter column classification set not null,
-  alter column classification set default 'manual_original',
-  alter column publication_origin set not null,
-  alter column publication_origin set default 'unknown',
-  alter column ingestion_source set not null,
+  alter column classification set not null;
+
+alter table public.x_account_activity
+  alter column classification set default 'manual_original';
+
+alter table public.x_account_activity
+  alter column publication_origin set not null;
+
+alter table public.x_account_activity
+  alter column publication_origin set default 'unknown';
+
+alter table public.x_account_activity
+  alter column ingestion_source set not null;
+
+alter table public.x_account_activity
   alter column ingestion_source set default 'authenticated_timeline';
 
 alter table public.x_account_activity
   add constraint x_account_activity_publication_origin_check
-    check (publication_origin in ('agent', 'manual', 'unknown')),
+    check (publication_origin in ('agent', 'manual', 'unknown'));
+
+alter table public.x_account_activity
   add constraint x_account_activity_classification_check
-    check (classification in ('agent_original', 'manual_original', 'reply', 'repost')),
+    check (classification in ('agent_original', 'manual_original', 'reply', 'repost'));
+
+alter table public.x_account_activity
   add constraint x_account_activity_ingestion_source_check
     check (ingestion_source in ('authenticated_timeline', 'agent_publish', 'backfill', 'reconciliation'));
 
@@ -95,8 +124,12 @@ alter table public.x_account_activity
 alter table public.x_account_activity drop column if exists source_kind;
 
 alter table public.x_post_analytics
-  alter column publication_id drop not null,
-  add column if not exists account_activity_x_post_id text,
+  alter column publication_id drop not null;
+
+alter table public.x_post_analytics
+  add column if not exists account_activity_x_post_id text;
+
+alter table public.x_post_analytics
   add column if not exists snapshot_key text;
 
 update public.x_post_analytics
@@ -118,8 +151,12 @@ create index if not exists x_post_analytics_activity_recorded_at_idx
   on public.x_post_analytics(account_activity_x_post_id, recorded_at desc);
 
 alter table public.x_post_performance_memory
-  alter column publication_id drop not null,
-  add column if not exists x_post_id text,
+  alter column publication_id drop not null;
+
+alter table public.x_post_performance_memory
+  add column if not exists x_post_id text;
+
+alter table public.x_post_performance_memory
   add column if not exists account_activity_x_post_id text;
 
 update public.x_post_performance_memory memory
