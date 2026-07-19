@@ -74,6 +74,7 @@ test("Website OS exposes FAQ, section-specific editors, server drafts and versio
   assert.match(ui, /Public booking destination: https:\/\/doneovernight\.com\/cp-book/);
   assert.match(ui, /overflow-wrap: anywhere/);
   assert.match(ui, /builderFromSiteConfig\(published, state\.builder\.mediaLibrary, state\.builder\)\.sections\.map\(comparableSection\)/);
+  assert.match(ui, /\.preview-workspace-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s);
 });
 
 test("public CP hydrates only published content and retains static fallback markup", () => {
