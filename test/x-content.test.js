@@ -212,6 +212,32 @@ test("analytics persists idempotent hourly snapshots for agent and manual origin
   assert.equal(publishCalls, 0);
 });
 
+test("performance memory uses update-or-insert because x_post_id has a partial unique index", async () => {
+  const originalFetch = global.fetch;
+  const originalUrl = process.env.SUPABASE_URL;
+  const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const calls = [];
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  global.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method || "GET" });
+    if (String(url).includes("x_post_performance_memory?x_post_id=")) return new Response("[]", { status: 200 });
+    return new Response(JSON.stringify([{ id: "memory-1" }]), { status: 201, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await repository.savePerformanceMemory({ x_post_id: "post-1", topic: "systems", views: 1 });
+    assert.match(calls[0].url, /x_post_performance_memory\?x_post_id=eq\.post-1/);
+    assert.equal(calls[0].method, "GET");
+    assert.equal(calls[1].method, "POST");
+    assert.equal(calls[1].url.endsWith("/x_post_performance_memory"), true);
+    assert.equal(calls[1].url.includes("on_conflict"), false);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = originalUrl;
+    if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+  }
+});
+
 test("analytics migration keeps manual rows nullable, deduplicates snapshots, and grants service role access", () => {
   const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260721_x_account_activity_analytics.sql"), "utf8");
   assert.match(migration, /alter column publication_id drop not null/i);
