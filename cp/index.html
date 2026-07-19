@@ -1364,7 +1364,7 @@
         <img class="header-logo" src="/assets/common-place/final/cp-header-small.png" alt="COMMONPL4CE">
       </a>
     </div>
-    <a class="book-link" href="#booker-station">Book</a>
+    <a class="book-link" href="https://doneovernight.com/cp-book" data-cp-booking-link>Book</a>
   </header>
 
   <main id="top">
@@ -1391,7 +1391,7 @@
         ]
       }
     </script>
-    <section class="archive-scroll" id="archive" aria-label="Campaign archive">
+    <section class="archive-scroll" id="archive" aria-label="Campaign archive" data-cp-section="hero">
       <div class="archive-pin">
       <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
         <div class="archive-rail" id="archiveRail">
@@ -1407,17 +1407,17 @@
     </section>
 
     <div class="vertical">
-      <section class="light-section story" aria-labelledby="feeling-title">
+      <section class="light-section story" aria-labelledby="feeling-title" data-cp-section="story">
         <div class="section-inner narrow">
           <h1 class="display-title" id="feeling-title">Shot with feeling.</h1>
           <p class="lead">CP creates visual stories for brands, campaigns and people who want their imagery to feel real.</p>
           <p class="lead">Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.</p>
           <p class="small-line">For brands that need more than clean content: imagery with mood, memory and presence.</p>
-          <a class="text-cta" href="#booker-station">Start your project</a>
+          <a class="text-cta" href="https://doneovernight.com/cp-book" data-cp-booking-link>Start your project</a>
         </div>
       </section>
 
-      <section class="light-section" aria-labelledby="create-title">
+      <section class="light-section" aria-labelledby="create-title" data-cp-section="what-we-create">
         <div class="section-inner">
           <p class="kicker">What we create</p>
           <h2 class="section-title" id="create-title">Visuals that keep a pulse.</h2>
@@ -1446,7 +1446,7 @@
         </div>
       </section>
 
-      <section class="light-section novateur-project" aria-label="Novateur selected client">
+      <section class="light-section novateur-project" aria-label="Novateur selected client" data-cp-section="novateur">
         <div class="section-inner">
           <div class="novateur-head">
             <div class="novateur-brand">
@@ -1497,7 +1497,7 @@
         </div>
       </section>
 
-      <section class="dark-section" aria-labelledby="process-title">
+      <section class="dark-section" aria-labelledby="process-title" data-cp-section="process">
         <div class="section-inner">
           <p class="kicker">Process</p>
           <h2 class="section-title" id="process-title">Calm direction before the shutter.</h2>
@@ -1527,7 +1527,7 @@
         </div>
       </section>
 
-      <section class="light-section" aria-labelledby="for-title">
+      <section class="light-section" aria-labelledby="for-title" data-cp-section="who-this-is-for">
         <div class="section-inner narrow">
           <p class="kicker">Who this is for</p>
           <h2 class="section-title" id="for-title">Intentional, not overproduced.</h2>
@@ -1543,7 +1543,7 @@
         </div>
       </section>
 
-      <section class="dark-section founder-section" aria-labelledby="behind-title">
+      <section class="dark-section founder-section" aria-labelledby="behind-title" data-cp-section="behind-romy">
         <div class="section-inner">
           <figure class="founder-media">
             <img src="/assets/common-place/romy/romy-behind-film.jpg" alt="Romy Peters photographing on location" loading="lazy" decoding="async">
@@ -1558,7 +1558,7 @@
         </div>
       </section>
 
-      <section class="light-section availability" aria-label="Availability">
+      <section class="light-section availability" aria-label="Availability" data-cp-section="availability">
         <div class="section-inner">
           <h2>Currently Booking</h2>
           <p>Netherlands<br>Europe<br>Worldwide</p>
@@ -1567,7 +1567,7 @@
         </div>
       </section>
 
-      <section class="light-section editorial-questions" aria-labelledby="questions-title">
+      <section class="light-section editorial-questions" aria-labelledby="questions-title" data-cp-section="faq">
         <div class="section-inner questions-layout">
           <div class="questions-intro">
             <p class="questions-label">BEFORE WE WORK TOGETHER</p>
@@ -1708,7 +1708,7 @@
         </div>
       </section>
 
-      <section class="dark-section booking" id="booker-station" aria-labelledby="booker-title">
+      <section class="dark-section booking" id="booker-station" aria-labelledby="booker-title" data-cp-section="booking">
         <div>
           <h2 class="section-title" id="booker-title">Book a shoot</h2>
           <p class="body-copy">Tell me what you have in mind.</p>
@@ -1795,7 +1795,7 @@
     </div>
   </main>
 
-  <footer class="footer">
+  <footer class="footer" data-cp-section="footer">
     <img class="footer-wordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
     <div class="footer-brand">
       <p class="footer-contact-label">Contact</p>
@@ -1824,10 +1824,133 @@
 
   <script>
     (function () {
+      const CONFIG_URL = '/api/task-submit?commonpl4ce_site_config=1';
+      const one = (selector, root) => (root || document).querySelector(selector);
+      const all = (selector, root) => Array.from((root || document).querySelectorAll(selector));
+      const setText = (root, selector, value) => { const node = one(selector, root); if (node && typeof value === 'string') node.textContent = value; };
+      const paragraphs = (value) => String(value || '').split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+
+      function sectionMap(config) {
+        return new Map((Array.isArray(config.sections) ? config.sections : []).map((section) => [section.id, section]));
+      }
+
+      function applyHero(config) {
+        const frames = all('#archiveRail .archive-frame');
+        const desktop = Array.isArray(config.hero && config.hero.desktop) ? config.hero.desktop : [];
+        const mobile = Array.isArray(config.hero && config.hero.mobile) ? config.hero.mobile : [];
+        frames.forEach(function (frame, index) {
+          const desktopSlot = desktop[index];
+          const mobileSlot = mobile[index];
+          const source = one('source', frame);
+          const image = one('img', frame);
+          if (source && desktopSlot && desktopSlot.src && desktopSlot.status !== 'Hidden') source.srcset = desktopSlot.src;
+          if (image && mobileSlot && mobileSlot.src && mobileSlot.status !== 'Hidden') image.src = mobileSlot.src;
+          if (image) image.alt = (mobileSlot && mobileSlot.alt) || (desktopSlot && desktopSlot.alt) || image.alt;
+          frame.hidden = desktopSlot && mobileSlot && desktopSlot.status === 'Hidden' && mobileSlot.status === 'Hidden';
+        });
+        window.dispatchEvent(new Event('resize'));
+      }
+
+      function renderFaq(section) {
+        const root = one('[data-cp-section="faq"]');
+        const list = root && one('[data-questions-accordion]', root);
+        if (!root || !list) return;
+        setText(root, '.questions-label', section.kicker || '');
+        setText(root, '.questions-title', section.heading || '');
+        const copy = one('.questions-copy', root);
+        if (copy) {
+          copy.replaceChildren();
+          paragraphs(section.body).forEach(function (text) { const p = document.createElement('p'); p.textContent = text; copy.appendChild(p); });
+        }
+        delete list.dataset.accordionReady;
+        list.replaceChildren();
+        (Array.isArray(section.questions) ? section.questions : []).filter((item) => item.enabled !== false).forEach(function (item, index) {
+          const article = document.createElement('article');
+          const open = Boolean(section.defaultOpenId && section.defaultOpenId === item.id);
+          article.className = `question-item${open ? ' is-open' : ''}`;
+          const trigger = document.createElement('button');
+          trigger.className = 'question-trigger';
+          trigger.type = 'button';
+          trigger.id = `question-trigger-${index + 1}`;
+          trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+          trigger.setAttribute('aria-controls', `question-panel-${index + 1}`);
+          const number = document.createElement('span'); number.className = 'question-number'; number.textContent = String(index + 1).padStart(2, '0');
+          const question = document.createElement('span'); question.className = 'question-text'; question.textContent = item.question || '';
+          const mark = document.createElement('span'); mark.className = 'question-mark'; mark.setAttribute('aria-hidden', 'true');
+          trigger.append(number, question, mark);
+          const panel = document.createElement('div'); panel.className = 'question-panel'; panel.id = `question-panel-${index + 1}`; panel.setAttribute('role', 'region'); panel.setAttribute('aria-labelledby', trigger.id); panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+          const inner = document.createElement('div'); inner.className = 'question-panel-inner';
+          paragraphs(item.answer).forEach(function (text) { const p = document.createElement('p'); p.textContent = text; inner.appendChild(p); });
+          panel.appendChild(inner); article.append(trigger, panel); list.appendChild(article);
+        });
+        const closing = document.createElement('div'); closing.className = 'questions-closing';
+        const label = document.createElement('p'); label.className = 'questions-label'; label.textContent = section.closingKicker || '';
+        const body = document.createElement('p'); body.textContent = section.closingBody || '';
+        const link = document.createElement('a'); link.className = 'questions-cta'; link.href = section.ctaLink || 'mailto:book@commonpl4ce.com'; link.textContent = section.ctaLabel || 'Ask COMMONPL4CE';
+        closing.append(label, body, link); list.appendChild(closing);
+        if (typeof window.initCommonplaceFaq === 'function') window.initCommonplaceFaq();
+      }
+
+      function applySections(config) {
+        const sections = sectionMap(config);
+        all('[data-cp-section]').forEach(function (node) {
+          const section = sections.get(node.dataset.cpSection);
+          if (section) node.hidden = section.enabled === false || section.visibility === 'Disabled';
+        });
+        const story = sections.get('story');
+        if (story) {
+          const root = one('[data-cp-section="story"]'); setText(root, '.display-title', story.heading); const leads = all('.lead', root);
+          if (leads[0]) leads[0].textContent = story.body || ''; if (leads[1]) leads[1].textContent = story.secondaryBody || '';
+          setText(root, '.small-line', story.smallLine); setText(root, '.text-cta', story.ctaLabel);
+        }
+        const simple = [
+          ['what-we-create', '.kicker', '.section-title'], ['process', '.kicker', '.section-title'],
+          ['who-this-is-for', '.kicker', '.section-title'], ['behind-romy', '.kicker', '.section-title']
+        ];
+        simple.forEach(function (entry) { const section = sections.get(entry[0]); const root = one(`[data-cp-section="${entry[0]}"]`); if (section && root) { setText(root, entry[1], section.kicker); setText(root, entry[2], section.heading); } });
+        const what = sections.get('what-we-create'); const whatRoot = one('[data-cp-section="what-we-create"]');
+        if (what && whatRoot && Array.isArray(what.items)) { const grid = one('.editorial-grid', whatRoot); if (grid) { grid.replaceChildren(); what.items.forEach(function (item) { const block = document.createElement('div'); block.className = 'text-block'; const title = document.createElement('h3'); title.textContent = item.title || ''; const body = document.createElement('p'); body.textContent = item.body || ''; block.append(title, body); grid.appendChild(block); }); } }
+        const process = sections.get('process'); const processRoot = one('[data-cp-section="process"]');
+        if (process && processRoot && Array.isArray(process.items)) { const list = one('.process-list', processRoot); if (list) { list.replaceChildren(); process.items.forEach(function (item, index) { const row = document.createElement('div'); row.className = 'process-item'; const number = document.createElement('span'); number.textContent = String(index + 1).padStart(2, '0'); const copy = document.createElement('div'); const title = document.createElement('h3'); title.textContent = item.title || ''; const body = document.createElement('p'); body.textContent = item.body || ''; copy.append(title, body); row.append(number, copy); list.appendChild(row); }); } }
+        const audience = sections.get('who-this-is-for'); const audienceRoot = one('[data-cp-section="who-this-is-for"]');
+        if (audience && audienceRoot) { const list = one('.audience-list', audienceRoot); if (list && Array.isArray(audience.items)) { list.replaceChildren(); audience.items.forEach(function (item) { const li = document.createElement('li'); li.textContent = typeof item === 'string' ? item : item.title || ''; list.appendChild(li); }); } setText(audienceRoot, '.body-copy', audience.body); }
+        const project = sections.get('novateur'); const projectRoot = one('[data-cp-section="novateur"]');
+        if (project && projectRoot) {
+          setText(projectRoot, '.novateur-copy .kicker', project.kicker); setText(projectRoot, '.novateur-copy > p:last-child', project.body);
+          const logo = one('.novateur-logo', projectRoot); if (logo && project.desktopImage) logo.src = project.desktopImage;
+          const meta = paragraphs(String(project.meta || '').replace(/\n/g, '\n\n')); const labels = all('.project-label', projectRoot); labels.forEach((node, index) => { if (meta[index] !== undefined) node.textContent = meta[index]; });
+          const gallery = Array.isArray(project.gallery) ? project.gallery : []; const slider = one('#novateurSlider', projectRoot);
+          if (slider && gallery.length) { slider.replaceChildren(); gallery.forEach(function (item) { const figure = document.createElement('figure'); figure.className = `novateur-slide${item.variant === 'wide' ? ' is-wide' : ''}`; const image = document.createElement('img'); image.src = item.src || ''; image.alt = item.alt || ''; image.loading = 'lazy'; image.decoding = 'async'; figure.appendChild(image); slider.appendChild(figure); }); }
+          const video = one('.novateur-film source', projectRoot); if (video && project.video) { video.src = project.video; video.parentElement.load(); }
+          const projectLinks = all('.project-links a', projectRoot); (Array.isArray(project.links) ? project.links : []).forEach(function (item, index) { if (projectLinks[index]) { projectLinks[index].href = item.url || projectLinks[index].href; projectLinks[index].textContent = item.label || projectLinks[index].textContent; } });
+        }
+        const behind = sections.get('behind-romy'); const behindRoot = one('[data-cp-section="behind-romy"]');
+        if (behind && behindRoot) { const image = one('img', behindRoot); if (image && behind.desktopImage) image.src = behind.desktopImage; if (image && behind.alt) image.alt = behind.alt; const copy = one('.founder-copy', behindRoot); const text = all('.lead,.body-copy', copy); const parts = [behind.body].concat(paragraphs(behind.secondaryBody)); text.forEach((node, index) => { if (parts[index] !== undefined) node.textContent = parts[index]; }); }
+        const availability = sections.get('availability'); const availabilityRoot = one('[data-cp-section="availability"]');
+        if (availability && availabilityRoot) { setText(availabilityRoot, 'h2', availability.heading); const texts = all(':scope > .section-inner > p', availabilityRoot); if (texts[0]) texts[0].innerHTML = String(availability.body || '').split('\n').map((line) => line.replace(/[&<>]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[char]))).join('<br>'); if (texts[1]) texts[1].textContent = availability.secondaryBody || ''; if (texts[2]) texts[2].textContent = availability.smallLine || ''; }
+        const booking = sections.get('booking'); const bookingRoot = one('[data-cp-section="booking"]');
+        if (booking) { all('[data-cp-booking-link]').forEach((link) => { link.href = booking.ctaLink || 'https://doneovernight.com/cp-book'; if (link.classList.contains('text-cta') && booking.ctaLabel) link.textContent = booking.ctaLabel; }); if (bookingRoot) { setText(bookingRoot, '#booker-title', booking.heading); setText(bookingRoot, '.body-copy', booking.body); } }
+        const footer = sections.get('footer'); const footerRoot = one('[data-cp-section="footer"]');
+        if (footer && footerRoot) { setText(footerRoot, '.footer-availability', footer.secondaryBody); const wordmark = one('.footer-wordmark', footerRoot); if (wordmark && footer.desktopImage) wordmark.src = footer.desktopImage; const links = all('.footer-contact a', footerRoot); if (links[0] && footer.socialUrl) { links[0].href = footer.socialUrl; links[0].setAttribute('aria-label', `COMMONPL4CE ${footer.socialLabel || 'social'}`); } if (links[1] && footer.contactEmail) links[1].href = `mailto:${footer.contactEmail}`; }
+        const faq = sections.get('faq'); if (faq) renderFaq(faq);
+      }
+
+      fetch(CONFIG_URL, { cache: 'no-store', credentials: 'same-origin' })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => { if (!data || data.success !== true || !data.config) return; applyHero(data.config); applySections(data.config); document.documentElement.dataset.cpContentVersion = data.versionId || data.publishedAt || 'published'; })
+        .catch(function () {});
+    })();
+  </script>
+
+  <script>
+    (function () {
+      window.initCommonplaceFaq = function () {
       const accordions = document.querySelectorAll('[data-questions-accordion]');
       if (!accordions.length) return;
 
       accordions.forEach(function (accordion) {
+        if (accordion.dataset.accordionReady === 'true') return;
+        accordion.dataset.accordionReady = 'true';
         const items = Array.from(accordion.querySelectorAll('.question-item'));
 
         function setItem(item, open) {
@@ -1873,9 +1996,10 @@
 
         const initialItem = items.find(function (item) {
           return item.classList.contains('is-open');
-        }) || items[0];
+        });
 
         if (initialItem) openItem(initialItem);
+        else items.forEach(function (item) { setItem(item, false); });
 
         window.addEventListener('resize', function () {
           const open = items.find(function (item) {
@@ -1884,6 +2008,8 @@
           if (open) setItem(open, true);
         }, { passive: true });
       });
+      };
+      window.initCommonplaceFaq();
     })();
   </script>
 

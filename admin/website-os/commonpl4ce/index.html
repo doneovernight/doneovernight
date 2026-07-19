@@ -1501,6 +1501,7 @@
     .builder-panel,
     .builder-preview-panel,
     .hero-manager {
+      min-width: 0;
       border: 1px solid rgba(237,230,216,.12);
       border-radius: 8px;
       background: rgba(0,0,0,.14);
@@ -1561,6 +1562,9 @@
     }
 
     .draft-preview-card {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
       min-height: 340px;
       border: 1px solid rgba(237,230,216,.12);
       border-radius: 8px;
@@ -1587,6 +1591,9 @@
       line-height: .88;
       letter-spacing: -.04em;
       text-transform: uppercase;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
 
     .draft-preview-card p {
@@ -1595,7 +1602,62 @@
       font-family: var(--serif);
       font-size: clamp(18px, 2vw, 24px);
       line-height: 1.35;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      white-space: pre-line;
     }
+
+    .faq-editor-list,
+    .version-history,
+    #contentVersionHistory {
+      display: grid;
+      gap: 10px;
+    }
+
+    .faq-editor-item,
+    .version-row {
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .faq-editor-head,
+    .faq-editor-actions,
+    .version-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .faq-editor-head strong,
+    .version-row strong { overflow-wrap: anywhere; }
+
+    .draft-frame-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, .35fr);
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .draft-frame-grid > div { min-width: 0; }
+    .draft-frame-grid h3 { margin: 0 0 8px; font-size: 13px; }
+    .draft-frame-grid iframe {
+      width: 100%;
+      height: 640px;
+      border: 1px solid rgba(237,230,216,.14);
+      border-radius: 8px;
+      background: #070604;
+    }
+    .draft-frame-grid .is-mobile iframe { max-width: 390px; }
+
+    .version-history { margin-top: 16px; }
+    .version-row span { color: var(--muted); font-size: 12px; }
 
     .draft-preview-media {
       min-height: 120px;
@@ -2542,7 +2604,7 @@
       .os-brand-meta { padding-left: 0; border-left: 0; }
       .os-header-actions { width: 100%; justify-content: space-between; }
       .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form { grid-template-columns: 1fr; }
+      .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form, .draft-frame-grid { grid-template-columns: 1fr; }
       .operations-stack { grid-column: auto; }
       .operational-form .wide { grid-column: auto; }
       .invoice-line-item { grid-template-columns: minmax(0, 1fr) 74px; }
@@ -2813,9 +2875,10 @@
 
             <div class="website-task is-active" data-website-tab="builder" role="tabpanel">
               <div class="builder-status-bar">
-                <p>Drafts save on this device until you publish them to the live config.</p>
+                <p id="builderPersistenceNote">Drafts are saved securely to this workspace and remain private until publishing.</p>
                 <div class="builder-controls">
-                  <button class="button small" id="saveBuilderDraft" type="button">Save draft locally</button>
+                  <select id="builderLifecycle" aria-label="Draft lifecycle"><option value="draft">Draft</option><option value="ready">Ready</option><option value="published">Published baseline</option><option value="disabled">Disabled</option></select>
+                  <button class="button small" id="saveBuilderDraft" type="button">Save draft</button>
                   <button class="button small" id="resetBuilderDraft" type="button">Reset draft</button>
                 </div>
               </div>
@@ -2824,7 +2887,7 @@
                   <div class="builder-head">
                     <div>
                       <h2>Sections</h2>
-                      <p>Homepage structure only: select, order, add, duplicate or remove local draft sections.</p>
+                      <p>Homepage structure: select, order, add, duplicate or remove draft sections.</p>
                     </div>
                   </div>
                   <div class="builder-section-list" id="builderSectionList"></div>
@@ -2839,6 +2902,8 @@
                       <option value="Divider / Spacer">Divider / Spacer</option>
                       <option value="Full-screen visual">Full-screen visual</option>
                       <option value="Two-column story">Two-column story</option>
+                      <option value="FAQ">FAQ</option>
+                      <option value="Footer">Footer</option>
                     </select>
                     <button class="button small" id="addBuilderSection" type="button">Add section</button>
                   </div>
@@ -2855,26 +2920,15 @@
                       <h2>Section editor</h2>
                       <p id="builderEditorNote">Select a section to edit draft fields.</p>
                     </div>
-                    <span class="builder-state" id="builderStorageState">Local draft</span>
+                    <span class="builder-state" id="builderStorageState">Loading draft</span>
                   </div>
-                  <div class="builder-editor-grid">
-                    <label class="field"><span>Kicker / label</span><input id="builderKicker" type="text" data-builder-field="kicker"></label>
-                    <label class="field"><span>Heading</span><input id="builderHeading" type="text" data-builder-field="heading"></label>
-                    <label class="field wide"><span>Body text</span><textarea id="builderBody" data-builder-field="body"></textarea></label>
-                    <label class="field"><span>CTA label</span><input id="builderCtaLabel" type="text" data-builder-field="ctaLabel"></label>
-                    <label class="field"><span>CTA link</span><input id="builderCtaLink" type="text" data-builder-field="ctaLink"></label>
-                    <label class="field"><span>Desktop image path</span><input id="builderDesktopImage" type="text" data-builder-field="desktopImage"></label>
-                    <label class="field"><span>Mobile image path</span><input id="builderMobileImage" type="text" data-builder-field="mobileImage"></label>
-                    <label class="field wide"><span>Gallery image paths</span><textarea id="builderGalleryImages" data-builder-field="galleryImages" placeholder="One URL or path per line"></textarea></label>
-                    <label class="field"><span>Visibility status</span><select id="builderVisibility" data-builder-field="visibility"><option>Draft</option><option>Hidden</option><option>Ready</option></select></label>
-                    <label class="field wide"><span>Internal notes</span><textarea id="builderInternalNotes" data-builder-field="internalNotes"></textarea></label>
-                  </div>
+                  <div class="builder-editor-grid" id="builderEditorFields"></div>
                 </div>
                 <div class="builder-preview-panel">
                   <div class="builder-head">
                     <div>
                       <h2>Draft preview</h2>
-                      <p>Local view of the selected section. Not live on public /cp.</p>
+                      <p>Saved draft view of the selected section. Not live on public /cp.</p>
                     </div>
                     <span class="builder-state" id="builderPreviewState">Draft</span>
                   </div>
@@ -2889,9 +2943,9 @@
                   <h2>Content drafts</h2>
                   <p>Website-facing copy prepared for the public COMMONPL4CE page.</p>
                 </div>
-                <span class="builder-state">Local only</span>
+                <span class="builder-state" id="contentDraftState">Server draft</span>
               </div>
-              <div class="website-note">Drafts save on this device until you publish them to the live config.</div>
+              <div class="website-note">Content drafts are saved to this workspace. Public /cp changes only after explicit publishing.</div>
               <div class="content-draft-grid" id="websiteFields"></div>
             </div>
 
@@ -2902,7 +2956,7 @@
                     <h2>Hero Builder</h2>
                     <p>Draft control for the current public archive playback order. Desktop and mobile are separate.</p>
                   </div>
-                  <span class="builder-state" id="heroDraftState">Local draft</span>
+                  <span class="builder-state" id="heroDraftState">Loading draft</span>
                 </div>
                 <div class="hero-workspace-grid">
                   <div class="hero-builder-v2">
@@ -2931,14 +2985,14 @@
                 <div class="builder-head">
                   <div>
                     <h2>Media Library</h2>
-                    <p>Assets can be assigned to the selected hero slot. Local files stay draft-only until upload storage is connected.</p>
+                    <p>Upload or select workspace assets, then assign them to desktop and mobile content.</p>
                   </div>
                   <span class="builder-state" id="mediaTargetState">No slot selected</span>
                 </div>
                 <div class="media-browser-grid">
                   <div class="media-tools">
                     <div class="media-add-row">
-                      <p id="mediaUploadNote">Upload storage required before this file can go live.</p>
+                      <p id="mediaUploadNote">Images are validated and stored in the COMMONPL4CE workspace.</p>
                       <label class="button small hero-local-file">Add media<input id="addMediaFile" type="file" accept="image/*"></label>
                     </div>
                     <label class="field"><span>Search assets</span><input id="mediaSearch" type="search" placeholder="Search filename, category or usage"></label>
@@ -2959,6 +3013,16 @@
                 </div>
               </div>
               <div class="preview-workspace-grid">
+                <section class="builder-preview-panel full-draft-preview-panel">
+                  <div class="builder-head">
+                    <div><h2>Full-page Draft Preview</h2><p>Private preview generated from the saved draft.</p></div>
+                    <span class="builder-state">Not live</span>
+                  </div>
+                  <div class="draft-frame-grid">
+                    <div><h3>Desktop draft</h3><iframe id="desktopDraftPreview" title="Desktop draft preview" sandbox="allow-scripts"></iframe></div>
+                    <div class="is-mobile"><h3>Mobile draft</h3><iframe id="mobileDraftPreview" title="Mobile draft preview" sandbox="allow-scripts"></iframe></div>
+                  </div>
+                </section>
                 <div class="live-preview-stack">
                   <div class="live-preview-grid">
                     <section class="live-preview-panel" aria-label="Live Desktop preview">
@@ -2985,9 +3049,9 @@
                   <div class="builder-head">
                     <div>
                       <h2>Selected Draft Section Preview</h2>
-                      <p>Local section draft only. Public /cp is unchanged.</p>
+                      <p>Saved section draft only. Public /cp is unchanged.</p>
                     </div>
-                    <span class="builder-state" id="previewPanelState">Local preview</span>
+                    <span class="builder-state" id="previewPanelState">Saved draft preview</span>
                   </div>
                   <div id="builderPreviewLarge"></div>
                 </section>
@@ -3006,7 +3070,11 @@
                 </div>
               </div>
               <div class="publish-summary-grid" id="publishSummary"></div>
-              <div class="website-note" id="publishStatusNote">Publishing writes a server-side COMMONPL4CE config. Local file previews require upload storage before they can publish.</div>
+              <div class="website-note" id="publishStatusNote">Publishing atomically updates the server-side COMMONPL4CE config.</div>
+              <section class="version-history" aria-label="Published version history">
+                <div class="builder-head"><div><h2>Version history</h2><p>Published versions can be restored without losing the current live version on failure.</p></div></div>
+                <div id="contentVersionHistory"></div>
+              </section>
             </div>
           </section>
         </section>
@@ -3474,7 +3542,7 @@
       "Move down": "Omlaag verplaatsen",
       "Section editor": "Sectiebewerker",
       "Select a section to edit draft fields.": "Selecteer een sectie om conceptvelden te bewerken.",
-      "Local draft": "Lokaal concept",
+      "Loading draft": "Concept laden",
       "Kicker / label": "Kicker / label",
       "Heading": "Kop",
       "Body text": "Hoofdtekst",
@@ -3491,7 +3559,8 @@
       "Ready": "Gereed",
       "Draft preview": "Conceptvoorbeeld",
       "Local view of the selected section. Not live on public /cp.": "Lokale weergave van de geselecteerde sectie. Niet live op openbaar /cp.",
-      "Local preview": "Lokaal voorbeeld",
+      "Saved draft preview": "Voorbeeld van opgeslagen concept",
+      "Saved section draft only. Public /cp is unchanged.": "Alleen een opgeslagen sectieconcept. Openbaar /cp blijft ongewijzigd.",
       "Content drafts": "Contentconcepten",
       "Content drafts are local until publishing is connected.": "Contentconcepten blijven lokaal totdat publiceren is gekoppeld.",
       "Website-facing copy prepared for the public COMMONPL4CE page.": "Websiteteksten voorbereid voor de openbare COMMONPL4CE-pagina.",
@@ -3575,7 +3644,11 @@
       "Refresh": "Vernieuwen",
       "Log out": "Uitloggen",
       "Loading bookings": "Boekingen laden",
-      "Draft saved locally": "Concept lokaal opgeslagen",
+      "Draft saved to workspace": "Concept opgeslagen in werkruimte",
+      "Saving draft": "Concept opslaan",
+      "Draft save failed": "Concept opslaan mislukt",
+      "Server draft unavailable - recovery copy only": "Serverconcept niet beschikbaar - alleen herstelkopie",
+      "Conflict detected - reload draft": "Bewerkingsconflict gevonden - laad het concept opnieuw",
       "Unsaved changes": "Niet-opgeslagen wijzigingen",
       "Not saved yet": "Nog niet opgeslagen",
       "Last saved time unavailable": "Tijdstip laatste opslag niet beschikbaar",
@@ -3585,7 +3658,16 @@
       "Writing live config.": "Live configuratie wordt opgeslagen.",
       "Published live.": "Live gepubliceerd.",
       "Published live. COMMONPL4CE has been updated.": "Live gepubliceerd. COMMONPL4CE is bijgewerkt.",
-      "Publish failed. Draft is still saved locally.": "Publiceren mislukt. Het concept is nog lokaal opgeslagen.",
+      "Publish failed. Draft remains saved in the workspace.": "Publiceren mislukt. Het concept blijft opgeslagen in de werkruimte.",
+      "Full-page Draft Preview": "Volledig paginavoorbeeld van concept",
+      "Private preview generated from the saved draft.": "Privévoorbeeld op basis van het opgeslagen concept.",
+      "Desktop draft": "Desktopconcept",
+      "Mobile draft": "Mobiel concept",
+      "Published baseline": "Gepubliceerde basisversie",
+      "Disabled": "Uitgeschakeld",
+      "Server draft": "Serverconcept",
+      "Version history": "Versiegeschiedenis",
+      "Published versions can be restored without losing the current live version on failure.": "Gepubliceerde versies kunnen worden hersteld zonder bij een fout de huidige liveversie te verliezen.",
       "Select a Hero slot first.": "Selecteer eerst een herovak.",
       "Select a media asset first.": "Selecteer eerst een media-asset.",
       "Assign to Hero slot": "Toewijzen aan herovak",
@@ -3999,9 +4081,11 @@
     const HERO_LOCAL_FILE_LIMIT = 900 * 1024;
     const MEDIA_LOCAL_FILE_LIMIT = 5 * 1024 * 1024;
     const COMMONPLACE_SITE_CONFIG_API = "/api/task-submit?commonpl4ce_site_config=1";
+    const COMMONPLACE_CONTENT_API = "/api/task-submit?commonpl4ce_content=1";
+    const COMMONPLACE_CONTENT_UPLOAD_API = "/api/task-submit?commonpl4ce_content_upload=1";
     const COMMONPLACE_ANALYTICS_API = "/api/task-submit";
     const COMMONPLACE_SITE_CONFIG_URL = "/assets/common-place/config/site-content.json";
-    const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story"];
+    const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story", "FAQ", "Footer"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
     const DEFAULT_SITE_CONFIG = {
       version: 1,
@@ -4106,6 +4190,14 @@
       publishStatus: "",
       publishPhase: "",
       publishError: "",
+      contentDraftRevision: 0,
+      contentDraftLifecycle: "draft",
+      contentDraftSavePhase: "loading",
+      contentDraftLastSavedAt: "",
+      contentDraftLastEditor: null,
+      contentVersions: [],
+      contentSaveTimer: null,
+      contentConflict: false,
       lastPublishedAt: "",
       publishedBuilderSignature: "",
       publishedConfig: DEFAULT_SITE_CONFIG,
@@ -4146,6 +4238,7 @@
 
     function createBuilderSection(name, type, overrides = {}) {
       return {
+        ...overrides,
         id: overrides.id || `section_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         name,
         type,
@@ -4159,8 +4252,43 @@
         ctaLink: overrides.ctaLink || "",
         internalNotes: overrides.internalNotes || "",
         visibility: overrides.visibility || "Draft",
+        enabled: overrides.enabled !== false,
         system: Boolean(overrides.system)
       };
+    }
+
+    function builderFromSiteConfig(config, media = [], previous = state.builder) {
+      const normalized = normalizeSiteConfig(config);
+      const fallback = defaultBuilderDraft();
+      const sections = Array.isArray(normalized.sections) && normalized.sections.length
+        ? normalized.sections.map((section) => createBuilderSection(section.name || section.heading || section.type, section.type || "Text block", section))
+        : fallback.sections;
+      const persistedMedia = (Array.isArray(media) ? media : []).map((asset) => normalizeMediaAsset({
+        ...asset,
+        status: asset.status ? `${asset.status.charAt(0).toUpperCase()}${asset.status.slice(1)}` : "Draft",
+        category: MEDIA_CATEGORIES.includes(asset.category) ? asset.category : "Brand",
+        format: asset.variant === "desktop" ? "Desktop" : asset.variant === "mobile" ? "Mobile" : (asset.mimeType || "Image"),
+        dimensions: asset.width && asset.height ? `${asset.width} x ${asset.height}` : "Stored asset",
+        usedIn: Array.isArray(asset.usage) ? asset.usage.join(", ") : "",
+        addedAt: asset.createdAt,
+        isLocal: false
+      }));
+      return normalizeBuilderDraft({
+        ...fallback,
+        selectedSectionId: sections.some((section) => section.id === previous?.selectedSectionId) ? previous.selectedSectionId : sections[0]?.id,
+        updatedAt: config.updatedAt || "",
+        websiteContent: normalized.content,
+        sections,
+        heroDesktopSlots: siteConfigToHeroSlots("desktop", normalized),
+        heroMobileSlots: siteConfigToHeroSlots("mobile", normalized),
+        mediaLibrary: persistedMedia.length ? persistedMedia : fallback.mediaLibrary,
+        bookingAvailability: normalized.bookingAvailability,
+        mediaTarget: previous?.mediaTarget || null,
+        selectedHeroSlot: previous?.selectedHeroSlot || fallback.selectedHeroSlot,
+        selectedMediaId: persistedMedia.some((asset) => asset.id === previous?.selectedMediaId) ? previous.selectedMediaId : "",
+        mediaFilter: previous?.mediaFilter || "All",
+        mediaSearch: previous?.mediaSearch || ""
+      });
     }
 
     function heroSlot(id, image, format, alt, note, status = "Ready") {
@@ -4325,71 +4453,67 @@
     function defaultBuilderDraft() {
       const sections = [
         createBuilderSection("Hero", "Full-screen visual", {
-          kicker: "Opening archive",
-          heading: "Hero",
-          body: workspace.websiteContent.heroLine,
-          visibility: "Ready",
-          system: true
+          id: "hero", kicker: "Opening archive", heading: "Hero", body: workspace.websiteContent.heroLine, visibility: "Published", system: true
         }),
         createBuilderSection("Story / Behind the Film", "Two-column story", {
-          kicker: "Behind the film",
-          heading: "Story / Behind the Film",
-          body: `${workspace.websiteContent.aboutText}\n\n${workspace.websiteContent.behindTheFilm}`,
-          visibility: "Ready",
-          system: true
+          id: "story", kicker: "", heading: "Shot with feeling.",
+          body: "CP creates visual stories for brands, campaigns and people who want their imagery to feel real.",
+          secondaryBody: "Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.",
+          smallLine: "For brands that need more than clean content: imagery with mood, memory and presence.",
+          ctaLabel: "Start your project", ctaLink: workspace.bookingUrl, visibility: "Published", system: true
         }),
         createBuilderSection("What We Create", "Text block", {
-          kicker: "Visual direction",
-          heading: "What We Create",
-          body: "Campaign, editorial, travel and lifestyle imagery shaped with mood, texture and presence.",
-          visibility: "Draft",
-          system: true
+          id: "what-we-create", kicker: "What we create", heading: "Visuals that keep a pulse.",
+          body: "Campaigns\nEditorials\nBrand Stories\nTravel Narratives\nPortraits", visibility: "Published", system: true
         }),
         createBuilderSection("Novateur / Selected Client", "Campaign / project block", {
-          kicker: "Selected client",
-          heading: "Novateur / Selected Client",
-          body: "A selected client story can be prepared here before it is connected to public publishing.",
-          visibility: "Draft",
-          system: true
+          id: "novateur", kicker: "Selected client", heading: "NOVATEUR STUDIOS",
+          body: "A campaign story built around fabric, movement and the feeling of clothes being lived in.",
+          desktopImage: "/assets/common-place/novateur/novateur-studios-logo.png", visibility: "Published", system: true
         }),
         createBuilderSection("Process", "Text block", {
-          kicker: "Process",
-          heading: "Process",
-          body: "Calm direction before the shutter. Clear mood, timing and usage before production.",
-          visibility: "Draft",
-          system: true
+          id: "process", kicker: "Process", heading: "Calm direction before the shutter.", body: "Direction\nProduction\nDelivery", visibility: "Published", system: true
         }),
         createBuilderSection("Who This Is For", "Text block", {
-          kicker: "For brands",
-          heading: "Who This Is For",
-          body: "For brands, founders and teams who want images that feel intentional, atmospheric and not overproduced.",
-          visibility: "Draft",
-          system: true
+          id: "who-this-is-for", kicker: "Who this is for", heading: "Intentional, not overproduced.",
+          body: "For brands and people who want visuals that feel intentional without losing the realness of the moment.", visibility: "Published", system: true
         }),
         createBuilderSection("Behind Romy", "Image block", {
-          kicker: "Behind Romy",
-          heading: "Behind Romy",
-          body: "A portrait-led section for Romy's perspective and working rhythm.",
-          desktopImage: "/assets/common-place/romy/romy-behind-film.jpg",
-          mobileImage: "/assets/common-place/romy/romy-behind-film.jpg",
-          visibility: "Draft",
-          system: true
+          id: "behind-romy", kicker: "Behind the Film", heading: "Romy Peters", body: workspace.websiteContent.aboutText,
+          secondaryBody: `${workspace.websiteContent.aboutBodySecondary}\n\n${workspace.websiteContent.behindTheFilm}`,
+          desktopImage: "/assets/common-place/romy/romy-behind-film.jpg", mobileImage: "/assets/common-place/romy/romy-behind-film.jpg",
+          alt: "Romy Peters photographing on location", visibility: "Published", system: true
+        }),
+        createBuilderSection("Availability", "Text block", {
+          id: "availability", kicker: "Availability", heading: "Currently Booking", body: workspace.websiteContent.availability,
+          secondaryBody: workspace.websiteContent.availabilityNote, smallLine: workspace.websiteContent.availabilityQuiet,
+          visibility: "Published", system: true
         }),
         createBuilderSection("Booking", "Booking CTA", {
-          kicker: "Start your project",
-          heading: "Booking",
-          body: "Prepare the booking call-to-action without publishing it yet.",
-          ctaLabel: workspace.websiteContent.bookingCta,
-          ctaLink: workspace.publicPath,
-          visibility: "Ready",
-          system: true
+          id: "booking", kicker: "Book a shoot", heading: "Book a shoot", body: "Tell me what you have in mind.",
+          ctaLabel: "Book a shoot", ctaLink: workspace.bookingUrl, enabled: true, visibility: "Published", system: true
         }),
-        createBuilderSection("Footer", "Text block", {
-          kicker: "End note",
-          heading: "Footer",
-          body: "COMMONPL4CE contact, socials and DONEOVERNIGHT powered-by stay prepared here.",
-          visibility: "Ready",
-          system: true
+        createBuilderSection("FAQ", "FAQ", {
+          id: "faq", kicker: "BEFORE WE WORK TOGETHER", heading: "Questions worth answering.",
+          body: "Every project is different.\n\nThese are simply the questions people ask most often before we begin.", defaultOpenId: "faq-1",
+          questions: [
+            ["faq-1", "What kind of projects do you usually work on?", "We work with fashion labels, creative brands, founders, restaurants, campaigns, products, editorial projects and people who care deeply about visual identity."],
+            ["faq-2", "Do I need a complete concept before contacting you?", "Not at all.\n\nSome projects begin with a finished campaign.\n\nOthers start with a conversation.\n\nWe shape the direction together before production begins."],
+            ["faq-3", "How does a project usually work?", "Every project starts with understanding the goal.\n\nFrom there we plan the creative direction, prepare production, shoot, edit and deliver.\n\nThe process stays personal from beginning to end."],
+            ["faq-4", "How long does delivery take?", "Every production is different.\n\nSmaller shoots can often be delivered much faster than larger campaigns.\n\nBefore we start you'll always know what to expect."],
+            ["faq-5", "Why invest in professional photography?", "Photography often creates the first impression people have of your business.\n\nStrong imagery builds trust, consistency and a visual identity that lasts far beyond a single campaign."],
+            ["faq-6", "Can you travel?", "Yes.\n\nProjects are not limited by location.\n\nTravel is planned together depending on the production."],
+            ["faq-7", "How is pricing determined?", "Every production is built around the project itself.\n\nInstead of forcing predefined packages, each proposal reflects the creative direction, preparation, production and delivery required."],
+            ["faq-8", "What happens after I book?", "You'll receive confirmation.\n\nWe discuss the creative direction.\n\nPlan the production.\n\nComplete the shoot.\n\nEdit everything carefully.\n\nDeliver the final work."]
+          ].map(([id, question, answer]) => ({ id, question, answer, enabled: true })),
+          closingKicker: "STILL WONDERING?", closingBody: "If your question isn't here, we'll happily answer it before we ever start shooting.",
+          ctaLabel: "Ask COMMONPL4CE", ctaLink: "mailto:book@commonpl4ce.com?subject=Question%20for%20COMMONPL4CE",
+          visibility: "Published", system: true
+        }),
+        createBuilderSection("Footer", "Footer", {
+          id: "footer", heading: "Footer", body: "COMMONPL4CE", secondaryBody: "Available worldwide",
+          desktopImage: "/assets/common-place/final/wordmark.png", contactEmail: workspace.email, socialLabel: "Instagram", socialUrl: workspace.instagram,
+          visibility: "Published", system: true
         })
       ];
       return {
@@ -4482,32 +4606,122 @@
       }
     }
 
-    function saveBuilderDraft() {
+    function writeBuilderRecoveryCache() {
       state.builder.updatedAt = new Date().toISOString();
       try {
         const draftForStorage = JSON.parse(JSON.stringify(state.builder, (key, value) => key === "previewImage" ? undefined : value));
         localStorage.setItem(BUILDER_DRAFT_KEY, JSON.stringify(draftForStorage));
-        setBuilderSaveState("Draft saved locally");
         return true;
       } catch (error) {
-        state.heroFeedback = "Large files require server upload in Phase 3.";
-        setBuilderSaveState("Unsaved changes");
         return false;
       }
     }
 
-    function savedTimeLabel(value = state.builder.updatedAt) {
+    function saveBuilderDraft() {
+      writeBuilderRecoveryCache();
+      if (state.contentDraftLifecycle === "published") {
+        state.contentDraftLifecycle = "draft";
+        const lifecycle = $("builderLifecycle");
+        if (lifecycle) lifecycle.value = "draft";
+      }
+      state.contentDraftSavePhase = "unsaved";
+      state.contentConflict = false;
+      setBuilderSaveState("Unsaved changes");
+      clearTimeout(state.contentSaveTimer);
+      if (state.authUser) state.contentSaveTimer = setTimeout(() => persistBuilderDraft().catch(() => {}), 700);
+      return true;
+    }
+
+    async function persistBuilderDraft() {
+      if (!state.authUser) {
+        setBuilderSaveState("Recovery copy saved on this device");
+        return false;
+      }
+      clearTimeout(state.contentSaveTimer);
+      state.contentSaveTimer = null;
+      state.contentDraftSavePhase = "saving";
+      setBuilderSaveState("Saving draft");
+      try {
+        const response = await fetch(COMMONPLACE_CONTENT_API, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            action: "commonpl4ce_content_save",
+            expected_revision: state.contentDraftRevision,
+            lifecycle: state.contentDraftLifecycle,
+            content: builderToSiteConfig()
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true || !data.draft) throw Object.assign(new Error(data.error || "Draft save failed"), { code: data.code });
+        state.contentDraftRevision = Number(data.draft.revision) || state.contentDraftRevision;
+        state.contentDraftLifecycle = data.draft.lifecycle || state.contentDraftLifecycle;
+        state.contentDraftLastSavedAt = data.draft.updatedAt || new Date().toISOString();
+        state.contentDraftLastEditor = data.draft.updatedBy || state.authUser;
+        state.contentDraftSavePhase = "saved";
+        state.contentConflict = false;
+        state.builder.updatedAt = state.contentDraftLastSavedAt;
+        writeBuilderRecoveryCache();
+        setBuilderSaveState("Draft saved to workspace");
+        renderPublishSummary();
+        return true;
+      } catch (error) {
+        state.contentDraftSavePhase = error.code === "CONTENT_DRAFT_CONFLICT" ? "conflict" : "failed";
+        state.contentConflict = error.code === "CONTENT_DRAFT_CONFLICT";
+        setBuilderSaveState(state.contentConflict ? "Conflict detected - reload draft" : "Draft save failed");
+        throw error;
+      }
+    }
+
+    function savedTimeLabel(value = state.contentDraftLastSavedAt || state.builder.updatedAt) {
       if (!value) return "Not saved yet";
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return "Last saved time unavailable";
       return `Last saved ${date.toLocaleTimeString(localeCode(), { hour: "2-digit", minute: "2-digit" })}`;
     }
 
-    function setBuilderSaveState(message = "Draft saved locally") {
+    function setBuilderSaveState(message = "Draft saved to workspace") {
+      const editor = state.contentDraftLastEditor?.email ? ` / ${state.contentDraftLastEditor.email}` : "";
       ["builderStorageState", "heroDraftState"].forEach((id) => {
         const target = $(id);
-        if (target) target.textContent = `${message} / ${savedTimeLabel()}`;
+        if (target) target.textContent = `${message} / ${savedTimeLabel()}${editor}`;
       });
+      const contentState = $("contentDraftState");
+      if (contentState) contentState.textContent = message;
+    }
+
+    async function loadContentWorkspace() {
+      try {
+        const response = await fetch(COMMONPLACE_CONTENT_API, { credentials: "same-origin", cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true || !data.draft || !data.published) throw new Error(data.error || "Website content unavailable");
+        state.contentDraftRevision = Number(data.draft.revision) || 0;
+        state.contentDraftLifecycle = data.draft.lifecycle || "draft";
+        state.contentDraftLastSavedAt = data.draft.updatedAt || "";
+        state.contentDraftLastEditor = data.draft.updatedBy || null;
+        state.contentVersions = Array.isArray(data.versions) ? data.versions : [];
+        state.builder = builderFromSiteConfig(data.draft.content, data.media, state.builder);
+        state.publishedConfig = normalizeSiteConfig(data.published.content);
+        state.publishedConfigLoaded = true;
+        state.publishedConfigSource = "website_os_content_state";
+        state.lastPublishedAt = data.published.publishedAt || "";
+        state.publishedBuilderSignature = builderSectionSignature(builderFromSiteConfig(data.published.content, data.media, state.builder));
+        state.contentDraftSavePhase = "saved";
+        const lifecycle = $("builderLifecycle");
+        if (lifecycle) lifecycle.value = state.contentDraftLifecycle;
+        writeBuilderRecoveryCache();
+        renderWebsiteFields();
+        renderActiveWebsiteTab();
+        renderPublishSummary();
+        renderVersionHistory();
+        setBuilderSaveState("Draft saved to workspace");
+        return true;
+      } catch (error) {
+        state.contentDraftSavePhase = "failed";
+        setBuilderSaveState("Server draft unavailable - recovery copy only");
+        throw error;
+      }
     }
 
     function builderToSiteConfig(builder = state.builder) {
@@ -4520,6 +4734,7 @@
         status: slot.status || "Draft"
       });
       return normalizeSiteConfig({
+        schemaVersion: 2,
         version: state.publishedConfig.version || 1,
         workspace: "commonpl4ce",
         updatedAt: new Date().toISOString(),
@@ -4528,7 +4743,11 @@
           mobile: builder.heroMobileSlots.map((slot, index) => slotToConfig(slot, index, "mobile"))
         },
         content: { ...builder.websiteContent },
-        bookingAvailability: { ...normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability }).bookingAvailability }
+        bookingAvailability: { ...normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability }).bookingAvailability },
+        sections: JSON.parse(JSON.stringify((builder.sections || []).map((section) => ({
+          ...section,
+          ...(section.id === "booking" ? { ctaLink: workspace.bookingUrl } : {})
+        }))))
       });
     }
 
@@ -4537,20 +4756,10 @@
     }
 
     function builderSectionSignature(builder = state.builder) {
-      return JSON.stringify((builder.sections || []).map((section) => ({
-        name: section.name,
-        type: section.type,
-        kicker: section.kicker || "",
-        heading: section.heading || "",
-        body: section.body || "",
-        ctaLabel: section.ctaLabel || "",
-        ctaLink: section.ctaLink || "",
-        desktopImage: section.desktopImage || "",
-        mobileImage: section.mobileImage || "",
-        galleryImages: section.galleryImages || "",
-        visibility: section.visibility || "",
-        internalNotes: section.internalNotes || ""
-      })));
+      return JSON.stringify((builder.sections || []).map((section) => {
+        const { system, ...publishable } = section;
+        return publishable;
+      }));
     }
 
     function publishedBuilderSignature() {
@@ -4582,20 +4791,28 @@
         const asset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId);
         return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || isLocalOnlyMedia(asset);
       }).length;
-      const sectionChanges = builderSectionSignature() === publishedBuilderSignature() ? 0 : 1;
+      const publishedSections = Array.isArray(published.sections) ? published.sections : [];
+      const draftSections = Array.isArray(draft.sections) ? draft.sections : [];
+      const sectionIds = [...new Set(draftSections.concat(publishedSections).map((section) => section.id))];
+      const sectionChangeNames = sectionIds.filter((id) => JSON.stringify(draftSections.find((section) => section.id === id) || null) !== JSON.stringify(publishedSections.find((section) => section.id === id) || null)).map((id) => draftSections.find((section) => section.id === id)?.name || publishedSections.find((section) => section.id === id)?.name || id);
+      const sectionChanges = sectionChangeNames.length;
       const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || bookingAvailabilityChanges.length > 0 || sectionChanges > 0;
-      return { draft, published, heroChanges, mediaPathChanges, contentChanges, bookingAvailabilityChanges, sectionChanges, blockedAssets, hasChanges };
+      return { draft, published, heroChanges, mediaPathChanges, contentChanges, bookingAvailabilityChanges, sectionChanges, sectionChangeNames, blockedAssets, hasChanges };
     }
 
     function syncBuilderSectionsFromContent() {
       const content = state.builder.websiteContent || {};
-      const hero = state.builder.sections.find((section) => section.name === "Hero");
+      const hero = state.builder.sections.find((section) => section.id === "hero");
       if (hero) hero.body = content.heroLine || "";
-      const story = state.builder.sections.find((section) => section.name === "Story / Behind the Film");
-      if (story) story.body = [content.aboutText, content.aboutBodySecondary, content.behindTheFilm].filter(Boolean).join("\n\n");
-      const booking = state.builder.sections.find((section) => section.name === "Booking");
-      if (booking) booking.ctaLabel = content.bookingCtaText || content.bookingCta || "";
-      const footer = state.builder.sections.find((section) => section.name === "Footer");
+      const story = state.builder.sections.find((section) => section.id === "story");
+      if (story) { story.heading = content.storyTitle || story.heading; story.body = content.storyLeadPrimary || story.body; story.secondaryBody = content.storyLeadSecondary || story.secondaryBody; story.smallLine = content.storySmallLine || story.smallLine; }
+      const behind = state.builder.sections.find((section) => section.id === "behind-romy");
+      if (behind) { behind.body = content.aboutText || behind.body; behind.secondaryBody = [content.aboutBodySecondary, content.behindTheFilm].filter(Boolean).join("\n\n"); }
+      const availability = state.builder.sections.find((section) => section.id === "availability");
+      if (availability) { availability.body = content.availability || availability.body; availability.secondaryBody = content.availabilityNote || availability.secondaryBody; availability.smallLine = content.availabilityQuiet || availability.smallLine; }
+      const booking = state.builder.sections.find((section) => section.id === "booking");
+      if (booking) { booking.ctaLabel = content.bookingCtaText || content.bookingCta || booking.ctaLabel; booking.ctaLink = workspace.bookingUrl; }
+      const footer = state.builder.sections.find((section) => section.id === "footer");
       if (footer) footer.body = content.footerText || "";
     }
 
@@ -4941,6 +5158,26 @@
       return `<iframe id="${id}" title="${title}" src="https://doneovernight.com/cp" loading="lazy"></iframe>`;
     }
 
+    function draftPreviewDocument(kind = "desktop") {
+      const sections = (state.builder.sections || []).filter((section) => section.enabled !== false && section.visibility !== "Disabled");
+      const hero = (kind === "mobile" ? state.builder.heroMobileSlots : state.builder.heroDesktopSlots).find((slot) => slot.status !== "Hidden");
+      const sectionHtml = sections.map((section) => {
+        if (section.type === "Full-screen visual") return `<section class="hero" style="background-image:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.45)),url('${escapeHTML(slotPreviewImage(hero))}')"><span>${escapeHTML(section.kicker || "COMMONPL4CE")}</span><h1>COMMONPL4CE</h1><p>${escapeHTML(section.body || "")}</p></section>`;
+        if (section.type === "FAQ") return `<section><span>${escapeHTML(section.kicker || "")}</span><h2>${escapeHTML(section.heading || "")}</h2><p>${escapeHTML(section.body || "")}</p><div>${(section.questions || []).filter((item) => item.enabled !== false).map((item) => `<details${section.defaultOpenId === item.id ? " open" : ""}><summary>${escapeHTML(item.question)}</summary><p>${escapeHTML(item.answer)}</p></details>`).join("")}</div></section>`;
+        const image = section.mobileImage && kind === "mobile" ? section.mobileImage : section.desktopImage;
+        return `<section><span>${escapeHTML(section.kicker || "")}</span><h2>${escapeHTML(section.heading || section.name || "")}</h2>${image ? `<img src="${escapeHTML(image)}" alt="${escapeHTML(section.alt || "")}">` : ""}<p>${escapeHTML(section.body || "")}</p>${section.secondaryBody ? `<p>${escapeHTML(section.secondaryBody)}</p>` : ""}${section.ctaLabel ? `<a href="${escapeHTML(section.ctaLink || "#")}">${escapeHTML(section.ctaLabel)}</a>` : ""}</section>`;
+      }).join("");
+      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{margin:0;background:#0a0907;color:#eee8da;font-family:Arial,sans-serif;overflow-x:hidden}section{min-height:62vh;padding:${kind === "mobile" ? "56px 22px" : "88px 7vw"};display:grid;align-content:center;gap:20px;border-bottom:1px solid rgba(238,232,218,.12)}.hero{min-height:100vh;background-size:cover;background-position:center}span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.6}h1,h2{margin:0;max-width:14ch;font-size:${kind === "mobile" ? "42px" : "72px"};line-height:.92;text-transform:uppercase;overflow-wrap:anywhere}p{margin:0;max-width:620px;white-space:pre-line;line-height:1.6;color:rgba(238,232,218,.72)}img{display:block;width:min(100%,720px);max-height:70vh;object-fit:cover}a{color:inherit;text-underline-offset:5px}details{border-top:1px solid rgba(238,232,218,.18);padding:16px 0}summary{cursor:pointer;font-weight:700}</style></head><body>${sectionHtml}</body></html>`;
+    }
+
+    function renderFullDraftPreview() {
+      if (!isWebsiteTabActive("preview")) return;
+      const desktop = $("desktopDraftPreview");
+      const mobile = $("mobileDraftPreview");
+      if (desktop) desktop.srcdoc = draftPreviewDocument("desktop");
+      if (mobile) mobile.srcdoc = draftPreviewDocument("mobile");
+    }
+
     function mountPreviewFrames() {
       const desktopMount = $("desktopPublicPreviewMount");
       const mobileMount = $("mobilePublicPreviewMount");
@@ -4972,6 +5209,7 @@
         unmountPreviewFrames();
         const preview = $("builderPreviewLarge");
         if (preview) preview.replaceChildren();
+        ["desktopDraftPreview", "mobileDraftPreview"].forEach((id) => { const frame = $(id); if (frame) frame.srcdoc = ""; });
       }
       if (tab === "builder") {
         const preview = $("builderPreview");
@@ -4989,9 +5227,11 @@
         renderMediaLibrary();
       } else if (isWebsiteTabActive("preview")) {
         mountPreviewFrames();
+        renderFullDraftPreview();
         renderBuilderPreview(section);
       } else if (isWebsiteTabActive("publish")) {
         renderPublishSummary();
+        renderVersionHistory();
       }
     }
 
@@ -5951,24 +6191,67 @@
     }
 
     function renderBuilderEditor(section) {
-      const fields = {
-        builderKicker: "kicker",
-        builderHeading: "heading",
-        builderBody: "body",
-        builderCtaLabel: "ctaLabel",
-        builderCtaLink: "ctaLink",
-        builderDesktopImage: "desktopImage",
-        builderMobileImage: "mobileImage",
-        builderGalleryImages: "galleryImages",
-        builderVisibility: "visibility",
-        builderInternalNotes: "internalNotes"
+      const target = $("builderEditorFields");
+      if (!target) return;
+      const input = (label, key, wide = false, type = "text", extra = "") => `<label class="field${wide ? " wide" : ""}"><span>${escapeHTML(label)}</span><input type="${type}" value="${escapeHTML(section?.[key] || "")}" data-builder-field="${key}" ${extra}></label>`;
+      const textarea = (label, key, placeholder = "") => `<label class="field wide"><span>${escapeHTML(label)}</span><textarea data-builder-field="${key}" placeholder="${escapeHTML(placeholder)}">${escapeHTML(section?.[key] || "")}</textarea></label>`;
+      const visibility = () => `<label class="field"><span>Visibility</span><select data-builder-field="visibility">${["Draft", "Ready", "Published", "Disabled"].map((value) => `<option${section?.visibility === value ? " selected" : ""}>${value}</option>`).join("")}</select></label>`;
+      const enabled = () => `<label class="field"><span>Section state</span><select data-builder-boolean="enabled"><option value="true"${section?.enabled !== false ? " selected" : ""}>Enabled</option><option value="false"${section?.enabled === false ? " selected" : ""}>Disabled</option></select></label>`;
+      const mediaSelect = (label, key) => `<label class="field"><span>${escapeHTML(label)}</span><select data-builder-media-field="${key}"><option value="">Select workspace media</option>${state.builder.mediaLibrary.filter((asset) => !isLocalOnlyMedia(asset) && !lower(asset.format).includes("video")).map((asset) => `<option value="${escapeHTML(asset.path)}"${section?.[key] === asset.path ? " selected" : ""}>${escapeHTML(asset.filename)}</option>`).join("")}</select></label>`;
+      const sectionItems = () => {
+        const items = Array.isArray(section.items) ? section.items : [];
+        return `<div class="wide faq-editor-list">${items.map((item, index) => {
+          const objectItem = item && typeof item === "object";
+          return `<article class="faq-editor-item"><div class="faq-editor-head"><strong>Item ${String(index + 1).padStart(2, "0")}</strong></div>${objectItem ? `<label class="field"><span>Title</span><input value="${escapeHTML(item.title || "")}" data-section-item-field="title" data-section-item-index="${index}"></label><label class="field"><span>Body</span><textarea data-section-item-field="body" data-section-item-index="${index}">${escapeHTML(item.body || "")}</textarea></label>` : `<label class="field"><span>Label</span><input value="${escapeHTML(item || "")}" data-section-item-field="value" data-section-item-index="${index}"></label>`}<div class="faq-editor-actions"><button class="button small" type="button" data-section-item-action="up" data-section-item-index="${index}"${index === 0 ? " disabled" : ""}>Move up</button><button class="button small" type="button" data-section-item-action="down" data-section-item-index="${index}"${index === items.length - 1 ? " disabled" : ""}>Move down</button><button class="button danger small" type="button" data-section-item-action="delete" data-section-item-index="${index}">Delete</button></div></article>`;
+        }).join("")}</div><button class="button small wide" type="button" data-section-item-action="add">Add item</button>`;
       };
-      Object.entries(fields).forEach(([id, key]) => {
-        const element = $(id);
-        if (!element) return;
-        element.disabled = !section;
-        element.value = section ? section[key] || "" : "";
-      });
+      const galleryEditor = () => {
+        const gallery = Array.isArray(section.gallery) ? section.gallery : clean(section.galleryImages).split("\n").filter(Boolean).map((src) => ({ src, alt: "", variant: "standard" }));
+        return `<div class="wide faq-editor-list">${gallery.map((item, index) => `<article class="faq-editor-item"><div class="faq-editor-head"><strong>Gallery ${String(index + 1).padStart(2, "0")}</strong></div><label class="field"><span>Asset</span><select data-gallery-field="src" data-gallery-index="${index}"><option value="${escapeHTML(item.src || "")}">${escapeHTML((item.src || "").split("/").pop() || "Current asset")}</option>${state.builder.mediaLibrary.filter((asset) => !isLocalOnlyMedia(asset)).map((asset) => `<option value="${escapeHTML(asset.path)}">${escapeHTML(asset.filename)}</option>`).join("")}</select></label><label class="field"><span>Alt text</span><input value="${escapeHTML(item.alt || "")}" data-gallery-field="alt" data-gallery-index="${index}"></label><div class="faq-editor-actions"><button class="button small" type="button" data-gallery-action="up" data-gallery-index="${index}"${index === 0 ? " disabled" : ""}>Move up</button><button class="button small" type="button" data-gallery-action="down" data-gallery-index="${index}"${index === gallery.length - 1 ? " disabled" : ""}>Move down</button><button class="button danger small" type="button" data-gallery-action="delete" data-gallery-index="${index}">Remove</button></div></article>`).join("")}</div><label class="field wide"><span>Add workspace asset</span><select data-gallery-add><option value="">Select media</option>${state.builder.mediaLibrary.filter((asset) => !isLocalOnlyMedia(asset)).map((asset) => `<option value="${escapeHTML(asset.path)}">${escapeHTML(asset.filename)}</option>`).join("")}</select></label>`;
+      };
+      if (!section) {
+        target.innerHTML = `<div class="empty-state wide"><strong>No section selected.</strong>Select or add a section to edit it.</div>`;
+        return;
+      }
+      const common = `${input("Kicker / label", "kicker")}${input("Heading", "heading")}`;
+      let fields = "";
+      if (section.type === "Full-screen visual") {
+        fields = `${common}${textarea("Hero line", "body")}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Two-column story") {
+        fields = `${common}${textarea("Primary story", "body")}${textarea("Secondary story", "secondaryBody")}${textarea("Closing line", "smallLine")}${input("CTA label", "ctaLabel")}${input("CTA link", "ctaLink")}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Campaign / project block") {
+        const links = Array.isArray(section.links) ? section.links : [{ label: "Website", url: "" }, { label: "Instagram", url: "" }];
+        fields = `${common}${input("Project meta", "meta", true)}${textarea("Description", "body")}${mediaSelect("Project logo / image", "desktopImage")}${input("Video path", "video")}${links.map((link, index) => `<label class="field"><span>${escapeHTML(link.label || `Link ${index + 1}`)}</span><input value="${escapeHTML(link.url || "")}" data-project-link-index="${index}"></label>`).join("")}${galleryEditor()}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Image block") {
+        fields = `${common}${textarea("Primary body", "body")}${textarea("Secondary body", "secondaryBody")}${mediaSelect("Desktop image", "desktopImage")}${mediaSelect("Mobile image", "mobileImage")}${input("Alt text", "alt", true)}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Booking CTA") {
+        fields = `${common}${textarea("Body", "body")}${input("CTA label", "ctaLabel")}${input("Booking URL", "ctaLink", true, "url", 'readonly aria-describedby="booking-url-note"')}<p class="form-note wide" id="booking-url-note">Public booking destination: https://doneovernight.com/cp-book</p>${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "FAQ") {
+        const questions = Array.isArray(section.questions) ? section.questions : [];
+        const defaultOptions = [`<option value=""${!section.defaultOpenId ? " selected" : ""}>No default-open item</option>`]
+          .concat(questions.map((item, index) => `<option value="${escapeHTML(item.id)}"${section.defaultOpenId === item.id ? " selected" : ""}>${String(index + 1).padStart(2, "0")} / ${escapeHTML(item.question || "Untitled question")}</option>`)).join("");
+        const questionRows = questions.map((item, index) => `
+          <article class="faq-editor-item" data-faq-item="${escapeHTML(item.id)}">
+            <div class="faq-editor-head"><strong>Question ${String(index + 1).padStart(2, "0")}</strong><span class="builder-state">${item.enabled === false ? "Disabled" : "Enabled"}</span></div>
+            <label class="field"><span>Question</span><input value="${escapeHTML(item.question || "")}" data-faq-field="question" data-faq-index="${index}"></label>
+            <label class="field"><span>Answer</span><textarea data-faq-field="answer" data-faq-index="${index}">${escapeHTML(item.answer || "")}</textarea></label>
+            <label class="field"><span>State</span><select data-faq-field="enabled" data-faq-index="${index}"><option value="true"${item.enabled !== false ? " selected" : ""}>Enabled</option><option value="false"${item.enabled === false ? " selected" : ""}>Disabled</option></select></label>
+            <div class="faq-editor-actions">
+              <button class="button small" type="button" data-faq-action="duplicate" data-faq-index="${index}">Duplicate</button>
+              <button class="button small" type="button" data-faq-action="up" data-faq-index="${index}"${index === 0 ? " disabled" : ""}>Move up</button>
+              <button class="button small" type="button" data-faq-action="down" data-faq-index="${index}"${index === questions.length - 1 ? " disabled" : ""}>Move down</button>
+              <button class="button danger small" type="button" data-faq-action="delete" data-faq-index="${index}">Delete</button>
+            </div>
+          </article>`).join("");
+        fields = `${common}${textarea("Introductory body", "body")}<label class="field wide"><span>Default-open question</span><select data-builder-field="defaultOpenId">${defaultOptions}</select></label><div class="wide faq-editor-list">${questionRows || '<div class="empty-state"><strong>No FAQ questions yet.</strong>Add the first question below.</div>'}</div><button class="button small wide" type="button" data-faq-action="add">Add question</button>${input("Closing kicker", "closingKicker")}${textarea("Closing body", "closingBody")}${input("Closing CTA label", "ctaLabel")}${input("Closing CTA link", "ctaLink")}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Footer") {
+        fields = `${textarea("Footer title", "body")}${mediaSelect("Footer wordmark", "desktopImage")}${textarea("Availability line", "secondaryBody")}${input("Contact email", "contactEmail", false, "email")}${input("Social label", "socialLabel")}${input("Social URL", "socialUrl", true, "url")}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else if (section.type === "Image gallery") {
+        fields = `${common}${textarea("Body", "body")}${galleryEditor()}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      } else {
+        fields = `${common}${textarea("Body text", "body")}${textarea("Secondary body", "secondaryBody")}${textarea("Closing line", "smallLine")}${Array.isArray(section.items) ? sectionItems() : ""}${visibility()}${enabled()}${textarea("Internal notes", "internalNotes")}`;
+      }
+      target.innerHTML = fields;
       const note = $("builderEditorNote");
       if (note) note.textContent = section ? `${section.name} / ${section.type} / ${section.system ? "core draft section" : "added draft section"}` : "Add or select a section to edit draft fields.";
       const index = section ? state.builder.sections.findIndex((item) => item.id === section.id) : -1;
@@ -5976,8 +6259,7 @@
       $("builderMoveDown").disabled = index < 0 || index >= state.builder.sections.length - 1;
       $("duplicateBuilderSection").disabled = !section;
       $("deleteBuilderSection").disabled = !section || section.system;
-      const stateLabel = $("builderStorageState");
-      if (stateLabel) stateLabel.textContent = section ? `${section.visibility} / local` : "Local draft";
+      setBuilderSaveState(state.contentDraftSavePhase === "saving" ? "Saving draft" : state.contentDraftSavePhase === "unsaved" ? "Unsaved changes" : "Draft saved to workspace");
     }
 
     function renderHeroManager() {
@@ -5987,7 +6269,7 @@
       renderHeroSlotList("desktop");
       renderHeroSlotList("mobile");
       renderHeroSlotEditor();
-      setBuilderSaveState(state.builder.updatedAt ? "Draft saved locally" : "Unsaved changes");
+      setBuilderSaveState(state.contentDraftSavePhase === "unsaved" ? "Unsaved changes" : state.contentDraftSavePhase === "saving" ? "Saving draft" : "Draft saved to workspace");
     }
 
     function heroSlots(kind) {
@@ -6273,7 +6555,7 @@
         <div class="field-grid">
           <label class="field"><span>Filename</span><input value="${escapeHTML(asset.filename)}" data-media-field="filename"></label>
           <label class="field"><span>Category</span><select data-media-field="category">${categories}</select></label>
-          <label class="field wide"><span>Asset path</span><input value="${escapeHTML(asset.path || "")}" data-media-field="path" placeholder="/assets/common-place/..."></label>
+          <label class="field wide"><span>Persistent asset URL</span><input value="${escapeHTML(asset.path || "")}" readonly></label>
           <label class="field wide"><span>Alt text</span><input value="${escapeHTML(asset.alt || "")}" data-media-field="alt"></label>
           <label class="field"><span>Status</span><select data-media-field="status"><option${asset.status === "Draft" ? " selected" : ""}>Draft</option><option${asset.status === "Ready" ? " selected" : ""}>Ready</option><option${asset.status === "Hidden" ? " selected" : ""}>Hidden</option></select></label>
           <label class="field"><span>Format / type</span><input value="${escapeHTML(asset.format || "")}" data-media-field="format"></label>
@@ -6290,8 +6572,8 @@
         ${localOnly ? `<div class="website-note">Upload storage required before this file can go live.</div>` : ""}
         <div class="media-asset-actions">
           <button class="button small" type="button" data-media-assign="${escapeHTML(asset.id)}"${assignDisabled ? " disabled" : ""}>Assign selected asset</button>
-          <label class="button small media-replace-file">Replace with local file<input type="file" accept="image/*" data-media-replace-file="${escapeHTML(asset.id)}"></label>
-          <button class="button small" type="button" data-media-delete="${escapeHTML(asset.id)}">Delete from draft library</button>
+          <label class="button small media-replace-file">Replace asset<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-media-replace-file="${escapeHTML(asset.id)}"></label>
+          <button class="button small" type="button" data-media-delete="${escapeHTML(asset.id)}">Remove asset</button>
         </div>
       `;
     }
@@ -6318,21 +6600,24 @@
       }
       const media = section.name === "Hero"
         ? `${state.builder.heroDesktopSlots.filter((slot) => slot.status !== "Hidden").length} desktop / ${state.builder.heroMobileSlots.filter((slot) => slot.status !== "Hidden").length} mobile hero slots prepared`
+        : section.type === "FAQ"
+          ? `${(section.questions || []).filter((item) => item.enabled !== false).length} enabled FAQ questions`
         : section.desktopImage || section.mobileImage || section.galleryImages || "No visual connected";
       if ($("builderPreviewState")) $("builderPreviewState").textContent = `${section.visibility} preview`;
-      if ($("previewPanelState")) $("previewPanelState").textContent = `${section.visibility} / local`;
+      if ($("previewPanelState")) $("previewPanelState").textContent = `${section.visibility} / saved draft`;
       const html = `
         <article class="draft-preview-card">
           <span class="preview-label">Draft preview / ${escapeHTML(section.type)}</span>
           <span class="section-preview-kicker" data-i18n-skip>${escapeHTML(section.kicker || section.name)}</span>
           <h3 data-i18n-skip>${escapeHTML(section.heading || section.name)}</h3>
           <p data-i18n-skip>${escapeHTML(section.body || "Draft copy will appear here.")}</p>
+          ${section.type === "FAQ" ? `<div class="faq-editor-list">${(section.questions || []).filter((item) => item.enabled !== false).map((item) => `<div class="faq-editor-item"><strong>${escapeHTML(item.question || "")}</strong><p>${escapeHTML(item.answer || "")}</p></div>`).join("")}</div>` : ""}
           <div class="draft-preview-media" data-i18n-skip>${escapeHTML(media)}</div>
           ${section.ctaLabel ? `<button class="button small" type="button" disabled data-i18n-skip>${escapeHTML(section.ctaLabel)}</button>` : ""}
           <span class="builder-state">${escapeHTML(section.visibility)} / not live</span>
         </article>
       `;
-      const signature = JSON.stringify([section.id, section.type, section.kicker, section.heading, section.body, section.ctaLabel, section.visibility, media]);
+      const signature = JSON.stringify([section, media]);
       targets.forEach((target) => {
         if (target.dataset.renderSignature === signature && target.childElementCount) return;
         target.dataset.renderSignature = signature;
@@ -6344,7 +6629,7 @@
       const target = $("publishSummary");
       if (!target) return;
       const readySections = state.builder.sections.filter((section) => section.visibility === "Ready").length;
-      const hiddenSections = state.builder.sections.filter((section) => section.visibility === "Hidden").length;
+      const hiddenSections = state.builder.sections.filter((section) => section.visibility === "Disabled" || section.enabled === false).length;
       const readyHeroSlots = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => slot.status === "Ready").length;
       const connectedMedia = state.builder.mediaLibrary.filter((asset) => clean(asset.usedIn)).length;
       const diff = siteConfigDiff();
@@ -6358,7 +6643,7 @@
       const statusText = isPublishing
         ? "Writing live config."
         : isFailed
-          ? "Publish failed. Draft is still saved locally."
+          ? "Publish failed. Draft remains saved in the workspace."
           : isPublished
             ? "Published live. COMMONPL4CE has been updated."
             : diff.hasChanges
@@ -6372,14 +6657,16 @@
         ["Sections hidden", hiddenSections],
         ["Hero slots ready", `${readyHeroSlots} of 14`],
         ["Changed hero slots", diff.heroChanges],
-        ["Changed sections", diff.sectionChanges],
+        ["Changed sections", diff.sectionChangeNames.length ? diff.sectionChangeNames.join(", ") : "None"],
         ["Changed text fields", diff.contentChanges.length ? diff.contentChanges.join(", ") : "None"],
         ["Booking availability", diff.bookingAvailabilityChanges.length ? diff.bookingAvailabilityChanges.join(", ") : "No change"],
         ["Changed media paths", diff.mediaPathChanges],
         ["Media assets connected", connectedMedia],
         ["Publish readiness", publishBlocker],
         ["Publish status", statusText],
-        ["Last published", state.lastPublishedAt ? formatTimestamp(state.lastPublishedAt) : "Not published in this session"]
+        ["Last published", state.lastPublishedAt ? formatTimestamp(state.lastPublishedAt) : "Not published in this session"],
+        ["Draft revision", state.contentDraftRevision],
+        ["Last editor", state.contentDraftLastEditor?.email || "Not recorded"]
       ];
       target.innerHTML = items.map(([label, value]) => `
         <div class="publish-summary-item">
@@ -6413,15 +6700,70 @@
         note.textContent = isPublishing
           ? "Writing live config."
           : isFailed
-            ? "Publish failed. Draft is still saved locally."
+            ? "Publish failed. Draft remains saved in the workspace."
             : isPublished
               ? `Published live. COMMONPL4CE has been updated.${state.lastPublishedAt ? ` ${formatTimestamp(state.lastPublishedAt)}.` : ""}`
               : diff.blockedAssets
-                ? "Upload storage required before this file can go live. Use existing Media Library assets or manual public paths until storage is connected."
+                ? "A browser-only media preview must be uploaded to workspace storage before publishing."
                 : diff.hasChanges
-                  ? "Draft changes not live yet. Publishing writes the server-side COMMONPL4CE config used by the public /cp website."
+                  ? "Draft changes not live yet. Publishing atomically updates the COMMONPL4CE config used by public /cp."
                   : "Published baseline is current. Publishing writes the server-side COMMONPL4CE config used by the public /cp website.";
       }
+    }
+
+    function renderVersionHistory() {
+      const target = $("contentVersionHistory");
+      if (!target) return;
+      if (!state.contentVersions.length) {
+        target.innerHTML = `<div class="empty-state"><strong>No published versions yet.</strong>The first publish creates version 1.</div>`;
+        return;
+      }
+      target.innerHTML = state.contentVersions.map((version, index) => `
+        <div class="version-row">
+          <div><strong>Version ${escapeHTML(version.version)}</strong><span>${escapeHTML(formatTimestamp(version.publishedAt))} / ${escapeHTML(version.publishedBy?.email || "Unknown editor")}${version.sourceVersionId ? " / rollback" : ""}</span></div>
+          <button class="button small" type="button" data-content-rollback="${escapeHTML(version.id)}"${index === 0 ? " disabled" : ""}>${index === 0 ? "Current live" : "Roll back"}</button>
+        </div>`).join("");
+    }
+
+    async function rollbackContentVersion(versionId) {
+      const version = state.contentVersions.find((item) => item.id === versionId);
+      if (!version) return;
+      const confirmed = await askConfirmation({
+        title: `Roll back to version ${version.version}?`,
+        body: "This creates a new published version from the selected snapshot. The operation is atomic.",
+        confirmLabel: "Roll back"
+      });
+      if (!confirmed) return;
+      const response = await fetch(COMMONPLACE_CONTENT_API, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_content_rollback",
+          expected_revision: state.contentDraftRevision,
+          version_id: versionId,
+          confirmation: "ROLLBACK_COMMONPL4CE"
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) throw new Error(data.error || "Rollback failed");
+      state.contentDraftRevision = Number(data.draft.revision) || state.contentDraftRevision;
+      state.contentDraftLifecycle = data.draft.lifecycle || "published";
+      if ($("builderLifecycle")) $("builderLifecycle").value = state.contentDraftLifecycle;
+      state.contentDraftLastSavedAt = data.draft.updatedAt || "";
+      state.contentDraftLastEditor = data.draft.updatedBy || state.authUser;
+      state.contentVersions = data.versions || [];
+      state.builder = builderFromSiteConfig(data.draft.content, data.media, state.builder);
+      state.publishedConfig = normalizeSiteConfig(data.published.content);
+      state.lastPublishedAt = data.published.publishedAt || "";
+      state.publishedBuilderSignature = builderSectionSignature(builderFromSiteConfig(data.published.content, data.media, state.builder));
+      state.publishPhase = "published";
+      writeBuilderRecoveryCache();
+      renderWebsiteFields();
+      renderActiveWebsiteTab();
+      renderPublishSummary();
+      renderVersionHistory();
+      showToast(`Version ${version.version} restored and published.`);
     }
 
     async function publishWebsiteConfig() {
@@ -6435,11 +6777,17 @@
       }
       if (diff.blockedAssets) {
         state.publishPhase = "failed";
-        state.publishStatus = "Publish failed. Draft is still saved locally.";
+        state.publishStatus = "Publish failed. Draft remains saved in the workspace.";
         state.publishError = "Blocked by local preview assets";
         renderPublishSummary();
         return;
       }
+      const confirmed = await askConfirmation({
+        title: "Publish COMMONPL4CE live?",
+        body: "This atomically replaces the live website content with the current saved draft.",
+        confirmLabel: "Publish live"
+      });
+      if (!confirmed) return;
       const button = $("publishWebsiteConfig");
       if (button) {
         button.disabled = true;
@@ -6450,20 +6798,34 @@
       state.publishError = "";
       renderPublishSummary();
       try {
-        const response = await fetch(COMMONPLACE_SITE_CONFIG_API, {
+        if (state.contentDraftSavePhase !== "saved") await persistBuilderDraft();
+        const response = await fetch(COMMONPLACE_CONTENT_API, {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ workspace_slug: WEBSITE_OS_WORKSPACE_SLUG, config: diff.draft })
+          body: JSON.stringify({
+            action: "commonpl4ce_content_publish",
+            expected_revision: state.contentDraftRevision,
+            lifecycle: state.contentDraftLifecycle === "disabled" ? "disabled" : "published",
+            confirmation: "PUBLISH_COMMONPL4CE",
+            content: builderToSiteConfig()
+          })
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok || data.success !== true || !data.config) {
+        if (!response.ok || data.success !== true || !data.published || !data.draft) {
           throw new Error(data.error || data.code || "Publish failed");
         }
-        const config = normalizeSiteConfig(data.config);
+        const config = normalizeSiteConfig(data.published.content);
+        state.contentDraftRevision = Number(data.draft.revision) || state.contentDraftRevision;
+        state.contentDraftLifecycle = data.draft.lifecycle || "published";
+        if ($("builderLifecycle")) $("builderLifecycle").value = state.contentDraftLifecycle;
+        state.contentDraftLastSavedAt = data.draft.updatedAt || new Date().toISOString();
+        state.contentDraftLastEditor = data.draft.updatedBy || state.authUser;
+        state.contentVersions = Array.isArray(data.versions) ? data.versions : state.contentVersions;
+        state.builder = builderFromSiteConfig(data.draft.content, data.media, state.builder);
         state.publishedConfig = config;
         state.publishedConfigLoaded = true;
-        state.publishedConfigSource = COMMONPLACE_SITE_CONFIG_API;
+        state.publishedConfigSource = "website_os_content_state";
         workspace.publishedConfig = config;
         workspace.websiteContent = {
           ...config.content,
@@ -6471,17 +6833,19 @@
           bookingCta: config.content.bookingCtaText
         };
         state.publishPhase = "published";
-        state.lastPublishedAt = new Date(data.publishedAt || Date.now()).toISOString();
+        state.lastPublishedAt = new Date(data.published.publishedAt || Date.now()).toISOString();
         state.publishedBuilderSignature = builderSectionSignature();
         state.publishStatus = "Published live.";
         state.publishError = "";
-        saveBuilderDraft();
+        state.contentDraftSavePhase = "saved";
+        writeBuilderRecoveryCache();
         renderWebsiteFields();
         renderBookingAvailabilitySettings();
+        renderVersionHistory();
         if (isWebsiteTabActive("preview")) refreshPublicPreviewFrames();
       } catch (error) {
         state.publishPhase = "failed";
-        state.publishStatus = "Publish failed. Draft is still saved locally.";
+        state.publishStatus = "Publish failed. Draft remains saved in the workspace.";
         state.publishError = clean(error.message || "Publish failed");
         renderPublishSummary();
       }
@@ -6491,6 +6855,26 @@
       const section = selectedBuilderSection();
       if (!section) return;
       section[field] = value;
+      if (section.id === "booking") section.ctaLink = workspace.bookingUrl;
+      const content = state.builder.websiteContent;
+      if (section.id === "hero" && field === "body") content.heroLine = value;
+      if (section.id === "story") {
+        if (field === "heading") content.storyTitle = value;
+        if (field === "body") content.storyLeadPrimary = value;
+        if (field === "secondaryBody") content.storyLeadSecondary = value;
+        if (field === "smallLine") content.storySmallLine = value;
+      }
+      if (section.id === "behind-romy") {
+        if (field === "body") content.aboutText = value;
+        if (field === "secondaryBody") content.behindTheFilm = value;
+      }
+      if (section.id === "availability") {
+        if (field === "body") content.availability = value;
+        if (field === "secondaryBody") content.availabilityNote = value;
+        if (field === "smallLine") content.availabilityQuiet = value;
+      }
+      if (section.id === "booking" && field === "ctaLabel") content.bookingCtaText = value;
+      if (section.id === "footer" && field === "body") content.footerText = value;
       saveBuilderDraft();
       renderBuilderSectionList(section);
       renderBuilderPreview(section);
@@ -6498,11 +6882,106 @@
       if (field === "visibility") renderBuilderEditor(section);
     }
 
+    function updateFaqQuestion(index, field, value) {
+      const section = selectedBuilderSection();
+      if (section?.type !== "FAQ" || !section.questions?.[index]) return;
+      section.questions[index][field] = field === "enabled" ? value === true || value === "true" : value;
+      saveBuilderDraft();
+      renderBuilderPreview(section);
+      renderPublishSummary();
+      if (field === "enabled") renderBuilderEditor(section);
+    }
+
+    async function handleFaqAction(action, index) {
+      const section = selectedBuilderSection();
+      if (section?.type !== "FAQ") return;
+      section.questions = Array.isArray(section.questions) ? section.questions : [];
+      if (action === "add") {
+        section.questions.push({ id: `faq-${cryptoRandomId()}`, question: "New question", answer: "", enabled: true });
+      } else if (action === "duplicate" && section.questions[index]) {
+        const copy = JSON.parse(JSON.stringify(section.questions[index]));
+        copy.id = `faq-${cryptoRandomId()}`;
+        copy.question = `${copy.question} copy`;
+        section.questions.splice(index + 1, 0, copy);
+      } else if ((action === "up" || action === "down") && section.questions[index]) {
+        const nextIndex = index + (action === "up" ? -1 : 1);
+        if (nextIndex < 0 || nextIndex >= section.questions.length) return;
+        const [item] = section.questions.splice(index, 1);
+        section.questions.splice(nextIndex, 0, item);
+      } else if (action === "delete" && section.questions[index]) {
+        const confirmed = await askConfirmation({
+          title: "Delete this FAQ question?",
+          body: "The question is removed from the draft. The live website stays unchanged until publishing.",
+          confirmLabel: "Delete question"
+        });
+        if (!confirmed) return;
+        const [removed] = section.questions.splice(index, 1);
+        if (section.defaultOpenId === removed.id) section.defaultOpenId = "";
+      } else {
+        return;
+      }
+      saveBuilderDraft();
+      renderBuilderEditor(section);
+      renderBuilderPreview(section);
+      renderPublishSummary();
+    }
+
+    function updateSectionItem(index, field, value) {
+      const section = selectedBuilderSection();
+      if (!section || !Array.isArray(section.items) || section.items[index] === undefined) return;
+      if (field === "value") section.items[index] = value;
+      else if (section.items[index] && typeof section.items[index] === "object") section.items[index][field] = value;
+      saveBuilderDraft();
+      renderBuilderPreview(section);
+      renderPublishSummary();
+    }
+
+    function handleSectionItemAction(action, index) {
+      const section = selectedBuilderSection();
+      if (!section) return;
+      section.items = Array.isArray(section.items) ? section.items : [];
+      if (action === "add") section.items.push(section.id === "who-this-is-for" ? "New item" : { title: "New item", body: "" });
+      else if (action === "delete" && section.items[index] !== undefined) section.items.splice(index, 1);
+      else if ((action === "up" || action === "down") && section.items[index] !== undefined) {
+        const next = index + (action === "up" ? -1 : 1);
+        if (next < 0 || next >= section.items.length) return;
+        const [item] = section.items.splice(index, 1); section.items.splice(next, 0, item);
+      } else return;
+      saveBuilderDraft(); renderBuilderEditor(section); renderBuilderPreview(section); renderPublishSummary();
+    }
+
+    function updateSectionGallery(index, field, value) {
+      const section = selectedBuilderSection();
+      if (!section) return;
+      section.gallery = Array.isArray(section.gallery) ? section.gallery : [];
+      if (!section.gallery[index]) return;
+      section.gallery[index][field] = value;
+      saveBuilderDraft(); renderBuilderPreview(section); renderPublishSummary();
+    }
+
+    function handleGalleryAction(action, index) {
+      const section = selectedBuilderSection();
+      if (!section || !Array.isArray(section.gallery) || !section.gallery[index]) return;
+      if (action === "delete") section.gallery.splice(index, 1);
+      else {
+        const next = index + (action === "up" ? -1 : 1);
+        if (next < 0 || next >= section.gallery.length) return;
+        const [item] = section.gallery.splice(index, 1); section.gallery.splice(next, 0, item);
+      }
+      saveBuilderDraft(); renderBuilderEditor(section); renderBuilderPreview(section); renderPublishSummary();
+    }
+
+    function cryptoRandomId() {
+      return window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
     function addBuilderSection() {
       const type = $("builderSectionType")?.value || SECTION_TYPES[0];
       const section = createBuilderSection(type, type, {
         kicker: "Draft section",
         body: "Prepare copy, imagery and visibility here before publishing is connected.",
+        ...(type === "FAQ" ? { heading: "Questions", questions: [], defaultOpenId: "" } : {}),
+        ...(type === "Booking CTA" ? { ctaLabel: "Book a shoot", ctaLink: workspace.bookingUrl, enabled: true } : {}),
         visibility: "Draft"
       });
       state.builder.sections.push(section);
@@ -6515,15 +6994,10 @@
       const section = selectedBuilderSection();
       if (!section) return;
       const copy = createBuilderSection(`${section.name} copy`, section.type, {
-        heading: section.heading,
-        kicker: section.kicker,
-        body: section.body,
-        desktopImage: section.desktopImage,
-        mobileImage: section.mobileImage,
-        galleryImages: section.galleryImages,
-        ctaLabel: section.ctaLabel,
-        ctaLink: section.ctaLink,
-        internalNotes: section.internalNotes,
+        ...JSON.parse(JSON.stringify(section)),
+        id: `section_${cryptoRandomId()}`,
+        name: `${section.name} copy`,
+        system: false,
         visibility: "Draft"
       });
       const index = state.builder.sections.findIndex((item) => item.id === section.id);
@@ -6583,7 +7057,7 @@
       slot.localFileName = "";
       slot.localFileSize = 0;
       delete slot.previewImage;
-      state.heroFeedback = "Hero slot cleared. Draft saved locally.";
+      state.heroFeedback = "Hero slot cleared. Saving draft.";
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
@@ -6599,7 +7073,7 @@
       slots.splice(nextIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: nextIndex };
       state.builder.mediaTarget = mediaTargetFrom(kind, nextIndex);
-      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} slot moved. Draft saved locally.`;
+      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} slot moved. Saving draft.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
@@ -6614,7 +7088,7 @@
       slots.splice(toIndex, 0, slot);
       state.builder.selectedHeroSlot = { kind, index: toIndex };
       state.builder.mediaTarget = mediaTargetFrom(kind, toIndex);
-      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} order updated. Draft saved locally.`;
+      state.heroFeedback = `${kind === "mobile" ? "Mobile" : "Desktop"} order updated. Saving draft.`;
       syncHeroAssetUsage();
       saveBuilderDraft();
       renderHeroManager();
@@ -6653,6 +7127,7 @@
         return;
       }
       const targetName = mediaTargetName(target);
+      const previousAsset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId && item.id !== asset.id) || null;
       const alreadyAssigned = slot.mediaId === asset.id &&
         (isLocalOnlyMedia(asset)
           ? Boolean(slot.previewImage)
@@ -6698,6 +7173,8 @@
         : assignedMessage;
       syncHeroAssetUsage();
       saveBuilderDraft();
+      persistMediaMetadata(asset).catch(() => {});
+      if (previousAsset) persistMediaMetadata(previousAsset).catch(() => {});
       renderHeroManager();
       renderMediaLibrary();
       renderBuilderPreview(selectedBuilderSection());
@@ -6793,80 +7270,106 @@
       if (["path", "alt", "status"].includes(field)) syncHeroSlotsForAsset(asset);
       syncHeroAssetUsage();
       saveBuilderDraft();
+      persistMediaMetadata(asset).catch((error) => {
+        state.mediaFeedback = error.message || "Media metadata could not be saved.";
+        renderMediaLibrary();
+      });
       renderMediaLibrary();
       renderHeroManager();
       renderPublishSummary();
     }
 
-    function handleAddMediaFile(file) {
-      if (!file) return;
-      if (!file.type.startsWith("image/")) {
-        state.mediaFeedback = "Choose an image file for Media Library.";
-        renderMediaLibrary();
-        return;
-      }
-      if (file.size > MEDIA_LOCAL_FILE_LIMIT) {
-        state.mediaFeedback = "File is too large. Upload storage required before this file can go live.";
-        renderMediaLibrary();
-        return;
-      }
-      const id = `local_media_${Date.now()}`;
-      const asset = normalizeMediaAsset({
-        id,
-        category: "Hero",
-        filename: file.name,
-        path: "",
-        dimensions: `${Math.round(file.size / 1024)} KB local preview`,
-        format: file.type || "Image",
-        alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
-        usedIn: "Not assigned",
-        status: "Draft",
-        addedAt: new Date().toISOString(),
-        isLocal: true
-      }, state.builder.mediaLibrary.length);
-      asset.previewImage = URL.createObjectURL(file);
-      state.builder.mediaLibrary.unshift(asset);
-      state.builder.selectedMediaId = asset.id;
-      state.builder.mediaFilter = "All";
-      state.mediaFeedback = "Draft only — upload storage required before publish.";
-      saveBuilderDraft();
-      renderMediaLibrary();
-      renderPublishSummary();
+    async function persistMediaMetadata(asset) {
+      if (!asset || !/^[0-9a-f-]{36}$/i.test(asset.id)) return false;
+      const response = await fetch(COMMONPLACE_CONTENT_API, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_content_media_update",
+          expected_revision: state.contentDraftRevision,
+          media_id: asset.id,
+          filename: asset.filename,
+          alt_text: asset.alt,
+          category: asset.category,
+          variant: lower(asset.format).includes("mobile") ? "mobile" : lower(asset.format).includes("desktop") ? "desktop" : "original",
+          status: lower(asset.status),
+          usage: clean(asset.usedIn) && asset.usedIn !== "Not assigned" ? asset.usedIn.split(",").map((item) => clean(item)) : []
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) throw new Error(data.error || "Media metadata save failed");
+      return true;
     }
 
-    function handleReplaceMediaFile(assetId, file) {
+    async function uploadPersistentMedia(file, asset = null) {
+      if (!file) return;
+      const allowed = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+      if (!allowed.includes(file.type)) throw new Error("Use JPEG, PNG, WebP or AVIF.");
+      if (file.size > 4 * 1024 * 1024) throw new Error("Image must be 4 MB or smaller.");
+      const previewUrl = URL.createObjectURL(file);
+      state.mediaFeedback = asset ? "Replacing asset..." : "Uploading media...";
+      if (asset) asset.previewImage = previewUrl;
+      renderMediaLibrary();
+      const form = new FormData();
+      form.append("file", file);
+      form.append("category", asset?.category || "Hero");
+      form.append("variant", lower(asset?.format).includes("mobile") ? "mobile" : lower(asset?.format).includes("desktop") ? "desktop" : "original");
+      form.append("alt_text", asset?.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "));
+      if (asset?.id) form.append("asset_id", asset.id);
+      const response = await fetch(COMMONPLACE_CONTENT_UPLOAD_API, { method: "POST", credentials: "same-origin", body: form });
+      const data = await response.json().catch(() => ({}));
+      URL.revokeObjectURL(previewUrl);
+      if (!response.ok || data.success !== true || !data.media) throw new Error(data.error || "Media upload failed");
+      const persisted = normalizeMediaAsset({
+        ...data.media,
+        category: data.media.category,
+        status: `${data.media.status.charAt(0).toUpperCase()}${data.media.status.slice(1)}`,
+        format: data.media.variant === "desktop" ? "Desktop" : data.media.variant === "mobile" ? "Mobile" : data.media.mimeType,
+        dimensions: data.media.width && data.media.height ? `${data.media.width} x ${data.media.height}` : `${Math.round(data.media.byteSize / 1024)} KB`,
+        usedIn: Array.isArray(data.media.usage) ? data.media.usage.join(", ") : "Not assigned",
+        addedAt: data.media.createdAt,
+        isLocal: false
+      });
+      if (asset) {
+        const index = state.builder.mediaLibrary.findIndex((item) => item.id === asset.id);
+        state.builder.mediaLibrary[index] = persisted;
+        syncHeroSlotsForAsset(persisted);
+      } else {
+        state.builder.mediaLibrary.unshift(persisted);
+      }
+      state.builder.selectedMediaId = persisted.id;
+      state.builder.mediaFilter = "All";
+      state.mediaFeedback = `${persisted.filename} saved to workspace media.`;
+      saveBuilderDraft();
+      renderMediaLibrary();
+      renderHeroManager();
+      renderPublishSummary();
+      return persisted;
+    }
+
+    async function handleAddMediaFile(file) {
+      try {
+        await uploadPersistentMedia(file);
+      } catch (error) {
+        state.mediaFeedback = error.message || "Media upload failed.";
+        renderMediaLibrary();
+      }
+    }
+
+    async function handleReplaceMediaFile(assetId, file) {
       const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
       if (!asset || !file) return;
-      if (!file.type.startsWith("image/")) {
-        state.mediaFeedback = "Choose an image file to replace this media asset.";
+      try {
+        await uploadPersistentMedia(file, asset);
+      } catch (error) {
+        delete asset.previewImage;
+        state.mediaFeedback = error.message || "Media replacement failed.";
         renderMediaLibrary();
-        return;
       }
-      if (file.size > MEDIA_LOCAL_FILE_LIMIT) {
-        state.mediaFeedback = "File is too large. Upload storage required before this file can go live.";
-        renderMediaLibrary();
-        return;
-      }
-      asset.filename = file.name;
-      asset.path = "";
-      asset.dimensions = `${Math.round(file.size / 1024)} KB local preview`;
-      asset.format = file.type || "Image";
-      asset.alt = asset.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
-      asset.status = "Draft";
-      asset.isLocal = true;
-      asset.addedAt = new Date().toISOString();
-      asset.previewImage = URL.createObjectURL(file);
-      syncHeroSlotsForAsset(asset);
-      syncHeroAssetUsage();
-      state.mediaFeedback = "Draft only — upload storage required before publish.";
-      state.heroFeedback = firstHeroUsageWarning(asset.id) || state.heroFeedback;
-      saveBuilderDraft();
-      renderMediaLibrary();
-      renderHeroManager();
-      renderPublishSummary();
     }
 
-    function deleteMediaAsset(assetId) {
+    async function deleteMediaAsset(assetId) {
       const asset = state.builder.mediaLibrary.find((item) => item.id === assetId);
       if (!asset) return;
       const warning = firstHeroUsageWarning(asset.id);
@@ -6875,61 +7378,45 @@
         renderMediaLibrary();
         return;
       }
+      const confirmed = await askConfirmation({ title: "Remove this media asset?", body: "The asset is removed from this workspace. Assets currently used by website content cannot be removed.", confirmLabel: "Remove asset" });
+      if (!confirmed) return;
+      const response = await fetch(COMMONPLACE_CONTENT_API, {
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ action: "commonpl4ce_content_media_remove", expected_revision: state.contentDraftRevision, media_id: asset.id })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success !== true) {
+        state.mediaFeedback = data.error || "Media asset could not be removed.";
+        renderMediaLibrary();
+        return;
+      }
       state.builder.mediaLibrary = state.builder.mediaLibrary.filter((item) => item.id !== asset.id);
       state.builder.selectedMediaId = state.builder.mediaLibrary[0]?.id || "";
-      state.mediaFeedback = `${asset.filename} removed from the draft media library. Real files were not deleted.`;
+      state.mediaFeedback = `${asset.filename} removed from workspace media.`;
       saveBuilderDraft();
       renderMediaLibrary();
       renderPublishSummary();
     }
 
-    function handleHeroLocalFile(kind, index, file) {
+    async function handleHeroLocalFile(kind, index, file) {
       const slot = heroSlots(kind)[index];
       if (!slot || !file) return;
-      if (!file.type.startsWith("image/")) {
-        state.heroFeedback = "Choose an image file for this hero slot.";
+      try {
+        state.heroFeedback = "Uploading image to workspace media...";
         renderHeroManager();
-        return;
+        const asset = await uploadPersistentMedia(file);
+        setMediaTarget(kind, index, { silent: true });
+        assignMediaToTarget(asset.id);
+      } catch (error) {
+        state.heroFeedback = error.message || "Image upload failed.";
+        renderHeroManager();
       }
-      if (file.size > HERO_LOCAL_FILE_LIMIT) {
-        slot.previewImage = URL.createObjectURL(file);
-        slot.localFileName = file.name;
-        slot.localFileSize = file.size;
-        state.builder.selectedHeroSlot = { kind, index };
-        state.heroFeedback = "Local preview only. Large files require server upload in Phase 3 before publishing this asset.";
-        setBuilderSaveState("Unsaved changes");
-        renderHeroManager();
-        renderBuilderPreview(selectedBuilderSection());
-        return;
-      }
-      state.heroFeedback = "Unsaved changes";
-      setBuilderSaveState("Unsaved changes");
-      const reader = new FileReader();
-      reader.onload = () => {
-        slot.mediaId = `local_${Date.now()}`;
-        slot.image = String(reader.result || "");
-        slot.alt = slot.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
-        slot.localFileName = file.name;
-        slot.localFileSize = file.size;
-        delete slot.previewImage;
-        slot.status = "Draft";
-        state.builder.selectedHeroSlot = { kind, index };
-        state.heroFeedback = `${file.name} added as a local draft preview only. Upload storage required before publishing this asset.`;
-        syncHeroAssetUsage();
-        saveBuilderDraft();
-        renderHeroManager();
-        renderBuilderPreview(selectedBuilderSection());
-        renderPublishSummary();
-      };
-      reader.onerror = () => {
-        state.heroFeedback = "Local file preview could not be loaded.";
-        renderHeroManager();
-      };
-      reader.readAsDataURL(file);
     }
 
     function resetBuilderDraft() {
-      state.builder = defaultBuilderDraft();
+      const mediaLibrary = state.builder.mediaLibrary;
+      state.builder = builderFromSiteConfig(state.publishedConfig, [], state.builder);
+      state.builder.mediaLibrary = mediaLibrary;
       saveBuilderDraft();
       renderSectionBuilder();
     }
@@ -7377,6 +7864,10 @@
 
     function unlockApp() {
       document.body.classList.add("is-unlocked");
+      loadContentWorkspace().catch((error) => {
+        state.publishError = error.message || "Workspace content unavailable";
+        renderPublishSummary();
+      });
       loadBookings().catch((error) => {
         setSync("Bookings unavailable");
         $("overviewBookings").innerHTML = `<div class="empty-state"><strong>Could not load bookings.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
@@ -7784,7 +8275,34 @@
 
       const mediaDelete = event.target.closest("[data-media-delete]");
       if (mediaDelete) {
-        deleteMediaAsset(mediaDelete.dataset.mediaDelete);
+        await deleteMediaAsset(mediaDelete.dataset.mediaDelete);
+        return;
+      }
+
+      const faqAction = event.target.closest("[data-faq-action]");
+      if (faqAction) {
+        await handleFaqAction(faqAction.dataset.faqAction, Number(faqAction.dataset.faqIndex));
+        return;
+      }
+
+      const sectionItemAction = event.target.closest("[data-section-item-action]");
+      if (sectionItemAction) {
+        handleSectionItemAction(sectionItemAction.dataset.sectionItemAction, Number(sectionItemAction.dataset.sectionItemIndex));
+        return;
+      }
+
+      const galleryAction = event.target.closest("[data-gallery-action]");
+      if (galleryAction) {
+        handleGalleryAction(galleryAction.dataset.galleryAction, Number(galleryAction.dataset.galleryIndex));
+        return;
+      }
+
+      const rollback = event.target.closest("[data-content-rollback]");
+      if (rollback) {
+        rollback.disabled = true;
+        try { await rollbackContentVersion(rollback.dataset.contentRollback); }
+        catch (error) { showToast(error.message || "Rollback failed."); }
+        finally { rollback.disabled = false; }
         return;
       }
 
@@ -7870,9 +8388,9 @@
     $("deleteBuilderSection").addEventListener("click", deleteBuilderSection);
     $("builderMoveUp").addEventListener("click", () => moveBuilderSection(-1));
     $("builderMoveDown").addEventListener("click", () => moveBuilderSection(1));
-    $("saveBuilderDraft").addEventListener("click", () => {
-      saveBuilderDraft();
-      setBuilderSaveState("Draft saved locally");
+    $("saveBuilderDraft").addEventListener("click", async () => {
+      try { await persistBuilderDraft(); showToast("Draft saved to workspace."); }
+      catch (error) { showToast(error.message || "Draft save failed."); }
     });
     $("resetBuilderDraft").addEventListener("click", resetBuilderDraft);
     $("publishWebsiteConfig").addEventListener("click", publishWebsiteConfig);
@@ -7892,6 +8410,57 @@
       const builderField = event.target.closest("[data-builder-field]");
       if (builderField) {
         updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
+        return;
+      }
+
+      const builderBoolean = event.target.closest("[data-builder-boolean]");
+      if (builderBoolean) {
+        updateSelectedBuilderSection(builderBoolean.dataset.builderBoolean, builderBoolean.value === "true");
+        renderBuilderEditor(selectedBuilderSection());
+        return;
+      }
+
+      const faqField = event.target.closest("[data-faq-field]");
+      if (faqField) {
+        updateFaqQuestion(Number(faqField.dataset.faqIndex), faqField.dataset.faqField, faqField.value);
+        return;
+      }
+
+      const sectionItemField = event.target.closest("[data-section-item-field]");
+      if (sectionItemField) {
+        updateSectionItem(Number(sectionItemField.dataset.sectionItemIndex), sectionItemField.dataset.sectionItemField, sectionItemField.value);
+        return;
+      }
+
+      const builderMediaField = event.target.closest("[data-builder-media-field]");
+      if (builderMediaField) {
+        updateSelectedBuilderSection(builderMediaField.dataset.builderMediaField, builderMediaField.value);
+        renderBuilderEditor(selectedBuilderSection());
+        return;
+      }
+
+      const galleryField = event.target.closest("[data-gallery-field]");
+      if (galleryField) {
+        updateSectionGallery(Number(galleryField.dataset.galleryIndex), galleryField.dataset.galleryField, galleryField.value);
+        return;
+      }
+
+      const projectLink = event.target.closest("[data-project-link-index]");
+      if (projectLink) {
+        const section = selectedBuilderSection();
+        section.links = Array.isArray(section.links) ? section.links : [{ label: "Website", url: "" }, { label: "Instagram", url: "" }];
+        if (section.links[Number(projectLink.dataset.projectLinkIndex)]) section.links[Number(projectLink.dataset.projectLinkIndex)].url = projectLink.value;
+        saveBuilderDraft(); renderPublishSummary();
+        return;
+      }
+
+      const galleryAdd = event.target.closest("[data-gallery-add]");
+      if (galleryAdd && galleryAdd.value) {
+        const section = selectedBuilderSection();
+        section.gallery = Array.isArray(section.gallery) ? section.gallery : [];
+        const asset = state.builder.mediaLibrary.find((item) => item.path === galleryAdd.value);
+        section.gallery.push({ src: galleryAdd.value, alt: asset?.alt || "", variant: "standard" });
+        saveBuilderDraft(); renderBuilderEditor(section); renderBuilderPreview(section); renderPublishSummary();
         return;
       }
 
@@ -7966,6 +8535,34 @@
 
     document.addEventListener("input", (event) => {
       if (event.target.closest("#invoiceForm")) updateInvoiceCalculatedTotal();
+      const builderField = event.target.closest("[data-builder-field]");
+      if (builderField) {
+        updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
+        return;
+      }
+      const faqField = event.target.closest("[data-faq-field]");
+      if (faqField && faqField.dataset.faqField !== "enabled") {
+        updateFaqQuestion(Number(faqField.dataset.faqIndex), faqField.dataset.faqField, faqField.value);
+        return;
+      }
+      const sectionItemField = event.target.closest("[data-section-item-field]");
+      if (sectionItemField) {
+        updateSectionItem(Number(sectionItemField.dataset.sectionItemIndex), sectionItemField.dataset.sectionItemField, sectionItemField.value);
+        return;
+      }
+      const galleryField = event.target.closest("[data-gallery-field]");
+      if (galleryField && galleryField.tagName !== "SELECT") {
+        updateSectionGallery(Number(galleryField.dataset.galleryIndex), galleryField.dataset.galleryField, galleryField.value);
+        return;
+      }
+      const projectLink = event.target.closest("[data-project-link-index]");
+      if (projectLink) {
+        const section = selectedBuilderSection();
+        section.links = Array.isArray(section.links) ? section.links : [{ label: "Website", url: "" }, { label: "Instagram", url: "" }];
+        if (section.links[Number(projectLink.dataset.projectLinkIndex)]) section.links[Number(projectLink.dataset.projectLinkIndex)].url = projectLink.value;
+        saveBuilderDraft(); renderPublishSummary();
+        return;
+      }
       const contentField = event.target.closest("[data-content-field]");
       if (contentField) {
         updateWebsiteContentField(contentField.dataset.contentField, contentField.value);
@@ -7981,6 +8578,12 @@
         saveBuilderDraft();
         renderMediaLibrary();
       }
+    });
+
+    $("builderLifecycle").addEventListener("change", () => {
+      state.contentDraftLifecycle = $("builderLifecycle").value;
+      saveBuilderDraft();
+      renderPublishSummary();
     });
 
     document.addEventListener("dragstart", (event) => {

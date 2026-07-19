@@ -87,6 +87,10 @@ const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_CONTENT_WORKSPACE_SLUG = "cp";
+const COMMONPLACE_CONTENT_MEDIA_BUCKET = "website-os-media";
+const COMMONPLACE_CONTENT_MAX_MEDIA_BYTES = 4 * 1024 * 1024;
+const COMMONPLACE_CONTENT_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const COMMONPLACE_BOOKING_SOURCE = "commonpl4ce_booker";
 const COMMONPLACE_BOOKING_VERSION = "commonpl4ce_booker_v1";
 const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
@@ -340,6 +344,371 @@ function normalizeCommonplaceSiteConfig(config = {}) {
   };
 }
 
+function isCommonplaceContentRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_content") === "1") return true;
+  } catch (error) {}
+  return clean(input.action).startsWith("commonpl4ce_content_");
+}
+
+function isCommonplaceContentUploadRequest(req) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    return url.searchParams.get("commonpl4ce_content_upload") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function normalizeContentLifecycle(value, fallback = "draft") {
+  const normalized = clean(value).toLowerCase();
+  return ["draft", "ready", "published", "disabled"].includes(normalized) ? normalized : fallback;
+}
+
+function containsBrowserOnlyMedia(value) {
+  if (typeof value === "string") return /^(blob:|data:|file:)/i.test(value.trim());
+  if (Array.isArray(value)) return value.some(containsBrowserOnlyMedia);
+  return Boolean(value && typeof value === "object" && Object.values(value).some(containsBrowserOnlyMedia));
+}
+
+function validateCommonplaceContent(config, { publishing = false } = {}) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    const error = new Error("Website content must be an object");
+    error.statusCode = 400;
+    error.code = "CONTENT_INVALID";
+    throw error;
+  }
+  const sections = Array.isArray(config.sections) ? config.sections : [];
+  if (!sections.length || sections.length > 60) {
+    const error = new Error("Website content must contain between 1 and 60 sections");
+    error.statusCode = 400;
+    error.code = "CONTENT_SECTIONS_INVALID";
+    throw error;
+  }
+  const ids = new Set();
+  for (const section of sections) {
+    const id = clean(section?.id);
+    if (!id || ids.has(id)) {
+      const error = new Error("Every website section needs a unique id");
+      error.statusCode = 400;
+      error.code = "CONTENT_SECTION_ID_INVALID";
+      throw error;
+    }
+    ids.add(id);
+    if (id === "faq") {
+      const questions = Array.isArray(section.questions) ? section.questions : [];
+      if (questions.length > 50) {
+        const error = new Error("FAQ supports at most 50 questions");
+        error.statusCode = 400;
+        error.code = "FAQ_LIMIT_EXCEEDED";
+        throw error;
+      }
+      const questionIds = new Set();
+      for (const item of questions) {
+        const questionId = clean(item?.id);
+        if (!questionId || questionIds.has(questionId) || clean(item?.question).length > 300 || clean(item?.answer).length > 5000) {
+          const error = new Error("FAQ question data is invalid");
+          error.statusCode = 400;
+          error.code = "FAQ_ITEM_INVALID";
+          throw error;
+        }
+        questionIds.add(questionId);
+      }
+      if (clean(section.defaultOpenId) && !questionIds.has(clean(section.defaultOpenId))) {
+        const error = new Error("FAQ default-open item does not exist");
+        error.statusCode = 400;
+        error.code = "FAQ_DEFAULT_INVALID";
+        throw error;
+      }
+    }
+  }
+  const booking = sections.find((section) => section.id === "booking");
+  if (booking && clean(booking.ctaLink) !== "https://doneovernight.com/cp-book") {
+    const error = new Error("COMMONPL4CE booking URL must be https://doneovernight.com/cp-book");
+    error.statusCode = 400;
+    error.code = "BOOKING_URL_INVALID";
+    throw error;
+  }
+  if (publishing && containsBrowserOnlyMedia(config)) {
+    const error = new Error("Local preview media cannot be published");
+    error.statusCode = 409;
+    error.code = "CONTENT_LOCAL_MEDIA_BLOCKED";
+    throw error;
+  }
+  return normalizeCommonplaceSiteConfig(config);
+}
+
+async function getCommonplaceContentWorkspace() {
+  const rows = await supabaseFetch([
+    `website_os_workspaces?slug=eq.${encodeURIComponent(COMMONPLACE_CONTENT_WORKSPACE_SLUG)}`,
+    "status=eq.active",
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function readPublishedCommonplaceContentState() {
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return null;
+  const rows = await supabaseFetch([
+    `website_os_content_state?workspace_id=eq.${encodeURIComponent(workspace.id)}`,
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  const state = Array.isArray(rows) ? rows[0] || null : null;
+  return state ? { workspace, state } : null;
+}
+
+function publicContentUser(user = {}) {
+  return user?.id ? { id: user.id, email: user.email || "", role: user.role || "Viewer" } : null;
+}
+
+function publicContentDraft(row = {}, editor = null) {
+  return row?.id ? {
+    id: row.id,
+    content: row.content || {},
+    lifecycle: row.lifecycle_status || "draft",
+    revision: Number(row.revision) || 0,
+    basePublishedVersion: Number(row.base_published_version) || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+    updatedBy: publicContentUser(editor)
+  } : null;
+}
+
+function publicContentVersion(row = {}, editor = null) {
+  return row?.id ? {
+    id: row.id,
+    version: Number(row.version_number) || 0,
+    lifecycle: row.lifecycle_status || "published",
+    publishedAt: row.published_at || null,
+    publishedBy: publicContentUser(editor),
+    sourceVersionId: row.source_version_id || null
+  } : null;
+}
+
+function publicMediaAsset(row = {}) {
+  return row?.id ? {
+    id: row.id,
+    filename: row.filename || "",
+    path: row.public_url || "",
+    bucket: row.storage_bucket || "",
+    storagePath: row.storage_path || "",
+    mimeType: row.mime_type || "",
+    byteSize: Number(row.byte_size) || 0,
+    width: row.width || null,
+    height: row.height || null,
+    alt: row.alt_text || "",
+    category: row.category || "other",
+    variant: row.variant_kind || "original",
+    variants: row.variants || {},
+    usage: Array.isArray(row.usage) ? row.usage : [],
+    status: row.status || "draft",
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  } : null;
+}
+
+async function contentUsersById(ids = []) {
+  const safeIds = [...new Set(ids.filter(Boolean))];
+  if (!safeIds.length) return new Map();
+  const rows = await supabaseFetch(`website_os_users?id=in.(${safeIds.map(encodeURIComponent).join(",")})&select=id,email,role`);
+  return new Map((Array.isArray(rows) ? rows : []).map((row) => [row.id, row]));
+}
+
+async function writeContentAudit(context, action, entityId, previousState = {}, nextState = {}, metadata = {}) {
+  await supabaseFetch("website_os_audit_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      workspace_id: context.workspace.id,
+      actor_user_id: context.user.id,
+      entity_type: "website_content",
+      entity_id: entityId || context.workspace.id,
+      action,
+      previous_state: previousState,
+      next_state: nextState,
+      metadata
+    })
+  });
+}
+
+async function readCommonplaceContentBundle(context) {
+  const workspaceId = context.workspace.id;
+  const [draftRows, stateRows, versionRows, mediaRows] = await Promise.all([
+    supabaseFetch(`website_os_content_drafts?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&limit=1`),
+    supabaseFetch(`website_os_content_state?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&limit=1`),
+    supabaseFetch(`website_os_content_versions?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&order=version_number.desc&limit=30`),
+    supabaseFetch(`website_os_media_assets?workspace_id=eq.${encodeURIComponent(workspaceId)}&deleted_at=is.null&select=*&order=updated_at.desc&limit=200`)
+  ]);
+  const draft = Array.isArray(draftRows) ? draftRows[0] || null : null;
+  const published = Array.isArray(stateRows) ? stateRows[0] || null : null;
+  const versions = Array.isArray(versionRows) ? versionRows : [];
+  const media = Array.isArray(mediaRows) ? mediaRows : [];
+  const users = await contentUsersById([
+    draft?.updated_by,
+    published?.published_by,
+    ...versions.map((row) => row.published_by)
+  ]);
+  return {
+    draft: publicContentDraft(draft, users.get(draft?.updated_by)),
+    published: published ? {
+      content: published.published_config || {},
+      versionId: published.published_version_id,
+      publishedAt: published.published_at,
+      publishedBy: publicContentUser(users.get(published.published_by))
+    } : null,
+    versions: versions.map((row) => publicContentVersion(row, users.get(row.published_by))),
+    media: media.map(publicMediaAsset),
+    currentUser: publicContentUser(context.user)
+  };
+}
+
+function contentRpcError(error) {
+  const detail = `${error?.message || ""} ${error?.detail || ""}`;
+  if (/CONTENT_DRAFT_CONFLICT|40001/i.test(detail)) {
+    error.statusCode = 409;
+    error.code = "CONTENT_DRAFT_CONFLICT";
+    error.message = "This draft changed on another device. Reload before saving again.";
+  }
+  return error;
+}
+
+async function handleCommonplaceContentGet(req, res) {
+  try {
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles: ["Owner", "Admin", "Editor", "Viewer"] });
+    return send(res, 200, { success: true, ...(await readCommonplaceContentBundle(context)) });
+  } catch (error) {
+    return send(res, error.statusCode || 500, { success: false, error: error.message || "Content unavailable", code: error.code || "CONTENT_READ_FAILED" });
+  }
+}
+
+async function handleCommonplaceContentPost(req, res, input = {}) {
+  const action = clean(input.action).replace(/^commonpl4ce_content_/, "");
+  try {
+    const roles = action === "rollback" ? ["Owner", "Admin"] : ["Owner", "Admin", "Editor"];
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles });
+    const expectedRevision = Number(input.expected_revision ?? input.expectedRevision);
+    if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+      return send(res, 400, { success: false, error: "Expected draft revision is required", code: "CONTENT_REVISION_REQUIRED" });
+    }
+
+    if (action === "save") {
+      const content = validateCommonplaceContent(input.content);
+      const result = await supabaseFetch("rpc/website_os_save_content_draft", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_content: content,
+          p_lifecycle_status: normalizeContentLifecycle(input.lifecycle, "draft")
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      await writeContentAudit(context, "draft_saved", result?.id, { revision: expectedRevision }, { revision: result?.revision, lifecycle: result?.lifecycle_status });
+      return send(res, 200, { success: true, draft: publicContentDraft(result, context.user) });
+    }
+
+    if (action === "publish") {
+      if (clean(input.confirmation) !== "PUBLISH_COMMONPL4CE") {
+        return send(res, 400, { success: false, error: "Explicit publish confirmation is required", code: "CONTENT_PUBLISH_CONFIRMATION_REQUIRED" });
+      }
+      const content = validateCommonplaceContent(input.content, { publishing: true });
+      const result = await supabaseFetch("rpc/website_os_publish_content", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_content: content,
+          p_lifecycle_status: normalizeContentLifecycle(input.lifecycle, "published") === "disabled" ? "disabled" : "published"
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      await writeContentAudit(context, "published", result?.version?.id, { revision: expectedRevision }, { version: result?.version?.version_number });
+      const bundle = await readCommonplaceContentBundle(context);
+      return send(res, 200, { success: true, ...bundle });
+    }
+
+    if (action === "rollback") {
+      if (clean(input.confirmation) !== "ROLLBACK_COMMONPL4CE" || !/^[0-9a-f-]{36}$/i.test(clean(input.version_id || input.versionId))) {
+        return send(res, 400, { success: false, error: "Explicit rollback confirmation and version are required", code: "CONTENT_ROLLBACK_CONFIRMATION_REQUIRED" });
+      }
+      const result = await supabaseFetch("rpc/website_os_rollback_content", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_version_id: clean(input.version_id || input.versionId)
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      await writeContentAudit(context, "rolled_back", result?.version?.id, {}, { sourceVersionId: clean(input.version_id || input.versionId), version: result?.version?.version_number });
+      const bundle = await readCommonplaceContentBundle(context);
+      return send(res, 200, { success: true, ...bundle });
+    }
+
+    if (action === "media_update") {
+      const id = clean(input.media_id || input.mediaId);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return send(res, 400, { success: false, error: "Valid media id required", code: "MEDIA_ID_INVALID" });
+      const existingRows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+      const patch = {
+        filename: clean(input.filename) || existing.filename,
+        alt_text: clean(input.alt_text ?? input.alt) || "",
+        category: clean(input.category) || existing.category,
+        variant_kind: ["original", "desktop", "mobile"].includes(clean(input.variant)) ? clean(input.variant) : existing.variant_kind,
+        status: ["draft", "ready", "hidden", "archived"].includes(clean(input.status).toLowerCase()) ? clean(input.status).toLowerCase() : existing.status,
+        usage: Array.isArray(input.usage) ? input.usage.map(clean).filter(Boolean).slice(0, 50) : existing.usage,
+        updated_by: context.user.id
+      };
+      const rows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&select=*`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(patch)
+      });
+      const asset = Array.isArray(rows) ? rows[0] : null;
+      await writeContentAudit(context, "media_updated", id, { status: existing.status }, { status: asset?.status });
+      return send(res, 200, { success: true, media: publicMediaAsset(asset) });
+    }
+
+    if (action === "media_remove") {
+      const id = clean(input.media_id || input.mediaId);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return send(res, 400, { success: false, error: "Valid media id required", code: "MEDIA_ID_INVALID" });
+      const existingRows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+      if (Array.isArray(existing.usage) && existing.usage.length) return send(res, 409, { success: false, error: `This asset is used in ${existing.usage.join(", ")}.`, code: "MEDIA_IN_USE" });
+      const now = new Date().toISOString();
+      await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ status: "trashed", deleted_at: now, deleted_by: context.user.id, updated_by: context.user.id })
+      });
+      if (existing.storage_bucket && existing.storage_path) {
+        try {
+          await storageFetch(`object/${encodeURIComponent(existing.storage_bucket)}/${encodeStoragePath(existing.storage_path)}`, { method: "DELETE" });
+        } catch (storageError) {
+          await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ status: existing.status, deleted_at: null, deleted_by: null, updated_by: context.user.id })
+          }).catch(() => {});
+          throw storageError;
+        }
+      }
+      await writeContentAudit(context, "media_removed", id, { status: existing.status }, { status: "trashed", deletedAt: now });
+      return send(res, 200, { success: true, mediaId: id });
+    }
+
+    return send(res, 400, { success: false, error: "Unsupported content action", code: "CONTENT_ACTION_UNSUPPORTED" });
+  } catch (error) {
+    return send(res, error.statusCode || 500, { success: false, error: error.statusCode && error.statusCode < 500 ? error.message : "Website content update failed", code: error.code || "CONTENT_UPDATE_FAILED" });
+  }
+}
+
 function isCommonplaceSiteConfigRequest(req, input = {}) {
   try {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
@@ -390,6 +759,21 @@ function configFromCommonplaceRecord(record = {}) {
 
 async function handleCommonplaceSiteConfigGet(req, res) {
   try {
+    const persisted = await readPublishedCommonplaceContentState().catch(() => null);
+    if (persisted?.state?.published_config) {
+      const config = normalizeCommonplaceSiteConfig(persisted.state.published_config);
+      const unavailableDates = await readCommonplaceUnavailableDates(config);
+      return send(res, 200, {
+        success: true,
+        config: {
+          ...config,
+          bookingAvailability: { ...config.bookingAvailability, unavailableDates }
+        },
+        source: "website_os_content_state",
+        versionId: persisted.state.published_version_id,
+        publishedAt: persisted.state.published_at || config.updatedAt || null
+      });
+    }
     const record = await readCommonplaceSiteConfigRecord();
     const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
     const unavailableDates = await readCommonplaceUnavailableDates(config);
@@ -3251,6 +3635,77 @@ async function handleWorkspaceAttachmentUpload(req, res) {
   }
 }
 
+async function handleCommonplaceContentUpload(req, res) {
+  let uploadedStoragePath = "";
+  try {
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles: ["Owner", "Admin", "Editor"] });
+    const buffer = await readMultipartBuffer(req);
+    const { fields, files } = parseMultipartUpload(buffer, req.headers["content-type"] || "");
+    const file = files[0];
+    if (!file || files.length !== 1) return send(res, 400, { success: false, error: "Choose one image", code: "MEDIA_FILE_REQUIRED" });
+    if (!COMMONPLACE_CONTENT_MEDIA_TYPES.has(clean(file.type).toLowerCase())) {
+      return send(res, 415, { success: false, error: "Use JPEG, PNG, WebP or AVIF", code: "MEDIA_TYPE_INVALID" });
+    }
+    if (!file.size || file.size > COMMONPLACE_CONTENT_MAX_MEDIA_BYTES) {
+      return send(res, 413, { success: false, error: "Image must be 4 MB or smaller", code: "MEDIA_FILE_TOO_LARGE" });
+    }
+    const variant = ["desktop", "mobile", "original"].includes(clean(fields.variant)) ? clean(fields.variant) : "original";
+    const filename = sanitizeAttachmentFilename(file.name);
+    const assetId = clean(fields.asset_id || fields.assetId);
+    let existing = null;
+    if (assetId) {
+      if (!/^[0-9a-f-]{36}$/i.test(assetId)) return send(res, 400, { success: false, error: "Invalid media id", code: "MEDIA_ID_INVALID" });
+      const rows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(assetId)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      existing = Array.isArray(rows) ? rows[0] || null : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+    }
+    const checksum = crypto.createHash("sha256").update(file.data).digest("hex");
+    uploadedStoragePath = `${context.workspace.slug}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${filename}`;
+    await storageFetch(`object/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(uploadedStoragePath)}`, {
+      method: "POST",
+      headers: { "Content-Type": file.type, "x-upsert": "false" },
+      body: file.data
+    });
+    const { url } = getSupabaseStorageConfig();
+    const publicUrl = `${url}/storage/v1/object/public/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(uploadedStoragePath)}`;
+    const now = new Date().toISOString();
+    const values = {
+      filename,
+      storage_bucket: COMMONPLACE_CONTENT_MEDIA_BUCKET,
+      storage_path: uploadedStoragePath,
+      public_url: publicUrl,
+      mime_type: file.type,
+      byte_size: file.size,
+      alt_text: clean(fields.alt_text || fields.alt) || existing?.alt_text || "",
+      category: clean(fields.category) || existing?.category || "other",
+      variant_kind: variant,
+      status: "draft",
+      updated_by: context.user.id,
+      checksum,
+      ...(existing ? { replaced_at: now } : { workspace_id: context.workspace.id, created_by: context.user.id })
+    };
+    const rows = await supabaseFetch(existing
+      ? `website_os_media_assets?id=eq.${encodeURIComponent(existing.id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&select=*`
+      : "website_os_media_assets?select=*", {
+      method: existing ? "PATCH" : "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(values)
+    });
+    const asset = Array.isArray(rows) ? rows[0] || null : null;
+    if (!asset) throw new Error("Media record was not persisted");
+    if (existing?.storage_bucket && existing?.storage_path) {
+      storageFetch(`object/${encodeURIComponent(existing.storage_bucket)}/${encodeStoragePath(existing.storage_path)}`, { method: "DELETE" }).catch(() => {});
+    }
+    await writeContentAudit(context, existing ? "media_replaced" : "media_uploaded", asset.id, existing || {}, asset, { variant });
+    return send(res, 200, { success: true, media: publicMediaAsset(asset) });
+  } catch (error) {
+    if (uploadedStoragePath) {
+      storageFetch(`object/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(uploadedStoragePath)}`, { method: "DELETE" }).catch(() => {});
+    }
+    return send(res, error.statusCode || 500, { success: false, error: error.statusCode && error.statusCode < 500 ? error.message : "Media upload failed", code: error.code || "MEDIA_UPLOAD_FAILED" });
+  }
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -3310,6 +3765,9 @@ async function getConnectedOperatorMetadata(input = {}) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_content") === "1") {
+      return handleCommonplaceContentGet(req, res);
+    }
     if (url.searchParams.get("commonpl4ce_site_config") === "1") {
       return handleCommonplaceSiteConfigGet(req, res);
     }
@@ -3364,6 +3822,10 @@ module.exports = async function handler(req, res) {
     return handleWorkspaceAttachmentUpload(req, res);
   }
 
+  if (isCommonplaceContentUploadRequest(req)) {
+    return handleCommonplaceContentUpload(req, res);
+  }
+
   try {
     const input = await parseBody(req);
     if (isWebsiteOsAuthRequest(input)) {
@@ -3380,6 +3842,10 @@ module.exports = async function handler(req, res) {
 
     if (isCommonplaceSiteConfigRequest(req, input)) {
       return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
+    if (isCommonplaceContentRequest(req, input)) {
+      return handleCommonplaceContentPost(req, res, input);
     }
 
     if (isCommonplaceAnalyticsSummaryRequest(input)) {
