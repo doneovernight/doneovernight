@@ -19,6 +19,7 @@ const telegramControl = require("../lib/x-content/telegram-control");
 const growth = require("../lib/x-content/growth-director");
 const intelligence = require("../lib/x-content/growth-intelligence");
 const navigationLinks = require("../lib/x-content/navigation-links");
+const { collectAnalytics } = require("../lib/x-content/engagement");
 
 const freshCandidate = (id, changes = {}) => ({ id, source_url: `https://official.example/${id}`, headline: `Official agent workflow update ${id}`, topic_cluster: `topic-${id}`, evidence_summary: "An official release note with enough concrete implementation detail.", authority_score: 1, publish_score: 0.9, status: "accepted", created_at: new Date().toISOString(), ...changes });
 const generatedPost = (id) => ({
@@ -84,13 +85,13 @@ test("new X drafts target 180–220 weighted characters with a 240 V2 hard maxim
 test("account activity summary counts actual original posts by Amsterdam day and excludes replies and reposts", () => {
   const now = Date.parse("2026-07-19T10:00:00.000Z");
   const summary = accountActivity.activitySummary([
-    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
-    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", publication_origin: "agent", is_reply: false, is_repost: false },
-    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
-    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false },
+    { x_post_id: "manual-today", created_at: "2026-07-19T06:00:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
+    { x_post_id: "agent-today", created_at: "2026-07-19T08:00:00.000Z", publication_origin: "agent_original", is_reply: false, is_repost: false },
+    { x_post_id: "amsterdam-midnight", created_at: "2026-07-18T22:30:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
+    { x_post_id: "prior-amsterdam-day", created_at: "2026-07-18T21:30:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false },
     { x_post_id: "reply", created_at: "2026-07-19T07:00:00.000Z", publication_origin: "reply", is_reply: true, is_repost: false },
     { x_post_id: "repost", created_at: "2026-07-19T07:30:00.000Z", publication_origin: "repost", is_reply: false, is_repost: true }
-  ], { now });
+  ], { now, status: { last_success_at: "2026-07-19T09:00:00.000Z" } });
   assert.equal(summary.posts_today, 3);
   assert.equal(summary.known_total_posts, 4);
   assert.equal(summary.agent_published_today, 1);
@@ -128,8 +129,8 @@ test("read-only account activity sync deduplicates X IDs, classifies agent and m
   assert.equal(result.synced, true);
   assert.equal(result.identity.username, "doneovernight");
   assert.equal(rows.length, 4);
-  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent");
-  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual");
+  assert.equal(rows.find((row) => row.x_post_id === "agent-1").publication_origin, "agent_original");
+  assert.equal(rows.find((row) => row.x_post_id === "manual-1").publication_origin, "manual_original");
   assert.equal(result.posts_today, 2);
   assert.equal(result.agent_published_today, 1);
   assert.equal(result.manual_posts_today, 1);
@@ -138,8 +139,8 @@ test("read-only account activity sync deduplicates X IDs, classifies agent and m
 });
 
 test("failed account activity sync preserves known values as stale and identity mismatches fail closed", async () => {
-  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", publication_origin: "manual", is_reply: false, is_repost: false, is_currently_visible: true }];
-  const settings = {}; let writes = 0; let timelineCalls = 0;
+  const known = [{ x_post_id: "manual-1", account_id: "42", text: "Manual original", created_at: "2026-07-19T09:00:00.000Z", publication_origin: "manual_original", is_reply: false, is_repost: false, is_currently_visible: true }];
+  const settings = { [accountActivity.SYNC_SETTING]: JSON.stringify({ last_success_at: "2026-07-19T09:30:00.000Z" }) }; let writes = 0; let timelineCalls = 0;
   const repo = {
     listAccountActivity: async () => known,
     getSetting: async (key) => settings[key] ? { value: settings[key] } : null,
@@ -163,11 +164,57 @@ test("account activity uses the official authenticated user timeline endpoint an
   const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260720_x_account_activity.sql"), "utf8");
   assert.match(clientSource, /\/2\/users\/\$\{encodeURIComponent\(userId\)\}\/tweets/);
   assert.match(clientSource, /referenced_tweets/);
+  assert.match(clientSource, /non_public_metrics/);
   assert.match(dashboard, /Known total posts/);
   assert.match(dashboard, /Manual posts today/);
   assert.match(dashboard, /Last X sync/);
   assert.match(migration, /enable row level security/);
   assert.match(migration, /grant select, insert, update, delete.*service_role/i);
+});
+
+test("first account activity state is explicitly unavailable until an authenticated sync succeeds", () => {
+  const summary = accountActivity.activitySummary([], { status: {} });
+  assert.equal(summary.never_synced, true);
+  assert.equal(summary.stale, true);
+  assert.equal(summary.posts_today, null);
+  assert.equal(summary.known_total_posts, null);
+});
+
+test("analytics persists idempotent hourly snapshots for agent and manual originals without publishing", async () => {
+  const snapshots = []; const memory = []; let publishCalls = 0;
+  const activity = [
+    { x_post_id: "agent-1", publication_origin: "agent_original", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "manual-1", publication_origin: "manual_original", is_reply: false, is_repost: false, current: true },
+    { x_post_id: "reply-1", publication_origin: "reply", is_reply: true, is_repost: false, current: true }
+  ];
+  const repo = {
+    listPublishedPublications: async () => [{ id: "publication-1", draft_id: "draft-1", x_post_id: "agent-1" }],
+    listAccountActivity: async () => activity,
+    latestAnalyticsForPost: async (id) => snapshots.find((row) => row.x_post_id === id) || null,
+    createAnalytics: async (row) => { const prior = snapshots.find((item) => item.x_post_id === row.x_post_id && item.snapshot_key === row.snapshot_key); if (prior) Object.assign(prior, row); else snapshots.push(row); return row; },
+    savePerformanceMemory: async (row) => { const prior = memory.find((item) => item.x_post_id === row.x_post_id); if (prior) Object.assign(prior, row); else memory.push(row); return row; }
+  };
+  const client = {
+    verifyIdentity: async () => ({ username: "doneovernight", userId: "42" }),
+    getUserMetrics: async () => ({ data: { data: { public_metrics: { followers_count: 99 } } } }),
+    getPostMetrics: async (id) => ({ data: { data: { id, public_metrics: { impression_count: 100, like_count: 4, reply_count: 1, retweet_count: 2, quote_count: 1, bookmark_count: 3 } } } }),
+    publish: async () => { publishCalls += 1; }
+  };
+  const now = Date.parse("2026-07-19T10:24:00.000Z");
+  const first = await collectAnalytics({ repository: repo, xClient: client, now });
+  const second = await collectAnalytics({ repository: repo, xClient: client, now });
+  assert.equal(first.snapshots, 2); assert.equal(first.agent_posts, 1); assert.equal(first.manual_posts, 1);
+  assert.equal(second.snapshots, 2); assert.equal(snapshots.length, 2); assert.equal(memory.length, 2);
+  assert.equal(snapshots.find((row) => row.x_post_id === "manual-1").publication_id, null);
+  assert.equal(publishCalls, 0);
+});
+
+test("analytics migration keeps manual rows nullable, deduplicates snapshots, and grants service role access", () => {
+  const migration = fs.readFileSync(require.resolve("../supabase/migrations/20260721_x_account_activity_analytics.sql"), "utf8");
+  assert.match(migration, /alter column publication_id drop not null/i);
+  assert.match(migration, /x_post_analytics_post_snapshot_key_idx/i);
+  assert.match(migration, /x_post_performance_memory_x_post_id_idx/i);
+  assert.match(migration, /grant select, insert, update, delete/i);
 });
 
 test("V2 editorial gate enforces a single original source, natural verified mention, and all quality scores", () => {
