@@ -813,9 +813,16 @@
       background: var(--cream);
       transform: translateX(-50%);
     }
+    .operations-calendar-day.is-blocked {
+      border-color: rgba(237,230,216,.12);
+      background: repeating-linear-gradient(135deg, rgba(237,230,216,.045) 0 3px, rgba(237,230,216,.015) 3px 7px);
+      color: rgba(241,234,220,.42);
+    }
     .operations-calendar-day.is-selected { border-color: rgba(237,230,216,.5); background: rgba(237,230,216,.14); color: var(--text); }
     .operations-calendar-day.is-today.is-selected { box-shadow: inset 0 0 0 1px rgba(241,234,220,.14); }
     .calendar-day-bookings { min-height: 54px; border-top: 1px solid rgba(237,230,216,.1); padding-top: 10px; }
+    .calendar-availability-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .calendar-availability-action span { color: var(--muted); font-size: 12px; line-height: 1.45; }
 
     .quick-actions { display: grid; gap: 6px; }
     .quick-action {
@@ -2228,6 +2235,7 @@
     .setting-row:first-child { border-top: 0; padding-top: 0; }
     .setting-row strong { font-size: 13px; }
     .setting-row span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .setting-row a { color: var(--text); text-decoration: underline; text-decoration-color: rgba(237,230,216,.28); text-underline-offset: 3px; }
 
     .record-actions {
       display: flex;
@@ -3194,6 +3202,15 @@
       "No bookings on this day.": "Geen boekingen op deze dag.",
       "booking on this day": "boeking op deze dag",
       "bookings on this day": "boekingen op deze dag",
+      "Unavailable": "Niet beschikbaar",
+      "Available for booking": "Beschikbaar voor boekingen",
+      "Block date": "Datum blokkeren",
+      "Make date available": "Datum beschikbaar maken",
+      "This date is blocked for public bookings.": "Deze datum is geblokkeerd voor openbare boekingen.",
+      "This date is available after publishing.": "Deze datum is beschikbaar na publicatie.",
+      "Dates with bookings stay unavailable automatically.": "Datums met boekingen blijven automatisch niet beschikbaar.",
+      "Date blocked. Publish to update the public booker.": "Datum geblokkeerd. Publiceer om de openbare booker bij te werken.",
+      "Date available. Publish to update the public booker.": "Datum beschikbaar. Publiceer om de openbare booker bij te werken.",
       "Create a real COMMONPL4CE booking through the existing intake flow.": "Maak een echte COMMONPL4CE-boeking via de bestaande intakeflow.",
       "Name": "Naam",
       "Select project type": "Selecteer projecttype",
@@ -3344,6 +3361,7 @@
       "Workspace.": "Werkruimte.",
       "Only working settings are editable. Everything else is locked until persistence is connected.": "Alleen werkende instellingen zijn bewerkbaar. De rest blijft vergrendeld totdat opslag is gekoppeld.",
       "Booking availability": "Boekingsbeschikbaarheid",
+      "Public booking page": "Openbare boekingspagina",
       "Controls whether /cp-book and the public /cp booker accept new requests after publishing.": "Bepaalt of /cp-book en de openbare /cp-booker na publicatie nieuwe aanvragen aannemen.",
       "Online": "Online",
       "Offline": "Offline",
@@ -3841,7 +3859,8 @@
         offlineHeading: "Booking temporarily unavailable.",
         offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
         offlineCtaLabel: "Visit COMMONPL4CE",
-        offlineCtaLink: "/cp"
+        offlineCtaLink: "/cp",
+        blockedDates: []
       }
     };
 
@@ -3851,6 +3870,7 @@
         brand: "COMMONPL4CE",
         publicPath: "/cp",
         publicUrl: "https://doneovernight.com/cp",
+        bookingUrl: "https://doneovernight.com/cp-book",
         domain: "doneovernight.com/cp",
         email: "book@commonpl4ce.com",
         instagram: "https://instagram.com/commonpl4ce",
@@ -3961,12 +3981,16 @@
         const bookingFallback = fallback.bookingAvailability;
         const status = lower(booking.status) === "offline" ? "offline" : "online";
         const offlineCtaLink = clean(booking.offlineCtaLink || booking.ctaLink) || bookingFallback.offlineCtaLink;
+        const blockedDates = Array.isArray(booking.blockedDates)
+          ? [...new Set(booking.blockedDates.map(clean).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort()
+          : [];
         return {
           status,
           offlineHeading: clean(booking.offlineHeading || booking.heading) || bookingFallback.offlineHeading,
           offlineMessage: clean(booking.offlineMessage || booking.message) || bookingFallback.offlineMessage,
           offlineCtaLabel: clean(booking.offlineCtaLabel || booking.ctaLabel) || bookingFallback.offlineCtaLabel,
-          offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : bookingFallback.offlineCtaLink
+          offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : bookingFallback.offlineCtaLink,
+          blockedDates
         };
       };
       const normalizeHero = (kind) => {
@@ -4823,6 +4847,10 @@
       return state.allBookings.filter((booking) => !booking.isTrashed && localDateKey(booking.preferredDate) === dateKey);
     }
 
+    function calendarBlockedDates() {
+      return new Set(normalizeSiteConfig({ bookingAvailability: state.builder.bookingAvailability }).bookingAvailability.blockedDates);
+    }
+
     function renderCalendarInto(targetId) {
       const target = $(targetId);
       if (!target) return;
@@ -4836,6 +4864,7 @@
       const monthLabel = cursor.toLocaleDateString(localeCode(), { month: "long", year: "numeric" });
       const selectedKey = state.selectedCalendarDate;
       const todayKey = localDateKey(new Date());
+      const blockedDates = calendarBlockedDates();
       const cells = [];
       for (let index = 0; index < leading; index += 1) cells.push(`<button class="operations-calendar-day is-muted" type="button" tabindex="-1" aria-hidden="true"></button>`);
       for (let day = 1; day <= days; day += 1) {
@@ -4843,14 +4872,26 @@
         const key = localDateKey(date);
         const count = calendarBookingsForDate(key).length;
         const isToday = key === todayKey;
+        const isBlocked = blockedDates.has(key);
         const dateLabel = date.toLocaleDateString(localeCode(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-        const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
-        cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${isToday ? ` aria-current="date"` : ""}>${day}</button>`);
+        const aria = `${isToday ? `${t("Today")}, ` : ""}${dateLabel}${isBlocked ? `, ${t("Unavailable")}` : ""}${count ? `, ${count} ${count === 1 ? t("booking on this day") : t("bookings on this day")}` : ""}`;
+        cells.push(`<button class="operations-calendar-day${isToday ? " is-today" : ""}${isBlocked ? " is-blocked" : ""}${count ? " has-booking" : ""}${selectedKey === key ? " is-selected" : ""}" type="button" data-calendar-date="${key}" aria-label="${escapeHTML(aria)}"${isToday ? ` aria-current="date"` : ""}>${day}</button>`);
       }
       const selectedBookings = selectedKey ? calendarBookingsForDate(selectedKey) : [];
-      const selectedMarkup = selectedKey
+      let selectedMarkup = selectedKey
         ? (selectedBookings.length ? selectedBookings.map(compactBookingHTML).join("") : `<div class="empty-state"><strong>${escapeHTML(formatDate(selectedKey))}</strong>${t("No bookings on this day.")}</div>`)
         : `<div class="empty-state"><strong>${escapeHTML(monthLabel)}</strong>${t("Select a booking day to see its requests.")}</div>`;
+      if (targetId === "fullCalendar" && selectedKey) {
+        const isBlocked = blockedDates.has(selectedKey);
+        const isPast = selectedKey < todayKey;
+        const availabilityCopy = selectedBookings.length
+          ? t("Dates with bookings stay unavailable automatically.")
+          : (isBlocked ? t("This date is blocked for public bookings.") : t("This date is available after publishing."));
+        const availabilityAction = isPast || selectedBookings.length
+          ? ""
+          : `<button class="button ghost small" type="button" data-calendar-block-toggle="${selectedKey}">${escapeHTML(t(isBlocked ? "Make date available" : "Block date"))}</button>`;
+        selectedMarkup += `<div class="calendar-availability-action"><span>${escapeHTML(availabilityCopy)}</span>${availabilityAction}</div>`;
+      }
       target.innerHTML = `
         <div class="operations-calendar-head">
           <strong>${escapeHTML(monthLabel)}</strong>
@@ -6296,16 +6337,17 @@
       const settings = [
         ["COMMONPL4CE brand", "Logo and public visual identity assets are connected.", "Active"],
         ["Domain", workspace.domain, "Active"],
+        ["Public booking page", workspace.bookingUrl, "Active", workspace.bookingUrl],
         ["Email", workspace.email, "Read-only"],
         ["Notifications", "Booking notifications follow the existing intake configuration.", "Existing"],
         ["DONEOVERNIGHT powered-by", "Visible in login and Website OS footer.", "Active"],
         ["Workspace access", "Uses Website OS server-side user auth.", "Active"]
       ];
-      $("settingsList").innerHTML = settings.map(([title, value, stateLabel]) => `
+      $("settingsList").innerHTML = settings.map(([title, value, stateLabel, link]) => `
         <div class="setting-row">
-          <strong>${escapeHTML(title)}</strong>
-          <span>${escapeHTML(value)}</span>
-          <span class="status-pill">${escapeHTML(stateLabel)}</span>
+          <strong>${escapeHTML(t(title))}</strong>
+          <span>${link ? `<a href="${escapeHTML(link)}" target="_blank" rel="noreferrer">${escapeHTML(value)}</a>` : escapeHTML(value)}</span>
+          <span class="status-pill">${escapeHTML(t(stateLabel))}</span>
         </div>
       `).join("");
       renderBookingAvailabilitySettings();
@@ -6739,6 +6781,30 @@
         state.selectedCalendarDate = "";
         renderCalendarInto("overviewCalendar");
         renderCalendarInto("fullCalendar");
+        return;
+      }
+
+      const calendarBlockToggle = event.target.closest("[data-calendar-block-toggle]");
+      if (calendarBlockToggle) {
+        const date = calendarBlockToggle.dataset.calendarBlockToggle;
+        const blockedDates = calendarBlockedDates();
+        const wasBlocked = blockedDates.has(date);
+        if (wasBlocked) blockedDates.delete(date);
+        else blockedDates.add(date);
+        state.builder.bookingAvailability = normalizeSiteConfig({
+          bookingAvailability: {
+            ...(state.builder.bookingAvailability || DEFAULT_SITE_CONFIG.bookingAvailability),
+            blockedDates: [...blockedDates].sort()
+          }
+        }).bookingAvailability;
+        saveBuilderDraft();
+        renderCalendarInto("overviewCalendar");
+        renderCalendarInto("fullCalendar");
+        renderBookingAvailabilitySettings();
+        renderPublishSummary();
+        showToast(t(wasBlocked
+          ? "Date available. Publish to update the public booker."
+          : "Date blocked. Publish to update the public booker."));
         return;
       }
 

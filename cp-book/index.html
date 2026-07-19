@@ -440,6 +440,18 @@
       border-color: rgba(237,230,216,.2);
       background: transparent;
     }
+    .calendar-day.is-unavailable {
+      border-color: rgba(237,230,216,.1);
+      background: rgba(237,230,216,.025);
+      color: rgba(237,230,216,.28);
+      cursor: not-allowed;
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+    .calendar-day.is-unavailable:hover {
+      border-color: rgba(237,230,216,.1);
+      background: rgba(237,230,216,.025);
+    }
     .form-success,
     .form-error {
       display: none;
@@ -906,7 +918,7 @@
         </fieldset>
         <fieldset class="step">
           <legend class="step-label">Preferred date</legend>
-          <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
+          <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required readonly>
         </fieldset>
         <p class="cal-note">Select a preferred shoot date.</p>
         <div class="calendar" role="group" aria-label="Calendar date selector">
@@ -1017,7 +1029,9 @@
         offlineHeading: 'Booking temporarily unavailable.',
         offlineMessage: 'Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.',
         offlineCtaLabel: 'Visit COMMONPL4CE',
-        offlineCtaLink: '/cp'
+        offlineCtaLink: '/cp',
+        blockedDates: [],
+        unavailableDates: []
       };
 
       if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
@@ -1028,6 +1042,7 @@
       let selectedDate = null;
       let isSubmitting = false;
       let formStarted = false;
+      let bookingAvailability = { ...DEFAULT_BOOKING_AVAILABILITY };
       const progressedFields = new Set();
 
       const formatDate = (date) => {
@@ -1061,24 +1076,36 @@
 
         for (let day = 1; day <= daysInMonth; day += 1) {
           const date = new Date(year, month, day);
+          const dateKey = formatDate(date);
+          const unavailableDates = new Set([
+            ...(bookingAvailability.blockedDates || []),
+            ...(bookingAvailability.unavailableDates || [])
+          ]);
+          const isUnavailable = dateKey < formatDate(today) || unavailableDates.has(dateKey);
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'calendar-day';
           button.textContent = String(day);
-          button.setAttribute('aria-label', date.toLocaleDateString(undefined, {
+          const dateLabel = date.toLocaleDateString(undefined, {
             weekday: 'long',
             month: 'long',
             day: 'numeric',
             year: 'numeric'
-          }));
+          });
+          button.setAttribute('aria-label', `${dateLabel}${isUnavailable ? ', unavailable' : ''}`);
 
-          if (selectedDate && formatDate(selectedDate) === formatDate(date)) {
+          if (isUnavailable) {
+            button.classList.add('is-unavailable');
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
+          } else if (selectedDate && formatDate(selectedDate) === dateKey) {
             button.classList.add('is-selected');
           }
 
           button.addEventListener('click', function () {
+            if (isUnavailable) return;
             selectedDate = date;
-            preferredDate.value = formatDate(date);
+            preferredDate.value = dateKey;
             renderCalendar();
           });
 
@@ -1108,12 +1135,17 @@
         .replace(/'/g, '&#039;');
       const normalizeBookingAvailability = (value = {}) => {
         const ctaLink = clean(value.offlineCtaLink || value.ctaLink) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink;
+        const normalizeDates = (dates) => Array.isArray(dates)
+          ? Array.from(new Set(dates.map(clean).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))).sort()
+          : [];
         return {
           status: clean(value.status).toLowerCase() === 'offline' ? 'offline' : 'online',
           offlineHeading: clean(value.offlineHeading || value.heading) || DEFAULT_BOOKING_AVAILABILITY.offlineHeading,
           offlineMessage: clean(value.offlineMessage || value.message) || DEFAULT_BOOKING_AVAILABILITY.offlineMessage,
           offlineCtaLabel: clean(value.offlineCtaLabel || value.ctaLabel) || DEFAULT_BOOKING_AVAILABILITY.offlineCtaLabel,
-          offlineCtaLink: ctaLink.startsWith('/') || /^https?:\/\//i.test(ctaLink) ? ctaLink : DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink
+          offlineCtaLink: ctaLink.startsWith('/') || /^https?:\/\//i.test(ctaLink) ? ctaLink : DEFAULT_BOOKING_AVAILABILITY.offlineCtaLink,
+          blockedDates: normalizeDates(value.blockedDates),
+          unavailableDates: normalizeDates(value.unavailableDates)
         };
       };
       const humanMessage = (value, fallback = 'Request could not be sent. Please try again.') => {
@@ -1160,13 +1192,24 @@
         `;
       }
 
-      fetchBookingAvailability().then((booking) => {
+      async function refreshBookingAvailability() {
+        const booking = await fetchBookingAvailability();
+        bookingAvailability = booking;
+        const unavailableDates = new Set([...(booking.blockedDates || []), ...(booking.unavailableDates || [])]);
+        if (selectedDate && unavailableDates.has(formatDate(selectedDate))) {
+          selectedDate = null;
+          preferredDate.value = '';
+        }
+        renderCalendar();
         if (booking.status === 'offline') {
           renderBookingOffline(booking);
-          return;
+          return booking;
         }
         if (submitButton) submitButton.disabled = false;
-      }).catch(() => {
+        return booking;
+      }
+
+      refreshBookingAvailability().catch(() => {
         if (submitButton) submitButton.disabled = false;
       });
 
@@ -1358,6 +1401,11 @@
           const result = await response.json().catch(() => ({}));
 
           if (!response.ok || result.success !== true) {
+            if (result.code === 'BOOKING_DATE_UNAVAILABLE' || result.code === 'BOOKING_DATE_INVALID') {
+              selectedDate = null;
+              preferredDate.value = '';
+              await refreshBookingAvailability().catch(() => null);
+            }
             throw new Error(humanMessage(result.error || result.message || result, 'Request could not be sent. Please try again.'));
           }
 

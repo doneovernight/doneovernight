@@ -87,6 +87,8 @@ const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
 const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
 const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_BOOKING_SOURCE = "commonpl4ce_booker";
+const COMMONPLACE_BOOKING_VERSION = "commonpl4ce_booker_v1";
 const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
 const COMMONPLACE_NEWSLETTER_SOURCE = "commonpl4ce_newsletter";
 const COMMONPLACE_NEWSLETTER_VERSION = "commonpl4ce_newsletter_v1";
@@ -156,7 +158,8 @@ const COMMONPLACE_SITE_CONFIG_DEFAULT = {
     offlineHeading: "Booking temporarily unavailable.",
     offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
     offlineCtaLabel: "Visit COMMONPL4CE",
-    offlineCtaLink: "/cp"
+    offlineCtaLink: "/cp",
+    blockedDates: []
   }
 };
 const hqLoginAttempts = new Map();
@@ -201,13 +204,107 @@ function normalizeCommonplaceBookingAvailability(value = {}) {
   const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT.bookingAvailability;
   const status = clean(source.status).toLowerCase() === "offline" ? "offline" : "online";
   const offlineCtaLink = clean(source.offlineCtaLink || source.ctaLink) || fallback.offlineCtaLink;
+  const blockedDates = Array.isArray(source.blockedDates)
+    ? [...new Set(source.blockedDates.map(normalizeCommonplaceBookingDate).filter(Boolean))].sort()
+    : [];
   return {
     status,
     offlineHeading: clean(source.offlineHeading || source.heading) || fallback.offlineHeading,
     offlineMessage: clean(source.offlineMessage || source.message) || fallback.offlineMessage,
     offlineCtaLabel: clean(source.offlineCtaLabel || source.ctaLabel) || fallback.offlineCtaLabel,
-    offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : fallback.offlineCtaLink
+    offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : fallback.offlineCtaLink,
+    blockedDates
   };
+}
+
+function normalizeCommonplaceBookingDate(value) {
+  const date = clean(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+  const parsed = new Date(`${date}T12:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date ? "" : date;
+}
+
+function currentCommonplaceDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Amsterdam",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function isCommonplaceBookingInput(input = {}) {
+  return clean(input.source).toLowerCase() === COMMONPLACE_BOOKING_SOURCE ||
+    clean(input.intakeVersion || input.intake_version).toLowerCase() === COMMONPLACE_BOOKING_VERSION;
+}
+
+function commonplaceBookingDateFromRecord(record = {}) {
+  return normalizeCommonplaceBookingDate(
+    record.raw_payload?.preferredDate ||
+    record.raw_payload?.preferred_date ||
+    record.raw_payload?.deadline ||
+    record.deadline
+  );
+}
+
+function commonplaceBookingStillReservesDate(record = {}) {
+  const status = clean(record.status || record.raw_payload?.status).toLowerCase();
+  const visibility = clean(record.raw_payload?.website_os_visibility).toLowerCase();
+  return visibility !== "trashed" && !record.raw_payload?.deleted_at &&
+    !["archived", "cancelled", "rejected", "completed", "delivered", "trashed"].includes(status);
+}
+
+async function readCommonplaceBookingRecords() {
+  const rows = await supabaseFetch([
+    `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_BOOKING_SOURCE)}`,
+    "select=task_id,status,deadline,raw_payload",
+    "order=created_at.desc"
+  ].join("&"));
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function readCommonplaceUnavailableDates(config = null) {
+  const normalized = normalizeCommonplaceSiteConfig(config || COMMONPLACE_SITE_CONFIG_DEFAULT);
+  const bookingDates = (await readCommonplaceBookingRecords())
+    .filter(commonplaceBookingStillReservesDate)
+    .map(commonplaceBookingDateFromRecord)
+    .filter(Boolean);
+  return [...new Set([
+    ...normalized.bookingAvailability.blockedDates,
+    ...bookingDates
+  ])].sort();
+}
+
+function commonplaceBookingTaskId(date) {
+  const year = date.slice(0, 4);
+  const monthDay = date.slice(5).replace("-", "");
+  return `DON-${year}-9${monthDay}`;
+}
+
+async function assertCommonplaceBookingAvailable(input = {}) {
+  const date = normalizeCommonplaceBookingDate(input.preferredDate || input.preferred_date || input.deadline);
+  const record = await readCommonplaceSiteConfigRecord().catch(() => null);
+  const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
+  if (config.bookingAvailability.status !== "online") {
+    const error = new Error("Bookings are currently unavailable.");
+    error.code = "BOOKING_OFFLINE";
+    error.statusCode = 409;
+    throw error;
+  }
+  if (!date || date < currentCommonplaceDate()) {
+    const error = new Error("Select an available future date.");
+    error.code = "BOOKING_DATE_INVALID";
+    error.statusCode = 400;
+    throw error;
+  }
+  const unavailableDates = await readCommonplaceUnavailableDates(config);
+  if (unavailableDates.includes(date)) {
+    const error = new Error("This date is no longer available. Please choose another date.");
+    error.code = "BOOKING_DATE_UNAVAILABLE";
+    error.statusCode = 409;
+    throw error;
+  }
+  return { date, taskId: commonplaceBookingTaskId(date) };
 }
 
 function normalizeCommonplaceSiteConfig(config = {}) {
@@ -294,16 +391,30 @@ async function handleCommonplaceSiteConfigGet(req, res) {
   try {
     const record = await readCommonplaceSiteConfigRecord();
     const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
+    const unavailableDates = await readCommonplaceUnavailableDates(config);
     return send(res, 200, {
       success: true,
-      config,
+      config: {
+        ...config,
+        bookingAvailability: {
+          ...config.bookingAvailability,
+          unavailableDates
+        }
+      },
       source: record ? "task_requests" : "default",
       publishedAt: record?.updated_at || config.updatedAt || null
     });
   } catch (error) {
+    const config = normalizeCommonplaceSiteConfig();
     return send(res, 200, {
       success: true,
-      config: normalizeCommonplaceSiteConfig(),
+      config: {
+        ...config,
+        bookingAvailability: {
+          ...config.bookingAvailability,
+          unavailableDates: [...config.bookingAvailability.blockedDates]
+        }
+      },
       source: "default",
       warning: error.code || error.message || "config_store_unavailable"
     });
@@ -3331,7 +3442,10 @@ module.exports = async function handler(req, res) {
     }
 
     const now = new Date();
-    const taskId = getRequestedTaskId(input) || createTaskId(now);
+    const commonplaceReservation = isCommonplaceBookingInput(input)
+      ? await assertCommonplaceBookingAvailable(input)
+      : null;
+    const taskId = getRequestedTaskId(input) || commonplaceReservation?.taskId || createTaskId(now);
     let { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
     const connectedOperator = await getConnectedOperatorMetadata(input);
     if (connectedOperator) {
@@ -3348,7 +3462,19 @@ module.exports = async function handler(req, res) {
 
     // Future operational handoffs: quote generation, payment session generation,
     // portal linking, operator assignment, and realtime client status updates.
-    const persistedTask = await saveTask(task);
+    let persistedTask;
+    try {
+      persistedTask = await saveTask(task);
+    } catch (error) {
+      const duplicateReservation = commonplaceReservation &&
+        error instanceof TaskPersistenceError &&
+        error.diagnostic?.upstreamStatus === 409;
+      if (!duplicateReservation) throw error;
+      const bookingError = new Error("This date is no longer available. Please choose another date.");
+      bookingError.code = "BOOKING_DATE_UNAVAILABLE";
+      bookingError.statusCode = 409;
+      throw bookingError;
+    }
     if (connectedOperator?.portal_request_id) {
       appendOperatorRelationshipTaskReference({
         portalRequest: {
@@ -3525,6 +3651,14 @@ module.exports = async function handler(req, res) {
         code: "EMAIL_TYPO_CONFIRMATION_REQUIRED",
         suggested_email: error.suggestedEmail || "",
         message: "Please confirm your email address before sending."
+      });
+    }
+
+    if (["BOOKING_OFFLINE", "BOOKING_DATE_INVALID", "BOOKING_DATE_UNAVAILABLE"].includes(error.code)) {
+      return send(res, error.statusCode || 409, {
+        success: false,
+        error: error.message,
+        code: error.code
       });
     }
 
