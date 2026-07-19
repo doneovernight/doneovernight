@@ -38,8 +38,10 @@ test("recognizes revenue only from paid subtotals excluding VAT", () => {
   ]);
 
   assert.equal(summary.revenueCents, 100000);
+  assert.equal(summary.paidCents, 100000);
+  assert.equal(summary.invoicedCents, 180000);
   assert.equal(summary.paidCount, 1);
-  assert.equal(summary.accountingRule, "paid_subtotal_excluding_vat");
+  assert.equal(summary.accountingRule, "invoiced_and_paid_subtotals_excluding_vat");
 });
 
 test("enforces safe invoice lifecycle transitions", () => {
@@ -83,4 +85,14 @@ test("migration and APIs enforce workspace scope, auth, and duplicate protection
   assert.match(updateApi, /assertInvoiceRole\(current, \["Owner", "Admin"\]\)/);
   assert.match(updateApi, /Booking not found in this workspace/);
   assert.match(readApi, /listScopedRecords\(authorized\.current, "invoice"/);
+});
+
+test("credited invoices leave both invoiced and paid revenue", () => {
+  const credited = buildInvoiceStatusPatch({ status: "paid", payment_status: "paid" }, "credited", "2026-07-21T10:00:00.000Z");
+  assert.equal(credited.status, "credited");
+  assert.equal(credited.payment_status, "credited");
+  assert.equal(credited.credited_at, "2026-07-21T10:00:00.000Z");
+  const summary = summarizeInvoices([{ status: "credited", payment_status: "credited", subtotal_cents: 100000 }]);
+  assert.equal(summary.invoicedCents, 0);
+  assert.equal(summary.paidCents, 0);
 });

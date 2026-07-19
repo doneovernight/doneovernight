@@ -22,6 +22,8 @@ const {
   normalizeInvoiceInput,
   summarizeInvoices
 } = require("../lib/website-os-invoices");
+const { duplicateCustomer, normalizeCustomerInput } = require("../lib/website-os-customers");
+const { buildWebsiteOsInvoicePdf } = require("../lib/website-os-invoice-pdf");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -433,6 +435,10 @@ function isCommonplaceRecordActionRequest(input = {}) {
 
 function isCommonplaceInvoiceActionRequest(input = {}) {
   return clean(input.action || input.intent) === "commonpl4ce_invoice_action";
+}
+
+function isCommonplaceCustomerActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_customer_action";
 }
 
 function buildTaskFilter(taskId) {
@@ -1807,8 +1813,139 @@ function websiteOsBookingFromTask(task = {}) {
     name: clean(raw.name || raw.contact_name || task.name || task.client_name),
     email: clean(raw.email || raw.contact_email || task.email || task.client_email),
     brandCompany: clean(raw.brand || raw.brand_company || raw.company || task.company),
+    phone: clean(raw.phone || raw.phone_number || task.phone),
+    billingAddress: clean(raw.billing_address || raw.address || task.billing_address),
+    vatNumber: clean(raw.vat_number || raw.vat || task.vat_number),
+    instagram: clean(raw.instagram || task.instagram),
+    projectType: clean(raw.projectType || raw.project_type),
+    location: clean(raw.location),
+    preferredDate: clean(raw.preferredDate || raw.preferred_date || task.deadline),
+    budget: clean(raw.budgetRange || raw.budget || task.client_budget),
+    isTest: raw.website_os_test_record === true || raw.test_record === true,
     status: clean(task.status || raw.status || "new").toLowerCase()
   };
+}
+
+function assertCustomerRole(current, roles = ["Owner", "Admin"]) {
+  if (!roles.includes(clean(current?.user?.role))) {
+    const error = new Error("Customer permission denied");
+    error.code = "CUSTOMER_PERMISSION_DENIED";
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+async function loadCommonpl4ceBooking(taskId) {
+  const task = await loadTask(taskId);
+  if (!task || !isCommonpl4ceWorkspaceBooking(task)) {
+    const error = new Error("Booking not found in this workspace");
+    error.code = "CUSTOMER_BOOKING_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+  return websiteOsBookingFromTask(task);
+}
+
+async function linkBookingToCustomer(current, customer, booking) {
+  if (!booking?.taskId) return null;
+  const existing = await listScopedRecords(current, "clientBooking", {
+    filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+    limit: 5
+  });
+  if (existing[0]) {
+    if (existing[0].client_id !== customer.id) {
+      const error = new Error("This booking is already linked to another customer");
+      error.code = "CUSTOMER_BOOKING_ALREADY_LINKED";
+      error.statusCode = 409;
+      throw error;
+    }
+    return existing[0];
+  }
+  return createScopedRecord(current, "clientBooking", {
+    client_id: customer.id,
+    booking_task_id: booking.taskId,
+    booking_snapshot: booking
+  }, { action: "customer_booking_linked" });
+}
+
+async function handleCommonpl4ceCustomerAction(current, input = {}) {
+  assertCustomerRole(current);
+  const operation = clean(input.customer_action || input.customerAction || input.operation).toLowerCase();
+  const customerId = clean(input.customer_id || input.customerId);
+  const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
+
+  if (operation === "create" || operation === "create_from_booking") {
+    const booking = taskId ? await loadCommonpl4ceBooking(taskId) : {};
+    const candidate = normalizeCustomerInput(input, booking);
+    const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+    const duplicate = duplicateCustomer(customers, candidate);
+    const resolution = clean(input.duplicate_resolution || input.duplicateResolution).toLowerCase();
+    if (duplicate && !["link", "merge"].includes(resolution)) {
+      const error = new Error("A matching customer already exists. Link or merge this booking instead.");
+      error.code = "CUSTOMER_DUPLICATE";
+      error.statusCode = 409;
+      error.existingCustomer = duplicate;
+      throw error;
+    }
+    let customer = duplicate;
+    if (duplicate && resolution === "merge") {
+      customer = await updateScopedRecord(current, "client", duplicate.id, {
+        ...normalizeCustomerInput(input, booking, duplicate),
+        updated_by: current.user.id
+      }, { action: "customer_merged" });
+    }
+    if (!customer) {
+      customer = await createScopedRecord(current, "client", {
+        ...candidate,
+        updated_by: current.user.id
+      }, { action: "customer_created" });
+    }
+    const bookingLink = await linkBookingToCustomer(current, customer, booking);
+    return { operation, customer, bookingLink, duplicateResolved: Boolean(duplicate) };
+  }
+
+  if (operation === "update") {
+    const existing = await getScopedRecord(current, "client", customerId);
+    if (!existing) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const values = normalizeCustomerInput(input, {}, existing);
+    const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+    const duplicate = duplicateCustomer(customers.filter((item) => item.id !== existing.id), values);
+    if (duplicate) {
+      const error = new Error("Another customer already uses this email or company identity");
+      error.code = "CUSTOMER_DUPLICATE";
+      error.statusCode = 409;
+      error.existingCustomer = duplicate;
+      throw error;
+    }
+    const customer = await updateScopedRecord(current, "client", existing.id, {
+      ...values,
+      updated_by: current.user.id
+    }, { action: "customer_updated" });
+    return { operation, customer };
+  }
+
+  if (operation === "link_booking") {
+    const customer = await getScopedRecord(current, "client", customerId);
+    if (!customer) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const booking = await loadCommonpl4ceBooking(taskId);
+    const bookingLink = await linkBookingToCustomer(current, customer, booking);
+    return { operation, customer, bookingLink };
+  }
+
+  const error = new Error("Unsupported customer action");
+  error.code = "CUSTOMER_ACTION_UNSUPPORTED";
+  error.statusCode = 400;
+  throw error;
 }
 
 function assertInvoiceRole(current, roles) {
@@ -1826,31 +1963,54 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
 
   if (operation === "create") {
     const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
-    if (!taskId) {
-      const error = new Error("Booking task id is required");
-      error.code = "INVOICE_BOOKING_REQUIRED";
+    const requestedCustomerId = clean(input.customer_id || input.customerId);
+    if (!taskId && !requestedCustomerId) {
+      const error = new Error("A booking or customer is required");
+      error.code = "INVOICE_ORIGIN_REQUIRED";
       error.statusCode = 400;
       throw error;
     }
-    const task = await loadTask(taskId);
-    if (!task || !isCommonplaceBookingTask(task)) {
-      const error = new Error("Booking not found in this workspace");
-      error.code = "INVOICE_BOOKING_NOT_FOUND";
-      error.statusCode = 404;
-      throw error;
-    }
-    const booking = websiteOsBookingFromTask(task);
+    const booking = taskId ? await loadCommonpl4ceBooking(taskId) : {};
     if (["archived", "trashed", "cancelled", "rejected"].includes(booking.status)) {
       const error = new Error("Archived, trashed or cancelled bookings cannot be invoiced");
       error.code = "INVOICE_BOOKING_INELIGIBLE";
       error.statusCode = 409;
       throw error;
     }
-    const previous = await listScopedRecords(current, "invoice", {
+    let customer = requestedCustomerId ? await getScopedRecord(current, "client", requestedCustomerId) : null;
+    if (requestedCustomerId && !customer) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "INVOICE_CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!customer && booking.taskId) {
+      const links = await listScopedRecords(current, "clientBooking", {
+        filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+        limit: 1
+      });
+      customer = links[0] ? await getScopedRecord(current, "client", links[0].client_id) : null;
+      if (!customer) {
+        const candidate = normalizeCustomerInput(input, booking);
+        const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+        customer = duplicateCustomer(customers, candidate) || await createScopedRecord(current, "client", {
+          ...candidate,
+          updated_by: current.user.id
+        }, { action: "customer_created_from_invoice" });
+        await linkBookingToCustomer(current, customer, booking);
+      }
+    }
+    if (customer?.is_test || booking.isTest) {
+      const error = new Error("Test customers or bookings cannot be invoiced");
+      error.code = "INVOICE_TEST_RECORD_BLOCKED";
+      error.statusCode = 409;
+      throw error;
+    }
+    const previous = booking.taskId ? await listScopedRecords(current, "invoice", {
       filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
       order: "created_at.desc",
       limit: 25
-    });
+    }) : [];
     const activeInvoice = previous.find((invoice) => invoice.status !== "cancelled");
     const allowDuplicate = input.allow_duplicate === true || input.allowDuplicate === true;
     if (activeInvoice && !allowDuplicate) {
@@ -1868,7 +2028,7 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
         throw error;
       }
     }
-    const values = normalizeInvoiceInput(input, booking);
+    const values = normalizeInvoiceInput(input, booking, customer || {});
     const now = new Date().toISOString();
     const invoice = await createScopedRecord(current, "invoice", {
       ...values,
@@ -1880,6 +2040,43 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
     return { operation, invoice };
   }
 
+  if (operation === "update") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    if (invoice.status !== "draft") {
+      const error = new Error("Only draft invoices can be edited");
+      error.code = "INVOICE_NOT_EDITABLE";
+      error.statusCode = 409;
+      throw error;
+    }
+    const customer = invoice.client_id ? await getScopedRecord(current, "client", invoice.client_id) : {};
+    const normalized = normalizeInvoiceInput({
+      ...input,
+      invoice_number: input.invoice_number || invoice.invoice_number,
+      customer_name: input.customer_name || invoice.customer_name,
+      customer_email: input.customer_email || invoice.customer_email,
+      customer_company: input.customer_company ?? invoice.customer_company,
+      customer_address: input.customer_address ?? invoice.customer_details?.address,
+      customer_vat_number: input.customer_vat_number ?? invoice.customer_details?.vat_number,
+      line_items: input.line_items || invoice.line_items,
+      vat_rate: input.vat_rate ?? invoice.vat_rate,
+      issue_date: input.issue_date || invoice.issue_date,
+      due_date: input.due_date || invoice.due_date,
+      notes: input.notes ?? invoice.notes
+    }, { taskId: invoice.booking_task_id }, customer || {});
+    const updated = await updateScopedRecord(current, "invoice", invoice.id, {
+      ...normalized,
+      updated_by: current.user.id
+    }, { action: "invoice_updated" });
+    return { operation, invoice: updated };
+  }
+
   if (operation === "update_status") {
     const invoiceId = clean(input.invoice_id || input.invoiceId);
     const invoice = await getScopedRecord(current, "invoice", invoiceId);
@@ -1889,13 +2086,63 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       error.statusCode = 404;
       throw error;
     }
-    const patch = buildInvoiceStatusPatch(invoice, input.status);
+    const nextStatus = clean(input.status).toLowerCase();
+    if (nextStatus === "sent" && clean(input.confirm) !== "MARK_INVOICE_SENT") {
+      const error = new Error("Explicit review confirmation is required before marking an invoice sent");
+      error.code = "INVOICE_SEND_CONFIRMATION_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    const now = new Date().toISOString();
+    const patch = buildInvoiceStatusPatch(invoice, nextStatus, now);
     delete patch.updated_by;
+    if (nextStatus === "sent") {
+      patch.send_history = [...(Array.isArray(invoice.send_history) ? invoice.send_history : []), {
+        action: "marked_sent",
+        delivery: "not_automatically_sent",
+        actor_user_id: current.user.id,
+        at: now
+      }];
+    }
+    if (["paid", "credited"].includes(nextStatus)) {
+      patch.payment_history = [...(Array.isArray(invoice.payment_history) ? invoice.payment_history : []), {
+        action: nextStatus,
+        actor_user_id: current.user.id,
+        at: now
+      }];
+    }
     const updated = await updateScopedRecord(current, "invoice", invoice.id, {
       ...patch,
       updated_by: current.user.id
-    }, { action: `invoice_status_${clean(input.status).toLowerCase()}` });
+    }, { action: `invoice_status_${nextStatus}` });
     return { operation, invoice: updated };
+  }
+
+  if (operation === "download_pdf") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const pdf = buildWebsiteOsInvoicePdf(invoice);
+    await writeAuditEvent(current, {
+      entityType: "invoice",
+      entityId: invoice.id,
+      action: "invoice_pdf_downloaded",
+      nextState: invoice
+    });
+    return {
+      operation,
+      invoice,
+      pdf: {
+        filename: `${invoice.invoice_number}.pdf`,
+        content_type: "application/pdf",
+        content_base64: pdf.toString("base64")
+      }
+    };
   }
 
   const error = new Error("Unsupported invoice action");
@@ -1922,10 +2169,39 @@ module.exports = async function handler(req, res) {
         });
       }
       const result = await handleCommonpl4ceInvoiceAction(authContext.current, input);
-      const invoices = await listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 });
+      const [invoices, customers, customerBookings] = await Promise.all([
+        listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 })
+      ]);
       return send(res, 200, {
         success: true,
         ...result,
+        customers,
+        customerBookings,
+        invoices,
+        invoiceSummary: summarizeInvoices(invoices)
+      });
+    }
+    if (isCommonplaceCustomerActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "CUSTOMER_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleCommonpl4ceCustomerAction(authContext.current, input);
+      const [customers, customerBookings, invoices] = await Promise.all([
+        listScopedRecords(authContext.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 })
+      ]);
+      return send(res, 200, {
+        success: true,
+        ...result,
+        customers,
+        customerBookings,
         invoices,
         invoiceSummary: summarizeInvoices(invoices)
       });
@@ -2140,6 +2416,7 @@ module.exports = async function handler(req, res) {
     console.warn(`Admin task update error: ${error.code || error.message}`);
     const safeActionError = [
       "RECORD_",
+      "CUSTOMER_",
       "WEBSITE_OS_",
       "PERMANENT_DELETE_",
       "UNSUPPORTED_RECORD_ACTION"
@@ -2148,6 +2425,7 @@ module.exports = async function handler(req, res) {
       success: false,
       error: clean(error.code).startsWith("INVOICE_") || safeActionError ? error.message : "Could not update task",
       code: error.code || "ADMIN_TASK_UPDATE_FAILED",
+      ...(error.existingCustomer ? { existingCustomer: error.existingCustomer } : {}),
       ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
       ...(error.emailResult ? { emailResult: error.emailResult } : {}),
       ...(error.deleteDebug ? { deleteDebug: error.deleteDebug } : {}),

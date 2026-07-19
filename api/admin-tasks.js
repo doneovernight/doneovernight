@@ -173,19 +173,28 @@ module.exports = async function handler(req, res) {
       ? (Array.isArray(tasks) ? tasks.filter(isCommonplaceTask) : [])
       : tasks;
     const enrichedTasks = Array.isArray(scopedTasks) ? await Promise.all(scopedTasks.map(enrichTask)) : [];
-    const invoices = authorized.mode === "website_os"
-      ? await listScopedRecords(authorized.current, "invoice", { order: "created_at.desc", limit: 200 })
-      : [];
+    const [invoices, customers, customerBookings] = authorized.mode === "website_os"
+      ? await Promise.all([
+        listScopedRecords(authorized.current, "invoice", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authorized.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authorized.current, "clientBooking", { order: "created_at.desc", limit: 200 })
+      ])
+      : [[], [], []];
     const testBookingRefs = new Set(
       (Array.isArray(scopedTasks) ? scopedTasks : [])
         .filter(isWebsiteOsTestTask)
         .map(taskReference)
         .filter(Boolean)
     );
-    const productionInvoices = invoices.filter((invoice) => !testBookingRefs.has(clean(invoice.booking_task_id)));
+    const testCustomerIds = new Set(customers.filter((customer) => customer.is_test === true).map((customer) => customer.id));
+    const productionInvoices = invoices.filter((invoice) => (
+      !testBookingRefs.has(clean(invoice.booking_task_id)) && !testCustomerIds.has(invoice.client_id)
+    ));
     return send(res, 200, {
       success: true,
       tasks: enrichedTasks,
+      customers,
+      customerBookings,
       invoices: productionInvoices,
       invoiceSummary: summarizeInvoices(productionInvoices)
     });
