@@ -658,6 +658,43 @@ test("Phase 1 internal admin boundary supplies only the seeded workspace after c
   }
 });
 
+test("Phase 1 synthetic workspaces remain isolated across drafts, analytics, activity, sources, and settings", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const originalFetch = global.fetch;
+  process.env.X_WORKSPACE_SCOPING_ENABLED = "true";
+  process.env.SUPABASE_URL = "https://project.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test";
+  const requests = [];
+  global.fetch = async (url, options = {}) => {
+    requests.push({ url: String(url), method: options.method || "GET", body: options.body ? JSON.parse(options.body) : null });
+    return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  const workspaceA = "00000000-0000-4000-8000-000000000003";
+  const workspaceB = "00000000-0000-4000-8000-000000000004";
+  try {
+    for (const workspaceId of [workspaceA, workspaceB]) {
+      await tenantContext.run({ workspaceId, principalId: `test-${workspaceId}`, role: "owner" }, async () => {
+        await repository.listDrafts(10);
+        await repository.listAnalytics(10);
+        await repository.listAccountActivity(10);
+        await repository.listSources(10);
+        await repository.setSetting("tenant_probe", workspaceId);
+      });
+    }
+    const a = requests.slice(0, 5); const b = requests.slice(5);
+    assert.equal(a.length, 5); assert.equal(b.length, 5);
+    assert.ok(a.every((request) => request.url.includes(`workspace_id=eq.${workspaceA}`) || request.body?.workspace_id === workspaceA));
+    assert.ok(b.every((request) => request.url.includes(`workspace_id=eq.${workspaceB}`) || request.body?.workspace_id === workspaceB));
+    assert.ok(a.every((request) => !request.url.includes(workspaceB) && request.body?.workspace_id !== workspaceB));
+    assert.ok(b.every((request) => !request.url.includes(workspaceA) && request.body?.workspace_id !== workspaceA));
+  } finally {
+    global.fetch = originalFetch;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
 test("Phase 1 migration defines the seeded tenant, workspace ownership, and strategy-ready scoped uniqueness", () => {
   const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260722_x_multi_tenant_foundation.sql"), "utf8");
   for (const table of ["organizations", "workspaces", "workspace_members", "x_accounts", "workspace_operator_grants", "x_sources", "x_topic_candidates", "x_source_controls", "x_radar_items", "x_editorial_objects", "x_draft_learning_metadata", "x_post_performance_memory"]) assert.match(sql, new RegExp(`workspace_id`));
