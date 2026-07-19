@@ -157,6 +157,9 @@ alter table public.x_post_performance_memory
   add column if not exists x_post_id text;
 
 alter table public.x_post_performance_memory
+  add column if not exists topic text;
+
+alter table public.x_post_performance_memory
   add column if not exists account_activity_x_post_id text;
 
 update public.x_post_performance_memory memory

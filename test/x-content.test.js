@@ -238,6 +238,7 @@ test("corrected migration preserves the failing row semantics and is rerunnable"
   assert.match(migration, /publication_origin in \('agent', 'manual', 'unknown'\)/i);
   assert.match(migration, /classification in \('agent_original', 'manual_original', 'reply', 'repost'\)/i);
   assert.match(migration, /ingestion_source in \('authenticated_timeline', 'agent_publish', 'backfill', 'reconciliation'\)/i);
+  assert.match(migration, /add column if not exists topic text/i);
   assert.match(migration, /where publication\.x_post_id = x_account_activity\.x_post_id/i);
   assert.match(migration, /drop constraint if exists x_account_activity_publication_origin_check/i);
   assert.match(migration, /drop column if exists source_kind/i);
