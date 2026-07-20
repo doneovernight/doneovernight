@@ -104,6 +104,16 @@ test("deployment build runs the full suite and admin routes carry defense header
   assert.match(vercel, /Permissions-Policy/);
 });
 
+test("tracked workflow exports contain no embedded bearer credentials", () => {
+  const workflowDirectory = path.join(root, "docs/n8n");
+  const workflowFiles = fs.readdirSync(workflowDirectory).filter((file) => file.endsWith(".json"));
+  workflowFiles.forEach((file) => {
+    const source = fs.readFileSync(path.join(workflowDirectory, file), "utf8");
+    const containsBearerCredential = /Bearer\s+eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(source);
+    assert.equal(containsBearerCredential, false, `${file} contains an embedded bearer credential`);
+  });
+});
+
 test("all COMMONPL4CE executable inline scripts parse after hardening", () => {
   ["admin/website-os/commonpl4ce/index.html", "cp/index.html", "cp-book/index.html"].forEach((file) => {
     const html = read(file);

@@ -4,6 +4,8 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  classifyBusinessBundleRecords,
+  isSystemAcceptanceEvidenceRecord,
   normalizeBusinessProfile,
   normalizeDocumentInput
 } = require("../lib/website-os-business");
@@ -149,6 +151,8 @@ test("Business Documents default flow uses presets, focused editing and progress
   assert.match(ui, /id="addBusinessDocument"/);
   assert.match(ui, /data-open-document-preview/);
   assert.match(ui, /id="businessDocumentPreviewDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
+  assert.match(ui, /function handleBusinessDialogKeydown\(event\)/);
+  assert.match(ui, /if \(handleBusinessDialogKeydown\(event\)\) return/);
 });
 
 test("Policy manager hides technical defaults and opens acceptance evidence on demand", () => {
@@ -158,12 +162,50 @@ test("Policy manager hides technical defaults and opens acceptance evidence on d
   assert.match(ui, /id="businessAcceptanceDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
   assert.match(ui, /data-toggle-business-policy/);
   assert.match(ui, /System acceptance evidence/);
-  assert.match(ui, /evidence\.includes\("controlled"\) && evidence\.includes\("policy"\)/);
+  assert.match(ui, /document\?\.system_evidence === true/);
   assert.match(ui, /state\.documentStatusFilter = "active"/);
   assert.match(ui, /state\.documentStatusFilter = preferredDocument\.status/);
   assert.doesNotMatch(ui, /name="policy_key"/);
   assert.match(ui, /policy_key: policy\.policy_key/);
   assert.match(read("lib/website-os-business.js"), /policy_key: policyKey\(input\.policy_key \|\| input\.policyKey \|\| document\.document_type \|\| document\.title\)/);
+});
+
+test("system acceptance evidence remains archived and isolated from daily workflows", () => {
+  const evidence = {
+    id: "00000000-0000-4000-8000-000000000001",
+    status: "archived",
+    document_type: "custom",
+    title: "A display title that does not control classification",
+    internal_notes: "system_acceptance_evidence controlled policy fixture",
+    enabled: false
+  };
+  const normal = {
+    id: "00000000-0000-4000-8000-000000000002",
+    status: "active",
+    document_type: "booking_policy",
+    title: "Booking Policy",
+    internal_notes: "",
+    enabled: true
+  };
+  assert.equal(isSystemAcceptanceEvidenceRecord(evidence), true);
+  assert.equal(isSystemAcceptanceEvidenceRecord({ ...evidence, status: "active" }), false);
+  assert.equal(isSystemAcceptanceEvidenceRecord({ ...evidence, internal_notes: "", title: "Acceptance evidence fixture" }), false);
+  const result = classifyBusinessBundleRecords({
+    documents: [evidence, normal],
+    workflows: [{ id: "evidence-workflow", document_id: evidence.id }, { id: "normal-workflow", document_id: normal.id }],
+    policies: [{ id: "evidence-policy", document_id: evidence.id }, { id: "normal-policy", document_id: normal.id }],
+    acceptances: [{ id: "evidence-acceptance", policy_id: "evidence-policy" }, { id: "normal-acceptance", policy_id: "normal-policy" }],
+    invoiceDocuments: [{ id: "evidence-invoice", document_id: evidence.id }, { id: "normal-invoice", document_id: normal.id }]
+  });
+  assert.equal(result.documents.find((item) => item.id === evidence.id).system_evidence, true);
+  assert.deepEqual(result.documentWorkflows.map((item) => item.id), ["normal-workflow"]);
+  assert.deepEqual(result.policies.map((item) => item.id), ["normal-policy"]);
+  assert.deepEqual(result.policyAcceptances.map((item) => item.id), ["normal-acceptance"]);
+  assert.deepEqual(result.invoiceDocuments.map((item) => item.id), ["normal-invoice"]);
+  const source = read("lib/website-os-business.js");
+  assert.match(source, /SYSTEM_ACCEPTANCE_EVIDENCE_IMMUTABLE/);
+  assert.match(source, /readPublicBookingPolicies[\s\S]*!isSystemAcceptanceEvidenceRecord/);
+  assert.match(source, /resolveInvoiceDocuments[\s\S]*!isSystemAcceptanceEvidenceRecord/);
 });
 
 test("Business Documents mobile flow uses one task at a time and sticky primary actions", () => {
