@@ -257,7 +257,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 
 | ID | Capability | Status | UI | FE | API | DB | Authz | Live | E2E | Ready | Evidence / limitation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OPS-01 | Migration ledger consistency | Partial | - | - | - | Y | - | - | Y | N | Production ledger now records 061-063 and the isolated runner safely excludes unapplied drift; legacy 052-060 history is still not retroactively recorded. |
+| OPS-01 | Migration ledger consistency | Partial | - | - | - | Y | - | - | Y | N | Production records 061-065, including required hardening migrations 063 and 064. Legacy 052-060 are not retroactively recorded, and remote 065 belongs to the separate business-documents line rather than this 126-test hardening release. |
 | OPS-02 | Migration 058 persistent-module schema | Complete | - | - | - | Y | Y | - | Y | Y | Migration 063 idempotently reconciled message, email, portfolio and acceptance tables in production. |
 | OPS-03 | Existing Website OS RLS enablement | Complete | - | - | - | Y | Y | - | Y | Y | Existing Website OS tables have RLS enabled and are service-role repository accessed. |
 | OPS-04 | `task_requests` authorization policy | Complete | - | - | Y | Y | Y | Y | Y | Y | Broad public UPDATE policy was removed; direct anonymous update probes are rejected and APIs require workspace sessions. |
@@ -265,14 +265,14 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | OPS-06 | Security headers / clickjacking | Complete | - | - | - | - | Y | Y | Y | Y | Admin routes ship CSP/frame-ancestors, X-Frame-Options, nosniff, HSTS, Referrer-Policy and Permissions-Policy. |
 | OPS-07 | Secret handling | Complete | - | - | Y | Y | Y | - | Y | Y | Service-role credential is server-only and absent from client bundle/search; values were never printed. |
 | OPS-08 | Production route identity gate | Complete | - | - | - | - | - | Y | Y | Y | Eight critical routes passed status and identity/negative-marker checks. |
-| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 121 tests including hardening, auth, content, media, invoices, booking actions and inline-script parsing. |
+| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 126 tests including hardening, auth, content, media, invoices, booking actions, Today Briefing and inline-script parsing. |
 | OPS-10 | Build/CI release gate | Complete | - | - | - | - | - | - | Y | Y | `vercel-build` runs the complete repository test suite and fails deployment on regression. |
 | OPS-11 | Authenticated production E2E suite | Partial | - | - | - | - | - | - | P | N | Release acceptance covers browser/API/data workflows, but it is not yet a standalone CI-owned reusable suite. |
 | OPS-12 | Acceptance fixtures | Partial | - | - | P | Y | Y | - | Y | N | Production fixture registry exists and is workspace-scoped; a generalized fixture orchestration API is still absent. |
 | OPS-13 | Pagination / scaling | Partial | P | P | P | Y | Y | - | P | N | Analytics aggregation is SQL-backed; customer/invoice lists still cap at 200 without cursor pagination. |
 | OPS-14 | Security/operations observability | Partial | Y | Y | Y | Y | Y | - | P | N | Auth and content/media/audit events persist; automated abuse/policy/storage alerts remain future operations work. |
-| OPS-15 | Git/worktree release hygiene | Broken | - | - | - | - | - | - | Y | N | Local `main` diverges from `origin/main`; stale hotfix branch can delete modern Website OS if merged. |
-| OPS-16 | Production deployment/alias coherence | Complete | - | - | - | - | - | Y | Y | Y | Vercel aliases point to the current production deployment correlated with `origin/main` HEAD. |
+| OPS-15 | Git/worktree release hygiene | Complete | - | - | - | - | - | - | Y | Y | Final integration starts from freshly fetched `origin/main` in an isolated worktree; stale local main and obsolete hotfix branches are not release sources. |
+| OPS-16 | Production deployment/alias coherence | Complete | - | - | - | - | - | Y | Y | Y | Release acceptance requires the deployed production commit and every DONEOVERNIGHT project alias to match `origin/main`; the resulting deployment ID and alias verification belong to the final release report. |
 | OPS-17 | Static/public performance baseline | Partial | Y | Y | Y | Y | - | Y | Y | N | Pages are responsive in synthetic checks, but config fetch is ~1.24s/no-store and asset directory is ~37MB. |
 
 ## Canonical Verdict

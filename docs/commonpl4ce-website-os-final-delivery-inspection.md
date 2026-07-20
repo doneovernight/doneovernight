@@ -28,9 +28,9 @@ Still intentionally incomplete:
 
 The release commit, Vercel deployment ID, alias mapping and production acceptance results are recorded in the final release report.
 
-Inspection date: 2026-07-19  
-Inspection mode: read-only production audit  
-Scope: COMMONPL4CE Website OS, public `/cp`, public `/cp-book`, relevant APIs, Supabase schema/data, Vercel routing/deployment, tests and release state  
+Inspection date: 2026-07-19
+Inspection mode: read-only production audit
+Scope: COMMONPL4CE Website OS, public `/cp`, public `/cp-book`, relevant APIs, Supabase schema/data, Vercel routing/deployment, tests and release state
 Canonical capability matrix: [commonpl4ce-website-os-implementation-matrix.md](./commonpl4ce-website-os-implementation-matrix.md)
 
 ## Executive Verdict
