@@ -65,6 +65,11 @@ const {
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
 const {
+  assertBookingPolicyAcceptances,
+  readPublicBookingPolicies,
+  recordBookingPolicyAcceptances
+} = require("../lib/website-os-business");
+const {
   applePackagePlan,
   appleSigningStatus,
   createSignedApplePassPackage,
@@ -979,6 +984,26 @@ function isCommonplaceSiteConfigRequest(req, input = {}) {
     if (url.searchParams.get("commonpl4ce_site_config") === "1") return true;
   } catch (error) {}
   return input.action === COMMONPLACE_SITE_CONFIG_SOURCE || input.intent === COMMONPLACE_SITE_CONFIG_SOURCE;
+}
+
+function isCommonplacePoliciesRequest(req) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    return url.searchParams.get("commonpl4ce_policies") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+async function handleCommonplacePoliciesGet(req, res) {
+  const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+  const publicPath = clean(url.searchParams.get("path") || "/cp-book");
+  const publicRequest = validateCommonplacePublicRequest(req, { path: publicPath, source: COMMONPLACE_BOOKING_SOURCE });
+  if (!publicRequest.ok) return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error, code: "COMMONPL4CE_PUBLIC_ROUTE_REJECTED" });
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return send(res, 503, { success: false, error: "COMMONPL4CE workspace unavailable", code: "CONTENT_WORKSPACE_UNAVAILABLE" });
+  const policies = await readPublicBookingPolicies(workspace.id);
+  return send(res, 200, { success: true, source: "commonpl4ce", policies });
 }
 
 async function verifyAdminKey(adminKey) {
@@ -4291,6 +4316,9 @@ module.exports = async function handler(req, res) {
     if (url.searchParams.get("commonpl4ce_site_config") === "1") {
       return handleCommonplaceSiteConfigGet(req, res);
     }
+    if (isCommonplacePoliciesRequest(req)) {
+      return handleCommonplacePoliciesGet(req, res);
+    }
     if (url.searchParams.get("ask_security_config") === "1") {
       const config = askVerificationConfig();
       return send(res, 200, {
@@ -4454,11 +4482,17 @@ module.exports = async function handler(req, res) {
 
     const now = new Date();
     let commonplaceReservation = null;
+    let commonplacePolicyAcceptance = null;
     if (isCommonplaceBookingInput(input)) {
       const publicRequest = validateCommonplacePublicRequest(req, { ...input, path: input.path || "/cp-book" });
       if (!publicRequest.ok) return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error, code: "COMMONPL4CE_PUBLIC_ROUTE_REJECTED" });
       await assertPublicIngestRate(req, input, { scope: "commonpl4ce_booking", windowSeconds: 3600, maxRequests: 12 });
       commonplaceReservation = await assertCommonplaceBookingAvailable(input);
+      const acceptanceInput = Array.isArray(input.policy_acceptances || input.policyAcceptances)
+        ? (input.policy_acceptances || input.policyAcceptances)
+        : [];
+      const acceptedPolicyIds = acceptanceInput.map((item) => clean(typeof item === "string" ? item : item?.policy_id || item?.policyId || item?.id)).filter(Boolean);
+      commonplacePolicyAcceptance = await assertBookingPolicyAcceptances(commonplaceReservation.workspaceId, acceptedPolicyIds);
     }
     const taskId = getRequestedTaskId(input) || commonplaceReservation?.taskId || createTaskId(now);
     let { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
@@ -4466,7 +4500,15 @@ module.exports = async function handler(req, res) {
       task.websiteOsWorkspaceId = commonplaceReservation.workspaceId;
       task.rawPayload = {
         ...(task.rawPayload || {}),
-        website_os_workspace_id: commonplaceReservation.workspaceId
+        website_os_workspace_id: commonplaceReservation.workspaceId,
+        website_os_policy_acceptances: (commonplacePolicyAcceptance?.policies || [])
+          .filter((policy) => commonplacePolicyAcceptance.acceptedIds.includes(policy.id))
+          .map((policy) => ({
+            policy_id: policy.id,
+            document_id: policy.documentId,
+            version_id: policy.versionId,
+            version_number: policy.versionNumber
+          }))
       };
     }
     const connectedOperator = await getConnectedOperatorMetadata(input);
@@ -4496,6 +4538,29 @@ module.exports = async function handler(req, res) {
       bookingError.code = "BOOKING_DATE_UNAVAILABLE";
       bookingError.statusCode = 409;
       throw bookingError;
+    }
+    if (commonplaceReservation && commonplacePolicyAcceptance?.acceptedIds?.length) {
+      try {
+        await recordBookingPolicyAcceptances({
+          workspaceId: commonplaceReservation.workspaceId,
+          bookingTaskId: taskId,
+          name: input.name,
+          emailAddress: input.email,
+          acceptedPolicyIds: commonplacePolicyAcceptance.acceptedIds,
+          requestFingerprint: publicIngestFingerprint(req, input, "commonpl4ce_policy_acceptance"),
+          userAgent: req.headers["user-agent"] || ""
+        });
+      } catch (acceptanceError) {
+        await supabaseFetch([
+          "task_requests?",
+          `website_os_workspace_id=eq.${encodeURIComponent(commonplaceReservation.workspaceId)}`,
+          `&task_id=eq.${encodeURIComponent(taskId)}`
+        ].join(""), { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {});
+        const error = new Error("Booking could not be recorded safely. Please try again.");
+        error.code = "POLICY_ACCEPTANCE_PERSIST_FAILED";
+        error.statusCode = 503;
+        throw error;
+      }
     }
     if (connectedOperator?.portal_request_id) {
       appendOperatorRelationshipTaskReference({

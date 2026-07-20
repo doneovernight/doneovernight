@@ -24,6 +24,14 @@ const {
 } = require("../lib/website-os-invoices");
 const { duplicateCustomer, normalizeCustomerInput } = require("../lib/website-os-customers");
 const { buildWebsiteOsInvoicePdf } = require("../lib/website-os-invoice-pdf");
+const {
+  getBusinessBundle,
+  getInvoiceDocumentBundle,
+  handleWebsiteOsBusinessAction,
+  linkPolicyAcceptancesToCustomer,
+  resolveInvoiceDocuments,
+  syncInvoiceDocuments
+} = require("../lib/website-os-business");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -443,6 +451,10 @@ function isCommonplaceInvoiceActionRequest(input = {}) {
 
 function isCommonplaceCustomerActionRequest(input = {}) {
   return clean(input.action || input.intent) === "commonpl4ce_customer_action";
+}
+
+function isCommonplaceBusinessActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_business_action";
 }
 
 function buildTaskFilter(taskId) {
@@ -1863,13 +1875,16 @@ async function linkBookingToCustomer(current, customer, booking) {
       error.statusCode = 409;
       throw error;
     }
+    await linkPolicyAcceptancesToCustomer(current, booking.taskId, customer.id);
     return existing[0];
   }
-  return createScopedRecord(current, "clientBooking", {
+  const link = await createScopedRecord(current, "clientBooking", {
     client_id: customer.id,
     booking_task_id: booking.taskId,
     booking_snapshot: booking
   }, { action: "customer_booking_linked" });
+  await linkPolicyAcceptancesToCustomer(current, booking.taskId, customer.id);
+  return link;
 }
 
 async function handleCommonpl4ceCustomerAction(current, input = {}) {
@@ -1961,6 +1976,12 @@ function assertInvoiceRole(current, roles) {
   }
 }
 
+function requestedInvoiceDocumentIds(input = {}) {
+  if (Object.prototype.hasOwnProperty.call(input, "document_ids")) return Array.isArray(input.document_ids) ? input.document_ids : [];
+  if (Object.prototype.hasOwnProperty.call(input, "documentIds")) return Array.isArray(input.documentIds) ? input.documentIds : [];
+  return undefined;
+}
+
 async function handleCommonpl4ceInvoiceAction(current, input = {}) {
   assertInvoiceRole(current, ["Owner", "Admin"]);
   const operation = clean(input.invoice_action || input.invoiceAction || input.operation).toLowerCase();
@@ -2032,6 +2053,8 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
         throw error;
       }
     }
+    const selectedDocumentIds = requestedInvoiceDocumentIds(input);
+    await resolveInvoiceDocuments(current, selectedDocumentIds);
     const values = normalizeInvoiceInput(input, booking, customer || {});
     const now = new Date().toISOString();
     const invoice = await createScopedRecord(current, "invoice", {
@@ -2041,7 +2064,8 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       duplicate_approved_at: allowDuplicate ? now : null,
       updated_by: current.user.id
     }, { action: "invoice_created" });
-    return { operation, invoice };
+    const invoiceDocuments = await syncInvoiceDocuments(current, invoice, selectedDocumentIds);
+    return { operation, invoice, invoiceDocuments };
   }
 
   if (operation === "update") {
@@ -2060,6 +2084,8 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       throw error;
     }
     const customer = invoice.client_id ? await getScopedRecord(current, "client", invoice.client_id) : {};
+    const selectedDocumentIds = requestedInvoiceDocumentIds(input);
+    if (selectedDocumentIds !== undefined) await resolveInvoiceDocuments(current, selectedDocumentIds);
     const normalized = normalizeInvoiceInput({
       ...input,
       invoice_number: input.invoice_number || invoice.invoice_number,
@@ -2078,7 +2104,10 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       ...normalized,
       updated_by: current.user.id
     }, { action: "invoice_updated" });
-    return { operation, invoice: updated };
+    const invoiceDocuments = selectedDocumentIds === undefined
+      ? await getInvoiceDocumentBundle(current, updated.id)
+      : await syncInvoiceDocuments(current, updated, selectedDocumentIds);
+    return { operation, invoice: updated, invoiceDocuments };
   }
 
   if (operation === "update_status") {
@@ -2131,7 +2160,14 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       error.statusCode = 404;
       throw error;
     }
-    const pdf = await buildWebsiteOsInvoicePdf(invoice);
+    const [invoiceDocuments, business] = await Promise.all([
+      getInvoiceDocumentBundle(current, invoice.id),
+      getBusinessBundle(current)
+    ]);
+    const pdf = await buildWebsiteOsInvoicePdf(invoice, {
+      businessProfile: business.businessProfile || {},
+      documents: invoiceDocuments
+    });
     await writeAuditEvent(current, {
       entityType: "invoice",
       entityId: invoice.id,
@@ -2165,6 +2201,17 @@ module.exports = async function handler(req, res) {
     const input = await parseBody(req);
     if (!clean(input.admin_key || req.headers["x-admin-key"])) assertWebsiteOsRequestOrigin(req);
     const authContext = await verifyAdminOrWebsiteOsSession(req, input.admin_key || req.headers["x-admin-key"]);
+    if (isCommonplaceBusinessActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "BUSINESS_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleWebsiteOsBusinessAction(authContext.current, input);
+      return send(res, 200, { success: true, ...result });
+    }
     if (isCommonplaceInvoiceActionRequest(input)) {
       if (authContext.mode !== "website_os" || !authContext.current) {
         return send(res, 403, {
@@ -2174,10 +2221,11 @@ module.exports = async function handler(req, res) {
         });
       }
       const result = await handleCommonpl4ceInvoiceAction(authContext.current, input);
-      const [invoices, customers, customerBookings] = await Promise.all([
+      const [invoices, customers, customerBookings, invoiceDocuments] = await Promise.all([
         listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 }),
         listScopedRecords(authContext.current, "client", { order: "updated_at.desc", limit: 200 }),
-        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 })
+        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "invoiceDocument", { order: "created_at.desc", limit: 200 })
       ]);
       return send(res, 200, {
         success: true,
@@ -2185,6 +2233,7 @@ module.exports = async function handler(req, res) {
         customers,
         customerBookings,
         invoices,
+        invoiceDocuments,
         invoiceSummary: summarizeInvoices(invoices)
       });
     }
@@ -2422,6 +2471,9 @@ module.exports = async function handler(req, res) {
     const safeActionError = [
       "RECORD_",
       "CUSTOMER_",
+      "BUSINESS_",
+      "DOCUMENT_",
+      "POLICY_",
       "WEBSITE_OS_",
       "PERMANENT_DELETE_",
       "UNSUPPORTED_RECORD_ACTION"

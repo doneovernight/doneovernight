@@ -930,6 +930,21 @@
       padding: 18px 0 0;
       margin: 0;
     }
+
+    .booking-policies { display: grid; gap: 12px; }
+    .booking-policy-options { display: grid; gap: 8px; }
+    .booking-policy {
+      border: 1px solid rgba(238, 230, 213, .18);
+      background: rgba(238, 230, 213, .035);
+      padding: 12px 14px;
+    }
+    .booking-policy > label { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; cursor: pointer; }
+    .booking-policy input { width: 18px; height: 18px; margin-top: 2px; accent-color: #eee6d5; }
+    .booking-policy span { font-size: 13px; line-height: 1.45; }
+    .booking-policy details { margin-left: 28px; color: rgba(238, 230, 213, .62); font-size: 12px; }
+    .booking-policy summary { min-height: 32px; cursor: pointer; }
+    .booking-policy-body { max-height: 220px; overflow: auto; padding: 8px 0; white-space: pre-wrap; line-height: 1.55; }
+    .booking-policies.is-invalid { outline: 1px solid #d98879; outline-offset: 6px; }
     .step-label {
       display: block;
       margin: 0 0 14px;
@@ -1996,6 +2011,11 @@
             <span class="step-label">References / mood / notes</span>
             <textarea class="field" name="references" placeholder="Add links or describe the feeling"></textarea>
           </label>
+          <section class="step booking-policies" id="bookingPolicies" aria-labelledby="bookingPoliciesTitle" hidden>
+            <span class="step-label" id="bookingPoliciesTitle">Agreements</span>
+            <div class="booking-policy-options" id="bookingPolicyOptions"></div>
+            <p class="cal-note" id="bookingPolicyStatus" aria-live="polite"></p>
+          </section>
           <div class="cal-block">
             <button class="cal-button" type="submit">Send request</button>
             <p class="cal-note">This sends a note about your project. The shoot is only confirmed after we speak.</p>
@@ -2375,6 +2395,9 @@
       const next = document.getElementById('calendarNext');
       const submitButton = form.querySelector('.cal-button');
       const errorMessage = document.getElementById('bookerError');
+      const policiesRoot = document.getElementById('bookingPolicies');
+      const policyOptions = document.getElementById('bookingPolicyOptions');
+      const policyStatus = document.getElementById('bookingPolicyStatus');
 
       if (!form || !calendarGrid || !calendarTitle || !preferredDate || !previous || !next) return;
 
@@ -2384,6 +2407,9 @@
       let isSubmitting = false;
       let bookingAvailability = window.__commonplaceBookingAvailability || { status: 'online', unavailableDates: [] };
       let unavailableDates = new Set(Array.isArray(bookingAvailability.unavailableDates) ? bookingAvailability.unavailableDates : []);
+      let bookingPolicies = [];
+      let bookingPoliciesReady = false;
+      let bookingPoliciesError = '';
 
       const formatDate = (date) => {
         const year = date.getFullYear();
@@ -2508,6 +2534,45 @@
         return fallback;
       };
 
+      function renderBookingPolicies() {
+        if (!policiesRoot || !policyOptions) return;
+        policyOptions.replaceChildren();
+        policiesRoot.hidden = bookingPolicies.length === 0;
+        bookingPolicies.forEach((policy) => {
+          const card = document.createElement('article');
+          card.className = 'booking-policy';
+          const label = document.createElement('label');
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'booking-policy';
+          checkbox.value = clean(policy.id);
+          checkbox.required = policy.requirement === 'required';
+          const text = document.createElement('span');
+          text.textContent = `${policy.requirement === 'required' ? 'I agree to' : 'I optionally accept'} ${policy.label}.`;
+          label.append(checkbox, text);
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = `Read ${policy.title} · version ${policy.versionLabel || policy.versionNumber}`;
+          const body = document.createElement('div');
+          body.className = 'booking-policy-body';
+          body.textContent = policy.body || '';
+          details.append(summary, body);
+          card.append(label, details);
+          policyOptions.appendChild(card);
+        });
+        if (policyStatus) policyStatus.textContent = bookingPolicies.length ? 'Your acceptance is stored with this booking and document version.' : '';
+      }
+
+      async function loadBookingPolicies() {
+        const response = await fetch(`/api/task-submit?commonpl4ce_policies=1&path=${encodeURIComponent(location.pathname)}`, { cache: 'no-store' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.success !== true) throw new Error(data.error || 'Agreements could not be loaded.');
+        bookingPolicies = Array.isArray(data.policies) ? data.policies : [];
+        bookingPoliciesReady = true;
+        bookingPoliciesError = '';
+        renderBookingPolicies();
+      }
+
       function clearFormState() {
         form.classList.remove('is-error', 'is-preview');
         form.querySelectorAll('.is-invalid').forEach((element) => element.classList.remove('is-invalid'));
@@ -2554,6 +2619,18 @@
         if (!selectedRadio('budget')) {
           markInvalid(budgetFieldset);
           invalid.push('Budget range');
+        }
+        const missingPolicies = bookingPolicies.filter((policy) => policy.requirement === 'required')
+          .filter((policy) => !form.querySelector(`input[name="booking-policy"][value="${policy.id}"]`)?.checked);
+        if (!bookingPoliciesReady) {
+          if (policiesRoot) policiesRoot.hidden = false;
+          if (policyStatus) policyStatus.textContent = bookingPoliciesError || 'Agreements are still loading. Please wait a moment.';
+          markInvalid(policiesRoot);
+          invalid.push('Agreements');
+        }
+        if (missingPolicies.length) {
+          markInvalid(policiesRoot);
+          invalid.push('Required agreements');
         }
 
         return {
@@ -2607,12 +2684,18 @@
           owner_email: 'donovan.vdp@gmail.com',
           recipient_email: 'donovan.vdp@gmail.com',
           notification_recipient: 'donovan.vdp@gmail.com',
+          policy_acceptances: Array.from(form.querySelectorAll('input[name="booking-policy"]:checked')).map((input) => input.value),
           submittedAt: new Date().toISOString()
         };
       }
 
       form.addEventListener('input', clearFormState);
       form.addEventListener('change', clearFormState);
+      loadBookingPolicies().catch((error) => {
+        bookingPoliciesError = error.message || 'Agreements could not be loaded.';
+        if (policiesRoot) policiesRoot.hidden = false;
+        if (policyStatus) policyStatus.textContent = bookingPoliciesError;
+      });
 
       form.addEventListener('submit', async function (event) {
         event.preventDefault();
