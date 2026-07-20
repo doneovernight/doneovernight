@@ -6817,7 +6817,13 @@
       if (state.selectedBusinessDocumentId && !state.businessDocuments.some((item) => item.id === state.selectedBusinessDocumentId)) {
         state.selectedBusinessDocumentId = "";
       }
-      if (!state.selectedBusinessDocumentId) state.selectedBusinessDocumentId = state.businessDocuments.find((item) => item.status === "active")?.id || state.businessDocuments.find((item) => item.status === "draft")?.id || state.businessDocuments[0]?.id || "";
+      if (!state.selectedBusinessDocumentId) {
+        const preferredDocument = state.businessDocuments.find((item) => item.status === "active") || state.businessDocuments.find((item) => item.status === "draft") || state.businessDocuments[0] || null;
+        state.selectedBusinessDocumentId = preferredDocument?.id || "";
+        if (preferredDocument && !state.businessDocuments.some((item) => item.status === state.documentStatusFilter)) {
+          state.documentStatusFilter = preferredDocument.status;
+        }
+      }
       if (state.selectedBusinessPolicyId && !state.businessPolicies.some((item) => item.id === state.selectedBusinessPolicyId)) {
         state.selectedBusinessPolicyId = "";
       }

@@ -160,6 +160,7 @@ test("Policy manager hides technical defaults and opens acceptance evidence on d
   assert.match(ui, /System acceptance evidence/);
   assert.match(ui, /evidence\.includes\("controlled"\) && evidence\.includes\("policy"\)/);
   assert.match(ui, /state\.documentStatusFilter = "active"/);
+  assert.match(ui, /state\.documentStatusFilter = preferredDocument\.status/);
   assert.doesNotMatch(ui, /name="policy_key"/);
   assert.match(ui, /policy_key: policy\.policy_key/);
   assert.match(read("lib/website-os-business.js"), /policy_key: policyKey\(input\.policy_key \|\| input\.policyKey \|\| document\.document_type \|\| document\.title\)/);
