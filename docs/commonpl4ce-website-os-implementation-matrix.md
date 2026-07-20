@@ -161,6 +161,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | DOC-02 | Branded document PDF export | Complete | Y | Y | Y | Y | Y | - | Y | Y | Server-generated PDFs use the persisted business identity and exact saved document/version. |
 | DOC-03 | Workflow attachment mapping | Partial | Y | Y | Y | Y | Y | - | P | N | Seven durable destinations exist; invoice consumption is active while branded-email/customer/portal delivery remains future work. |
 | DOC-04 | Version-pinned invoice attachments | Complete | Y | Y | Y | Y | Y | - | Y | Y | Invoice creation/update stores exact published document versions and invoice PDF export appends their immutable contents. |
+| DOC-05 | Daily-use documents and policy UX | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Presets, focused editing, progressive Advanced controls, compact policy rows, explicit preview/acceptance sheets and one-task mobile navigation preserve the existing version/evidence model. |
 | POL-01 | Policy manager | Complete | Y | Y | Y | Y | Y | - | Y | Y | Required/optional, internal/customer-visible, ordering, enablement and acceptance contexts persist per workspace. |
 | POL-02 | Public booking acceptance | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Both public bookers read only current customer-visible versions, fail closed on required/stale acceptance and retain the original intake source/version. |
 | POL-03 | Immutable acceptance evidence | Complete | Y | Y | Y | Y | Y | - | Y | Y | Exact version, booking, timestamp, customer snapshot and privacy-preserving fingerprints are append-only; later customer linking is role- and workspace-verified. |
@@ -281,7 +282,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | OPS-06 | Security headers / clickjacking | Complete | - | - | - | - | Y | Y | Y | Y | Admin routes ship CSP/frame-ancestors, X-Frame-Options, nosniff, HSTS, Referrer-Policy and Permissions-Policy. |
 | OPS-07 | Secret handling | Complete | - | - | Y | Y | Y | - | Y | Y | Service-role credential is server-only and absent from client bundle/search; values were never printed. |
 | OPS-08 | Production route identity gate | Complete | - | - | - | - | - | Y | Y | Y | Eight critical routes passed status and identity/negative-marker checks. |
-| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 134 tests including hardening, auth, content, media, invoices, business documents, policies, booking actions and inline-script parsing. |
+| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 137 tests including hardening, auth, content, media, invoices, business documents, policies, booking actions and inline-script parsing. |
 | OPS-10 | Build/CI release gate | Complete | - | - | - | - | - | - | Y | Y | `vercel-build` runs the complete repository test suite and fails deployment on regression. |
 | OPS-11 | Authenticated production E2E suite | Partial | - | - | - | - | - | - | P | N | Release acceptance covers browser/API/data workflows, but it is not yet a standalone CI-owned reusable suite. |
 | OPS-12 | Acceptance fixtures | Partial | - | - | P | Y | Y | - | Y | N | Production fixture registry exists and is workspace-scoped; a generalized fixture orchestration API is still absent. |

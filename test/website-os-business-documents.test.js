@@ -132,6 +132,47 @@ test("Website OS exposes complete document, policy, identity and invoice attachm
   assert.match(ui, /min-height: 44px/);
 });
 
+test("Business Documents default flow uses presets, focused editing and progressive disclosure", () => {
+  const ui = read("admin/website-os/commonpl4ce/index.html");
+  ["booking_policy", "cancellation_policy", "invoice_terms", "service_agreement", "custom"].forEach((preset) => {
+    assert.match(ui, new RegExp(`data-document-preset=["']${preset}["']`));
+  });
+  assert.match(ui, /grid-template-columns: minmax\(250px, \.62fr\) minmax\(0, 1\.38fr\)/);
+  assert.doesNotMatch(ui, /grid-template-columns: minmax\(220px, \.72fr\) minmax\(360px, 1\.25fr\) minmax\(280px, \.9fr\)/);
+  assert.match(ui, /Document title/);
+  assert.match(ui, /Document content/);
+  assert.match(ui, /BUSINESS_SIMPLE_DESTINATIONS/);
+  assert.match(ui, /<details class="business-advanced">/);
+  assert.match(ui, /Version reference/);
+  assert.match(ui, /Additional workflow destinations/);
+  assert.match(ui, /id="advancedBusinessDocumentType"/);
+  assert.match(ui, /id="addBusinessDocument"/);
+  assert.match(ui, /data-open-document-preview/);
+  assert.match(ui, /id="businessDocumentPreviewDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
+});
+
+test("Policy manager hides technical defaults and opens acceptance evidence on demand", () => {
+  const ui = read("admin/website-os/commonpl4ce/index.html");
+  ["Required during booking", "Optional during booking", "Include with invoice", "Internal only"].forEach((label) => assert.match(ui, new RegExp(label)));
+  assert.match(ui, /data-open-policy-acceptances/);
+  assert.match(ui, /id="businessAcceptanceDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
+  assert.match(ui, /data-toggle-business-policy/);
+  assert.match(ui, /System acceptance evidence/);
+  assert.match(ui, /state\.documentStatusFilter = "active"/);
+  assert.doesNotMatch(ui, /name="policy_key"/);
+  assert.match(ui, /policy_key: policy\.policy_key/);
+  assert.match(read("lib/website-os-business.js"), /policy_key: policyKey\(input\.policy_key \|\| input\.policyKey \|\| document\.document_type \|\| document\.title\)/);
+});
+
+test("Business Documents mobile flow uses one task at a time and sticky primary actions", () => {
+  const ui = read("admin/website-os/commonpl4ce/index.html");
+  assert.match(ui, /data-mobile-screen="list"/);
+  assert.match(ui, /document-workspace\[data-mobile-screen="list"\] \.document-editor-pane/);
+  assert.match(ui, /document-workspace\[data-mobile-screen="editor"\] \.document-library-pane/);
+  assert.match(ui, /\.document-sticky-actions[\s\S]*position: fixed/);
+  assert.match(ui, /min-height: 44px/);
+});
+
 test("business document PDF is branded and downloadable", async () => {
   const pdf = await buildWebsiteOsDocumentPdf({
     title: "Booking Policy",

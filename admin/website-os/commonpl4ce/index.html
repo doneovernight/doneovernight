@@ -2784,10 +2784,78 @@
 
     .document-workspace {
       display: grid;
-      grid-template-columns: minmax(220px, .72fr) minmax(360px, 1.25fr) minmax(280px, .9fr);
+      grid-template-columns: minmax(250px, .62fr) minmax(0, 1.38fr);
       gap: 12px;
       align-items: start;
     }
+
+    .business-onboarding {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 8px;
+      background: rgba(237,230,216,.1);
+    }
+
+    .business-onboarding span {
+      min-width: 0;
+      padding: 10px 12px;
+      background: #0b0a09;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    .business-onboarding strong { display: block; margin-bottom: 2px; color: var(--text); font-size: 11px; }
+
+    .document-presets {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .document-presets button {
+      min-width: 0;
+      min-height: 54px;
+      padding: 9px 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.12);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .document-presets button:hover,
+    .document-presets button:focus-visible { border-color: rgba(237,230,216,.28); background: rgba(237,230,216,.05); }
+    .document-presets button strong { display: block; margin-bottom: 2px; font-size: 11px; }
+    .document-presets button span { display: block; color: var(--muted); font-size: 9px; line-height: 1.35; }
+
+    .document-filter-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.12);
+    }
+
+    .document-filter-tabs button {
+      min-width: 0;
+      min-height: 36px;
+      padding: 0 6px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--muted);
+      font: 800 9px var(--mono);
+      cursor: pointer;
+    }
+
+    .document-filter-tabs button[aria-selected="true"] { background: rgba(237,230,216,.09); color: var(--text); }
 
     .document-pane {
       min-width: 0;
@@ -2823,6 +2891,43 @@
       text-align: left;
       cursor: pointer;
     }
+
+    .document-library-row,
+    .policy-library-row {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.12);
+    }
+
+    .document-library-row.is-active,
+    .policy-library-row.is-active { border-color: rgba(237,230,216,.34); background: rgba(237,230,216,.06); }
+    .document-library-main { min-width: 0; display: grid; gap: 5px; }
+    .document-library-main strong { overflow-wrap: anywhere; font-size: 12px; }
+    .document-library-meta { display: flex; flex-wrap: wrap; gap: 5px 8px; color: var(--muted); font-size: 9px; }
+    .document-library-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .document-usage { color: var(--muted); font-size: 9px; overflow-wrap: anywhere; }
+
+    .simple-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      width: max-content;
+      padding: 0 7px;
+      border: 1px solid rgba(237,230,216,.15);
+      border-radius: 999px;
+      color: var(--muted);
+      font: 800 8px var(--mono);
+    }
+
+    .simple-status.is-published { border-color: rgba(143,183,140,.36); color: #c9dfc6; }
+    .simple-status.is-draft { border-color: rgba(223,176,91,.35); color: #e4c488; }
+    .simple-status.is-off,
+    .simple-status.is-archived { color: rgba(237,230,216,.48); }
+    .fixture-evidence-label { color: #e4c488; font: 800 8px var(--mono); text-transform: uppercase; }
 
     .document-select:hover,
     .policy-select:hover { border-color: rgba(237,230,216,.24); background: rgba(237,230,216,.045); }
@@ -2909,6 +3014,102 @@
       align-items: center;
     }
 
+    .document-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .document-editor-head h2 { margin: 0 0 4px; overflow-wrap: anywhere; font-size: 18px; }
+    .document-editor-head p { margin: 0; color: var(--muted); font-size: 10px; }
+    .business-mobile-back { display: none; }
+
+    .document-use-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .document-use-grid .workflow-option { justify-content: flex-start; }
+
+    .business-advanced {
+      grid-column: 1 / -1;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.1);
+    }
+
+    .business-advanced > summary {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--muted);
+      font: 800 10px var(--mono);
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .business-advanced > summary::-webkit-details-marker { display: none; }
+    .business-advanced > summary::after { content: "+"; margin-left: auto; color: var(--text); }
+    .business-advanced[open] > summary::after { content: "−"; }
+    .business-advanced-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 12px 12px; }
+    .business-advanced-content .wide { grid-column: 1 / -1; }
+
+    .document-sticky-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .business-dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .business-dialog-backdrop[hidden] { display: none; }
+    .business-dialog-card {
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100dvh - 40px));
+      display: grid;
+      gap: 14px;
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid rgba(237,230,216,.18);
+      border-radius: 8px;
+      background: #0b0a09;
+      box-shadow: 0 24px 80px rgba(0,0,0,.5);
+    }
+
+    .business-dialog-card .document-preview { min-height: 360px; }
+
+    .policy-use-choice {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .policy-use-choice label {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .policy-use-choice input { width: 18px; height: 18px; }
+    .acceptance-button { display: inline-flex; align-items: center; gap: 7px; }
+    .acceptance-button .status-pill { min-width: 22px; justify-content: center; }
+
     .document-state-row {
       display: flex;
       flex-wrap: wrap;
@@ -2986,6 +3187,7 @@
       .split, .reply-workspace, .section-builder, .builder-grid, .hero-workspace-grid, .media-browser-grid, .preview-workspace-grid, .live-preview-grid, .customer-workspace, .document-workspace { grid-template-columns: 1fr; }
       .booking-row, .template-row, .client-row { grid-template-columns: 1fr; }
       .hero-slot-detail, .media-detail { position: static; }
+      .business-onboarding { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 720px) {
@@ -3019,10 +3221,41 @@
       .business-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .business-tab { min-height: 44px; padding-inline: 8px; }
       .document-pane { padding: 12px; }
+      .business-onboarding { grid-template-columns: 1fr; }
+      .document-presets { grid-template-columns: 1fr; }
+      .document-presets button, .document-filter-tabs button { min-height: 44px; }
+      .document-workspace[data-mobile-screen="list"] .document-editor-pane { display: none; }
+      .document-workspace[data-mobile-screen="editor"] .document-library-pane { display: none; }
+      .document-workspace[data-mobile-screen="editor"] .document-editor-pane { display: grid; }
+      .business-mobile-back { display: inline-flex; }
+      .document-use-grid, .policy-use-choice, .business-advanced-content { grid-template-columns: 1fr; }
+      .business-advanced-content .wide { grid-column: auto; }
+      .document-sticky-actions {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        z-index: 4;
+        padding: 10px 12px;
+        border: 1px solid rgba(237,230,216,.12);
+        border-top: 1px solid rgba(237,230,216,.12);
+        border-radius: 8px;
+        background: rgba(11,10,9,.96);
+        backdrop-filter: blur(12px);
+      }
+      .document-sticky-actions .button { min-height: 44px; flex: 1 1 130px; }
+      .document-editor-pane { padding-bottom: 142px; }
       .document-preview { min-height: 300px; padding: 22px 18px; }
       .document-actions, .business-form-actions { display: grid; grid-template-columns: 1fr; }
       .document-actions .button, .business-form-actions .button { width: 100%; }
       .business-status-card { grid-template-columns: 1fr; }
+      .business-dialog-backdrop { align-items: end; padding: 0; }
+      .business-dialog-card {
+        width: 100%;
+        max-height: calc(100dvh - 18px);
+        border-radius: 8px 8px 0 0;
+        padding: 14px 12px calc(18px + env(safe-area-inset-bottom));
+      }
       .media-target-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .operations-stack { grid-column: auto; }
       .operational-form .wide { grid-column: auto; }
@@ -3639,11 +3872,11 @@
         </section>
 
         <section class="view" id="view-documents" data-view="documents">
-          <div class="view-head">
+          <div class="view-head business-view-head">
             <div class="view-title">
               <div class="eyebrow">Business</div>
               <h1>Documents.</h1>
-              <p>Workspace-scoped terms, policies, workflow attachments and immutable published versions.</p>
+              <p>Create, publish and connect the documents customers need.</p>
             </div>
             <div class="business-tabs" role="tablist" aria-label="Business document workspace">
               <button class="business-tab" type="button" data-business-tab-target="documents" role="tab" aria-selected="true">Documents</button>
@@ -3652,48 +3885,62 @@
           </div>
 
           <section class="business-task is-active" data-business-tab="documents" role="tabpanel">
-            <div class="document-workspace">
-              <aside class="document-pane">
+            <div class="business-onboarding" role="note" aria-label="Document help">
+              <span><strong>Document</strong> Your approved business copy.</span>
+              <span><strong>Policy</strong> A published document customers can agree to.</span>
+              <span><strong>Customer agreement</strong> Choose when acceptance is required.</span>
+              <span><strong>Publish</strong> Makes the saved version available for use.</span>
+            </div>
+            <div class="document-workspace" data-business-workspace="documents" data-mobile-screen="list">
+              <aside class="document-pane document-library-pane" aria-labelledby="businessDocumentLibraryTitle">
                 <div class="panel-head">
-                  <div><h2>Document library</h2><p>Standard and custom documents.</p></div>
-                  <button class="button small primary" id="addBusinessDocument" type="button">Add document</button>
+                  <div><h2 id="businessDocumentLibraryTitle">Document library</h2><p>Choose a starting point, then add approved copy.</p></div>
                 </div>
-                <label class="field"><span>Filter</span><select id="documentStatusFilter"><option value="all">All documents</option><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></label>
-                <label class="field"><span>New document type</span><select id="newBusinessDocumentType"><option value="general_terms">General Terms &amp; Conditions</option><option value="booking_policy">Booking Policy</option><option value="payment_policy">Payment Policy</option><option value="cancellation_policy">Cancellation Policy</option><option value="privacy_policy">Privacy Policy</option><option value="cookie_policy">Cookie Policy</option><option value="invoice_terms">Invoice Terms</option><option value="service_agreement">Service Agreement</option><option value="custom">Custom Document</option></select></label>
+                <div class="document-presets" role="group" aria-label="Create a document">
+                  <button type="button" data-document-preset="booking_policy"><strong>Booking Policy</strong><span>Booking expectations and preparation</span></button>
+                  <button type="button" data-document-preset="cancellation_policy"><strong>Cancellation Policy</strong><span>Changes and cancellations</span></button>
+                  <button type="button" data-document-preset="invoice_terms"><strong>Invoice Terms</strong><span>Invoice and payment information</span></button>
+                  <button type="button" data-document-preset="service_agreement"><strong>Project Agreement</strong><span>Project scope and delivery</span></button>
+                  <button type="button" data-document-preset="custom"><strong>Custom Document</strong><span>Start with a clean structure</span></button>
+                </div>
+                <details class="business-advanced document-library-advanced">
+                  <summary>Other document types</summary>
+                  <div class="business-advanced-content">
+                    <label class="field wide"><span>Document type</span><select id="advancedBusinessDocumentType"><option value="general_terms">General Terms &amp; Conditions</option><option value="payment_policy">Payment Policy</option><option value="privacy_policy">Privacy Policy</option><option value="cookie_policy">Cookie Policy</option></select></label>
+                    <button class="button ghost small wide" id="addBusinessDocument" type="button">Create selected type</button>
+                  </div>
+                </details>
+                <div class="document-filter-tabs" role="tablist" aria-label="Document status">
+                  <button type="button" data-document-filter="active" aria-selected="true">Published</button>
+                  <button type="button" data-document-filter="draft" aria-selected="false">Draft</button>
+                  <button type="button" data-document-filter="archived" aria-selected="false">Archived</button>
+                </div>
                 <div class="document-list" id="businessDocumentList"></div>
               </aside>
 
-              <section class="document-pane" id="businessDocumentEditor" aria-label="Selected document editor">
-                <div class="empty-state"><strong>Select or add a document.</strong>Its workspace-scoped editor appears here.</div>
+              <section class="document-pane document-editor-pane" id="businessDocumentEditor" aria-label="Selected document editor">
+                <div class="empty-state"><strong>Choose a document to open it.</strong>Create a preset or open an existing document.</div>
               </section>
-
-              <aside class="document-pane">
-                <div class="panel-head"><div><h2>Document preview</h2><p>Draft preview. Not automatically sent.</p></div><span class="status-pill" id="documentPreviewState">Draft</span></div>
-                <article class="document-preview" id="businessDocumentPreview"><small>COMMONPL4CE · Draft preview</small><h2>Select a document</h2><div class="document-preview-body">Published documents and saved drafts remain separate.</div></article>
-                <section>
-                  <div class="panel-head"><div><h3>Version history</h3><p>Published versions are immutable.</p></div></div>
-                  <div class="document-version-list" id="businessDocumentVersions"></div>
-                </section>
-              </aside>
             </div>
           </section>
 
           <section class="business-task" data-business-tab="policies" role="tabpanel">
-            <div class="document-workspace">
-              <aside class="document-pane">
+            <div class="business-onboarding" role="note" aria-label="Policy help">
+              <span><strong>Document</strong> Publish the copy first.</span>
+              <span><strong>Policy</strong> Connect that document to a customer moment.</span>
+              <span><strong>Acceptance</strong> The exact accepted version stays recorded.</span>
+            </div>
+            <div class="document-workspace" data-business-workspace="policies" data-mobile-screen="list">
+              <aside class="document-pane document-library-pane" aria-labelledby="businessPolicyLibraryTitle">
                 <div class="panel-head">
-                  <div><h2>Policy manager</h2><p>Choose which published policies apply.</p></div>
-                  <button class="button small primary" id="addBusinessPolicy" type="button">Add policy</button>
+                  <div><h2 id="businessPolicyLibraryTitle">Policies</h2><p>Choose where customers see a published document.</p></div>
+                  <button class="button small primary" id="addBusinessPolicy" type="button">Create policy</button>
                 </div>
                 <div class="policy-list" id="businessPolicyList"></div>
               </aside>
-              <section class="document-pane" id="businessPolicyEditor" aria-label="Selected policy editor">
-                <div class="empty-state"><strong>Select or add a policy.</strong>Required, visibility and workflow settings appear here.</div>
+              <section class="document-pane document-editor-pane" id="businessPolicyEditor" aria-label="Selected policy editor">
+                <div class="empty-state"><strong>Create your first policy.</strong>Publish a document, then choose when customers should agree to it.</div>
               </section>
-              <aside class="document-pane">
-                <div class="panel-head"><div><h2>Acceptance history</h2><p>Immutable records for exact published versions.</p></div><span class="status-pill" id="policyAcceptanceCount">0</span></div>
-                <div class="policy-acceptance-list" id="businessPolicyAcceptances"></div>
-              </aside>
             </div>
           </section>
         </section>
@@ -4081,6 +4328,26 @@
           <button class="button danger small" type="button" id="confirmAccept">Move to Trash</button>
         </div>
       </div>
+    </div>
+
+    <div class="business-dialog-backdrop" id="businessDocumentPreviewDialog" hidden aria-hidden="true" inert>
+      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessDocumentPreviewTitle">
+        <div class="panel-head">
+          <div><h2 id="businessDocumentPreviewTitle">Document preview</h2><p>Draft preview. Nothing is published from this screen.</p></div>
+          <button class="icon-button" type="button" data-close-business-dialog="preview" aria-label="Close preview">&times;</button>
+        </div>
+        <article class="document-preview" id="businessDocumentPreview" data-i18n-skip><small>COMMONPL4CE · Draft preview</small><h2>Select a document</h2><div class="document-preview-body">Published documents and saved drafts remain separate.</div></article>
+      </section>
+    </div>
+
+    <div class="business-dialog-backdrop" id="businessAcceptanceDialog" hidden aria-hidden="true" inert>
+      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessAcceptanceTitle">
+        <div class="panel-head">
+          <div><h2 id="businessAcceptanceTitle">Customer acceptances</h2><p>The accepted document version remains recorded.</p></div>
+          <div class="record-actions"><span class="status-pill" id="policyAcceptanceCount">0</span><button class="icon-button" type="button" data-close-business-dialog="acceptances" aria-label="Close acceptances">&times;</button></div>
+        </div>
+        <div class="policy-acceptance-list" id="businessPolicyAcceptances" data-i18n-skip></div>
+      </section>
     </div>
 
     <footer class="os-footer">
@@ -4819,9 +5086,52 @@
       "Documents.": "Documenten.",
       "Documents": "Documenten",
       "Policies": "Beleid",
+      "Create, publish and connect the documents customers need.": "Maak, publiceer en koppel de documenten die klanten nodig hebben.",
+      "Document help": "Hulp bij documenten",
+      "Document": "Document",
+      "Your approved business copy.": "Je goedgekeurde bedrijfstekst.",
+      "Policy": "Beleid",
+      "A published document customers can agree to.": "Een gepubliceerd document waarmee klanten kunnen instemmen.",
+      "Customer agreement": "Klantinstemming",
+      "Choose when acceptance is required.": "Kies wanneer instemming nodig is.",
+      "Publish": "Publiceren",
+      "Makes the saved version available for use.": "Maakt de opgeslagen versie beschikbaar voor gebruik.",
+      "Policy help": "Hulp bij beleid",
+      "Publish the copy first.": "Publiceer eerst de tekst.",
+      "Connect that document to a customer moment.": "Koppel dat document aan een klantmoment.",
+      "Acceptance": "Instemming",
+      "The exact accepted version stays recorded.": "De exact geaccepteerde versie blijft vastgelegd.",
       "Workspace-scoped terms, policies, workflow attachments and immutable published versions.": "Werkruimtegebonden voorwaarden, beleid, workflowbijlagen en onveranderlijke gepubliceerde versies.",
       "Document library": "Documentbibliotheek",
       "Standard and custom documents.": "Standaard- en aangepaste documenten.",
+      "Choose a starting point, then add approved copy.": "Kies een startpunt en voeg daarna goedgekeurde tekst toe.",
+      "Create a document": "Een document maken",
+      "Booking Policy": "Boekingsbeleid",
+      "Cancellation Policy": "Annuleringsbeleid",
+      "Invoice Terms": "Factuurvoorwaarden",
+      "Custom Document": "Aangepast document",
+      "Booking expectations and preparation": "Boekingsverwachtingen en voorbereiding",
+      "Changes and cancellations": "Wijzigingen en annuleringen",
+      "Invoice and payment information": "Factuur- en betalingsinformatie",
+      "Project Agreement": "Projectovereenkomst",
+      "Project scope and delivery": "Projectomvang en oplevering",
+      "Start with a clean structure": "Begin met een lege structuur",
+      "Other document types": "Andere documenttypen",
+      "Create selected type": "Geselecteerd type maken",
+      "Document status": "Documentstatus",
+      "Published": "Gepubliceerd",
+      "Choose a document to open it.": "Kies een document om het te openen.",
+      "Create a preset or open an existing document.": "Maak een document vanuit een preset of open een bestaand document.",
+      "Create your first policy.": "Maak je eerste beleid.",
+      "Publish a document, then choose when customers should agree to it.": "Publiceer een document en kies daarna wanneer klanten ermee moeten instemmen.",
+      "Policies": "Beleid",
+      "Choose where customers see a published document.": "Kies waar klanten een gepubliceerd document zien.",
+      "Create policy": "Beleid maken",
+      "Customer acceptances": "Klantinstemmingen",
+      "The accepted document version remains recorded.": "De geaccepteerde documentversie blijft vastgelegd.",
+      "Close preview": "Voorbeeld sluiten",
+      "Close acceptances": "Instemmingen sluiten",
+      "Nothing is published from this screen.": "Vanuit dit scherm wordt niets gepubliceerd.",
       "Add document": "Document toevoegen",
       "Filter": "Filter",
       "All documents": "Alle documenten",
@@ -4891,8 +5201,36 @@
       "Server-backed workspace records.": "Server-side werkruimterecords.",
       "No documents in this view.": "Geen documenten in deze weergave.",
       "Add a standard or custom business document.": "Voeg een standaard- of aangepast bedrijfsdocument toe.",
+      "Last edited": "Laatst bewerkt",
+      "Used for": "Gebruikt voor",
+      "Not used yet": "Nog niet gebruikt",
+      "System acceptance evidence": "Systeembewijs van acceptatie",
+      "No archived documents.": "Geen gearchiveerde documenten.",
+      "No drafts yet.": "Nog geen concepten.",
+      "No published documents yet.": "Nog geen gepubliceerde documenten.",
+      "Archived documents and system evidence appear here.": "Gearchiveerde documenten en systeembewijs verschijnen hier.",
+      "Choose a preset above to get started.": "Kies hierboven een preset om te beginnen.",
+      "Open": "Openen",
       "Select or add a document.": "Selecteer of voeg een document toe.",
       "Its workspace-scoped editor appears here.": "De werkruimtegebonden editor verschijnt hier.",
+      "Back to documents": "Terug naar documenten",
+      "Published and available for use.": "Gepubliceerd en beschikbaar voor gebruik.",
+      "Archived and no longer available for new use.": "Gearchiveerd en niet meer beschikbaar voor nieuw gebruik.",
+      "Saved privately until you publish.": "Privé opgeslagen totdat je publiceert.",
+      "Document title": "Documenttitel",
+      "Document content": "Documentinhoud",
+      "Use approved business copy. Presets do not contain legal terms.": "Gebruik goedgekeurde bedrijfstekst. Presets bevatten geen juridische voorwaarden.",
+      "Booking": "Boeking",
+      "Invoice": "Factuur",
+      "Email": "E-mail",
+      "Project": "Project",
+      "Advanced settings": "Geavanceerde instellingen",
+      "Version reference": "Versiereferentie",
+      "Available for use": "Beschikbaar voor gebruik",
+      "Additional workflow destinations": "Extra workflowbestemmingen",
+      "Published versions stay available for rollback.": "Gepubliceerde versies blijven beschikbaar om terug te zetten.",
+      "Save draft": "Concept opslaan",
+      "Preview": "Voorbeeld",
       "Document type": "Documenttype",
       "Title": "Titel",
       "Version label": "Versielabel",
@@ -4926,6 +5264,31 @@
       "No published versions yet.": "Nog geen gepubliceerde versies.",
       "Publishing creates an immutable version.": "Publiceren maakt een onveranderlijke versie.",
       "Loading policies...": "Beleid laden…",
+      "Create your first policy": "Maak je eerste beleid",
+      "Connect a published document to booking, invoices or internal use.": "Koppel een gepubliceerd document aan boekingen, facturen of intern gebruik.",
+      "Publish a document before connecting it to a booking.": "Publiceer een document voordat je het aan een boeking koppelt.",
+      "Edit": "Bewerken",
+      "Off": "Uit",
+      "Disable": "Uitschakelen",
+      "Enable": "Inschakelen",
+      "Choose Create policy to connect a published document.": "Kies Beleid maken om een gepubliceerd document te koppelen.",
+      "Publish a document first": "Publiceer eerst een document",
+      "Back to policies": "Terug naar beleid",
+      "Connect one published document to the right customer moment.": "Koppel één gepubliceerd document aan het juiste klantmoment.",
+      "Archived policy remains available for history.": "Gearchiveerd beleid blijft beschikbaar voor de geschiedenis.",
+      "Where is this policy used?": "Waar wordt dit beleid gebruikt?",
+      "Required during booking": "Verplicht tijdens boeken",
+      "Optional during booking": "Optioneel tijdens boeken",
+      "Include with invoice": "Meesturen met factuur",
+      "Internal only": "Alleen intern",
+      "Enable this policy": "Dit beleid inschakelen",
+      "Generated when saved": "Wordt bij opslaan aangemaakt",
+      "Detailed customer agreement points": "Gedetailleerde momenten voor klantinstemming",
+      "View acceptances": "Instemmingen bekijken",
+      "Only publishing or enabling a policy changes customer-facing use.": "Alleen publiceren of inschakelen wijzigt het gebruik voor klanten.",
+      "This policy remains visible here, but its document is archived.": "Dit beleid blijft hier zichtbaar, maar het document is gearchiveerd.",
+      "Policy disabled.": "Beleid uitgeschakeld.",
+      "Policy enabled.": "Beleid ingeschakeld.",
       "Required": "Verplicht",
       "Optional": "Optioneel",
       "Customer Visible": "Zichtbaar voor klant",
@@ -5172,6 +5535,39 @@
       ["client_portal", "Future Client Portal"]
     ];
     const BUSINESS_POLICY_CONTEXTS = [["booking", "Booking"], ["invoice", "Invoice"], ["project", "Project"], ["manual", "Manual"]];
+    const BUSINESS_DOCUMENT_PRESETS = {
+      booking_policy: {
+        title: "Booking Policy",
+        body: "Booking details\n[Add approved business copy.]\n\nConfirmation and preparation\n[Add approved business copy.]\n\nChanges\n[Add approved business copy.]",
+        bodyNl: "Boekingsdetails\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nBevestiging en voorbereiding\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nWijzigingen\n[Voeg goedgekeurde bedrijfstekst toe.]"
+      },
+      cancellation_policy: {
+        title: "Cancellation Policy",
+        body: "Changes and cancellations\n[Add approved business copy.]\n\nTiming\n[Add approved business copy.]\n\nNext steps\n[Add approved business copy.]",
+        bodyNl: "Wijzigingen en annuleringen\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nTiming\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nVervolgstappen\n[Voeg goedgekeurde bedrijfstekst toe.]"
+      },
+      invoice_terms: {
+        title: "Invoice Terms",
+        body: "Invoice details\n[Add approved business copy.]\n\nPayment information\n[Add approved business copy.]\n\nQuestions\n[Add approved business copy.]",
+        bodyNl: "Factuurgegevens\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nBetalingsinformatie\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nVragen\n[Voeg goedgekeurde bedrijfstekst toe.]"
+      },
+      service_agreement: {
+        title: "Project Agreement",
+        body: "Project scope\n[Add approved business copy.]\n\nDeliverables and timing\n[Add approved business copy.]\n\nApproval\n[Add approved business copy.]",
+        bodyNl: "Projectomvang\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nOplevering en timing\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nGoedkeuring\n[Voeg goedgekeurde bedrijfstekst toe.]"
+      },
+      custom: {
+        title: "Custom Document",
+        body: "Purpose\n[Add approved business copy.]\n\nDetails\n[Add approved business copy.]\n\nNext steps\n[Add approved business copy.]",
+        bodyNl: "Doel\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nDetails\n[Voeg goedgekeurde bedrijfstekst toe.]\n\nVervolgstappen\n[Voeg goedgekeurde bedrijfstekst toe.]"
+      }
+    };
+    const BUSINESS_SIMPLE_DESTINATIONS = [
+      ["booking_confirmation", "Booking"],
+      ["invoice", "Invoice"],
+      ["branded_email", "Email"],
+      ["project_start", "Project"]
+    ];
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story", "FAQ", "Footer"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
     const DEFAULT_SITE_CONFIG = {
@@ -5286,7 +5682,11 @@
       activeBusinessTab: "documents",
       selectedBusinessDocumentId: "",
       selectedBusinessPolicyId: "",
-      documentStatusFilter: "all",
+      documentStatusFilter: "active",
+      businessDocumentScreen: "list",
+      businessPolicyScreen: "list",
+      creatingBusinessPolicy: false,
+      businessDialogReturnFocus: null,
       trash: [],
       clients: [],
       selectedBookingId: "",
@@ -6408,13 +6808,16 @@
       if (Array.isArray(data.policyAcceptances)) state.businessPolicyAcceptances = data.policyAcceptances;
       if (Array.isArray(data.invoiceDocuments)) state.invoiceDocuments = data.invoiceDocuments;
       if (data.document?.id) state.selectedBusinessDocumentId = data.document.id;
-      if (data.policy?.id) state.selectedBusinessPolicyId = data.policy.id;
+      if (data.policy?.id) {
+        state.selectedBusinessPolicyId = data.policy.id;
+        state.creatingBusinessPolicy = false;
+      }
       if (data.publish?.document?.id) state.selectedBusinessDocumentId = data.publish.document.id;
       if (data.rollback?.document?.id) state.selectedBusinessDocumentId = data.rollback.document.id;
       if (state.selectedBusinessDocumentId && !state.businessDocuments.some((item) => item.id === state.selectedBusinessDocumentId)) {
         state.selectedBusinessDocumentId = "";
       }
-      if (!state.selectedBusinessDocumentId) state.selectedBusinessDocumentId = state.businessDocuments.find((item) => item.status !== "archived")?.id || state.businessDocuments[0]?.id || "";
+      if (!state.selectedBusinessDocumentId) state.selectedBusinessDocumentId = state.businessDocuments.find((item) => item.status === "active")?.id || state.businessDocuments.find((item) => item.status === "draft")?.id || state.businessDocuments[0]?.id || "";
       if (state.selectedBusinessPolicyId && !state.businessPolicies.some((item) => item.id === state.selectedBusinessPolicyId)) {
         state.selectedBusinessPolicyId = "";
       }
@@ -6464,6 +6867,49 @@
       return ["Owner", "Admin", "Editor"].includes(clean(state.authUser?.role));
     }
 
+    function simpleDocumentStatus(document) {
+      if (document?.status === "active") return "Published";
+      if (document?.status === "archived") return "Archived";
+      return "Draft";
+    }
+
+    function simpleStatusClass(label) {
+      return `is-${clean(label).toLowerCase().replace(/[^a-z]+/g, "-")}`;
+    }
+
+    function documentUsageLabels(documentId) {
+      const destinations = new Set(workflowDestinationsForDocument(documentId).map((item) => item.destination));
+      const labels = [];
+      BUSINESS_SIMPLE_DESTINATIONS.forEach(([value, label]) => {
+        if (destinations.has(value)) labels.push(t(label));
+      });
+      if (["customer_welcome", "manual_email"].some((value) => destinations.has(value)) && !labels.includes(t("Email"))) labels.push(t("Email"));
+      if (destinations.has("client_portal") && !labels.includes(t("Project"))) labels.push(t("Project"));
+      return labels;
+    }
+
+    function isSystemAcceptanceEvidence(document) {
+      if (document?.status !== "archived") return false;
+      const evidence = lower(`${document.title} ${document.internal_notes}`);
+      return evidence.includes("acceptance") && (evidence.includes("fixture") || evidence.includes("evidence") || evidence.includes("test"));
+    }
+
+    function policyUseMode(policy) {
+      const contexts = Array.isArray(policy?.acceptance_contexts) ? policy.acceptance_contexts : [];
+      if (policy?.visibility === "internal") return "internal";
+      if (contexts.includes("invoice") && !contexts.includes("booking")) return "invoice";
+      if (policy?.requirement === "required") return "required_booking";
+      return "optional_booking";
+    }
+
+    function policyUseLabel(policy) {
+      const mode = policyUseMode(policy);
+      if (mode === "required_booking") return t("Required during booking");
+      if (mode === "optional_booking") return t("Optional during booking");
+      if (mode === "invoice") return t("Include with invoice");
+      return t("Internal only");
+    }
+
     function renderBusinessWorkspace() {
       const navCount = $("navDocumentsCount");
       if (navCount) navCount.textContent = String(state.businessDocuments.filter((item) => item.status !== "archived").length);
@@ -6475,6 +6921,12 @@
       });
       if ($("addBusinessDocument")) $("addBusinessDocument").disabled = !businessCanEdit();
       if ($("addBusinessPolicy")) $("addBusinessPolicy").disabled = !businessCanPublish();
+      document.querySelectorAll("[data-document-preset]").forEach((button) => { button.disabled = !businessCanEdit(); });
+      document.querySelectorAll("[data-document-filter]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.documentFilter === state.documentStatusFilter ? "true" : "false");
+      });
+      document.querySelector('[data-business-workspace="documents"]')?.setAttribute("data-mobile-screen", state.businessDocumentScreen);
+      document.querySelector('[data-business-workspace="policies"]')?.setAttribute("data-mobile-screen", state.businessPolicyScreen);
       renderBusinessDocumentList();
       renderBusinessDocumentEditor();
       renderBusinessDocumentPreview();
@@ -6493,13 +6945,22 @@
         return;
       }
       const filter = state.documentStatusFilter;
-      const records = state.businessDocuments.filter((item) => filter === "all" || item.status === filter);
-      target.innerHTML = records.length ? records.map((item) => `
-        <button class="document-select${item.id === state.selectedBusinessDocumentId ? " is-active" : ""}" type="button" data-business-document-id="${escapeHTML(item.id)}">
-          <strong>${escapeHTML(item.title)}</strong>
-          <span>${escapeHTML(t(businessDocumentTypeLabel(item.document_type)))} · ${escapeHTML(t(item.status[0].toUpperCase() + item.status.slice(1)))} · v${escapeHTML(item.version_label || "1.0")}</span>
-        </button>
-      `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No documents in this view."))}</strong>${escapeHTML(t("Add a standard or custom business document."))}</div>`;
+      const records = state.businessDocuments.filter((item) => item.status === filter);
+      target.innerHTML = records.length ? records.map((item) => {
+        const status = simpleDocumentStatus(item);
+        const usage = documentUsageLabels(item.id);
+        const evidence = isSystemAcceptanceEvidence(item);
+        return `
+          <article class="document-library-row${item.id === state.selectedBusinessDocumentId ? " is-active" : ""}">
+            <div class="document-library-main">
+              <strong>${escapeHTML(item.title)}</strong>
+              <div class="document-library-meta"><span class="simple-status ${simpleStatusClass(status)}">${escapeHTML(t(status))}</span><span>${escapeHTML(t("Last edited"))} ${escapeHTML(formatTimestamp(item.updated_at))}</span></div>
+              <span class="document-usage">${escapeHTML(usage.length ? `${t("Used for")}: ${usage.join(", ")}` : t("Not used yet"))}</span>
+              ${evidence ? `<span class="fixture-evidence-label">${escapeHTML(t("System acceptance evidence"))}</span>` : ""}
+            </div>
+            <div class="document-library-actions"><span></span><button class="button ghost small" type="button" data-business-document-id="${escapeHTML(item.id)}">${escapeHTML(t("Open"))}</button></div>
+          </article>`;
+      }).join("") : `<div class="empty-state"><strong>${escapeHTML(t(filter === "archived" ? "No archived documents." : filter === "draft" ? "No drafts yet." : "No published documents yet."))}</strong>${escapeHTML(t(filter === "archived" ? "Archived documents and system evidence appear here." : "Choose a preset above to get started."))}</div>`;
     }
 
     function renderBusinessDocumentEditor() {
@@ -6507,39 +6968,49 @@
       if (!target) return;
       const document = selectedBusinessDocument();
       if (!document) {
-        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Select or add a document."))}</strong>${escapeHTML(t("Its workspace-scoped editor appears here."))}</div>`;
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Choose a document to open it."))}</strong>${escapeHTML(t("Create a preset or open an existing document."))}</div>`;
         return;
       }
       const workflows = new Map(workflowDestinationsForDocument(document.id).map((item) => [item.destination, item]));
       const archived = document.status === "archived";
       const canEdit = businessCanEdit() && !archived;
+      const status = simpleDocumentStatus(document);
       target.innerHTML = `
-        <div class="panel-head"><div><h2>${escapeHTML(document.title)}</h2><p>${escapeHTML(t(businessDocumentTypeLabel(document.document_type)))} · ${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</p></div><span class="status-pill">${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</span></div>
+        <button class="button ghost small business-mobile-back" type="button" data-business-back-library="documents">${escapeHTML(t("Back to documents"))}</button>
+        <div class="document-editor-head"><div><h2>${escapeHTML(document.title)}</h2><p>${escapeHTML(t(status === "Published" ? "Published and available for use." : status === "Archived" ? "Archived and no longer available for new use." : "Saved privately until you publish."))}</p></div><span class="simple-status ${simpleStatusClass(status)}">${escapeHTML(t(status))}</span></div>
         <form id="businessDocumentForm" class="document-editor-grid" data-document-id="${escapeHTML(document.id)}" data-revision="${Number(document.revision) || 1}">
-          <label class="field"><span>${escapeHTML(t("Document type"))}</span><input value="${escapeHTML(t(businessDocumentTypeLabel(document.document_type)))}" readonly></label>
-          <label class="field"><span>${escapeHTML(t("Status"))}</span><input value="${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}" readonly></label>
-          <label class="field wide"><span>${escapeHTML(t("Title"))}</span><input name="title" type="text" maxlength="160" value="${escapeHTML(document.title)}" ${canEdit ? "required" : "disabled"}></label>
-          <label class="field"><span>${escapeHTML(t("Version label"))}</span><input name="version_label" type="text" maxlength="40" value="${escapeHTML(document.version_label || "1.0")}" ${canEdit ? "required" : "disabled"}></label>
-          <label class="field"><span>${escapeHTML(t("Effective date"))}</span><input name="effective_date" type="date" value="${escapeHTML(document.effective_date || "")}" ${canEdit ? "" : "disabled"}></label>
-          <label class="field"><span>${escapeHTML(t("Language"))}</span><select name="language" ${canEdit ? "" : "disabled"}><option value="nl"${document.language === "nl" ? " selected" : ""}>Nederlands</option><option value="en"${document.language === "en" ? " selected" : ""}>English</option></select></label>
-          <label class="workflow-option"><input name="enabled" type="checkbox"${document.enabled !== false ? " checked" : ""}${canEdit ? "" : " disabled"}>${escapeHTML(t("Enabled"))}</label>
-          <label class="field wide"><span>${escapeHTML(t("Internal notes"))}</span><textarea name="internal_notes" rows="3" ${canEdit ? "" : "disabled"}>${escapeHTML(document.internal_notes || "")}</textarea></label>
-          <label class="field wide"><span>${escapeHTML(t("Document body"))}</span><textarea class="document-body-editor" name="body" ${canEdit ? "" : "disabled"}>${escapeHTML(document.body || "")}</textarea></label>
+          <label class="field wide"><span>${escapeHTML(t("Document title"))}</span><input name="title" type="text" maxlength="160" value="${escapeHTML(document.title)}" ${canEdit ? "required" : "disabled"}></label>
+          <label class="field wide"><span>${escapeHTML(t("Document content"))}</span><textarea class="document-body-editor" name="body" ${canEdit ? "required" : "disabled"}>${escapeHTML(document.body || "")}</textarea><small>${escapeHTML(t("Use approved business copy. Presets do not contain legal terms."))}</small></label>
           <fieldset class="invoice-document-options wide" ${businessCanPublish() && !archived ? "" : "disabled"}>
-            <legend>${escapeHTML(t("Automatic workflow attachments"))}</legend>
-            <p class="form-note">${escapeHTML(t("Attachments use the published version. Branded email delivery is prepared but not sent automatically."))}</p>
-            <div class="document-workflow-list">${BUSINESS_DOCUMENT_DESTINATIONS.map(([value, label]) => {
-              const workflow = workflows.get(value);
-              return `<label class="workflow-option"><input type="checkbox" name="workflow" value="${escapeHTML(value)}"${workflow ? " checked" : ""}>${escapeHTML(t(label))}</label>`;
-            }).join("")}</div>
+            <legend>${escapeHTML(t("Used for"))}</legend>
+            <div class="document-use-grid">${BUSINESS_SIMPLE_DESTINATIONS.map(([value, label]) => `<label class="workflow-option"><input type="checkbox" name="workflow" value="${escapeHTML(value)}"${workflows.has(value) ? " checked" : ""}>${escapeHTML(t(label))}</label>`).join("")}</div>
           </fieldset>
-          <div class="document-state-row wide"><span>${escapeHTML(t("Last updated"))}: ${escapeHTML(formatTimestamp(document.updated_at))}</span><span>·</span><span>${escapeHTML(t("Revision"))} ${Number(document.revision) || 1}</span></div>
-          <div class="document-actions wide">
-            ${canEdit ? `<button class="button primary small" type="submit">${escapeHTML(t("Save document"))}</button>` : ""}
-            ${archived || !businessCanPublish() ? "" : `<button class="button small" type="button" data-publish-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Publish document"))}</button>`}
-            <button class="button ghost small" type="button" data-export-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Download PDF"))}</button>
-            ${canEdit ? `<button class="button ghost small" type="button" data-duplicate-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Duplicate"))}</button>` : ""}
-            ${archived || !businessCanPublish() ? "" : `<button class="button ghost small" type="button" data-archive-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Archive"))}</button>`}
+          <details class="business-advanced">
+            <summary>${escapeHTML(t("Advanced settings"))}</summary>
+            <div class="business-advanced-content">
+              <label class="field"><span>${escapeHTML(t("Document type"))}</span><input value="${escapeHTML(t(businessDocumentTypeLabel(document.document_type)))}" readonly></label>
+              <label class="field"><span>${escapeHTML(t("Version reference"))}</span><input name="version_label" type="text" maxlength="40" value="${escapeHTML(document.version_label || "1.0")}" ${canEdit ? "required" : "disabled"}></label>
+              <label class="field"><span>${escapeHTML(t("Effective date"))}</span><input name="effective_date" type="date" value="${escapeHTML(document.effective_date || "")}" ${canEdit ? "" : "disabled"}></label>
+              <label class="field"><span>${escapeHTML(t("Language"))}</span><select name="language" ${canEdit ? "" : "disabled"}><option value="nl"${document.language === "nl" ? " selected" : ""}>Nederlands</option><option value="en"${document.language === "en" ? " selected" : ""}>English</option></select></label>
+              <label class="workflow-option"><input name="enabled" type="checkbox"${document.enabled !== false ? " checked" : ""}${canEdit ? "" : " disabled"}>${escapeHTML(t("Available for use"))}</label>
+              <label class="field wide"><span>${escapeHTML(t("Internal notes"))}</span><textarea name="internal_notes" rows="3" ${canEdit ? "" : "disabled"}>${escapeHTML(document.internal_notes || "")}</textarea></label>
+              <fieldset class="invoice-document-options wide" ${businessCanPublish() && !archived ? "" : "disabled"}>
+                <legend>${escapeHTML(t("Additional workflow destinations"))}</legend>
+                <div class="document-workflow-list">${BUSINESS_DOCUMENT_DESTINATIONS.filter(([value]) => !BUSINESS_SIMPLE_DESTINATIONS.some(([simple]) => simple === value)).map(([value, label]) => `<label class="workflow-option"><input type="checkbox" name="workflow" value="${escapeHTML(value)}"${workflows.has(value) ? " checked" : ""}>${escapeHTML(t(label))}</label>`).join("")}</div>
+              </fieldset>
+              <div class="document-state-row wide"><span>${escapeHTML(t("Last edited"))}: ${escapeHTML(formatTimestamp(document.updated_at))}</span><span>·</span><span>${escapeHTML(t("Revision"))} ${Number(document.revision) || 1}</span></div>
+              <section class="wide"><div class="panel-head"><div><h3>${escapeHTML(t("Version history"))}</h3><p>${escapeHTML(t("Published versions stay available for rollback."))}</p></div></div><div class="document-version-list" id="businessDocumentVersions"></div></section>
+              <div class="document-actions wide">
+                <button class="button ghost small" type="button" data-export-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Download PDF"))}</button>
+                ${canEdit ? `<button class="button ghost small" type="button" data-duplicate-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Duplicate"))}</button>` : ""}
+                ${archived || !businessCanPublish() ? "" : `<button class="button ghost small" type="button" data-archive-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Archive"))}</button>`}
+              </div>
+            </div>
+          </details>
+          <div class="document-sticky-actions">
+            ${canEdit ? `<button class="button primary small" type="submit">${escapeHTML(t("Save draft"))}</button>` : ""}
+            ${archived || !businessCanPublish() ? "" : `<button class="button small" type="button" data-publish-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Publish"))}</button>`}
+            <button class="button ghost small" type="button" data-open-document-preview>${escapeHTML(t("Preview"))}</button>
           </div>
           <p class="form-note wide" id="businessDocumentStatus" aria-live="polite">${escapeHTML(t(document.published_version_id ? "Draft edits stay private until Publish." : "Save the draft, then publish an immutable first version."))}</p>
         </form>`;
@@ -6585,39 +7056,66 @@
         return;
       }
       const policies = state.businessPolicies.filter((item) => !item.archived_at);
-      target.innerHTML = policies.length ? policies.map((item) => `
-        <button class="policy-select${item.id === state.selectedBusinessPolicyId ? " is-active" : ""}" type="button" data-business-policy-id="${escapeHTML(item.id)}">
-          <strong>${escapeHTML(item.label)}</strong>
-          <span>${escapeHTML(t(item.requirement === "required" ? "Required" : "Optional"))} · ${escapeHTML(t(item.visibility === "customer_visible" ? "Customer Visible" : "Internal"))}${item.enabled ? "" : ` · ${escapeHTML(t("Disabled"))}`}</span>
-        </button>`).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No policies configured."))}</strong>${escapeHTML(t("Publish a document before making it customer visible."))}</div>`;
+      target.innerHTML = policies.length ? policies.map((item) => {
+        const linkedDocument = state.businessDocuments.find((document) => document.id === item.document_id);
+        return `
+          <article class="policy-library-row${item.id === state.selectedBusinessPolicyId ? " is-active" : ""}">
+            <div class="document-library-main"><strong>${escapeHTML(item.label || linkedDocument?.title || t("Policy"))}</strong><div class="document-library-meta"><span>${escapeHTML(policyUseLabel(item))}</span><span class="simple-status ${item.enabled ? "is-published" : "is-off"}">${escapeHTML(t(item.enabled ? "Active" : "Off"))}</span></div></div>
+            <div class="document-library-actions"><button class="button ghost small" type="button" data-business-policy-id="${escapeHTML(item.id)}">${escapeHTML(t("Edit"))}</button><button class="button ghost small" type="button" data-toggle-business-policy="${escapeHTML(item.id)}">${escapeHTML(t(item.enabled ? "Disable" : "Enable"))}</button></div>
+          </article>`;
+      }).join("") : `<div class="empty-state"><strong>${escapeHTML(t("Create your first policy"))}</strong>${escapeHTML(t(activePublishedDocuments().length ? "Connect a published document to booking, invoices or internal use." : "Publish a document before connecting it to a booking."))}</div>`;
     }
 
     function renderBusinessPolicyEditor() {
       const target = $("businessPolicyEditor");
       if (!target) return;
       const policy = selectedBusinessPolicy();
-      const availableDocuments = state.businessDocuments.filter((item) => item.status !== "archived");
-      if (!policy) {
-        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Select or add a policy."))}</strong>${escapeHTML(t("Required, visibility and workflow settings appear here."))}</div>`;
+      const publishedDocuments = activePublishedDocuments();
+      const usedDocumentIds = new Set(state.businessPolicies.filter((item) => !item.archived_at).map((item) => item.document_id));
+      const availableDocuments = state.creatingBusinessPolicy
+        ? publishedDocuments.filter((item) => !usedDocumentIds.has(item.id))
+        : publishedDocuments;
+      if (!policy && !state.creatingBusinessPolicy) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Create your first policy"))}</strong>${escapeHTML(t(availableDocuments.length ? "Choose Create policy to connect a published document." : "Publish a document before connecting it to a booking."))}</div>`;
         return;
       }
-      const contexts = Array.isArray(policy.acceptance_contexts) ? policy.acceptance_contexts : ["booking"];
-      const linkedDocument = state.businessDocuments.find((item) => item.id === policy.document_id);
+      if (!policy && !availableDocuments.length) {
+        target.innerHTML = `<button class="button ghost small business-mobile-back" type="button" data-business-back-library="policies">${escapeHTML(t("Back to policies"))}</button><div class="empty-state"><strong>${escapeHTML(t("Publish a document first"))}</strong>${escapeHTML(t("Publish a document before connecting it to a booking."))}</div>`;
+        return;
+      }
+      const linkedDocument = state.businessDocuments.find((item) => item.id === policy?.document_id);
+      const policyArchived = Boolean(policy?.archived_at);
+      const linkedAvailable = linkedDocument && !availableDocuments.some((item) => item.id === linkedDocument.id) ? [linkedDocument, ...availableDocuments] : availableDocuments;
+      const contexts = Array.isArray(policy?.acceptance_contexts) ? policy.acceptance_contexts : ["booking"];
+      const mode = policy ? policyUseMode(policy) : "optional_booking";
+      const acceptanceCount = policy ? state.businessPolicyAcceptances.filter((item) => item.policy_id === policy.id).length : 0;
       target.innerHTML = `
-        <div class="panel-head"><div><h2>${escapeHTML(policy.label)}</h2><p>${escapeHTML(linkedDocument?.title || t("Missing linked document"))}</p></div><span class="status-pill">${escapeHTML(t(policy.enabled ? "Enabled" : "Disabled"))}</span></div>
-        <form id="businessPolicyForm" class="policy-editor-grid" data-policy-id="${escapeHTML(policy.id)}">
-          <label class="field wide"><span>${escapeHTML(t("Published document"))}</span><select name="document_id" required>${availableDocuments.map((document) => `<option value="${escapeHTML(document.id)}"${document.id === policy.document_id ? " selected" : ""}>${escapeHTML(document.title)} · ${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</option>`).join("")}</select></label>
-          <label class="field"><span>${escapeHTML(t("Policy key"))}</span><input name="policy_key" value="${escapeHTML(policy.policy_key)}" required></label>
-          <label class="field"><span>${escapeHTML(t("Customer label"))}</span><input name="label" value="${escapeHTML(policy.label)}" required></label>
-          <label class="field"><span>${escapeHTML(t("Requirement"))}</span><select name="requirement"><option value="required"${policy.requirement === "required" ? " selected" : ""}>${escapeHTML(t("Required"))}</option><option value="optional"${policy.requirement === "optional" ? " selected" : ""}>${escapeHTML(t("Optional"))}</option></select></label>
-          <label class="field"><span>${escapeHTML(t("Visibility"))}</span><select name="visibility"><option value="customer_visible"${policy.visibility === "customer_visible" ? " selected" : ""}>${escapeHTML(t("Customer Visible"))}</option><option value="internal"${policy.visibility === "internal" ? " selected" : ""}>${escapeHTML(t("Internal"))}</option></select></label>
-          <label class="field"><span>${escapeHTML(t("Order"))}</span><input name="display_order" type="number" min="0" max="999" value="${Number(policy.display_order) || 0}"></label>
-          <label class="workflow-option"><input name="enabled" type="checkbox"${policy.enabled ? " checked" : ""}>${escapeHTML(t("Enabled"))}</label>
-          <fieldset class="invoice-document-options wide"><legend>${escapeHTML(t("Acceptance contexts"))}</legend><div class="document-workflow-list">${BUSINESS_POLICY_CONTEXTS.map(([value, label]) => `<label class="policy-context-option"><input name="acceptance_context" type="checkbox" value="${escapeHTML(value)}"${contexts.includes(value) ? " checked" : ""}>${escapeHTML(t(label))}</label>`).join("")}</div></fieldset>
-          <div class="document-actions wide"><button class="button primary small" type="submit">${escapeHTML(t("Save policy"))}</button>${businessCanPublish() ? `<button class="button ghost small" type="button" data-archive-business-policy="${escapeHTML(policy.id)}">${escapeHTML(t("Archive policy"))}</button>` : ""}</div>
-          <p class="form-note wide" id="businessPolicyStatus" aria-live="polite">${escapeHTML(linkedDocument?.status === "active" ? t("Customer-visible booking acceptance uses the current published version.") : t("Publish the linked document before this policy can appear publicly."))}</p>
+        <button class="button ghost small business-mobile-back" type="button" data-business-back-library="policies">${escapeHTML(t("Back to policies"))}</button>
+        <div class="document-editor-head"><div><h2>${escapeHTML(policy?.label || t("Create policy"))}</h2><p>${escapeHTML(t(policyArchived ? "Archived policy remains available for history." : "Connect one published document to the right customer moment."))}</p></div>${policy ? `<span class="simple-status ${policyArchived ? "is-archived" : policy.enabled ? "is-published" : "is-off"}">${escapeHTML(t(policyArchived ? "Archived" : policy.enabled ? "Active" : "Off"))}</span>` : ""}</div>
+        <form id="businessPolicyForm" class="policy-editor-grid" data-policy-id="${escapeHTML(policy?.id || "")}" data-create="${policy ? "false" : "true"}">
+          <label class="field wide"><span>${escapeHTML(t("Document"))}</span><select name="document_id" required>${linkedAvailable.map((document) => `<option value="${escapeHTML(document.id)}"${document.id === (policy?.document_id || linkedAvailable[0]?.id) ? " selected" : ""}>${escapeHTML(document.title)}${document.status === "active" ? "" : ` · ${escapeHTML(t("Archived"))}`}</option>`).join("")}</select></label>
+          <fieldset class="invoice-document-options wide"><legend>${escapeHTML(t("Where is this policy used?"))}</legend><div class="policy-use-choice">
+            <label><input type="radio" name="policy_use_mode" value="required_booking"${mode === "required_booking" ? " checked" : ""}>${escapeHTML(t("Required during booking"))}</label>
+            <label><input type="radio" name="policy_use_mode" value="optional_booking"${mode === "optional_booking" ? " checked" : ""}>${escapeHTML(t("Optional during booking"))}</label>
+            <label><input type="radio" name="policy_use_mode" value="invoice"${mode === "invoice" ? " checked" : ""}>${escapeHTML(t("Include with invoice"))}</label>
+            <label><input type="radio" name="policy_use_mode" value="internal"${mode === "internal" ? " checked" : ""}>${escapeHTML(t("Internal only"))}</label>
+          </div></fieldset>
+          <label class="workflow-option wide"><input name="enabled" type="checkbox"${policy?.enabled !== false ? " checked" : ""}>${escapeHTML(t("Enable this policy"))}</label>
+          <details class="business-advanced">
+            <summary>${escapeHTML(t("Advanced settings"))}</summary>
+            <div class="business-advanced-content">
+              <label class="field"><span>${escapeHTML(t("Customer label"))}</span><input name="label" maxlength="160" value="${escapeHTML(policy?.label || linkedAvailable[0]?.title || "")}"></label>
+              <label class="field"><span>${escapeHTML(t("Policy key"))}</span><input value="${escapeHTML(policy?.policy_key || t("Generated when saved"))}" readonly></label>
+              <label class="field"><span>${escapeHTML(t("Order"))}</span><input name="display_order" type="number" min="0" max="999" value="${Number(policy?.display_order) || state.businessPolicies.length}"></label>
+              <label class="field"><span>${escapeHTML(t("Visibility"))}</span><select name="visibility"><option value="customer_visible"${policy?.visibility !== "internal" ? " selected" : ""}>${escapeHTML(t("Customer Visible"))}</option><option value="internal"${policy?.visibility === "internal" ? " selected" : ""}>${escapeHTML(t("Internal"))}</option></select></label>
+              <fieldset class="invoice-document-options wide"><legend>${escapeHTML(t("Detailed customer agreement points"))}</legend><div class="document-workflow-list">${BUSINESS_POLICY_CONTEXTS.map(([value, label]) => `<label class="policy-context-option"><input name="acceptance_context" type="checkbox" value="${escapeHTML(value)}"${contexts.includes(value) ? " checked" : ""}>${escapeHTML(t(label))}</label>`).join("")}</div></fieldset>
+              ${policy && !policyArchived && businessCanPublish() ? `<div class="document-actions wide"><button class="button ghost small" type="button" data-archive-business-policy="${escapeHTML(policy.id)}">${escapeHTML(t("Archive policy"))}</button></div>` : ""}
+            </div>
+          </details>
+          <div class="document-sticky-actions"><button class="button primary small" type="submit">${escapeHTML(t(policy ? "Save policy" : "Create policy"))}</button>${policy ? `<button class="button ghost small acceptance-button" type="button" data-open-policy-acceptances><span>${escapeHTML(t("View acceptances"))}</span><span class="status-pill">${acceptanceCount}</span></button>` : ""}</div>
+          <p class="form-note wide" id="businessPolicyStatus" aria-live="polite">${escapeHTML(linkedDocument?.status === "active" || !policy ? t("Only publishing or enabling a policy changes customer-facing use.") : t("This policy remains visible here, but its document is archived."))}</p>
         </form>`;
-      if (!businessCanPublish()) target.querySelectorAll("input, select, button").forEach((control) => { control.disabled = true; });
+      if (!businessCanPublish() || policyArchived) target.querySelectorAll("input, select, button[type=submit], [data-archive-business-policy]").forEach((control) => { control.disabled = true; });
     }
 
     function renderBusinessPolicyAcceptances() {
@@ -6630,6 +7128,28 @@
       target.innerHTML = records.length ? records.map((item) => `
         <div class="policy-acceptance-row"><strong>${escapeHTML(item.customer_name_snapshot || t("Customer"))} · ${escapeHTML(item.booking_task_id)}</strong><span>${escapeHTML(t("Accepted version"))} ${Number(item.accepted_version_number)} · ${escapeHTML(formatTimestamp(item.accepted_at))}</span></div>
       `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No acceptances recorded."))}</strong>${escapeHTML(t("Accepted policy versions appear here without exposing raw email or IP data."))}</div>`;
+    }
+
+    function openBusinessDialog(kind, trigger = null) {
+      const dialog = kind === "acceptances" ? $("businessAcceptanceDialog") : $("businessDocumentPreviewDialog");
+      if (!dialog) return;
+      state.businessDialogReturnFocus = trigger || document.activeElement;
+      if (kind === "acceptances") renderBusinessPolicyAcceptances();
+      else renderBusinessDocumentPreview();
+      dialog.hidden = false;
+      dialog.inert = false;
+      dialog.setAttribute("aria-hidden", "false");
+      window.requestAnimationFrame(() => dialog.querySelector("button")?.focus());
+    }
+
+    function closeBusinessDialog(kind) {
+      const dialog = kind === "acceptances" ? $("businessAcceptanceDialog") : $("businessDocumentPreviewDialog");
+      if (!dialog || dialog.hidden) return;
+      dialog.hidden = true;
+      dialog.inert = true;
+      dialog.setAttribute("aria-hidden", "true");
+      state.businessDialogReturnFocus?.focus?.();
+      state.businessDialogReturnFocus = null;
     }
 
     function setNamedFormValues(form, values = {}, { force = false } = {}) {
@@ -6767,21 +7287,28 @@
       }
     }
 
-    async function createBusinessDocument() {
+    async function createBusinessDocument(type = "custom") {
       if (state.businessPending) return;
-      const type = $("newBusinessDocumentType")?.value || "custom";
-      const title = businessDocumentTypeLabel(type);
+      const preset = BUSINESS_DOCUMENT_PRESETS[type] || {
+        title: businessDocumentTypeLabel(type),
+        body: BUSINESS_DOCUMENT_PRESETS.custom.body,
+        bodyNl: BUSINESS_DOCUMENT_PRESETS.custom.bodyNl
+      };
+      const language = state.businessProfile?.language || "nl";
       state.businessPending = true;
       try {
         const data = await businessRequest("create_document", {
           document_type: type,
-          title,
+          title: preset.title,
           version_label: "1.0",
-          language: state.businessProfile?.language || "nl",
+          language,
           enabled: true,
-          body: ""
+          body: language === "nl" ? preset.bodyNl : preset.body
         });
         applyBusinessBundle(data);
+        state.documentStatusFilter = "draft";
+        state.businessDocumentScreen = "editor";
+        renderBusinessWorkspace();
         showToast(t("Document draft created."));
       } catch (error) {
         showToast(error.message);
@@ -6855,6 +7382,7 @@
           confirmation: "PUBLISH_DOCUMENT"
         });
         applyBusinessBundle(data);
+        state.documentStatusFilter = "active";
         showToast(t("Document published."));
       } catch (error) {
         showToast(error.message);
@@ -6874,6 +7402,7 @@
       if (!approved) return;
       const data = await businessRequest("archive_document", { document_id: documentId });
       applyBusinessBundle(data);
+      state.documentStatusFilter = "archived";
       showToast(t("Document archived."));
     }
 
@@ -6905,47 +7434,82 @@
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    async function createBusinessPolicy() {
+    function createBusinessPolicy() {
       const usedDocumentIds = new Set(state.businessPolicies.filter((item) => !item.archived_at).map((item) => item.document_id));
-      const document = activePublishedDocuments().find((item) => !usedDocumentIds.has(item.id));
-      if (!document) return showToast(t("Publish an unused document before adding a policy."));
-      const data = await businessRequest("create_policy", {
-        document_id: document.id,
-        policy_key: `${document.document_type}_${Date.now()}`,
-        label: document.title,
-        requirement: "optional",
-        visibility: "internal",
-        enabled: true,
-        display_order: state.businessPolicies.length,
-        acceptance_contexts: ["booking"]
-      });
-      applyBusinessBundle(data);
-      showToast(t("Policy created."));
+      if (!activePublishedDocuments().some((item) => !usedDocumentIds.has(item.id))) {
+        showToast(t("Publish a document before connecting it to a booking."));
+      }
+      state.creatingBusinessPolicy = true;
+      state.selectedBusinessPolicyId = "";
+      state.businessPolicyScreen = "editor";
+      renderBusinessWorkspace();
+    }
+
+    function policyModeValues(mode) {
+      if (mode === "required_booking") return { requirement: "required", visibility: "customer_visible", acceptanceContexts: ["booking"] };
+      if (mode === "invoice") return { requirement: "optional", visibility: "customer_visible", acceptanceContexts: ["invoice"] };
+      if (mode === "internal") return { requirement: "optional", visibility: "internal", acceptanceContexts: ["manual"] };
+      return { requirement: "optional", visibility: "customer_visible", acceptanceContexts: ["booking"] };
+    }
+
+    function syncPolicyModeToAdvanced(form) {
+      const mode = form?.querySelector('[name="policy_use_mode"]:checked')?.value || "optional_booking";
+      const values = policyModeValues(mode);
+      if (form.elements.visibility) form.elements.visibility.value = values.visibility;
+      form.querySelectorAll('[name="acceptance_context"]').forEach((input) => { input.checked = values.acceptanceContexts.includes(input.value); });
     }
 
     async function saveBusinessPolicy(event) {
       event.preventDefault();
       const form = event.currentTarget;
       const policy = selectedBusinessPolicy();
-      if (!policy || state.businessPending) return;
+      const creating = form.dataset.create === "true";
+      if ((!policy && !creating) || state.businessPending) return;
       const values = formObject(form);
+      const modeValues = policyModeValues(form.querySelector('[name="policy_use_mode"]:checked')?.value || "optional_booking");
+      const linkedDocument = state.businessDocuments.find((item) => item.id === values.document_id);
       state.businessPending = true;
       try {
-        const data = await businessRequest("save_policy", {
-          policy_id: policy.id,
+        const data = await businessRequest(creating ? "create_policy" : "save_policy", {
+          ...(policy ? { policy_id: policy.id, policy_key: policy.policy_key } : {}),
           document_id: values.document_id,
-          policy_key: values.policy_key,
-          label: values.label,
-          requirement: values.requirement,
-          visibility: values.visibility,
+          label: values.label || linkedDocument?.title || t("Policy"),
+          requirement: modeValues.requirement,
+          visibility: values.visibility || modeValues.visibility,
           display_order: values.display_order,
           enabled: form.elements.enabled.checked,
           acceptance_contexts: Array.from(form.querySelectorAll('[name="acceptance_context"]:checked')).map((input) => input.value)
         });
         applyBusinessBundle(data);
-        showToast(t("Policy saved."));
+        state.creatingBusinessPolicy = false;
+        showToast(t(creating ? "Policy created." : "Policy saved."));
       } catch (error) {
         if ($("businessPolicyStatus")) $("businessPolicyStatus").textContent = error.message;
+      } finally {
+        state.businessPending = false;
+      }
+    }
+
+    async function toggleBusinessPolicy(policyId) {
+      const policy = state.businessPolicies.find((item) => item.id === policyId);
+      if (!policy || state.businessPending) return;
+      state.businessPending = true;
+      try {
+        const data = await businessRequest("save_policy", {
+          policy_id: policy.id,
+          document_id: policy.document_id,
+          policy_key: policy.policy_key,
+          label: policy.label,
+          requirement: policy.requirement,
+          visibility: policy.visibility,
+          display_order: policy.display_order,
+          enabled: !policy.enabled,
+          acceptance_contexts: policy.acceptance_contexts
+        });
+        applyBusinessBundle(data);
+        showToast(t(policy.enabled ? "Policy disabled." : "Policy enabled."));
+      } catch (error) {
+        showToast(error.message);
       } finally {
         state.businessPending = false;
       }
@@ -10235,9 +10799,7 @@
         bookings: [["new-booking", "New Booking", "primary"]],
         calendar: [["new-booking", "New Booking", "primary"]],
         website: [["save-draft", "Save draft", ""], ["preview", "Preview", ""], ["publish-review", "Publish", "primary"]],
-        documents: state.activeBusinessTab === "policies"
-          ? (businessCanPublish() ? [["save-policy", "Save policy", "primary"], ["add-policy", "Add policy", ""]] : [])
-          : (businessCanEdit() ? [["save-document", "Save document", ""], ...(businessCanPublish() ? [["publish-document", "Publish document", "primary"]] : [])] : []),
+        documents: [],
         clients: [["add-client", "Add Client", "primary"]],
         analytics: [["refresh", "Refresh", ""]],
         settings: businessCanPublish() ? [["save-business", "Save business identity", "primary"]] : []
@@ -10494,9 +11056,30 @@
         return;
       }
 
+      const documentFilter = event.target.closest("[data-document-filter]");
+      if (documentFilter) {
+        state.documentStatusFilter = documentFilter.dataset.documentFilter;
+        state.selectedBusinessDocumentId = state.businessDocuments.find((item) => item.status === state.documentStatusFilter)?.id || "";
+        state.businessDocumentScreen = "list";
+        renderBusinessWorkspace();
+        return;
+      }
+
+      const documentPreset = event.target.closest("[data-document-preset]");
+      if (documentPreset) {
+        await createBusinessDocument(documentPreset.dataset.documentPreset);
+        return;
+      }
+
+      if (event.target.closest("#addBusinessDocument")) {
+        await createBusinessDocument($("advancedBusinessDocumentType")?.value || "custom");
+        return;
+      }
+
       const businessDocument = event.target.closest("[data-business-document-id]");
       if (businessDocument) {
         state.selectedBusinessDocumentId = businessDocument.dataset.businessDocumentId;
+        state.businessDocumentScreen = "editor";
         renderBusinessWorkspace();
         return;
       }
@@ -10504,17 +11087,49 @@
       const businessPolicy = event.target.closest("[data-business-policy-id]");
       if (businessPolicy) {
         state.selectedBusinessPolicyId = businessPolicy.dataset.businessPolicyId;
+        state.creatingBusinessPolicy = false;
+        state.businessPolicyScreen = "editor";
         renderBusinessWorkspace();
         return;
       }
 
-      if (event.target.closest("#addBusinessDocument")) {
-        await createBusinessDocument();
+      const businessBack = event.target.closest("[data-business-back-library]");
+      if (businessBack) {
+        if (businessBack.dataset.businessBackLibrary === "policies") {
+          state.businessPolicyScreen = "list";
+          state.creatingBusinessPolicy = false;
+        } else {
+          state.businessDocumentScreen = "list";
+        }
+        renderBusinessWorkspace();
         return;
       }
 
       if (event.target.closest("#addBusinessPolicy")) {
-        await createBusinessPolicy();
+        createBusinessPolicy();
+        return;
+      }
+
+      const togglePolicy = event.target.closest("[data-toggle-business-policy]");
+      if (togglePolicy) {
+        togglePolicy.disabled = true;
+        await toggleBusinessPolicy(togglePolicy.dataset.toggleBusinessPolicy);
+        return;
+      }
+
+      if (event.target.closest("[data-open-document-preview]")) {
+        openBusinessDialog("preview", event.target.closest("[data-open-document-preview]"));
+        return;
+      }
+
+      if (event.target.closest("[data-open-policy-acceptances]")) {
+        openBusinessDialog("acceptances", event.target.closest("[data-open-policy-acceptances]"));
+        return;
+      }
+
+      const closeBusiness = event.target.closest("[data-close-business-dialog]");
+      if (closeBusiness) {
+        closeBusinessDialog(closeBusiness.dataset.closeBusinessDialog);
         return;
       }
 
@@ -10973,9 +11588,8 @@
     });
 
     document.addEventListener("change", async (event) => {
-      if (event.target.id === "documentStatusFilter") {
-        state.documentStatusFilter = event.target.value;
-        renderBusinessDocumentList();
+      if (event.target.matches('#businessPolicyForm [name="policy_use_mode"]')) {
+        syncPolicyModeToAdvanced(event.target.form);
         return;
       }
       if (event.target.closest("#businessDocumentForm")) {
@@ -11256,8 +11870,16 @@
       stepTodayBriefing(distance < 0 ? 1 : -1);
     }, { passive: true });
 
+    [["businessDocumentPreviewDialog", "preview"], ["businessAcceptanceDialog", "acceptances"]].forEach(([id, kind]) => {
+      $(id).addEventListener("click", (event) => {
+        if (event.target === $(id)) closeBusinessDialog(kind);
+      });
+    });
+
     document.addEventListener("keydown", (event) => {
       if (handleTodayBriefingKeydown(event)) return;
+      if (event.key === "Escape" && !$("businessDocumentPreviewDialog").hidden) closeBusinessDialog("preview");
+      if (event.key === "Escape" && !$("businessAcceptanceDialog").hidden) closeBusinessDialog("acceptances");
       if (event.key === "Escape" && $("mobileMoreBackdrop")?.classList.contains("is-visible")) closeMobileMore();
       if (event.key === "Escape" && $("newBookingDialog")?.classList.contains("is-visible")) closeNewBookingDialog();
       if (event.key === "Escape" && $("invoiceDialog")?.classList.contains("is-visible")) closeInvoiceDialog();
