@@ -15,10 +15,10 @@ The service-role key is not a database migration credential and must not be used
 
 1. Pull the current branch and inspect `supabase/migrations/`.
 2. Export production-only credentials in a secure operator shell or CI secret store.
-3. Run an isolated dry run for the reviewed migration. The isolated worktree includes the already-applied production ledger baseline (`061` and `062`) but excludes every unrelated, unapplied local migration:
+3. Run an isolated dry run for the reviewed migration. The isolated worktree includes the already-applied production ledger baseline (`061` through `064`) but excludes every unrelated, unapplied local migration:
 
    ```bash
-   node scripts/website-os-production-migrate.mjs --only 063_website_os_final_hardening.sql
+   node scripts/website-os-production-migrate.mjs --only 064_website_os_today_briefing.sql
    ```
 4. Review the Supabase CLI dry-run output.
 5. Apply only after review:
@@ -26,12 +26,16 @@ The service-role key is not a database migration credential and must not be used
    ```bash
    WEBSITE_OS_MIGRATIONS_APPROVED=apply-production-website-os \
    node scripts/website-os-production-migrate.mjs \
-     --only 063_website_os_final_hardening.sql \
+     --only 064_website_os_today_briefing.sql \
      --apply
    ```
 
 6. Verify remote migration history and table availability before enabling a module API.
 7. Create test data only through authenticated server-side endpoints and register it in `website_os_acceptance_fixtures`.
+
+## Migration 064
+
+`064_website_os_today_briefing.sql` stores dismissal or 60-minute snooze state per workspace user, booking reference, and COMMONPL4CE calendar date. It stores no booking/customer content and grants access only to the server-side service-role boundary.
 
 ## Guardrails
 

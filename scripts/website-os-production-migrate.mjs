@@ -18,7 +18,9 @@ const linkedProjectRefFile = resolve("supabase/.temp/project-ref");
 const linkedProjectRef = existsSync(linkedProjectRefFile) ? readFileSync(linkedProjectRefFile, "utf8").trim() : "";
 const isolatedRemoteHistory = [
   "061_website_os_content_builder.sql",
-  "062_website_os_content_conflict_errors.sql"
+  "062_website_os_content_conflict_errors.sql",
+  "063_website_os_final_hardening.sql",
+  "064_website_os_today_briefing.sql"
 ];
 
 function fail(message) {
@@ -67,7 +69,7 @@ if (onlyMigration) {
   if (!dbUrl && !projectRef && existsSync(linkedState)) cpSync(linkedState, join(supabaseRoot, ".temp"), { recursive: true });
   commandRoot = temporaryRoot;
   console.log(`Isolated migration: ${onlyMigration}`);
-  console.log("Included production ledger baseline: 061, 062");
+  console.log("Included production ledger baseline: 061, 062, 063, 064");
 }
 
 if (!apply) console.log("Dry run only. No production schema changes will be applied.");

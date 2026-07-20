@@ -1,6 +1,6 @@
 # COMMONPL4CE Website OS Implementation Matrix
 
-Canonical capability status for `admin.doneovernight.com/cp`, updated on 2026-07-20 after the final hardening implementation and production application of migration `063_website_os_final_hardening.sql`. The release commit and deployment are recorded in the final release report after production verification.
+Canonical capability status for `admin.doneovernight.com/cp`, updated on 2026-07-20 after the final hardening implementation and production application of migrations `063_website_os_final_hardening.sql` and `064_website_os_today_briefing.sql`. The release commit and deployment are recorded in the final release report after production verification.
 
 Status meanings:
 
@@ -66,6 +66,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | DASH-10 | Test-booking analytics attribution | Complete | Y | Y | Y | Y | Y | - | Y | Y | Conversion aggregation excludes explicitly test-marked bookings in the database-backed summary rather than subtracting unrelated totals. |
 | DASH-11 | Analytics abuse resistance | Complete | - | - | Y | Y | - | Y | Y | Y | Public analytics ingestion uses the COMMONPL4CE path/event allowlist and production database rate limiter. |
 | DASH-12 | Raw-database reconciliation | Complete | - | - | Y | Y | Y | - | Y | Y | A disposable production booking was created, observed in dashboard/calendar counts, exercised through lifecycle actions and permanently removed; counts returned to baseline. |
+| DASH-13 | Today booking briefing | Complete | Y | Y | Y | Y | Y | - | Y | Y | Amsterdam-scoped active bookings open in an accessible desktop dialog/mobile bottom sheet; per-user booking/date dismissal, 60-minute snooze, exact detail navigation, multiple-booking stepping and a persistent Today entry point are covered by migration 064 and browser acceptance. |
 
 ## Bookings
 

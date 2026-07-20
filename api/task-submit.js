@@ -101,6 +101,7 @@ const COMMONPLACE_BOOKING_VERSION = "commonpl4ce_booker_v1";
 const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
 const COMMONPLACE_NEWSLETTER_SOURCE = "commonpl4ce_newsletter";
 const COMMONPLACE_NEWSLETTER_VERSION = "commonpl4ce_newsletter_v1";
+const COMMONPLACE_TIME_ZONE = "Europe/Amsterdam";
 const COMMONPLACE_ALLOWED_ANALYTICS_PATHS = new Set(["/cp", "/cp-book"]);
 const COMMONPLACE_ANALYTICS_EVENTS = new Set([
   "page_view",
@@ -345,7 +346,7 @@ function normalizeCommonplaceBookingDate(value) {
 
 function currentCommonplaceDate() {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Amsterdam",
+    timeZone: COMMONPLACE_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
@@ -1719,6 +1720,10 @@ function isWebsiteOsAuthRequest(input = {}) {
   return input.action === "website_os_auth" || input.intent === "website_os_auth";
 }
 
+function isWebsiteOsTodayBriefingRequest(input = {}) {
+  return input.action === "website_os_today_briefing" || input.intent === "website_os_today_briefing";
+}
+
 function assertWebsiteOsAdminHost(req) {
   const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
   if (host && host !== "admin.doneovernight.com" && !host.includes("localhost") && !host.includes("127.0.0.1")) {
@@ -1807,6 +1812,91 @@ async function handleWebsiteOsAuthRequest(req, res, input = {}) {
   }
 
   return send(res, 400, { success: false, error: "Unsupported Website OS auth action" });
+}
+
+function publicTodayBriefingDismissal(row = {}) {
+  const action = clean(row.dismissal_action);
+  const snoozedUntil = row.snoozed_until || null;
+  return {
+    bookingTaskId: clean(row.booking_task_id),
+    briefingDate: clean(row.briefing_date),
+    action,
+    snoozedUntil,
+    updatedAt: row.updated_at || null,
+    active: action !== "later" || Boolean(snoozedUntil && Date.parse(snoozedUntil) > Date.now())
+  };
+}
+
+async function handleWebsiteOsTodayBriefingRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  assertWebsiteOsRequestOrigin(req);
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || COMMONPLACE_CONTENT_WORKSPACE_SLUG);
+  const current = await requireWebsiteOsSession(req, {
+    slug: workspaceSlug,
+    roles: ["Owner", "Admin", "Editor", "Viewer"]
+  });
+  const operation = clean(input.briefing_action || input.briefingAction || "list").toLowerCase();
+  const briefingDate = currentCommonplaceDate();
+
+  if (operation === "list") {
+    const rows = await supabaseFetch([
+      `website_os_today_briefing_dismissals?workspace_id=eq.${encodeURIComponent(current.workspace.id)}`,
+      `user_id=eq.${encodeURIComponent(current.user.id)}`,
+      `briefing_date=eq.${encodeURIComponent(briefingDate)}`,
+      "select=booking_task_id,briefing_date,dismissal_action,snoozed_until,updated_at",
+      "order=updated_at.desc"
+    ].join("&"));
+    return send(res, 200, {
+      success: true,
+      briefingDate,
+      timeZone: COMMONPLACE_TIME_ZONE,
+      dismissals: (Array.isArray(rows) ? rows : []).map(publicTodayBriefingDismissal)
+    });
+  }
+
+  if (!["dismissed", "later", "viewed"].includes(operation)) {
+    return send(res, 400, {
+      success: false,
+      error: "Unsupported Today Briefing action",
+      code: "TODAY_BRIEFING_ACTION_INVALID"
+    });
+  }
+
+  const bookingTaskId = clean(input.booking_task_id || input.bookingTaskId).slice(0, 120);
+  if (!bookingTaskId) {
+    return send(res, 400, {
+      success: false,
+      error: "Booking reference required",
+      code: "TODAY_BRIEFING_BOOKING_REQUIRED"
+    });
+  }
+
+  try {
+    const result = await supabaseFetch("rpc/website_os_save_today_briefing_state", {
+      method: "POST",
+      body: JSON.stringify({
+        p_workspace_id: current.workspace.id,
+        p_user_id: current.user.id,
+        p_booking_task_id: bookingTaskId,
+        p_briefing_date: briefingDate,
+        p_action: operation
+      })
+    });
+    const saved = Array.isArray(result) ? result[0] : result;
+    return send(res, 200, {
+      success: true,
+      briefingDate,
+      timeZone: COMMONPLACE_TIME_ZONE,
+      dismissal: saved || { bookingTaskId, briefingDate, action: operation }
+    });
+  } catch (error) {
+    const scoped = /TODAY_BRIEFING_(BOOKING|USER)_SCOPE_INVALID/.test(`${error.message || ""} ${error.detail || ""}`);
+    return send(res, scoped ? 403 : (error.statusCode || 500), {
+      success: false,
+      error: scoped ? "Today Briefing booking is not available in this workspace" : "Today Briefing state could not be saved",
+      code: scoped ? "TODAY_BRIEFING_SCOPE_REJECTED" : "TODAY_BRIEFING_SAVE_FAILED"
+    });
+  }
 }
 
 function validateCommonplacePublicRequest(req, input = {}) {
@@ -4266,6 +4356,18 @@ module.exports = async function handler(req, res) {
           success: false,
           error: error.message || "Website OS auth failed",
           code: error.code || "WEBSITE_OS_AUTH_FAILED"
+        });
+      }
+    }
+
+    if (isWebsiteOsTodayBriefingRequest(input)) {
+      try {
+        return await handleWebsiteOsTodayBriefingRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.statusCode && error.statusCode < 500 ? error.message : "Today Briefing unavailable",
+          code: error.code || "TODAY_BRIEFING_FAILED"
         });
       }
     }
