@@ -1311,6 +1311,12 @@
       gap: 14px;
     }
 
+    .website-task[data-website-tab="builder"] {
+      min-width: 0;
+      max-width: 100%;
+      container: website-builder / inline-size;
+    }
+
     .website-note {
       border: 1px solid rgba(237,230,216,.1);
       border-radius: 8px;
@@ -1326,6 +1332,15 @@
       align-items: start;
       justify-content: space-between;
       gap: 14px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .builder-head > * { min-width: 0; }
+
+    .builder-head > :first-child {
+      flex: 1 1 auto;
+      max-width: 100%;
     }
 
     .builder-head h2 {
@@ -1333,6 +1348,7 @@
       font-size: 18px;
       line-height: 1.2;
       font-weight: 900;
+      overflow-wrap: anywhere;
     }
 
     .builder-head p {
@@ -1340,6 +1356,8 @@
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
 
     .builder-state {
@@ -1354,7 +1372,29 @@
       font: 850 10px var(--mono);
       letter-spacing: .1em;
       text-transform: uppercase;
-      white-space: nowrap;
+      max-width: 100%;
+      line-height: 1.3;
+      text-align: center;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .builder-save-summary {
+      min-width: 0;
+      max-width: min(100%, 220px);
+      display: grid;
+      justify-items: end;
+      gap: 5px;
+      flex: 0 1 220px;
+    }
+
+    .builder-save-meta {
+      min-width: 0;
+      max-width: 100%;
+      color: rgba(241,234,220,.46);
+      font: 700 10px/1.35 var(--mono);
+      text-align: right;
+      overflow-wrap: anywhere;
     }
 
     .hero-gallery-grid {
@@ -1613,9 +1653,22 @@
 
     .builder-grid {
       display: grid;
-      grid-template-columns: minmax(250px, .52fr) minmax(0, 1fr) minmax(280px, .72fr);
+      grid-template-columns: minmax(210px, .46fr) minmax(320px, 1fr) minmax(240px, .62fr);
       gap: 14px;
       align-items: start;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .builder-grid > *,
+    .builder-panel > *,
+    .builder-preview-panel > *,
+    .builder-section-list > *,
+    .builder-editor-grid > *,
+    .faq-editor-list > *,
+    .faq-editor-item > * {
+      min-width: 0;
+      max-width: 100%;
     }
 
     .content-draft-grid {
@@ -1648,6 +1701,8 @@
     }
 
     .builder-section-item {
+      min-width: 0;
+      max-width: 100%;
       border: 1px solid rgba(237,230,216,.1);
       border-radius: 8px;
       background: rgba(237,230,216,.045);
@@ -1667,6 +1722,7 @@
     .builder-section-item strong {
       font-size: 13px;
       line-height: 1.25;
+      overflow-wrap: anywhere;
     }
 
     .builder-section-item span {
@@ -1674,12 +1730,34 @@
       font: 850 10px var(--mono);
       letter-spacing: .1em;
       text-transform: uppercase;
+      overflow-wrap: anywhere;
     }
 
     .builder-editor-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .builder-editor-grid label.field,
+    .builder-editor-grid label.field > *,
+    .builder-editor-grid input,
+    .builder-editor-grid textarea,
+    .builder-editor-grid select,
+    .builder-editor-grid .form-note,
+    .builder-editor-grid .empty-state {
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .builder-editor-grid label.field > span,
+    .builder-editor-grid .form-note,
+    .builder-editor-grid .empty-state,
+    .faq-editor-head strong {
+      overflow-wrap: anywhere;
     }
 
     .builder-editor-grid .wide { grid-column: 1 / -1; }
@@ -1687,7 +1765,21 @@
     .builder-preview-panel {
       display: grid;
       gap: 12px;
+      min-width: 0;
+      max-width: 100%;
     }
+
+    #builderPreview,
+    #builderPreview > *,
+    .draft-preview-card > *,
+    .draft-preview-card img,
+    .draft-preview-card video,
+    .draft-preview-card a {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .draft-preview-card a { overflow-wrap: anywhere; }
 
     .draft-preview-card {
       min-width: 0;
@@ -3398,6 +3490,43 @@
       .gate-footer { min-height: 150px; padding-bottom: 24px; }
       .gate-powered img { width: 98px; }
     }
+
+    @container website-builder (max-width: 1040px) {
+      .builder-grid {
+        grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+      }
+
+      .builder-preview-panel {
+        grid-column: 1 / -1;
+      }
+
+      .draft-preview-card {
+        min-height: 280px;
+        padding: clamp(18px, 4cqi, 30px);
+      }
+
+      .draft-preview-card h3 {
+        font-size: clamp(28px, 7cqi, 52px);
+      }
+    }
+
+    @container website-builder (max-width: 680px) {
+      .builder-grid { grid-template-columns: minmax(0, 1fr); }
+      .builder-preview-panel { grid-column: auto; }
+      .builder-editor-grid { grid-template-columns: minmax(0, 1fr); }
+      .builder-editor-grid .wide { grid-column: auto; }
+      .builder-head { flex-direction: column; }
+      .builder-save-summary {
+        width: 100%;
+        max-width: 100%;
+        justify-items: start;
+        flex-basis: auto;
+      }
+      .builder-save-meta { text-align: left; }
+      .add-section-row { grid-template-columns: minmax(0, 1fr); }
+      .section-actions .button,
+      .faq-editor-actions .button { flex: 1 1 132px; }
+    }
   </style>
 </head>
 <body>
@@ -3712,7 +3841,10 @@
                       <h2>Section editor</h2>
                       <p id="builderEditorNote">Select a section to edit draft fields.</p>
                     </div>
-                    <span class="builder-state" id="builderStorageState">Loading draft</span>
+                    <div class="builder-save-summary" id="builderStorageSummary">
+                      <span class="builder-state" id="builderStorageState">Loading draft</span>
+                      <span class="builder-save-meta" id="builderStorageMeta">Not saved yet</span>
+                    </div>
                   </div>
                   <div class="builder-editor-grid" id="builderEditorFields"></div>
                 </div>
@@ -4774,6 +4906,11 @@
       "Log out": "Uitloggen",
       "Loading bookings": "Boekingen laden",
       "Draft saved to workspace": "Concept opgeslagen in werkruimte",
+      "Saved": "Opgeslagen",
+      "Saving": "Opslaan",
+      "Unsaved": "Niet opgeslagen",
+      "Loading": "Laden",
+      "Save failed": "Opslaan mislukt",
       "Drafts are saved securely to this workspace and remain private until publishing.": "Concepten worden veilig in deze werkruimte opgeslagen en blijven privé tot publicatie.",
       "Save draft": "Concept opslaan",
       "Restore draft": "Concept herstellen",
@@ -6239,12 +6376,42 @@
       return `Last saved ${date.toLocaleTimeString(localeCode(), { hour: "2-digit", minute: "2-digit" })}`;
     }
 
+    function compactBuilderEditorLabel(editor = state.contentDraftLastEditor) {
+      const explicitName = clean(editor?.displayName || editor?.name || "");
+      if (explicitName) return explicitName;
+      const email = clean(editor?.email || "");
+      if (!email) return "";
+      const localPart = email.split("@")[0] || email;
+      return localPart.length > 24 ? `${localPart.slice(0, 21)}...` : localPart;
+    }
+
+    function compactBuilderSaveLabel(message) {
+      if (message === "Draft saved to workspace") return "Saved";
+      if (message === "Saving draft") return "Saving";
+      if (message === "Unsaved changes") return "Unsaved";
+      if (message === "Draft save failed") return "Save failed";
+      if (message === "Conflict detected - reload draft") return "Conflict";
+      if (message === "Loading draft") return "Loading";
+      return message;
+    }
+
     function setBuilderSaveState(message = "Draft saved to workspace") {
-      const editor = state.contentDraftLastEditor?.email ? ` / ${state.contentDraftLastEditor.email}` : "";
+      const editorEmail = clean(state.contentDraftLastEditor?.email || "");
+      const editorLabel = compactBuilderEditorLabel();
+      const savedLabel = savedTimeLabel();
+      const fullLabel = `${message} / ${savedLabel}${editorEmail ? ` / ${editorEmail}` : ""}`;
       ["builderStorageState", "heroDraftState"].forEach((id) => {
         const target = $(id);
-        if (target) target.textContent = `${message} / ${savedTimeLabel()}${editor}`;
+        if (!target) return;
+        target.textContent = t(compactBuilderSaveLabel(message));
+        target.title = translateDynamicInterfaceText(fullLabel);
+        target.setAttribute("aria-label", translateDynamicInterfaceText(fullLabel));
       });
+      const meta = $("builderStorageMeta");
+      if (meta) {
+        meta.textContent = `${translateDynamicInterfaceText(savedLabel)}${editorLabel ? ` / ${editorLabel}` : ""}`;
+        meta.title = editorEmail || editorLabel;
+      }
       const contentState = $("contentDraftState");
       if (contentState) contentState.textContent = message;
     }
