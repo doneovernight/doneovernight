@@ -6891,7 +6891,9 @@
     function isSystemAcceptanceEvidence(document) {
       if (document?.status !== "archived") return false;
       const evidence = lower(`${document.title} ${document.internal_notes}`);
-      return evidence.includes("acceptance") && (evidence.includes("fixture") || evidence.includes("evidence") || evidence.includes("test"));
+      const controlledEvidence = evidence.includes("fixture") || evidence.includes("evidence") || evidence.includes("test");
+      const acceptanceEvidence = evidence.includes("acceptance") || evidence.includes("controlled") && evidence.includes("policy");
+      return controlledEvidence && acceptanceEvidence;
     }
 
     function policyUseMode(policy) {

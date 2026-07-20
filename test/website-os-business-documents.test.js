@@ -158,6 +158,7 @@ test("Policy manager hides technical defaults and opens acceptance evidence on d
   assert.match(ui, /id="businessAcceptanceDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
   assert.match(ui, /data-toggle-business-policy/);
   assert.match(ui, /System acceptance evidence/);
+  assert.match(ui, /evidence\.includes\("controlled"\) && evidence\.includes\("policy"\)/);
   assert.match(ui, /state\.documentStatusFilter = "active"/);
   assert.doesNotMatch(ui, /name="policy_key"/);
   assert.match(ui, /policy_key: policy\.policy_key/);
