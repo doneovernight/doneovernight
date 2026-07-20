@@ -1,6 +1,6 @@
 # COMMONPL4CE Website OS Implementation Matrix
 
-Canonical capability status for `admin.doneovernight.com/cp`, updated on 2026-07-20 after the final hardening implementation and production application of migrations `063_website_os_final_hardening.sql` and `064_website_os_today_briefing.sql`. The release commit and deployment are recorded in the final release report after production verification.
+Canonical capability status for `admin.doneovernight.com/cp`, updated on 2026-07-20 after the final hardening implementation and production application of migrations `063_website_os_final_hardening.sql`, `064_website_os_today_briefing.sql` and `065_website_os_business_documents.sql`. The release commit and deployment are recorded in the final release report after production verification.
 
 Status meanings:
 
@@ -43,7 +43,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | SHELL-02 | Public `/cp` route isolation | Complete | Y | Y | - | - | - | Y | Y | Y | Production route suite and live identity markers confirm the public archive. |
 | SHELL-03 | Public `/cp-book` route isolation | Complete | Y | Y | - | - | - | Y | Y | Y | Returns the booking interface with correct source/version markers. |
 | SHELL-04 | Unknown admin fallback | Complete | Y | Y | - | - | - | Y | Y | Y | Unknown admin slugs render the admin-safe fallback, not public content. |
-| SHELL-05 | Primary navigation destinations / active state | Complete | Y | Y | - | - | Y | - | P | Y | Visible routes are Overview, Bookings, Calendar, Website, Clients, Analytics and Settings. |
+| SHELL-05 | Primary navigation destinations / active state | Complete | Y | Y | - | - | Y | - | P | Y | Visible routes are Overview, Bookings, Calendar, Website, Business Documents, Clients, Analytics and Settings. |
 | SHELL-06 | Sidebar collapse persistence | Complete | Y | Y | - | P | - | - | P | Y | Preference is stored locally and shell state is restored. |
 | SHELL-07 | EN/NL interface locale | Partial | Y | Y | N | P | - | - | Y | N | Immediate switching, `document.lang`, current-screen preservation and refresh persistence were verified in the authenticated production UI; preference remains device-local. |
 | SHELL-08 | Mobile shell and keyboard operation | Partial | Y | Y | - | - | - | - | Y | N | Authenticated production screens were exercised at phone width with bottom navigation, sheets, cards and 44px targets; physical Safari/Android coverage remains outstanding. |
@@ -150,6 +150,22 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | INV-17 | Credit-note document/workflow | Partial | Y | Y | Y | Y | Y | - | N | N | `credited` status exists; no separate credit-note document/number/accounting entry. |
 | INV-18 | Invoice search/pagination | Missing | N | N | N | Y | Y | - | N | N | List is capped at 200. |
 
+## Business Identity, Documents And Policies
+
+| ID | Capability | Status | UI | FE | API | DB | Authz | Live | E2E | Ready | Evidence / limitation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BIZ-01 | Central business identity | Complete | Y | Y | Y | Y | Y | - | Y | Y | Legal/contact/brand/invoice defaults are revision-protected, server-backed and workspace-scoped; only known COMMONPL4CE facts are seeded. |
+| BIZ-02 | Connected-domain state | Partial | Y | Y | Y | Y | Y | - | P | N | Manual verified/pending/disconnected state is durable; automated DNS ownership and SSL provisioning remain future provider work. |
+| BIZ-03 | Business email identity | Partial | Y | Y | Y | Y | Y | - | P | N | Address, reply-to, display name, signature and provider type persist; provider verification and sending are deliberately disconnected. |
+| DOC-01 | Document drafts, publish, history and rollback | Complete | Y | Y | Y | Y | Y | - | Y | Y | Revision-protected drafts and transactional immutable versions support publish, archive, duplicate and rollback. |
+| DOC-02 | Branded document PDF export | Complete | Y | Y | Y | Y | Y | - | Y | Y | Server-generated PDFs use the persisted business identity and exact saved document/version. |
+| DOC-03 | Workflow attachment mapping | Partial | Y | Y | Y | Y | Y | - | P | N | Seven durable destinations exist; invoice consumption is active while branded-email/customer/portal delivery remains future work. |
+| DOC-04 | Version-pinned invoice attachments | Complete | Y | Y | Y | Y | Y | - | Y | Y | Invoice creation/update stores exact published document versions and invoice PDF export appends their immutable contents. |
+| POL-01 | Policy manager | Complete | Y | Y | Y | Y | Y | - | Y | Y | Required/optional, internal/customer-visible, ordering, enablement and acceptance contexts persist per workspace. |
+| POL-02 | Public booking acceptance | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Both public bookers read only current customer-visible versions, fail closed on required/stale acceptance and retain the original intake source/version. |
+| POL-03 | Immutable acceptance evidence | Complete | Y | Y | Y | Y | Y | - | Y | Y | Exact version, booking, timestamp, customer snapshot and privacy-preserving fingerprints are append-only; later customer linking is role- and workspace-verified. |
+| POL-04 | External legal review and approved copy | Missing | N | N | N | N | - | - | N | N | The product deliberately does not invent legal terms; COMMONPL4CE must supply reviewed copy before activating policies. |
+
 ## Communications And Portfolio
 
 | ID | Capability | Status | UI | FE | API | DB | Authz | Live | E2E | Ready | Evidence / limitation |
@@ -158,7 +174,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | COMM-02 | Message threads/messages persistence | Partial | P | N | N | Y | Y | - | N | N | Migration 063 created workspace-scoped production tables and policies; the authenticated module repository/UI is not activated. |
 | COMM-03 | Message archive/trash/restore | Placeholder | Y | N | N | Y | Y | - | N | N | Schema support exists, but the module remains hidden and no production action contract is exposed. |
 | COMM-04 | Branded email templates | Placeholder | Y | P | N | Y | Y | - | N | N | Production template/send tables exist, but the dormant preview is not presented as a working delivery workflow. |
-| COMM-05 | Attachments and real delivery | Missing | N | N | N | N | N | - | N | N | No attachment storage, delivery provider, failure handling or resend protection. |
+| COMM-05 | Attachments and real delivery | Partial | P | P | P | Y | Y | - | N | N | Version-pinned document mappings and invoice PDF attachments exist; no email provider, delivery failure handling or resend protection exists yet. |
 | COMM-06 | Delivery/send history | Missing | N | N | N | N | N | - | N | N | Invoice manual send state is not an email-delivery record. |
 | PORT-01 | Portfolio project CRUD | Placeholder | Y | N | N | Y | Y | N | N | N | Migration 063 supplies workspace-scoped project persistence, but the production module remains hidden until its API/UI contract is complete. |
 | PORT-02 | Portfolio media/categories/order/featured | Placeholder | Y | N | N | Y | Y | N | N | N | Schema support exists; dormant controls are not exposed as working functionality. |
@@ -249,7 +265,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | SET-01 | Booking availability settings | Complete | Y | Y | Y | Y | Y | Y | P | Y | Draft/publish lifecycle controls `/cp-book` and server availability. |
 | SET-02 | Security settings | Partial | Y | Y | Y | Y | Y | - | Y | N | Password changes, all-device and individual-session revocation and session inventory work; recovery and 2FA remain absent. |
 | SET-03 | Locale preference | Partial | Y | Y | N | P | - | - | N | N | Non-sensitive local persistence only. |
-| SET-04 | Workspace/domain/email display | Partial | Y | P | P | Y | Y | - | N | N | Mostly descriptive/read-only; not a complete editable settings contract. |
+| SET-04 | Business identity/domain/email settings | Partial | Y | Y | Y | Y | Y | - | P | N | Business identity and honest connection states are editable and persisted; DNS, SSL and email-provider automation are not connected. |
 | SET-05 | Notification settings | Partial | Y | N | N | N | N | - | N | N | Intake notification behavior is reported read-only; no misleading editable toggle is exposed. |
 | SET-06 | Design/global settings | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Design, branding, navigation, contact, SEO and integration settings use authenticated draft/publish persistence. |
 
@@ -257,7 +273,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 
 | ID | Capability | Status | UI | FE | API | DB | Authz | Live | E2E | Ready | Evidence / limitation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OPS-01 | Migration ledger consistency | Partial | - | - | - | Y | - | - | Y | N | Production ledger now records 061-063 and the isolated runner safely excludes unapplied drift; legacy 052-060 history is still not retroactively recorded. |
+| OPS-01 | Migration ledger consistency | Partial | - | - | - | Y | - | - | Y | N | Production ledger now records 061-065 and the isolated runner safely excludes unapplied drift; legacy 052-060 history is still not retroactively recorded. |
 | OPS-02 | Migration 058 persistent-module schema | Complete | - | - | - | Y | Y | - | Y | Y | Migration 063 idempotently reconciled message, email, portfolio and acceptance tables in production. |
 | OPS-03 | Existing Website OS RLS enablement | Complete | - | - | - | Y | Y | - | Y | Y | Existing Website OS tables have RLS enabled and are service-role repository accessed. |
 | OPS-04 | `task_requests` authorization policy | Complete | - | - | Y | Y | Y | Y | Y | Y | Broad public UPDATE policy was removed; direct anonymous update probes are rejected and APIs require workspace sessions. |
@@ -265,7 +281,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | OPS-06 | Security headers / clickjacking | Complete | - | - | - | - | Y | Y | Y | Y | Admin routes ship CSP/frame-ancestors, X-Frame-Options, nosniff, HSTS, Referrer-Policy and Permissions-Policy. |
 | OPS-07 | Secret handling | Complete | - | - | Y | Y | Y | - | Y | Y | Service-role credential is server-only and absent from client bundle/search; values were never printed. |
 | OPS-08 | Production route identity gate | Complete | - | - | - | - | - | Y | Y | Y | Eight critical routes passed status and identity/negative-marker checks. |
-| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 121 tests including hardening, auth, content, media, invoices, booking actions and inline-script parsing. |
+| OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes 134 tests including hardening, auth, content, media, invoices, business documents, policies, booking actions and inline-script parsing. |
 | OPS-10 | Build/CI release gate | Complete | - | - | - | - | - | - | Y | Y | `vercel-build` runs the complete repository test suite and fails deployment on regression. |
 | OPS-11 | Authenticated production E2E suite | Partial | - | - | - | - | - | - | P | N | Release acceptance covers browser/API/data workflows, but it is not yet a standalone CI-owned reusable suite. |
 | OPS-12 | Acceptance fixtures | Partial | - | - | P | Y | Y | - | Y | N | Production fixture registry exists and is workspace-scoped; a generalized fixture orchestration API is still absent. |
@@ -277,6 +293,6 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 
 ## Canonical Verdict
 
-**READY FOR CONTROLLED PRODUCTION ACCEPTANCE, WITH DECLARED PHASE 3 LIMITS.** The former P0 authorization/grant issues, missing schema, booking availability split, builder/public mismatches, unsafe URLs, weak media validation, invoice PDF loss, missing headers and partial build gate are resolved. Recovery/2FA, real email delivery, public Portfolio, customer/invoice pagination, automated operational alerting and a reusable CI-owned authenticated browser suite remain explicitly incomplete; unavailable modules stay hidden from production navigation.
+**READY FOR CONTROLLED PRODUCTION ACCEPTANCE, WITH DECLARED PHASE 3 LIMITS.** The former P0 authorization/grant issues, missing schema, booking availability split, builder/public mismatches, unsafe URLs, weak media validation, invoice PDF loss, missing headers and partial build gate are resolved. Business identity, versioned documents, policies, acceptance evidence and invoice document snapshots are now production-backed. Recovery/2FA, DNS/email provider automation, approved legal copy, real email delivery, public Portfolio, customer/invoice pagination, automated operational alerting and a reusable CI-owned authenticated browser suite remain explicitly incomplete; unavailable modules stay hidden from production navigation.
 
 This matrix supersedes the earlier “Completed / Phase 3” summary. A capability may have a working UI/API and still be non-ready when its authorization, live consumer, durability, scale behavior, or direct end-to-end evidence is incomplete.

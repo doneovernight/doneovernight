@@ -20,7 +20,8 @@ const isolatedRemoteHistory = [
   "061_website_os_content_builder.sql",
   "062_website_os_content_conflict_errors.sql",
   "063_website_os_final_hardening.sql",
-  "064_website_os_today_briefing.sql"
+  "064_website_os_today_briefing.sql",
+  "065_website_os_business_documents.sql"
 ];
 
 function fail(message) {
@@ -69,7 +70,7 @@ if (onlyMigration) {
   if (!dbUrl && !projectRef && existsSync(linkedState)) cpSync(linkedState, join(supabaseRoot, ".temp"), { recursive: true });
   commandRoot = temporaryRoot;
   console.log(`Isolated migration: ${onlyMigration}`);
-  console.log("Included production ledger baseline: 061, 062, 063, 064");
+  console.log("Included production ledger baseline: 061, 062, 063, 064, 065");
 }
 
 if (!apply) console.log("Dry run only. No production schema changes will be applied.");

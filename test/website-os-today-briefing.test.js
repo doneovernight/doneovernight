@@ -41,8 +41,8 @@ test("Website OS exposes an accessible, exact-record, multi-booking Today Briefi
   assert.match(ui, /const WORKSPACE_TIME_ZONE = "Europe\/Amsterdam"/);
   assert.match(ui, /function todayBookings\(\)/);
   assert.match(ui, /booking\.isTest \|\| booking\.isTrashed/);
-  assert.match(ui, /"cancelled", "canceled", "declined", "rejected", "no_longer_proceeding", "archived", "trashed"/);
-  assert.match(ui, /\["completed", "delivered"\][\s\S]*!booking\.followUpRequired/);
+  assert.match(ui, /"cancelled", "canceled", "declined", "rejected", "no_longer_proceeding", "completed", "delivered", "archived", "trashed"/);
+  assert.doesNotMatch(ui, /\["completed", "delivered"\][\s\S]*!booking\.followUpRequired/);
   assert.match(ui, /data-today-briefing-step/);
   assert.match(ui, /todayBriefingTouchStartX/);
   assert.match(ui, /handleTodayBriefingKeydown/);

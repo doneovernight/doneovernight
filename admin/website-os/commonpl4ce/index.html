@@ -2753,6 +2753,221 @@
       backdrop-filter: none;
     }
 
+    .business-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 8px;
+      background: rgba(237,230,216,.025);
+    }
+
+    .business-tab {
+      min-height: 40px;
+      padding: 0 18px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font: 800 11px var(--mono);
+      cursor: pointer;
+    }
+
+    .business-tab[aria-selected="true"] {
+      border-color: rgba(237,230,216,.2);
+      background: rgba(237,230,216,.08);
+      color: var(--text);
+    }
+
+    .business-task { display: none; }
+    .business-task.is-active { display: grid; gap: 14px; }
+
+    .document-workspace {
+      display: grid;
+      grid-template-columns: minmax(220px, .72fr) minmax(360px, 1.25fr) minmax(280px, .9fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .document-pane {
+      min-width: 0;
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid rgba(237,230,216,.11);
+      border-radius: 8px;
+      background: rgba(237,230,216,.025);
+    }
+
+    .document-list,
+    .policy-list,
+    .document-version-list,
+    .document-workflow-list,
+    .policy-acceptance-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .document-select,
+    .policy-select {
+      width: 100%;
+      min-width: 0;
+      min-height: 54px;
+      display: grid;
+      gap: 4px;
+      padding: 10px 11px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(0,0,0,.12);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .document-select:hover,
+    .policy-select:hover { border-color: rgba(237,230,216,.24); background: rgba(237,230,216,.045); }
+    .document-select.is-active,
+    .policy-select.is-active { border-color: rgba(237,230,216,.36); background: rgba(237,230,216,.085); }
+    .document-select strong,
+    .policy-select strong { overflow-wrap: anywhere; font-size: 12px; }
+    .document-select span,
+    .policy-select span { color: var(--muted); font-size: 10px; }
+
+    .document-editor-grid,
+    .business-profile-grid,
+    .business-connection-grid,
+    .policy-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .document-editor-grid .wide,
+    .business-profile-grid .wide,
+    .business-connection-grid .wide,
+    .policy-editor-grid .wide { grid-column: 1 / -1; }
+
+    .document-body-editor { min-height: 340px; font-family: var(--body); line-height: 1.6; }
+
+    .document-preview {
+      min-width: 0;
+      min-height: 420px;
+      padding: 28px 24px;
+      overflow: hidden;
+      border: 1px solid rgba(237,230,216,.12);
+      border-radius: 7px;
+      background: #eee6d5;
+      color: #141210;
+    }
+
+    .document-preview small {
+      display: block;
+      margin-bottom: 22px;
+      color: rgba(20,18,16,.55);
+      font: 800 9px var(--mono);
+      text-transform: uppercase;
+    }
+
+    .document-preview h2 {
+      margin: 0 0 20px;
+      overflow-wrap: anywhere;
+      font-size: clamp(24px, 3vw, 40px);
+      line-height: 1;
+    }
+
+    .document-preview .document-preview-body {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .workflow-option,
+    .policy-context-option,
+    .invoice-document-option {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(237,230,216,.025);
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .workflow-option input,
+    .policy-context-option input,
+    .invoice-document-option input { width: 18px; height: 18px; flex: 0 0 auto; }
+
+    .document-actions,
+    .business-form-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .document-state-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .document-version {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 10px;
+      border-top: 1px solid rgba(237,230,216,.09);
+    }
+
+    .document-version strong { display: block; overflow-wrap: anywhere; font-size: 11px; }
+    .document-version span { color: var(--muted); font-size: 10px; }
+
+    .business-status-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(237,230,216,.1);
+      border-radius: 7px;
+      background: rgba(237,230,216,.025);
+    }
+
+    .business-status-card strong { display: block; margin-bottom: 3px; font-size: 12px; }
+    .business-status-card span:not(.status-pill) { color: var(--muted); font-size: 11px; }
+
+    .invoice-document-options {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+      padding: 12px;
+      border: 1px solid rgba(237,230,216,.11);
+      border-radius: 7px;
+    }
+
+    .invoice-document-options legend { padding: 0 5px; font-size: 11px; font-weight: 800; }
+    .invoice-document-options .form-note { margin: 0 0 3px; }
+
+    .policy-acceptance-row {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+      padding: 9px 10px;
+      border-top: 1px solid rgba(237,230,216,.09);
+    }
+
+    .policy-acceptance-row strong { overflow-wrap: anywhere; font-size: 11px; }
+    .policy-acceptance-row span { color: var(--muted); font-size: 10px; }
+
     .mobile-bottom-nav,
     .mobile-action-bar,
     .mobile-more-backdrop,
@@ -2768,7 +2983,7 @@
       .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .operations-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .operations-stack { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .split, .reply-workspace, .section-builder, .builder-grid, .hero-workspace-grid, .media-browser-grid, .preview-workspace-grid, .live-preview-grid, .customer-workspace { grid-template-columns: 1fr; }
+      .split, .reply-workspace, .section-builder, .builder-grid, .hero-workspace-grid, .media-browser-grid, .preview-workspace-grid, .live-preview-grid, .customer-workspace, .document-workspace { grid-template-columns: 1fr; }
       .booking-row, .template-row, .client-row { grid-template-columns: 1fr; }
       .hero-slot-detail, .media-detail { position: static; }
     }
@@ -2799,7 +3014,15 @@
       .os-layout { width: 100%; padding: 12px 12px 32px; }
       .os-nav { display: none; }
       .os-main, .view, .website-task { gap: 12px; }
-      .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form, .draft-frame-grid { grid-template-columns: 1fr; }
+      .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form, .draft-frame-grid, .document-editor-grid, .business-profile-grid, .business-connection-grid, .policy-editor-grid { grid-template-columns: 1fr; }
+      .document-editor-grid .wide, .business-profile-grid .wide, .business-connection-grid .wide, .policy-editor-grid .wide { grid-column: auto; }
+      .business-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .business-tab { min-height: 44px; padding-inline: 8px; }
+      .document-pane { padding: 12px; }
+      .document-preview { min-height: 300px; padding: 22px 18px; }
+      .document-actions, .business-form-actions { display: grid; grid-template-columns: 1fr; }
+      .document-actions .button, .business-form-actions .button { width: 100%; }
+      .business-status-card { grid-template-columns: 1fr; }
       .media-target-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .operations-stack { grid-column: auto; }
       .operational-form .wide { grid-column: auto; }
@@ -3010,6 +3233,7 @@
         <button type="button" data-view-target="messages" data-nav-icon="MS" hidden><span class="nav-label">Messages</span> <span class="nav-count" id="navMessagesCount">0</span></button>
         <button type="button" data-view-target="emails" data-nav-icon="EM" hidden><span class="nav-label">Branded Emails</span></button>
         <button type="button" data-view-target="website" data-nav-icon="WB"><span class="nav-label">Website</span></button>
+        <button type="button" data-view-target="documents" data-nav-icon="DO"><span class="nav-label">Business Documents</span> <span class="nav-count" id="navDocumentsCount">0</span></button>
         <button type="button" data-view-target="portfolio" data-nav-icon="PF" hidden><span class="nav-label">Portfolio</span></button>
         <button type="button" data-view-target="clients" data-nav-icon="CL"><span class="nav-label">Clients</span> <span class="nav-count" id="navClientsCount">0</span></button>
         <button type="button" data-view-target="analytics" data-nav-icon="AN"><span class="nav-label">Analytics</span></button>
@@ -3414,6 +3638,66 @@
           </section>
         </section>
 
+        <section class="view" id="view-documents" data-view="documents">
+          <div class="view-head">
+            <div class="view-title">
+              <div class="eyebrow">Business</div>
+              <h1>Documents.</h1>
+              <p>Workspace-scoped terms, policies, workflow attachments and immutable published versions.</p>
+            </div>
+            <div class="business-tabs" role="tablist" aria-label="Business document workspace">
+              <button class="business-tab" type="button" data-business-tab-target="documents" role="tab" aria-selected="true">Documents</button>
+              <button class="business-tab" type="button" data-business-tab-target="policies" role="tab" aria-selected="false">Policies</button>
+            </div>
+          </div>
+
+          <section class="business-task is-active" data-business-tab="documents" role="tabpanel">
+            <div class="document-workspace">
+              <aside class="document-pane">
+                <div class="panel-head">
+                  <div><h2>Document library</h2><p>Standard and custom documents.</p></div>
+                  <button class="button small primary" id="addBusinessDocument" type="button">Add document</button>
+                </div>
+                <label class="field"><span>Filter</span><select id="documentStatusFilter"><option value="all">All documents</option><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></label>
+                <label class="field"><span>New document type</span><select id="newBusinessDocumentType"><option value="general_terms">General Terms &amp; Conditions</option><option value="booking_policy">Booking Policy</option><option value="payment_policy">Payment Policy</option><option value="cancellation_policy">Cancellation Policy</option><option value="privacy_policy">Privacy Policy</option><option value="cookie_policy">Cookie Policy</option><option value="invoice_terms">Invoice Terms</option><option value="service_agreement">Service Agreement</option><option value="custom">Custom Document</option></select></label>
+                <div class="document-list" id="businessDocumentList"></div>
+              </aside>
+
+              <section class="document-pane" id="businessDocumentEditor" aria-label="Selected document editor">
+                <div class="empty-state"><strong>Select or add a document.</strong>Its workspace-scoped editor appears here.</div>
+              </section>
+
+              <aside class="document-pane">
+                <div class="panel-head"><div><h2>Document preview</h2><p>Draft preview. Not automatically sent.</p></div><span class="status-pill" id="documentPreviewState">Draft</span></div>
+                <article class="document-preview" id="businessDocumentPreview"><small>COMMONPL4CE · Draft preview</small><h2>Select a document</h2><div class="document-preview-body">Published documents and saved drafts remain separate.</div></article>
+                <section>
+                  <div class="panel-head"><div><h3>Version history</h3><p>Published versions are immutable.</p></div></div>
+                  <div class="document-version-list" id="businessDocumentVersions"></div>
+                </section>
+              </aside>
+            </div>
+          </section>
+
+          <section class="business-task" data-business-tab="policies" role="tabpanel">
+            <div class="document-workspace">
+              <aside class="document-pane">
+                <div class="panel-head">
+                  <div><h2>Policy manager</h2><p>Choose which published policies apply.</p></div>
+                  <button class="button small primary" id="addBusinessPolicy" type="button">Add policy</button>
+                </div>
+                <div class="policy-list" id="businessPolicyList"></div>
+              </aside>
+              <section class="document-pane" id="businessPolicyEditor" aria-label="Selected policy editor">
+                <div class="empty-state"><strong>Select or add a policy.</strong>Required, visibility and workflow settings appear here.</div>
+              </section>
+              <aside class="document-pane">
+                <div class="panel-head"><div><h2>Acceptance history</h2><p>Immutable records for exact published versions.</p></div><span class="status-pill" id="policyAcceptanceCount">0</span></div>
+                <div class="policy-acceptance-list" id="businessPolicyAcceptances"></div>
+              </aside>
+            </div>
+          </section>
+        </section>
+
         <section class="view" id="view-portfolio" data-view="portfolio" hidden aria-hidden="true">
           <div class="view-head">
             <div class="view-title">
@@ -3490,6 +3774,58 @@
           </div>
           <section class="os-panel">
             <div class="settings-list" id="settingsList"></div>
+            <section class="security-section" aria-label="Business identity settings">
+              <div class="panel-head">
+                <div><h2>Business Identity</h2><p>Central identity for documents, invoices and future branded email.</p></div>
+                <span class="status-pill" id="businessIdentityState">Loading</span>
+              </div>
+              <form class="business-profile-grid" id="businessIdentityForm">
+                <label class="field"><span>Business name</span><input name="business_name" type="text" required maxlength="120"></label>
+                <label class="field"><span>Legal name</span><input name="legal_name" type="text" maxlength="180"></label>
+                <label class="field"><span>Company number</span><input name="company_number" type="text" maxlength="80"></label>
+                <label class="field"><span>VAT number</span><input name="vat_number" type="text" maxlength="80"></label>
+                <label class="field wide"><span>Business address</span><textarea name="business_address" rows="3"></textarea></label>
+                <label class="field"><span>Phone</span><input name="phone" type="tel" inputmode="tel"></label>
+                <label class="field"><span>Business email</span><input name="business_email" type="email" inputmode="email"></label>
+                <label class="field"><span>Website</span><input name="website" type="url" inputmode="url"></label>
+                <label class="field"><span>Instagram</span><input name="instagram" type="url" inputmode="url"></label>
+                <label class="field"><span>TikTok</span><input name="tiktok" type="url" inputmode="url"></label>
+                <label class="field"><span>LinkedIn</span><input name="linkedin" type="url" inputmode="url"></label>
+                <label class="field wide"><span>Logo asset path</span><input name="logo_url" type="text"></label>
+                <label class="field wide"><span>Wordmark asset path</span><input name="wordmark_url" type="text"></label>
+                <label class="field wide"><span>Brand colors</span><input name="brand_colors" type="text" placeholder="#060606, #EEE6D5, #F5EFE2"></label>
+                <label class="field"><span>Invoice prefix</span><input name="invoice_prefix" type="text" maxlength="12"></label>
+                <label class="field"><span>Timezone</span><input name="timezone" type="text" value="Europe/Amsterdam"></label>
+                <label class="field"><span>Currency</span><input name="currency" type="text" maxlength="3" value="EUR"></label>
+                <label class="field"><span>Language</span><select name="language"><option value="nl">Nederlands</option><option value="en">English</option></select></label>
+                <label class="field wide"><span>Invoice footer</span><textarea name="invoice_footer" rows="3"></textarea></label>
+                <label class="field wide"><span>Business signature</span><textarea name="business_signature" rows="4"></textarea></label>
+                <div class="business-form-actions wide"><button class="button primary small" type="submit">Save business identity</button><span class="form-note" id="businessIdentityNote">Server-backed and workspace scoped.</span></div>
+              </form>
+            </section>
+            <section class="security-section" aria-label="Connected domain settings">
+              <div class="panel-head"><div><h2>Connected Domain</h2><p>Manual status now; DNS and SSL automation remain provider work.</p></div><span class="status-pill" id="domainConnectionState">Pending</span></div>
+              <form class="business-connection-grid" id="businessDomainForm">
+                <input name="domain_id" type="hidden">
+                <label class="field wide"><span>Domain</span><input name="hostname" type="text" placeholder="commonpl4ce.com"></label>
+                <label class="field"><span>Type</span><select name="domain_type"><option value="custom">Custom domain</option><option value="subdomain">Subdomain</option></select></label>
+                <label class="field"><span>Connection status</span><select name="connection_status"><option value="pending">Pending</option><option value="disconnected">Disconnected</option><option value="verified">Verified manually</option></select></label>
+                <div class="business-form-actions wide"><button class="button primary small" type="submit">Save domain state</button><span class="form-note" id="businessDomainNote">Verified must reflect a completed manual DNS and SSL check.</span></div>
+              </form>
+              <div id="businessDomainList"></div>
+            </section>
+            <section class="security-section" aria-label="Business email settings">
+              <div class="panel-head"><div><h2>Business Email</h2><p>Identity and provider preparation. Sending is not enabled here.</p></div><span class="status-pill" id="businessEmailState">Disconnected</span></div>
+              <form class="business-connection-grid" id="businessEmailForm">
+                <label class="field"><span>Business email</span><input name="business_email" type="email" inputmode="email"></label>
+                <label class="field"><span>Reply-to email</span><input name="reply_to_email" type="email" inputmode="email"></label>
+                <label class="field"><span>Display name</span><input name="display_name" type="text"></label>
+                <label class="field"><span>Connection type</span><select name="connection_type"><option value="google_workspace">Google Workspace</option><option value="microsoft_365">Microsoft 365</option><option value="smtp">SMTP</option><option value="other">Other</option></select></label>
+                <label class="field wide"><span>Signature</span><textarea name="signature" rows="4"></textarea></label>
+                <div class="business-form-actions wide"><button class="button primary small" type="submit">Save email identity</button><span class="form-note" id="businessEmailNote">Provider verification and sending remain disconnected until credentials are configured server-side.</span></div>
+              </form>
+              <div id="businessEmailDetails"></div>
+            </section>
             <section class="security-section" aria-label="Public website settings">
               <div class="panel-head">
                 <div>
@@ -3631,6 +3967,7 @@
       <section class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
         <div class="mobile-more-sheet-head"><strong id="mobileMoreTitle">More</strong><button class="button ghost small" id="mobileMoreClose" type="button">Close</button></div>
         <button class="button ghost" id="mobileTodayButton" type="button" data-today-briefing-open hidden>Today</button>
+        <button class="button ghost" type="button" data-view-target="documents">Business Documents</button>
         <button class="button ghost" type="button" data-view-target="clients">Clients</button>
         <button class="button ghost" type="button" data-view-target="analytics">Analytics</button>
         <button class="button ghost" type="button" data-view-target="settings">Settings</button>
@@ -3688,6 +4025,11 @@
           <label class="field"><span>Due date</span><input id="invoiceDueDate" name="due_date" type="date" required></label>
           <div class="field"><span>Total</span><strong id="invoiceCalculatedTotal">EUR 0.00</strong></div>
           <label class="field wide"><span>Invoice notes</span><textarea id="invoiceNotes" name="notes" rows="2"></textarea></label>
+          <fieldset class="invoice-document-options wide" id="invoiceDocumentOptions">
+            <legend>Applicable documents</legend>
+            <p class="form-note">Only active published versions can be attached. The invoice PDF preserves the selected versions.</p>
+            <div id="invoiceDocumentChoices"></div>
+          </fieldset>
           <p class="form-note wide" id="invoiceDialogStatus" aria-live="polite">Invoice starts as Draft. Revenue is counted only after it is marked Paid, excluding VAT.</p>
           <div class="confirm-actions wide">
             <button class="button ghost small" type="button" data-close-invoice>Cancel</button>
@@ -4471,7 +4813,193 @@
       "Server-side auth": "Server-side authenticatie",
       "HttpOnly cookie": "HttpOnly-cookie",
       "Phase 3": "Fase 3",
-      "This module is not available in production yet.": "Deze module is nog niet beschikbaar in productie."
+      "This module is not available in production yet.": "Deze module is nog niet beschikbaar in productie.",
+      "Business": "Bedrijf",
+      "Business Documents": "Bedrijfsdocumenten",
+      "Documents.": "Documenten.",
+      "Documents": "Documenten",
+      "Policies": "Beleid",
+      "Workspace-scoped terms, policies, workflow attachments and immutable published versions.": "Werkruimtegebonden voorwaarden, beleid, workflowbijlagen en onveranderlijke gepubliceerde versies.",
+      "Document library": "Documentbibliotheek",
+      "Standard and custom documents.": "Standaard- en aangepaste documenten.",
+      "Add document": "Document toevoegen",
+      "Filter": "Filter",
+      "All documents": "Alle documenten",
+      "New document type": "Nieuw documenttype",
+      "Document preview": "Documentvoorbeeld",
+      "Draft preview. Not automatically sent.": "Conceptvoorbeeld. Wordt niet automatisch verzonden.",
+      "Select a document": "Selecteer een document",
+      "Published documents and saved drafts remain separate.": "Gepubliceerde documenten en opgeslagen concepten blijven gescheiden.",
+      "Version history": "Versiegeschiedenis",
+      "Published versions are immutable.": "Gepubliceerde versies zijn onveranderlijk.",
+      "Policy manager": "Beheer van beleid",
+      "Choose which published policies apply.": "Kies welk gepubliceerd beleid van toepassing is.",
+      "Add policy": "Beleid toevoegen",
+      "Acceptance history": "Acceptatiegeschiedenis",
+      "Immutable records for exact published versions.": "Onveranderlijke registraties voor exacte gepubliceerde versies.",
+      "Business Identity": "Bedrijfsidentiteit",
+      "Central identity for documents, invoices and future branded email.": "Centrale identiteit voor documenten, facturen en toekomstige merk-e-mail.",
+      "Business name": "Bedrijfsnaam",
+      "Legal name": "Juridische naam",
+      "Company number": "KvK-nummer",
+      "VAT number": "Btw-nummer",
+      "Business address": "Bedrijfsadres",
+      "Phone": "Telefoon",
+      "Business email": "Zakelijk e-mailadres",
+      "Website": "Website",
+      "Logo asset path": "Pad naar logo-asset",
+      "Wordmark asset path": "Pad naar woordmerk-asset",
+      "Brand colors": "Merkkleuren",
+      "Invoice prefix": "Factuurvoorvoegsel",
+      "Timezone": "Tijdzone",
+      "Currency": "Valuta",
+      "Language": "Taal",
+      "Invoice footer": "Factuurvoettekst",
+      "Business signature": "Bedrijfshandtekening",
+      "Save business identity": "Bedrijfsidentiteit opslaan",
+      "Server-backed and workspace scoped.": "Server-side opgeslagen en werkruimtegebonden.",
+      "Connected Domain": "Gekoppeld domein",
+      "Manual status now; DNS and SSL automation remain provider work.": "Nu handmatige status; DNS- en SSL-automatisering blijft providerwerk.",
+      "Type": "Type",
+      "Custom domain": "Aangepast domein",
+      "Subdomain": "Subdomein",
+      "Connection status": "Verbindingsstatus",
+      "Verification": "Verificatie",
+      "No business email": "Geen zakelijk e-mailadres",
+      "not_started": "niet gestart",
+      "verified": "geverifieerd",
+      "pending": "in afwachting",
+      "active": "actief",
+      "disconnected": "niet verbonden",
+      "Pending": "In afwachting",
+      "Disconnected": "Niet verbonden",
+      "Verified": "Geverifieerd",
+      "Verified manually": "Handmatig geverifieerd",
+      "Save domain state": "Domeinstatus opslaan",
+      "Verified must reflect a completed manual DNS and SSL check.": "Geverifieerd mag alleen worden gebruikt na een voltooide handmatige DNS- en SSL-controle.",
+      "Business Email": "Zakelijke e-mail",
+      "Identity and provider preparation. Sending is not enabled here.": "Identiteit en providervoorbereiding. Verzenden is hier niet ingeschakeld.",
+      "Reply-to email": "Antwoordadres",
+      "Display name": "Weergavenaam",
+      "Connection type": "Verbindingstype",
+      "Signature": "Handtekening",
+      "Save email identity": "E-mailidentiteit opslaan",
+      "Provider verification and sending remain disconnected until credentials are configured server-side.": "Providerverificatie en verzending blijven losgekoppeld totdat server-side gegevens zijn ingesteld.",
+      "Applicable documents": "Toepasselijke documenten",
+      "Only active published versions can be attached. The invoice PDF preserves the selected versions.": "Alleen actieve gepubliceerde versies kunnen worden bijgevoegd. De factuur-PDF bewaart de geselecteerde versies.",
+      "Loading business documents...": "Bedrijfsdocumenten laden…",
+      "Server-backed workspace records.": "Server-side werkruimterecords.",
+      "No documents in this view.": "Geen documenten in deze weergave.",
+      "Add a standard or custom business document.": "Voeg een standaard- of aangepast bedrijfsdocument toe.",
+      "Select or add a document.": "Selecteer of voeg een document toe.",
+      "Its workspace-scoped editor appears here.": "De werkruimtegebonden editor verschijnt hier.",
+      "Document type": "Documenttype",
+      "Title": "Titel",
+      "Version label": "Versielabel",
+      "Effective date": "Ingangsdatum",
+      "Enabled": "Ingeschakeld",
+      "Disabled": "Uitgeschakeld",
+      "Internal notes": "Interne notities",
+      "Document body": "Documenttekst",
+      "Automatic workflow attachments": "Automatische workflowbijlagen",
+      "Attachments use the published version. Branded email delivery is prepared but not sent automatically.": "Bijlagen gebruiken de gepubliceerde versie. Merk-e-mail is voorbereid, maar wordt niet automatisch verzonden.",
+      "Booking Confirmation": "Boekingsbevestiging",
+      "Branded Email": "Merk-e-mail",
+      "Customer Welcome": "Klantwelkomstbericht",
+      "Project Start": "Projectstart",
+      "Manual Email": "Handmatige e-mail",
+      "Future Client Portal": "Toekomstig klantportaal",
+      "Last updated": "Laatst bijgewerkt",
+      "Revision": "Revisie",
+      "Save document": "Document opslaan",
+      "Publish document": "Document publiceren",
+      "Download PDF": "PDF downloaden",
+      "Duplicate": "Dupliceren",
+      "Archive": "Archiveren",
+      "Draft edits stay private until Publish.": "Conceptwijzigingen blijven privé tot publicatie.",
+      "Save the draft, then publish an immutable first version.": "Sla het concept op en publiceer daarna een onveranderlijke eerste versie.",
+      "No document body yet.": "Nog geen documenttekst.",
+      "Draft preview": "Conceptvoorbeeld",
+      "Draft / Active": "Concept / Actief",
+      "Current live version": "Huidige liveversie",
+      "Rollback": "Terugzetten",
+      "No published versions yet.": "Nog geen gepubliceerde versies.",
+      "Publishing creates an immutable version.": "Publiceren maakt een onveranderlijke versie.",
+      "Loading policies...": "Beleid laden…",
+      "Required": "Verplicht",
+      "Optional": "Optioneel",
+      "Customer Visible": "Zichtbaar voor klant",
+      "Internal": "Intern",
+      "No policies configured.": "Geen beleid ingesteld.",
+      "Publish a document before making it customer visible.": "Publiceer een document voordat je het zichtbaar maakt voor klanten.",
+      "Select or add a policy.": "Selecteer of voeg beleid toe.",
+      "Required, visibility and workflow settings appear here.": "Verplichting, zichtbaarheid en workflowinstellingen verschijnen hier.",
+      "Missing linked document": "Gekoppeld document ontbreekt",
+      "Published document": "Gepubliceerd document",
+      "Policy key": "Beleidssleutel",
+      "Customer label": "Klantlabel",
+      "Requirement": "Verplichting",
+      "Visibility": "Zichtbaarheid",
+      "Order": "Volgorde",
+      "Acceptance contexts": "Acceptatiecontexten",
+      "Project": "Project",
+      "Manual": "Handmatig",
+      "Save policy": "Beleid opslaan",
+      "Archive policy": "Beleid archiveren",
+      "Customer-visible booking acceptance uses the current published version.": "Klantzichtbare boekingsacceptatie gebruikt de huidige gepubliceerde versie.",
+      "Publish the linked document before this policy can appear publicly.": "Publiceer het gekoppelde document voordat dit beleid openbaar kan verschijnen.",
+      "Customer": "Klant",
+      "Accepted version": "Geaccepteerde versie",
+      "No acceptances recorded.": "Geen acceptaties geregistreerd.",
+      "Accepted policy versions appear here without exposing raw email or IP data.": "Geaccepteerde beleidsversies verschijnen hier zonder ruwe e-mail- of IP-gegevens te tonen.",
+      "Connected": "Verbonden",
+      "Not configured": "Niet ingesteld",
+      "Loading": "Laden",
+      "No connected domain.": "Geen gekoppeld domein.",
+      "Add a domain to prepare manual DNS and SSL verification.": "Voeg een domein toe om handmatige DNS- en SSL-verificatie voor te bereiden.",
+      "Saving business identity...": "Bedrijfsidentiteit opslaan…",
+      "Business identity saved server-side.": "Bedrijfsidentiteit server-side opgeslagen.",
+      "Business identity saved.": "Bedrijfsidentiteit opgeslagen.",
+      "Confirm manual domain verification?": "Handmatige domeinverificatie bevestigen?",
+      "Only mark this domain verified after DNS, routing and SSL have been checked outside Website OS.": "Markeer dit domein pas als geverifieerd nadat DNS, routing en SSL buiten Website OS zijn gecontroleerd.",
+      "Mark verified": "Als geverifieerd markeren",
+      "Saving domain state...": "Domeinstatus opslaan…",
+      "Domain state saved. DNS and SSL are not changed automatically.": "Domeinstatus opgeslagen. DNS en SSL worden niet automatisch gewijzigd.",
+      "Domain state saved.": "Domeinstatus opgeslagen.",
+      "Saving email identity...": "E-mailidentiteit opslaan…",
+      "Email identity saved. Provider sending remains disconnected.": "E-mailidentiteit opgeslagen. Providerverzending blijft losgekoppeld.",
+      "Email identity saved.": "E-mailidentiteit opgeslagen.",
+      "Document draft created.": "Documentconcept aangemaakt.",
+      "Saving document draft...": "Documentconcept opslaan…",
+      "Document draft saved server-side.": "Documentconcept server-side opgeslagen.",
+      "Document draft saved.": "Documentconcept opgeslagen.",
+      "Unsaved document changes.": "Niet-opgeslagen documentwijzigingen.",
+      "Another device changed this document. Reload before saving.": "Een ander apparaat heeft dit document gewijzigd. Laad opnieuw voordat je opslaat.",
+      "Publish this document?": "Dit document publiceren?",
+      "Publishing creates an immutable version. Customer-visible policies and workflow attachments can use it immediately.": "Publiceren maakt een onveranderlijke versie. Klantzichtbaar beleid en workflowbijlagen kunnen deze direct gebruiken.",
+      "Document published.": "Document gepubliceerd.",
+      "Document duplicated as a custom draft.": "Document gedupliceerd als aangepast concept.",
+      "Archive this document?": "Dit document archiveren?",
+      "It remains in version history but leaves active workflow choices.": "Het blijft in de versiegeschiedenis, maar verdwijnt uit actieve workflowkeuzes.",
+      "Document archived.": "Document gearchiveerd.",
+      "Roll back to this version?": "Terugzetten naar deze versie?",
+      "Rollback publishes a new immutable version based on the selected one.": "Terugzetten publiceert een nieuwe onveranderlijke versie op basis van de geselecteerde versie.",
+      "Document rolled back and republished.": "Document teruggezet en opnieuw gepubliceerd.",
+      "Publish a document before adding a policy.": "Publiceer een document voordat je beleid toevoegt.",
+      "Publish an unused document before adding a policy.": "Publiceer een nog niet gebruikt document voordat je beleid toevoegt.",
+      "Policy created.": "Beleid aangemaakt.",
+      "Policy saved.": "Beleid opgeslagen.",
+      "Archive this policy?": "Dit beleid archiveren?",
+      "It will no longer be shown for new customer acceptance.": "Het wordt niet langer getoond voor nieuwe klantacceptatie.",
+      "Policy archived.": "Beleid gearchiveerd.",
+      "Published version": "Gepubliceerde versie",
+      "No active published documents.": "Geen actieve gepubliceerde documenten.",
+      "Publish a business document before attaching it to an invoice.": "Publiceer een bedrijfsdocument voordat je het aan een factuur toevoegt.",
+      "Manual attachment": "Handmatige bijlage",
+      "Workflow attachment": "Workflowbijlage",
+      "No documents attached.": "Geen documenten bijgevoegd.",
+      "Edit the draft invoice to select active published documents.": "Bewerk de conceptfactuur om actieve gepubliceerde documenten te selecteren.",
+      "Business workspace unavailable.": "Bedrijfswerkruimte niet beschikbaar."
     };
     const translations = {
       en: Object.fromEntries(Object.keys(DUTCH_TRANSLATIONS).map((key) => [key, key])),
@@ -4623,6 +5151,27 @@
     const COMMONPLACE_CONTENT_UPLOAD_API = "/api/task-submit?commonpl4ce_content_upload=1";
     const COMMONPLACE_ANALYTICS_API = "/api/task-submit";
     const COMMONPLACE_SITE_CONFIG_URL = "/assets/common-place/config/site-content.json";
+    const BUSINESS_DOCUMENT_TYPES = [
+      ["general_terms", "General Terms & Conditions"],
+      ["booking_policy", "Booking Policy"],
+      ["payment_policy", "Payment Policy"],
+      ["cancellation_policy", "Cancellation Policy"],
+      ["privacy_policy", "Privacy Policy"],
+      ["cookie_policy", "Cookie Policy"],
+      ["invoice_terms", "Invoice Terms"],
+      ["service_agreement", "Service Agreement"],
+      ["custom", "Custom Document"]
+    ];
+    const BUSINESS_DOCUMENT_DESTINATIONS = [
+      ["booking_confirmation", "Booking Confirmation"],
+      ["invoice", "Invoice"],
+      ["branded_email", "Branded Email"],
+      ["customer_welcome", "Customer Welcome"],
+      ["project_start", "Project Start"],
+      ["manual_email", "Manual Email"],
+      ["client_portal", "Future Client Portal"]
+    ];
+    const BUSINESS_POLICY_CONTEXTS = [["booking", "Booking"], ["invoice", "Invoice"], ["project", "Project"], ["manual", "Manual"]];
     const SECTION_TYPES = ["Text block", "Image block", "Image gallery", "Campaign / project block", "Testimonial", "Booking CTA", "Divider / Spacer", "Full-screen visual", "Two-column story", "FAQ", "Footer"];
     const MEDIA_CATEGORIES = ["Hero", "Portfolio", "Projects", "Logo", "Brand", "Video", "Behind the Film"];
     const DEFAULT_SITE_CONFIG = {
@@ -4722,7 +5271,22 @@
       customers: [],
       customerBookings: [],
       invoices: [],
+      invoiceDocuments: [],
       invoiceSummary: { connected: true, invoiceCount: 0, activeCount: 0, paidCount: 0, invoicedCents: 0, paidCents: 0, revenueCents: 0, accountingRule: "invoiced_and_paid_subtotals_excluding_vat" },
+      businessProfile: null,
+      businessDomains: [],
+      businessEmailIdentity: null,
+      businessDocuments: [],
+      businessDocumentVersions: [],
+      businessDocumentWorkflows: [],
+      businessPolicies: [],
+      businessPolicyAcceptances: [],
+      businessLoaded: false,
+      businessPending: false,
+      activeBusinessTab: "documents",
+      selectedBusinessDocumentId: "",
+      selectedBusinessPolicyId: "",
+      documentStatusFilter: "all",
       trash: [],
       clients: [],
       selectedBookingId: "",
@@ -5686,6 +6250,7 @@
       }
       state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
       state.invoices = Array.isArray(data.invoices) ? data.invoices : [];
+      state.invoiceDocuments = Array.isArray(data.invoiceDocuments) ? data.invoiceDocuments : state.invoiceDocuments;
       state.customers = Array.isArray(data.customers) ? data.customers : [];
       state.customerBookings = Array.isArray(data.customerBookings) ? data.customerBookings : [];
       state.invoiceSummary = data.invoiceSummary && typeof data.invoiceSummary === "object"
@@ -5806,6 +6371,611 @@
       renderTrash();
       renderAnalytics();
       renderDraftEditor();
+      renderBusinessWorkspace();
+      renderBusinessSettings();
+    }
+
+    async function businessRequest(operation, payload = {}) {
+      const response = await fetch(ADMIN_UPDATE_TASK_ENDPOINT, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          action: "commonpl4ce_business_action",
+          business_action: operation,
+          workspace_slug: WEBSITE_OS_WORKSPACE_SLUG,
+          ...payload
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success !== true) {
+        const error = new Error(data?.error || "Business workspace request failed.");
+        error.code = data?.code || "BUSINESS_REQUEST_FAILED";
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function applyBusinessBundle(data = {}) {
+      if (Object.prototype.hasOwnProperty.call(data, "businessProfile")) state.businessProfile = data.businessProfile || null;
+      if (Array.isArray(data.domains)) state.businessDomains = data.domains;
+      if (Object.prototype.hasOwnProperty.call(data, "emailIdentity")) state.businessEmailIdentity = data.emailIdentity || null;
+      if (Array.isArray(data.documents)) state.businessDocuments = data.documents;
+      if (Array.isArray(data.documentVersions)) state.businessDocumentVersions = data.documentVersions;
+      if (Array.isArray(data.documentWorkflows)) state.businessDocumentWorkflows = data.documentWorkflows;
+      if (Array.isArray(data.policies)) state.businessPolicies = data.policies;
+      if (Array.isArray(data.policyAcceptances)) state.businessPolicyAcceptances = data.policyAcceptances;
+      if (Array.isArray(data.invoiceDocuments)) state.invoiceDocuments = data.invoiceDocuments;
+      if (data.document?.id) state.selectedBusinessDocumentId = data.document.id;
+      if (data.policy?.id) state.selectedBusinessPolicyId = data.policy.id;
+      if (data.publish?.document?.id) state.selectedBusinessDocumentId = data.publish.document.id;
+      if (data.rollback?.document?.id) state.selectedBusinessDocumentId = data.rollback.document.id;
+      if (state.selectedBusinessDocumentId && !state.businessDocuments.some((item) => item.id === state.selectedBusinessDocumentId)) {
+        state.selectedBusinessDocumentId = "";
+      }
+      if (!state.selectedBusinessDocumentId) state.selectedBusinessDocumentId = state.businessDocuments.find((item) => item.status !== "archived")?.id || state.businessDocuments[0]?.id || "";
+      if (state.selectedBusinessPolicyId && !state.businessPolicies.some((item) => item.id === state.selectedBusinessPolicyId)) {
+        state.selectedBusinessPolicyId = "";
+      }
+      if (!state.selectedBusinessPolicyId) state.selectedBusinessPolicyId = state.businessPolicies.find((item) => !item.archived_at)?.id || state.businessPolicies[0]?.id || "";
+      state.businessLoaded = true;
+      renderBusinessWorkspace();
+      renderBusinessSettings(true);
+      renderInvoiceDocumentChoices();
+    }
+
+    async function loadBusinessWorkspace() {
+      const data = await businessRequest("get");
+      applyBusinessBundle(data);
+      return data;
+    }
+
+    function businessDocumentTypeLabel(type) {
+      return BUSINESS_DOCUMENT_TYPES.find(([value]) => value === type)?.[1] || "Custom Document";
+    }
+
+    function selectedBusinessDocument() {
+      return state.businessDocuments.find((item) => item.id === state.selectedBusinessDocumentId) || null;
+    }
+
+    function selectedBusinessPolicy() {
+      return state.businessPolicies.find((item) => item.id === state.selectedBusinessPolicyId) || null;
+    }
+
+    function publishedDocumentVersion(document) {
+      if (!document?.published_version_id) return null;
+      return state.businessDocumentVersions.find((item) => item.id === document.published_version_id) || null;
+    }
+
+    function workflowDestinationsForDocument(documentId) {
+      return state.businessDocumentWorkflows.filter((item) => item.document_id === documentId && item.enabled !== false);
+    }
+
+    function activePublishedDocuments() {
+      return state.businessDocuments.filter((document) => document.status === "active" && document.enabled !== false && publishedDocumentVersion(document));
+    }
+
+    function businessCanPublish() {
+      return ["Owner", "Admin"].includes(clean(state.authUser?.role));
+    }
+
+    function businessCanEdit() {
+      return ["Owner", "Admin", "Editor"].includes(clean(state.authUser?.role));
+    }
+
+    function renderBusinessWorkspace() {
+      const navCount = $("navDocumentsCount");
+      if (navCount) navCount.textContent = String(state.businessDocuments.filter((item) => item.status !== "archived").length);
+      document.querySelectorAll("[data-business-tab-target]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.businessTabTarget === state.activeBusinessTab ? "true" : "false");
+      });
+      document.querySelectorAll("[data-business-tab]").forEach((panel) => {
+        panel.classList.toggle("is-active", panel.dataset.businessTab === state.activeBusinessTab);
+      });
+      if ($("addBusinessDocument")) $("addBusinessDocument").disabled = !businessCanEdit();
+      if ($("addBusinessPolicy")) $("addBusinessPolicy").disabled = !businessCanPublish();
+      renderBusinessDocumentList();
+      renderBusinessDocumentEditor();
+      renderBusinessDocumentPreview();
+      renderBusinessDocumentVersions();
+      renderBusinessPolicyList();
+      renderBusinessPolicyEditor();
+      renderBusinessPolicyAcceptances();
+      if ($("view-documents")?.classList.contains("is-active")) renderMobileActionBar("documents");
+    }
+
+    function renderBusinessDocumentList() {
+      const target = $("businessDocumentList");
+      if (!target) return;
+      if (!state.businessLoaded) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Loading business documents..."))}</strong>${escapeHTML(t("Server-backed workspace records."))}</div>`;
+        return;
+      }
+      const filter = state.documentStatusFilter;
+      const records = state.businessDocuments.filter((item) => filter === "all" || item.status === filter);
+      target.innerHTML = records.length ? records.map((item) => `
+        <button class="document-select${item.id === state.selectedBusinessDocumentId ? " is-active" : ""}" type="button" data-business-document-id="${escapeHTML(item.id)}">
+          <strong>${escapeHTML(item.title)}</strong>
+          <span>${escapeHTML(t(businessDocumentTypeLabel(item.document_type)))} · ${escapeHTML(t(item.status[0].toUpperCase() + item.status.slice(1)))} · v${escapeHTML(item.version_label || "1.0")}</span>
+        </button>
+      `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No documents in this view."))}</strong>${escapeHTML(t("Add a standard or custom business document."))}</div>`;
+    }
+
+    function renderBusinessDocumentEditor() {
+      const target = $("businessDocumentEditor");
+      if (!target) return;
+      const document = selectedBusinessDocument();
+      if (!document) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Select or add a document."))}</strong>${escapeHTML(t("Its workspace-scoped editor appears here."))}</div>`;
+        return;
+      }
+      const workflows = new Map(workflowDestinationsForDocument(document.id).map((item) => [item.destination, item]));
+      const archived = document.status === "archived";
+      const canEdit = businessCanEdit() && !archived;
+      target.innerHTML = `
+        <div class="panel-head"><div><h2>${escapeHTML(document.title)}</h2><p>${escapeHTML(t(businessDocumentTypeLabel(document.document_type)))} · ${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</p></div><span class="status-pill">${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</span></div>
+        <form id="businessDocumentForm" class="document-editor-grid" data-document-id="${escapeHTML(document.id)}" data-revision="${Number(document.revision) || 1}">
+          <label class="field"><span>${escapeHTML(t("Document type"))}</span><input value="${escapeHTML(t(businessDocumentTypeLabel(document.document_type)))}" readonly></label>
+          <label class="field"><span>${escapeHTML(t("Status"))}</span><input value="${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}" readonly></label>
+          <label class="field wide"><span>${escapeHTML(t("Title"))}</span><input name="title" type="text" maxlength="160" value="${escapeHTML(document.title)}" ${canEdit ? "required" : "disabled"}></label>
+          <label class="field"><span>${escapeHTML(t("Version label"))}</span><input name="version_label" type="text" maxlength="40" value="${escapeHTML(document.version_label || "1.0")}" ${canEdit ? "required" : "disabled"}></label>
+          <label class="field"><span>${escapeHTML(t("Effective date"))}</span><input name="effective_date" type="date" value="${escapeHTML(document.effective_date || "")}" ${canEdit ? "" : "disabled"}></label>
+          <label class="field"><span>${escapeHTML(t("Language"))}</span><select name="language" ${canEdit ? "" : "disabled"}><option value="nl"${document.language === "nl" ? " selected" : ""}>Nederlands</option><option value="en"${document.language === "en" ? " selected" : ""}>English</option></select></label>
+          <label class="workflow-option"><input name="enabled" type="checkbox"${document.enabled !== false ? " checked" : ""}${canEdit ? "" : " disabled"}>${escapeHTML(t("Enabled"))}</label>
+          <label class="field wide"><span>${escapeHTML(t("Internal notes"))}</span><textarea name="internal_notes" rows="3" ${canEdit ? "" : "disabled"}>${escapeHTML(document.internal_notes || "")}</textarea></label>
+          <label class="field wide"><span>${escapeHTML(t("Document body"))}</span><textarea class="document-body-editor" name="body" ${canEdit ? "" : "disabled"}>${escapeHTML(document.body || "")}</textarea></label>
+          <fieldset class="invoice-document-options wide" ${businessCanPublish() && !archived ? "" : "disabled"}>
+            <legend>${escapeHTML(t("Automatic workflow attachments"))}</legend>
+            <p class="form-note">${escapeHTML(t("Attachments use the published version. Branded email delivery is prepared but not sent automatically."))}</p>
+            <div class="document-workflow-list">${BUSINESS_DOCUMENT_DESTINATIONS.map(([value, label]) => {
+              const workflow = workflows.get(value);
+              return `<label class="workflow-option"><input type="checkbox" name="workflow" value="${escapeHTML(value)}"${workflow ? " checked" : ""}>${escapeHTML(t(label))}</label>`;
+            }).join("")}</div>
+          </fieldset>
+          <div class="document-state-row wide"><span>${escapeHTML(t("Last updated"))}: ${escapeHTML(formatTimestamp(document.updated_at))}</span><span>·</span><span>${escapeHTML(t("Revision"))} ${Number(document.revision) || 1}</span></div>
+          <div class="document-actions wide">
+            ${canEdit ? `<button class="button primary small" type="submit">${escapeHTML(t("Save document"))}</button>` : ""}
+            ${archived || !businessCanPublish() ? "" : `<button class="button small" type="button" data-publish-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Publish document"))}</button>`}
+            <button class="button ghost small" type="button" data-export-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Download PDF"))}</button>
+            ${canEdit ? `<button class="button ghost small" type="button" data-duplicate-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Duplicate"))}</button>` : ""}
+            ${archived || !businessCanPublish() ? "" : `<button class="button ghost small" type="button" data-archive-business-document="${escapeHTML(document.id)}">${escapeHTML(t("Archive"))}</button>`}
+          </div>
+          <p class="form-note wide" id="businessDocumentStatus" aria-live="polite">${escapeHTML(t(document.published_version_id ? "Draft edits stay private until Publish." : "Save the draft, then publish an immutable first version."))}</p>
+        </form>`;
+    }
+
+    function currentDocumentFormValue(name, fallback = "") {
+      const field = document.querySelector(`#businessDocumentForm [name="${name}"]`);
+      if (!field) return fallback;
+      if (field.type === "checkbox") return field.checked;
+      return field.value;
+    }
+
+    function renderBusinessDocumentPreview() {
+      const target = $("businessDocumentPreview");
+      const stateLabel = $("documentPreviewState");
+      if (!target) return;
+      const document = selectedBusinessDocument();
+      if (!document) return;
+      const title = currentDocumentFormValue("title", document.title);
+      const body = currentDocumentFormValue("body", document.body) || t("No document body yet.");
+      const version = currentDocumentFormValue("version_label", document.version_label || "1.0");
+      target.innerHTML = `<small>${escapeHTML(state.businessProfile?.business_name || "COMMONPL4CE")} · ${escapeHTML(t("Draft preview"))} · v${escapeHTML(version)}</small><h2>${escapeHTML(title)}</h2><div class="document-preview-body">${escapeHTML(body)}</div>`;
+      if (stateLabel) stateLabel.textContent = t(document.status === "active" ? "Draft / Active" : document.status[0].toUpperCase() + document.status.slice(1));
+    }
+
+    function renderBusinessDocumentVersions() {
+      const target = $("businessDocumentVersions");
+      if (!target) return;
+      const document = selectedBusinessDocument();
+      const versions = document ? state.businessDocumentVersions.filter((item) => item.document_id === document.id).sort((a, b) => Number(b.version_number) - Number(a.version_number)) : [];
+      target.innerHTML = versions.length ? versions.map((version) => `
+        <div class="document-version">
+          <div><strong>v${Number(version.version_number)} · ${escapeHTML(version.version_label)}</strong><span>${escapeHTML(formatTimestamp(version.published_at))}${version.id === document.published_version_id ? ` · ${escapeHTML(t("Current live version"))}` : ""}</span></div>
+          <div class="record-actions"><button class="button ghost small" type="button" data-export-business-document="${escapeHTML(document.id)}" data-version-id="${escapeHTML(version.id)}">PDF</button>${businessCanPublish() && version.id !== document.published_version_id ? `<button class="button ghost small" type="button" data-rollback-business-document="${escapeHTML(document.id)}" data-version-id="${escapeHTML(version.id)}">${escapeHTML(t("Rollback"))}</button>` : ""}</div>
+        </div>`).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No published versions yet."))}</strong>${escapeHTML(t("Publishing creates an immutable version."))}</div>`;
+    }
+
+    function renderBusinessPolicyList() {
+      const target = $("businessPolicyList");
+      if (!target) return;
+      if (!state.businessLoaded) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Loading policies..."))}</strong></div>`;
+        return;
+      }
+      const policies = state.businessPolicies.filter((item) => !item.archived_at);
+      target.innerHTML = policies.length ? policies.map((item) => `
+        <button class="policy-select${item.id === state.selectedBusinessPolicyId ? " is-active" : ""}" type="button" data-business-policy-id="${escapeHTML(item.id)}">
+          <strong>${escapeHTML(item.label)}</strong>
+          <span>${escapeHTML(t(item.requirement === "required" ? "Required" : "Optional"))} · ${escapeHTML(t(item.visibility === "customer_visible" ? "Customer Visible" : "Internal"))}${item.enabled ? "" : ` · ${escapeHTML(t("Disabled"))}`}</span>
+        </button>`).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No policies configured."))}</strong>${escapeHTML(t("Publish a document before making it customer visible."))}</div>`;
+    }
+
+    function renderBusinessPolicyEditor() {
+      const target = $("businessPolicyEditor");
+      if (!target) return;
+      const policy = selectedBusinessPolicy();
+      const availableDocuments = state.businessDocuments.filter((item) => item.status !== "archived");
+      if (!policy) {
+        target.innerHTML = `<div class="empty-state"><strong>${escapeHTML(t("Select or add a policy."))}</strong>${escapeHTML(t("Required, visibility and workflow settings appear here."))}</div>`;
+        return;
+      }
+      const contexts = Array.isArray(policy.acceptance_contexts) ? policy.acceptance_contexts : ["booking"];
+      const linkedDocument = state.businessDocuments.find((item) => item.id === policy.document_id);
+      target.innerHTML = `
+        <div class="panel-head"><div><h2>${escapeHTML(policy.label)}</h2><p>${escapeHTML(linkedDocument?.title || t("Missing linked document"))}</p></div><span class="status-pill">${escapeHTML(t(policy.enabled ? "Enabled" : "Disabled"))}</span></div>
+        <form id="businessPolicyForm" class="policy-editor-grid" data-policy-id="${escapeHTML(policy.id)}">
+          <label class="field wide"><span>${escapeHTML(t("Published document"))}</span><select name="document_id" required>${availableDocuments.map((document) => `<option value="${escapeHTML(document.id)}"${document.id === policy.document_id ? " selected" : ""}>${escapeHTML(document.title)} · ${escapeHTML(t(document.status[0].toUpperCase() + document.status.slice(1)))}</option>`).join("")}</select></label>
+          <label class="field"><span>${escapeHTML(t("Policy key"))}</span><input name="policy_key" value="${escapeHTML(policy.policy_key)}" required></label>
+          <label class="field"><span>${escapeHTML(t("Customer label"))}</span><input name="label" value="${escapeHTML(policy.label)}" required></label>
+          <label class="field"><span>${escapeHTML(t("Requirement"))}</span><select name="requirement"><option value="required"${policy.requirement === "required" ? " selected" : ""}>${escapeHTML(t("Required"))}</option><option value="optional"${policy.requirement === "optional" ? " selected" : ""}>${escapeHTML(t("Optional"))}</option></select></label>
+          <label class="field"><span>${escapeHTML(t("Visibility"))}</span><select name="visibility"><option value="customer_visible"${policy.visibility === "customer_visible" ? " selected" : ""}>${escapeHTML(t("Customer Visible"))}</option><option value="internal"${policy.visibility === "internal" ? " selected" : ""}>${escapeHTML(t("Internal"))}</option></select></label>
+          <label class="field"><span>${escapeHTML(t("Order"))}</span><input name="display_order" type="number" min="0" max="999" value="${Number(policy.display_order) || 0}"></label>
+          <label class="workflow-option"><input name="enabled" type="checkbox"${policy.enabled ? " checked" : ""}>${escapeHTML(t("Enabled"))}</label>
+          <fieldset class="invoice-document-options wide"><legend>${escapeHTML(t("Acceptance contexts"))}</legend><div class="document-workflow-list">${BUSINESS_POLICY_CONTEXTS.map(([value, label]) => `<label class="policy-context-option"><input name="acceptance_context" type="checkbox" value="${escapeHTML(value)}"${contexts.includes(value) ? " checked" : ""}>${escapeHTML(t(label))}</label>`).join("")}</div></fieldset>
+          <div class="document-actions wide"><button class="button primary small" type="submit">${escapeHTML(t("Save policy"))}</button>${businessCanPublish() ? `<button class="button ghost small" type="button" data-archive-business-policy="${escapeHTML(policy.id)}">${escapeHTML(t("Archive policy"))}</button>` : ""}</div>
+          <p class="form-note wide" id="businessPolicyStatus" aria-live="polite">${escapeHTML(linkedDocument?.status === "active" ? t("Customer-visible booking acceptance uses the current published version.") : t("Publish the linked document before this policy can appear publicly."))}</p>
+        </form>`;
+      if (!businessCanPublish()) target.querySelectorAll("input, select, button").forEach((control) => { control.disabled = true; });
+    }
+
+    function renderBusinessPolicyAcceptances() {
+      const target = $("businessPolicyAcceptances");
+      const count = $("policyAcceptanceCount");
+      if (!target) return;
+      const policy = selectedBusinessPolicy();
+      const records = state.businessPolicyAcceptances.filter((item) => !policy || item.policy_id === policy.id);
+      if (count) count.textContent = String(records.length);
+      target.innerHTML = records.length ? records.map((item) => `
+        <div class="policy-acceptance-row"><strong>${escapeHTML(item.customer_name_snapshot || t("Customer"))} · ${escapeHTML(item.booking_task_id)}</strong><span>${escapeHTML(t("Accepted version"))} ${Number(item.accepted_version_number)} · ${escapeHTML(formatTimestamp(item.accepted_at))}</span></div>
+      `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No acceptances recorded."))}</strong>${escapeHTML(t("Accepted policy versions appear here without exposing raw email or IP data."))}</div>`;
+    }
+
+    function setNamedFormValues(form, values = {}, { force = false } = {}) {
+      if (!form || !force && form.dataset.dirty === "true") return;
+      Array.from(form.elements).forEach((field) => {
+        if (!field.name || field.type === "submit" || field.type === "button") return;
+        const value = values[field.name];
+        if (value === undefined) return;
+        if (field.type === "checkbox") field.checked = value === true;
+        else if (field.name === "brand_colors" && Array.isArray(value)) field.value = value.join(", ");
+        else field.value = value ?? "";
+      });
+      form.dataset.dirty = "false";
+    }
+
+    function renderBusinessSettings(force = false) {
+      const profile = state.businessProfile;
+      const profileForm = $("businessIdentityForm");
+      if (profileForm && profile) {
+        setNamedFormValues(profileForm, profile, { force: force || profileForm.dataset.revision !== String(profile.revision) });
+        profileForm.dataset.revision = String(profile.revision);
+      }
+      if ($("businessIdentityState")) $("businessIdentityState").textContent = profile ? t("Connected") : (state.businessLoaded ? t("Not configured") : t("Loading"));
+
+      const primaryDomain = state.businessDomains.find((item) => item.is_primary && item.connection_status !== "disconnected") || state.businessDomains[0] || null;
+      const domainForm = $("businessDomainForm");
+      if (domainForm && primaryDomain) {
+        setNamedFormValues(domainForm, {
+          domain_id: primaryDomain.id,
+          hostname: primaryDomain.hostname,
+          domain_type: primaryDomain.domain_type,
+          connection_status: primaryDomain.connection_status
+        }, { force: force || domainForm.dataset.revision !== String(primaryDomain.revision) });
+        domainForm.dataset.revision = String(primaryDomain.revision);
+      }
+      if ($("domainConnectionState")) $("domainConnectionState").textContent = t(primaryDomain ? primaryDomain.connection_status[0].toUpperCase() + primaryDomain.connection_status.slice(1) : "Not configured");
+      if ($("businessDomainList")) {
+        $("businessDomainList").innerHTML = state.businessDomains.length ? state.businessDomains.map((domain) => `
+          <div class="business-status-card"><div><strong>${escapeHTML(domain.hostname)}</strong><span>${escapeHTML(t(domain.domain_type === "subdomain" ? "Subdomain" : "Custom domain"))} · ${escapeHTML(t("Verification"))} ${escapeHTML(t(domain.verification_status || "not_started"))} · SSL ${escapeHTML(t(domain.ssl_status || "not_started"))}</span></div><span class="status-pill">${escapeHTML(t(domain.connection_status[0].toUpperCase() + domain.connection_status.slice(1)))}</span></div>
+        `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No connected domain."))}</strong>${escapeHTML(t("Add a domain to prepare manual DNS and SSL verification."))}</div>`;
+      }
+
+      const emailIdentity = state.businessEmailIdentity;
+      const emailForm = $("businessEmailForm");
+      if (emailForm && emailIdentity) {
+        setNamedFormValues(emailForm, emailIdentity, { force: force || emailForm.dataset.revision !== String(emailIdentity.revision) });
+        emailForm.dataset.revision = String(emailIdentity.revision);
+      }
+      if ($("businessEmailState")) $("businessEmailState").textContent = t(emailIdentity ? emailIdentity.connection_status[0].toUpperCase() + emailIdentity.connection_status.slice(1) : "Not configured");
+      if ($("businessEmailDetails")) {
+        $("businessEmailDetails").innerHTML = emailIdentity ? `<div class="business-status-card"><div><strong>${escapeHTML(emailIdentity.business_email || t("No business email"))}</strong><span>${escapeHTML(t(emailIdentity.connection_type === "google_workspace" ? "Google Workspace" : emailIdentity.connection_type === "microsoft_365" ? "Microsoft 365" : emailIdentity.connection_type === "smtp" ? "SMTP" : "Other"))} · ${escapeHTML(t("Verification"))} ${escapeHTML(t(emailIdentity.verification_status || "not_started"))}</span></div><span class="status-pill">${escapeHTML(t(emailIdentity.connection_status[0].toUpperCase() + emailIdentity.connection_status.slice(1)))}</span></div>` : "";
+      }
+      [profileForm, domainForm, emailForm].forEach((form) => form?.querySelectorAll("input, select, textarea, button").forEach((control) => {
+        control.disabled = !businessCanPublish();
+      }));
+    }
+
+    function formObject(form) {
+      return Object.fromEntries(new FormData(form).entries());
+    }
+
+    async function saveBusinessIdentity(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector('[type="submit"]');
+      const note = $("businessIdentityNote");
+      button.disabled = true;
+      note.textContent = t("Saving business identity...");
+      try {
+        const values = formObject(form);
+        values.brand_colors = clean(values.brand_colors).split(",").map(clean).filter(Boolean);
+        values.expected_revision = state.businessProfile?.revision || 1;
+        const data = await businessRequest("save_identity", values);
+        applyBusinessBundle(data);
+        form.dataset.dirty = "false";
+        note.textContent = t("Business identity saved server-side.");
+        showToast(t("Business identity saved."));
+      } catch (error) {
+        note.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function saveBusinessDomain(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector('[type="submit"]');
+      const note = $("businessDomainNote");
+      const values = formObject(form);
+      const current = state.businessDomains.find((item) => item.id === values.domain_id) || null;
+      if (values.connection_status === "verified" && (current?.connection_status !== "verified" || clean(values.hostname).toLowerCase() !== clean(current?.hostname).toLowerCase())) {
+        const approved = await askConfirmation({
+          title: t("Confirm manual domain verification?"),
+          body: t("Only mark this domain verified after DNS, routing and SSL have been checked outside Website OS."),
+          confirmLabel: t("Mark verified")
+        });
+        if (!approved) return;
+        values.confirmation = "VERIFY_DOMAIN_MANUALLY";
+      }
+      values.expected_revision = current?.revision || 1;
+      button.disabled = true;
+      note.textContent = t("Saving domain state...");
+      try {
+        const data = await businessRequest("save_domain", values);
+        applyBusinessBundle(data);
+        form.dataset.dirty = "false";
+        note.textContent = t("Domain state saved. DNS and SSL are not changed automatically.");
+        showToast(t("Domain state saved."));
+      } catch (error) {
+        note.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function saveBusinessEmail(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const button = form.querySelector('[type="submit"]');
+      const note = $("businessEmailNote");
+      const values = { ...formObject(form), expected_revision: state.businessEmailIdentity?.revision || 1 };
+      button.disabled = true;
+      note.textContent = t("Saving email identity...");
+      try {
+        const data = await businessRequest("save_email", values);
+        applyBusinessBundle(data);
+        form.dataset.dirty = "false";
+        note.textContent = t("Email identity saved. Provider sending remains disconnected.");
+        showToast(t("Email identity saved."));
+      } catch (error) {
+        note.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function createBusinessDocument() {
+      if (state.businessPending) return;
+      const type = $("newBusinessDocumentType")?.value || "custom";
+      const title = businessDocumentTypeLabel(type);
+      state.businessPending = true;
+      try {
+        const data = await businessRequest("create_document", {
+          document_type: type,
+          title,
+          version_label: "1.0",
+          language: state.businessProfile?.language || "nl",
+          enabled: true,
+          body: ""
+        });
+        applyBusinessBundle(data);
+        showToast(t("Document draft created."));
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        state.businessPending = false;
+      }
+    }
+
+    function documentFormPayload() {
+      const form = $("businessDocumentForm");
+      const document = selectedBusinessDocument();
+      if (!form || !document) return null;
+      const values = formObject(form);
+      return {
+        document_id: document.id,
+        expected_revision: document.revision,
+        title: values.title,
+        version_label: values.version_label,
+        effective_date: values.effective_date,
+        language: values.language,
+        internal_notes: values.internal_notes,
+        body: values.body,
+        enabled: form.elements.enabled.checked,
+        destinations: Array.from(form.querySelectorAll('[name="workflow"]:checked')).map((input) => ({ destination: input.value, enabled: true, required: false }))
+      };
+    }
+
+    async function saveBusinessDocument(event, { quiet = false } = {}) {
+      event?.preventDefault?.();
+      const payload = documentFormPayload();
+      if (!payload || state.businessPending) return null;
+      const status = $("businessDocumentStatus");
+      state.businessPending = true;
+      if (status) status.textContent = t("Saving document draft...");
+      try {
+        let data = await businessRequest("save_document", payload);
+        if (businessCanPublish()) {
+          data = await businessRequest("save_document_workflows", {
+            document_id: payload.document_id,
+            destinations: payload.destinations
+          });
+        }
+        applyBusinessBundle(data);
+        if ($("businessDocumentStatus")) $("businessDocumentStatus").textContent = t("Document draft saved server-side.");
+        if (!quiet) showToast(t("Document draft saved."));
+        return selectedBusinessDocument();
+      } catch (error) {
+        if (status) status.textContent = error.code === "DOCUMENT_DRAFT_CONFLICT" ? t("Another device changed this document. Reload before saving.") : error.message;
+        if (!quiet) showToast(error.message);
+        return null;
+      } finally {
+        state.businessPending = false;
+      }
+    }
+
+    async function publishBusinessDocument(documentId) {
+      if (state.businessPending) return;
+      const saved = await saveBusinessDocument(null, { quiet: true });
+      if (!saved || saved.id !== documentId) return;
+      const approved = await askConfirmation({
+        title: t("Publish this document?"),
+        body: t("Publishing creates an immutable version. Customer-visible policies and workflow attachments can use it immediately."),
+        confirmLabel: t("Publish document")
+      });
+      if (!approved) return;
+      state.businessPending = true;
+      try {
+        const data = await businessRequest("publish_document", {
+          document_id: documentId,
+          expected_revision: saved.revision,
+          confirmation: "PUBLISH_DOCUMENT"
+        });
+        applyBusinessBundle(data);
+        showToast(t("Document published."));
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        state.businessPending = false;
+      }
+    }
+
+    async function duplicateBusinessDocument(documentId) {
+      const data = await businessRequest("duplicate_document", { document_id: documentId });
+      applyBusinessBundle(data);
+      showToast(t("Document duplicated as a custom draft."));
+    }
+
+    async function archiveBusinessDocument(documentId) {
+      const approved = await askConfirmation({ title: t("Archive this document?"), body: t("It remains in version history but leaves active workflow choices."), confirmLabel: t("Archive") });
+      if (!approved) return;
+      const data = await businessRequest("archive_document", { document_id: documentId });
+      applyBusinessBundle(data);
+      showToast(t("Document archived."));
+    }
+
+    async function rollbackBusinessDocument(documentId, versionId) {
+      const document = state.businessDocuments.find((item) => item.id === documentId);
+      if (!document) return;
+      const approved = await askConfirmation({ title: t("Roll back to this version?"), body: t("Rollback publishes a new immutable version based on the selected one."), confirmLabel: t("Rollback") });
+      if (!approved) return;
+      const data = await businessRequest("rollback_document", {
+        document_id: documentId,
+        version_id: versionId,
+        expected_revision: document.revision,
+        confirmation: "ROLLBACK_DOCUMENT"
+      });
+      applyBusinessBundle(data);
+      showToast(t("Document rolled back and republished."));
+    }
+
+    async function exportBusinessDocument(documentId, versionId = "") {
+      const data = await businessRequest("export_document", { document_id: documentId, version_id: versionId });
+      const binary = atob(data.pdf.content_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(new Blob([bytes], { type: data.pdf.content_type || "application/pdf" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = data.pdf.filename || "business-document.pdf";
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function createBusinessPolicy() {
+      const usedDocumentIds = new Set(state.businessPolicies.filter((item) => !item.archived_at).map((item) => item.document_id));
+      const document = activePublishedDocuments().find((item) => !usedDocumentIds.has(item.id));
+      if (!document) return showToast(t("Publish an unused document before adding a policy."));
+      const data = await businessRequest("create_policy", {
+        document_id: document.id,
+        policy_key: `${document.document_type}_${Date.now()}`,
+        label: document.title,
+        requirement: "optional",
+        visibility: "internal",
+        enabled: true,
+        display_order: state.businessPolicies.length,
+        acceptance_contexts: ["booking"]
+      });
+      applyBusinessBundle(data);
+      showToast(t("Policy created."));
+    }
+
+    async function saveBusinessPolicy(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const policy = selectedBusinessPolicy();
+      if (!policy || state.businessPending) return;
+      const values = formObject(form);
+      state.businessPending = true;
+      try {
+        const data = await businessRequest("save_policy", {
+          policy_id: policy.id,
+          document_id: values.document_id,
+          policy_key: values.policy_key,
+          label: values.label,
+          requirement: values.requirement,
+          visibility: values.visibility,
+          display_order: values.display_order,
+          enabled: form.elements.enabled.checked,
+          acceptance_contexts: Array.from(form.querySelectorAll('[name="acceptance_context"]:checked')).map((input) => input.value)
+        });
+        applyBusinessBundle(data);
+        showToast(t("Policy saved."));
+      } catch (error) {
+        if ($("businessPolicyStatus")) $("businessPolicyStatus").textContent = error.message;
+      } finally {
+        state.businessPending = false;
+      }
+    }
+
+    async function archiveBusinessPolicy(policyId) {
+      const approved = await askConfirmation({ title: t("Archive this policy?"), body: t("It will no longer be shown for new customer acceptance."), confirmLabel: t("Archive policy") });
+      if (!approved) return;
+      const data = await businessRequest("archive_policy", { policy_id: policyId });
+      applyBusinessBundle(data);
+      showToast(t("Policy archived."));
+    }
+
+    function invoiceDocumentIdsFromForm() {
+      return Array.from(document.querySelectorAll('#invoiceDocumentChoices input[type="checkbox"]:checked')).map((input) => input.value);
+    }
+
+    function invoiceDocumentLinks(invoiceId) {
+      return state.invoiceDocuments.filter((item) => item.invoice_id === invoiceId);
+    }
+
+    function renderInvoiceDocumentChoices(invoiceId = $("invoiceEditId")?.value || "") {
+      const target = $("invoiceDocumentChoices");
+      if (!target) return;
+      const activeDocuments = activePublishedDocuments();
+      const existingIds = new Set(invoiceDocumentLinks(invoiceId).map((item) => item.document_id));
+      const workflowIds = new Set(state.businessDocumentWorkflows.filter((item) => item.destination === "invoice" && item.enabled).map((item) => item.document_id));
+      target.innerHTML = activeDocuments.length ? activeDocuments.map((document) => `
+        <label class="invoice-document-option"><input type="checkbox" value="${escapeHTML(document.id)}"${existingIds.has(document.id) || (!invoiceId && workflowIds.has(document.id)) ? " checked" : ""}><span><strong>${escapeHTML(document.title)}</strong><br>${escapeHTML(t("Published version"))} ${escapeHTML(publishedDocumentVersion(document)?.version_label || document.version_label)}</span></label>
+      `).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No active published documents."))}</strong>${escapeHTML(t("Publish a business document before attaching it to an invoice."))}</div>`;
     }
 
     function isWebsiteTabActive(tab) {
@@ -6398,12 +7568,11 @@
     function todayBookings() {
       const now = new Date();
       const todayKey = state.todayBriefingDate || workspaceDateKey(now);
-      const excluded = new Set(["cancelled", "canceled", "declined", "rejected", "no_longer_proceeding", "archived", "trashed"]);
+      const excluded = new Set(["cancelled", "canceled", "declined", "rejected", "no_longer_proceeding", "completed", "delivered", "archived", "trashed"]);
       return state.bookings
         .filter((booking) => {
           const persistedStatus = lower(booking.taskStatus || booking.status);
           if (booking.isTest || booking.isTrashed || bookingDateKey(booking) !== todayKey || excluded.has(persistedStatus)) return false;
-          if (["completed", "delivered"].includes(persistedStatus) && !booking.followUpRequired) return false;
           return !bookingHasFinished(booking, now) || booking.followUpRequired;
         })
         .sort((left, right) => {
@@ -6765,6 +7934,7 @@
       $("invoiceNotes").value = "";
       $("invoiceLineItems").replaceChildren();
       addInvoiceLineItem({ description: booking?.projectType || "Photography services", quantity: 1 });
+      renderInvoiceDocumentChoices("");
       $("invoiceDialogBooking").textContent = booking
         ? `${booking.name} · ${booking.taskId || booking.id}`
         : `${linkedCustomer.name} · customer invoice`;
@@ -6796,6 +7966,7 @@
         quantity: item.quantity,
         unitPrice: Number(item.unit_price_cents || 0) / 100
       }));
+      renderInvoiceDocumentChoices(invoice.id);
       $("invoiceDialogTitle").textContent = "Edit Invoice";
       $("invoiceDialogBooking").textContent = `${invoice.invoice_number} · Draft`;
       $("invoiceDialogStatus").textContent = "Only draft invoices can be edited.";
@@ -6816,6 +7987,7 @@
       state.customers = Array.isArray(data.customers) ? data.customers : state.customers;
       state.clients = state.customers;
       state.customerBookings = Array.isArray(data.customerBookings) ? data.customerBookings : state.customerBookings;
+      state.invoiceDocuments = Array.isArray(data.invoiceDocuments) ? data.invoiceDocuments : state.invoiceDocuments;
       if (data.invoiceSummary && typeof data.invoiceSummary === "object") state.invoiceSummary = data.invoiceSummary;
       renderMetrics();
       renderBookings();
@@ -6854,7 +8026,8 @@
             vat_rate: $("invoiceVatRate").value,
             issue_date: $("invoiceIssueDate").value,
             due_date: $("invoiceDueDate").value,
-            notes: $("invoiceNotes").value
+            notes: $("invoiceNotes").value,
+            document_ids: invoiceDocumentIdsFromForm()
           })
         });
         const data = await response.json().catch(() => ({}));
@@ -8575,6 +9748,11 @@
         ...(Array.isArray(invoice.send_history) ? invoice.send_history : []),
         ...(Array.isArray(invoice.payment_history) ? invoice.payment_history : [])
       ].sort((left, right) => Date.parse(right.at || 0) - Date.parse(left.at || 0));
+      const attachedDocuments = invoiceDocumentLinks(invoice.id).map((link) => ({
+        link,
+        document: state.businessDocuments.find((item) => item.id === link.document_id),
+        version: state.businessDocumentVersions.find((item) => item.id === link.document_version_id)
+      })).filter((item) => item.document && item.version);
       return `
         <section class="customer-linked-item">
           <div class="panel-head"><div><h3>${escapeHTML(invoice.invoice_number)}</h3><p>Invoice detail · ${escapeHTML(t(invoice.status[0].toUpperCase() + invoice.status.slice(1)))}</p></div><div class="record-actions">${invoice.status === "draft" ? `<button class="button ghost small" type="button" data-edit-invoice="${escapeHTML(invoice.id)}">Edit draft</button>` : ""}<button class="button ghost small" type="button" data-download-invoice="${escapeHTML(invoice.id)}">Download PDF</button></div></div>
@@ -8587,6 +9765,7 @@
             <div class="detail"><span>Payment</span><strong>${escapeHTML(invoice.payment_status)}</strong></div>
           </div>
           <div class="customer-linked-list">${lineItems.map((item) => `<div class="customer-linked-item"><strong>${escapeHTML(item.description)}</strong><span>${escapeHTML(String(item.quantity))} × ${escapeHTML(formatMoneyCents(item.unit_price_cents))} · ${escapeHTML(formatMoneyCents(item.line_total_cents))}</span></div>`).join("")}</div>
+          <div class="customer-linked-list">${attachedDocuments.length ? attachedDocuments.map((item) => `<div class="customer-linked-item"><strong>${escapeHTML(item.document.title)}</strong><span>${escapeHTML(t("Published version"))} ${escapeHTML(item.version.version_label)} · ${escapeHTML(t(item.link.attachment_source === "manual" ? "Manual attachment" : "Workflow attachment"))}</span></div>`).join("") : `<div class="empty-state"><strong>${escapeHTML(t("No documents attached."))}</strong>${escapeHTML(t("Edit the draft invoice to select active published documents."))}</div>`}</div>
           <p class="form-note">${escapeHTML(invoice.notes || "No invoice notes.")}</p>
           <div class="customer-linked-list">${history.length ? history.map((item) => `<div class="customer-linked-item"><strong>${escapeHTML(item.action || "Invoice activity")}</strong><span>${escapeHTML(formatTimestamp(item.at))}</span></div>`).join("") : `<div class="empty-state"><strong>No send or payment history yet.</strong>History appears after explicit status changes.</div>`}</div>
         </section>`;
@@ -9056,9 +10235,12 @@
         bookings: [["new-booking", "New Booking", "primary"]],
         calendar: [["new-booking", "New Booking", "primary"]],
         website: [["save-draft", "Save draft", ""], ["preview", "Preview", ""], ["publish-review", "Publish", "primary"]],
+        documents: state.activeBusinessTab === "policies"
+          ? (businessCanPublish() ? [["save-policy", "Save policy", "primary"], ["add-policy", "Add policy", ""]] : [])
+          : (businessCanEdit() ? [["save-document", "Save document", ""], ...(businessCanPublish() ? [["publish-document", "Publish document", "primary"]] : [])] : []),
         clients: [["add-client", "Add Client", "primary"]],
         analytics: [["refresh", "Refresh", ""]],
-        settings: []
+        settings: businessCanPublish() ? [["save-business", "Save business identity", "primary"]] : []
       };
       target.innerHTML = (actions[view] || []).map(([action, label, style]) =>
         `<button class="button small ${style}" type="button" data-mobile-action="${action}">${escapeHTML(t(label))}</button>`
@@ -9088,6 +10270,8 @@
         });
       }
       if (view === "calendar") renderOperationalDashboard();
+      if (view === "documents") renderBusinessWorkspace();
+      if (view === "settings") renderBusinessSettings();
     }
 
     function unlockApp() {
@@ -9101,6 +10285,11 @@
         setSync("Bookings unavailable");
         $("overviewBookings").innerHTML = `<div class="empty-state"><strong>Could not load bookings.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
         $("bookingsList").innerHTML = `<div class="empty-state"><strong>Could not load booking requests.</strong>${escapeHTML(error.message || "Check admin access and API configuration.")}</div>`;
+      });
+      loadBusinessWorkspace().catch((error) => {
+        state.businessLoaded = true;
+        renderBusinessWorkspace();
+        if ($("businessIdentityNote")) $("businessIdentityNote").textContent = error.message || t("Business workspace unavailable.");
       });
       loadCommonplaceAnalytics(state.analyticsRange).catch(() => {
         state.analyticsConnected = false;
@@ -9218,6 +10407,14 @@
     $("newBookingForm").addEventListener("submit", createInternalBooking);
     $("invoiceForm").addEventListener("submit", createInvoice);
     $("customerForm").addEventListener("submit", createCustomer);
+    $("businessIdentityForm").addEventListener("submit", saveBusinessIdentity);
+    $("businessDomainForm").addEventListener("submit", saveBusinessDomain);
+    $("businessEmailForm").addEventListener("submit", saveBusinessEmail);
+
+    document.addEventListener("submit", async (event) => {
+      if (event.target.id === "businessDocumentForm") await saveBusinessDocument(event);
+      if (event.target.id === "businessPolicyForm") await saveBusinessPolicy(event);
+    });
     $("addCustomerButton").addEventListener("click", () => openCustomerDialog());
 
     $("refreshButton").addEventListener("click", () => loadBookings());
@@ -9278,7 +10475,82 @@
         if (action === "save-draft") $("saveBuilderDraft").click();
         if (action === "preview") switchWebsiteTab("preview");
         if (action === "publish-review") switchWebsiteTab("publish");
+        if (action === "save-document") $("businessDocumentForm")?.requestSubmit();
+        if (action === "publish-document" && state.selectedBusinessDocumentId) await publishBusinessDocument(state.selectedBusinessDocumentId);
+        if (action === "save-policy") $("businessPolicyForm")?.requestSubmit();
+        if (action === "add-policy") await createBusinessPolicy();
+        if (action === "save-business") {
+          const focusedForm = document.activeElement?.closest?.("#businessIdentityForm, #businessDomainForm, #businessEmailForm");
+          (focusedForm || $("businessIdentityForm"))?.requestSubmit();
+        }
         if (action === "refresh") loadBookings();
+        return;
+      }
+
+      const businessTab = event.target.closest("[data-business-tab-target]");
+      if (businessTab) {
+        state.activeBusinessTab = businessTab.dataset.businessTabTarget === "policies" ? "policies" : "documents";
+        renderBusinessWorkspace();
+        return;
+      }
+
+      const businessDocument = event.target.closest("[data-business-document-id]");
+      if (businessDocument) {
+        state.selectedBusinessDocumentId = businessDocument.dataset.businessDocumentId;
+        renderBusinessWorkspace();
+        return;
+      }
+
+      const businessPolicy = event.target.closest("[data-business-policy-id]");
+      if (businessPolicy) {
+        state.selectedBusinessPolicyId = businessPolicy.dataset.businessPolicyId;
+        renderBusinessWorkspace();
+        return;
+      }
+
+      if (event.target.closest("#addBusinessDocument")) {
+        await createBusinessDocument();
+        return;
+      }
+
+      if (event.target.closest("#addBusinessPolicy")) {
+        await createBusinessPolicy();
+        return;
+      }
+
+      const publishDocument = event.target.closest("[data-publish-business-document]");
+      if (publishDocument) {
+        await publishBusinessDocument(publishDocument.dataset.publishBusinessDocument);
+        return;
+      }
+
+      const duplicateDocument = event.target.closest("[data-duplicate-business-document]");
+      if (duplicateDocument) {
+        await duplicateBusinessDocument(duplicateDocument.dataset.duplicateBusinessDocument);
+        return;
+      }
+
+      const archiveDocument = event.target.closest("[data-archive-business-document]");
+      if (archiveDocument) {
+        await archiveBusinessDocument(archiveDocument.dataset.archiveBusinessDocument);
+        return;
+      }
+
+      const rollbackDocument = event.target.closest("[data-rollback-business-document]");
+      if (rollbackDocument) {
+        await rollbackBusinessDocument(rollbackDocument.dataset.rollbackBusinessDocument, rollbackDocument.dataset.versionId);
+        return;
+      }
+
+      const exportDocument = event.target.closest("[data-export-business-document]");
+      if (exportDocument) {
+        await exportBusinessDocument(exportDocument.dataset.exportBusinessDocument, exportDocument.dataset.versionId || "");
+        return;
+      }
+
+      const archivePolicy = event.target.closest("[data-archive-business-policy]");
+      if (archivePolicy) {
+        await archiveBusinessPolicy(archivePolicy.dataset.archiveBusinessPolicy);
         return;
       }
       const jump = event.target.closest("[data-view-jump]");
@@ -9701,6 +10973,16 @@
     });
 
     document.addEventListener("change", async (event) => {
+      if (event.target.id === "documentStatusFilter") {
+        state.documentStatusFilter = event.target.value;
+        renderBusinessDocumentList();
+        return;
+      }
+      if (event.target.closest("#businessDocumentForm")) {
+        if ($("businessDocumentStatus")) $("businessDocumentStatus").textContent = t("Unsaved document changes.");
+        renderBusinessDocumentPreview();
+        return;
+      }
       const builderField = event.target.closest("[data-builder-field]");
       if (builderField) {
         updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
@@ -9829,6 +11111,13 @@
 
     document.addEventListener("input", (event) => {
       if (event.target.closest("#invoiceForm")) updateInvoiceCalculatedTotal();
+      const businessSettingsForm = event.target.closest("#businessIdentityForm, #businessDomainForm, #businessEmailForm");
+      if (businessSettingsForm) businessSettingsForm.dataset.dirty = "true";
+      if (event.target.closest("#businessDocumentForm")) {
+        if ($("businessDocumentStatus")) $("businessDocumentStatus").textContent = t("Unsaved document changes.");
+        renderBusinessDocumentPreview();
+        return;
+      }
       const builderField = event.target.closest("[data-builder-field]");
       if (builderField) {
         updateSelectedBuilderSection(builderField.dataset.builderField, builderField.value);
@@ -9951,6 +11240,7 @@
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden && document.body.classList.contains("is-unlocked")) {
         loadBookings({ silent: true }).catch(() => {});
+        loadBusinessWorkspace().catch(() => {});
       }
     });
 
