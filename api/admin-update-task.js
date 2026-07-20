@@ -9,7 +9,7 @@ const {
   activateWorkspaceAfterVerifiedPayment,
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
-const { requireWebsiteOsSession } = require("../lib/website-os-auth");
+const { assertWebsiteOsRequestOrigin, requireWebsiteOsSession } = require("../lib/website-os-auth");
 const {
   createScopedRecord,
   getScopedRecord,
@@ -422,6 +422,10 @@ function isCommonpl4ceWorkspaceBooking(task = {}) {
   const declaredWorkspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
   if (declaredWorkspace && !["cp", "commonpl4ce"].includes(declaredWorkspace)) return false;
   return isCommonplaceBookingTask(task);
+}
+
+function belongsToWebsiteOsWorkspace(task = {}, current = {}) {
+  return Boolean(current?.workspace?.id) && clean(task.website_os_workspace_id) === clean(current.workspace.id);
 }
 
 function isWebsiteOsStatusOnlyUpdate(input = {}) {
@@ -1652,7 +1656,7 @@ async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
   const roles = action === "permanent_delete" ? ["Owner"] : ["Owner", "Admin"];
   const current = await requireWebsiteOsSession(req, { slug: "cp", roles });
   const task = await loadTask(taskId);
-  if (!task || !isCommonpl4ceWorkspaceBooking(task)) {
+  if (!task || !belongsToWebsiteOsWorkspace(task, current) || !isCommonpl4ceWorkspaceBooking(task)) {
     const error = new Error("Record not found");
     error.code = "RECORD_NOT_FOUND";
     error.statusCode = 404;
@@ -1835,9 +1839,9 @@ function assertCustomerRole(current, roles = ["Owner", "Admin"]) {
   }
 }
 
-async function loadCommonpl4ceBooking(taskId) {
+async function loadCommonpl4ceBooking(current, taskId) {
   const task = await loadTask(taskId);
-  if (!task || !isCommonpl4ceWorkspaceBooking(task)) {
+  if (!task || !belongsToWebsiteOsWorkspace(task, current) || !isCommonpl4ceWorkspaceBooking(task)) {
     const error = new Error("Booking not found in this workspace");
     error.code = "CUSTOMER_BOOKING_NOT_FOUND";
     error.statusCode = 404;
@@ -1875,7 +1879,7 @@ async function handleCommonpl4ceCustomerAction(current, input = {}) {
   const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
 
   if (operation === "create" || operation === "create_from_booking") {
-    const booking = taskId ? await loadCommonpl4ceBooking(taskId) : {};
+    const booking = taskId ? await loadCommonpl4ceBooking(current, taskId) : {};
     const candidate = normalizeCustomerInput(input, booking);
     const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
     const duplicate = duplicateCustomer(customers, candidate);
@@ -1937,7 +1941,7 @@ async function handleCommonpl4ceCustomerAction(current, input = {}) {
       error.statusCode = 404;
       throw error;
     }
-    const booking = await loadCommonpl4ceBooking(taskId);
+    const booking = await loadCommonpl4ceBooking(current, taskId);
     const bookingLink = await linkBookingToCustomer(current, customer, booking);
     return { operation, customer, bookingLink };
   }
@@ -1970,7 +1974,7 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       error.statusCode = 400;
       throw error;
     }
-    const booking = taskId ? await loadCommonpl4ceBooking(taskId) : {};
+    const booking = taskId ? await loadCommonpl4ceBooking(current, taskId) : {};
     if (["archived", "trashed", "cancelled", "rejected"].includes(booking.status)) {
       const error = new Error("Archived, trashed or cancelled bookings cannot be invoiced");
       error.code = "INVOICE_BOOKING_INELIGIBLE";
@@ -2127,7 +2131,7 @@ async function handleCommonpl4ceInvoiceAction(current, input = {}) {
       error.statusCode = 404;
       throw error;
     }
-    const pdf = buildWebsiteOsInvoicePdf(invoice);
+    const pdf = await buildWebsiteOsInvoicePdf(invoice);
     await writeAuditEvent(current, {
       entityType: "invoice",
       entityId: invoice.id,
@@ -2159,6 +2163,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
+    if (!clean(input.admin_key || req.headers["x-admin-key"])) assertWebsiteOsRequestOrigin(req);
     const authContext = await verifyAdminOrWebsiteOsSession(req, input.admin_key || req.headers["x-admin-key"]);
     if (isCommonplaceInvoiceActionRequest(input)) {
       if (authContext.mode !== "website_os" || !authContext.current) {
@@ -2232,7 +2237,7 @@ module.exports = async function handler(req, res) {
         });
       }
       const scopedTask = await loadTask(taskId);
-      if (!scopedTask || !isCommonplaceTask(scopedTask)) {
+      if (!scopedTask || !belongsToWebsiteOsWorkspace(scopedTask, authContext.current) || !isCommonplaceTask(scopedTask)) {
         return send(res, 404, {
           success: false,
           error: "Task not found",

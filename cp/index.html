@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -6,6 +6,12 @@
   <title>COMMONPL4CE | Campaign Archive</title>
   <meta name="description" content="CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
   <meta name="robots" content="noindex, nofollow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="COMMONPL4CE | Campaign Archive">
+  <meta property="og:description" content="CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.">
+  <meta property="og:url" content="https://doneovernight.com/cp">
+  <meta property="og:image" content="https://doneovernight.com/assets/common-place/fullscreen/slide-01-opening.jpg">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://doneovernight.com/cp">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/common-place/final/cp-favicon-32.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/common-place/final/cp-favicon-96.png">
@@ -32,6 +38,9 @@
       --type-body-size: clamp(17px, 1.45vw, 22px);
       --type-body-line: 1.34;
       --type-display-weight: 850;
+      --section-spacing: 120px;
+      --content-width: 1180px;
+      --button-radius: 0px;
       --archive-x: 0px;
       --archive-height: 100vh;
       --wordmark-opacity: 1;
@@ -222,6 +231,20 @@
       min-height: 0;
       background: var(--black);
     }
+    .archive-line {
+      position: absolute;
+      z-index: 4;
+      left: clamp(18px, 4vw, 58px);
+      bottom: clamp(20px, 4vw, 52px);
+      max-width: 42ch;
+      margin: 0;
+      color: rgba(245,241,234,.72);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.5;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
     .archive-pin {
       position: sticky;
       top: 0;
@@ -300,7 +323,7 @@
     }
     .light-section,
     .dark-section {
-      padding: clamp(78px, 12vw, 176px) clamp(20px, 8vw, 140px);
+      padding: clamp(78px, var(--section-spacing), 220px) clamp(20px, 8vw, 140px);
     }
     .dark-section {
       background: var(--ink);
@@ -312,7 +335,7 @@
       align-items: center;
     }
     .section-inner {
-      width: min(100%, 1180px);
+      width: min(100%, var(--content-width));
       margin: 0 auto;
     }
     .narrow {
@@ -381,6 +404,12 @@
       text-transform: uppercase;
     }
     .text-cta:hover { opacity: .6; }
+    body[data-button-style="outline"] .text-cta,
+    body[data-button-style="solid"] .text-cta { border: 1px solid currentColor; padding: 12px 16px; border-radius: var(--button-radius); }
+    body[data-button-style="solid"] .text-cta { background: currentColor; color: var(--black); }
+
+    @media (min-width: 768px) { .archive-frame[data-desktop-hidden="true"] { display: none; } }
+    @media (max-width: 767px) { .archive-frame[data-mobile-hidden="true"] { display: none; } }
 
     .editorial-grid {
       display: grid;
@@ -668,6 +697,36 @@
       line-height: 1.25;
       text-transform: uppercase;
     }
+
+    .cp-newsletter { display: grid; place-items: center; text-align: center; padding-top: clamp(76px, 10vw, 138px); padding-bottom: clamp(76px, 10vw, 138px); }
+    .cp-newsletter-card { width: min(100%, 560px); display: grid; gap: 18px; justify-items: center; }
+    .cp-newsletter-form { width: min(100%, 420px); display: none; gap: 12px; }
+    .cp-newsletter.is-open .cp-newsletter-form,
+    .cp-newsletter-popup.is-open .cp-newsletter-form { display: grid; }
+    .cp-newsletter.is-open .cp-newsletter-toggle,
+    .cp-newsletter-popup.is-open .cp-newsletter-toggle { display: none; }
+    .cp-newsletter-status { min-height: 1.4em; margin: 0; color: var(--muted); font-size: var(--type-label-size); font-weight: var(--type-label-weight); letter-spacing: .12em; line-height: 1.5; text-transform: uppercase; }
+    .cp-newsletter.is-success .cp-newsletter-form,
+    .cp-newsletter.is-success .cp-newsletter-toggle,
+    .cp-newsletter-popup.is-success .cp-newsletter-form,
+    .cp-newsletter-popup.is-success .cp-newsletter-toggle { display: none; }
+    .cp-newsletter-popup { position: fixed; right: clamp(16px, 2.4vw, 28px); bottom: clamp(16px, 2.4vw, 28px); z-index: 70; width: min(calc(100vw - 32px), 390px); opacity: 0; pointer-events: none; transform: translate3d(26px, 42px, 0); transition: opacity .38s ease, transform .38s ease; will-change: opacity, transform; }
+    .cp-newsletter-popup.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .cp-newsletter-popup.is-exiting { opacity: 0; pointer-events: none; transform: translate3d(26px, 42px, 0); }
+    .cp-newsletter-popup.is-success { pointer-events: none; }
+    .cp-newsletter-popup-card { border: 1px solid rgba(248,244,235,.16); border-radius: 18px; background: linear-gradient(140deg, rgba(248,244,235,.13), rgba(248,244,235,.04)), rgba(18,17,15,.82); box-shadow: 0 24px 80px rgba(0,0,0,.28); backdrop-filter: blur(20px); color: var(--paper); display: grid; gap: 12px; padding: 16px; }
+    .cp-newsletter-popup-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .cp-newsletter-popup .kicker { color: rgba(248,244,235,.58); margin: 0; }
+    .cp-newsletter-popup .field { border-color: rgba(248,244,235,.2); color: var(--paper); }
+    .cp-newsletter-popup .step-label,
+    .cp-newsletter-popup .cp-newsletter-status { color: rgba(248,244,235,.64); }
+    .cp-newsletter-popup-dismiss { width: 44px; height: 44px; border: 1px solid rgba(248,244,235,.14); border-radius: 999px; background: rgba(248,244,235,.06); color: rgba(248,244,235,.7); cursor: pointer; font-size: 20px; line-height: 1; }
+    .cp-newsletter-popup-dismiss:hover,
+    .cp-newsletter-popup-dismiss:focus-visible { border-color: rgba(248,244,235,.28); background: rgba(248,244,235,.1); color: var(--paper); }
+    .cp-newsletter-popup .cp-newsletter-form { width: 100%; }
+
+    @media (max-width: 640px) { .cp-newsletter-popup { right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); width: calc(100vw - 28px); } }
+    @media (prefers-reduced-motion: reduce) { .cp-newsletter-popup, .cp-newsletter-popup.is-exiting { transition: none; transform: none; } }
 
     .editorial-questions {
       background: var(--light);
@@ -1006,6 +1065,32 @@
       border-color: rgba(237,230,216,.2);
       background: transparent;
     }
+    .calendar-day.is-unavailable {
+      color: rgba(237,230,216,.32);
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .booking-unavailable {
+      max-width: 660px;
+      margin-top: 34px;
+      padding: 28px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .booking-unavailable h3 { margin: 0 0 12px; color: var(--paper); font-size: 24px; }
+    .booking-unavailable p { margin: 0 0 20px; color: var(--muted); line-height: 1.6; }
+    .cp-managed-section .section-inner { display: grid; gap: 24px; }
+    .cp-managed-section .managed-copy { display: grid; gap: 18px; max-width: 780px; }
+    .cp-managed-section .managed-copy p { margin: 0; white-space: pre-line; }
+    .cp-managed-section .managed-media { width: 100%; max-height: 78vh; object-fit: cover; }
+    .cp-managed-section.is-two-column .section-inner { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; }
+    .cp-managed-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .cp-managed-gallery img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; }
+    .cp-managed-divider { min-height: 1px; padding-block: clamp(48px, 9vw, 110px); }
+    .cp-managed-divider::after { content: ""; display: block; width: min(1180px, calc(100% - 48px)); height: 1px; margin: auto; background: var(--line); }
+    @media (max-width: 760px) {
+      .cp-managed-section.is-two-column .section-inner, .cp-managed-gallery { grid-template-columns: 1fr; }
+    }
     .form-success,
     .form-error {
       display: none;
@@ -1172,6 +1257,7 @@
       letter-spacing: var(--type-label-tracking);
       text-transform: uppercase;
     }
+    .footer-managed-text { margin: 8px 0 0; max-width: 42ch; color: rgba(245,241,234,.42); font-size: 10px; line-height: 1.5; }
     .footer-credit {
       display: grid;
       gap: 8px;
@@ -1304,6 +1390,15 @@
       }
     }
 
+    @media (max-width: 340px) {
+      .section-title {
+        max-width: 100%;
+        font-size: 34px;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .intro-backdrop,
@@ -1358,6 +1453,114 @@
     })();
   </script>
 
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (path !== '/cp') return;
+      const sessionKey = 'commonpl4ce_analytics_session';
+      const sessionId = sessionStorage.getItem(sessionKey) || (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+      sessionStorage.setItem(sessionKey, sessionId);
+      const configPromise = window.__commonplaceConfigPromise || fetch('/api/task-submit?commonpl4ce_site_config=1', { cache: 'no-store', credentials: 'same-origin' })
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .catch(function () { return null; });
+      window.__commonplaceConfigPromise = configPromise;
+
+      function track(eventType, metadata) {
+        if (window.__commonplaceAnalyticsEnabled === false) return;
+        fetch('/api/track-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ action: 'track_event', source: 'commonpl4ce', event_type: eventType, path, session_id: sessionId, metadata: metadata || {} }),
+          keepalive: true
+        }).catch(function () {});
+      }
+      window.commonpl4ceTrack = track;
+
+      function boot(data) {
+        window.__commonplaceAnalyticsEnabled = data?.config?.siteSettings?.integrations?.analyticsEnabled !== false;
+        if (window.__commonplaceAnalyticsEnabled === false) return;
+        track('page_view');
+        const ready = function () {
+          const seenDepths = new Set();
+          function checkScrollDepth() {
+            const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+            const depth = Math.min(100, Math.round((window.scrollY / scrollable) * 100));
+            [25, 50, 75, 100].forEach(function (mark) { if (depth >= mark && !seenDepths.has(mark)) { seenDepths.add(mark); track('scroll_depth', { depth: String(mark) }); } });
+            if (seenDepths.size === 4) window.removeEventListener('scroll', checkScrollDepth);
+          }
+          window.addEventListener('scroll', checkScrollDepth, { passive: true });
+          checkScrollDepth();
+          document.querySelectorAll('[data-cp-booking-link]').forEach(function (link) { link.addEventListener('click', function () { track('book_cta_click', { label: link.textContent || 'Book' }); }); });
+          const observer = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) { if (!entry.isIntersecting) return; observer.unobserve(entry.target); if (entry.target.id === 'archive') track('hero_view'); if (entry.target.id === 'booker-station') track('booker_station_view'); if (entry.target.dataset.projectSection) track('project_section_view', { section: entry.target.dataset.projectSection }); });
+          }, { threshold: .38 }) : null;
+          if (observer) { ['archive', 'booker-station'].forEach(function (id) { const element = document.getElementById(id); if (element) observer.observe(element); }); document.querySelectorAll('[data-project-section]').forEach(function (element) { observer.observe(element); }); }
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true }); else ready();
+      }
+      configPromise.then(boot);
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (path !== '/cp') return;
+      const popupStorageKey = 'commonpl4ce_newsletter_popup_state_v1';
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const exitDelay = reducedMotion ? 0 : 430;
+      const ready = function () {
+        const popup = document.querySelector('[data-newsletter-popup]');
+        let popupVisible = false;
+        let popupClosing = false;
+        let successTimer = 0;
+        let exitTimer = 0;
+        let revealTimer = 0;
+        function track(type, metadata) { if (typeof window.commonpl4ceTrack === 'function') window.commonpl4ceTrack(type, metadata); }
+        function closePopup(target, reason) {
+          if (!target || popupClosing) return;
+          popupClosing = true;
+          clearTimeout(successTimer); clearTimeout(revealTimer);
+          target.classList.add('is-exiting'); target.classList.remove('is-visible');
+          if (reason) try { localStorage.setItem(popupStorageKey, reason); } catch (error) {}
+          window.removeEventListener('scroll', checkPopupScroll);
+          clearTimeout(exitTimer);
+          exitTimer = window.setTimeout(function () { target.hidden = true; target.classList.remove('is-visible', 'is-exiting', 'is-open'); popupVisible = false; popupClosing = false; }, exitDelay);
+        }
+        document.querySelectorAll('[data-cp-newsletter]').forEach(function (root) {
+          const toggle = root.querySelector('[data-newsletter-toggle]');
+          const form = root.querySelector('[data-newsletter-form]');
+          const email = root.querySelector('[data-newsletter-email]');
+          const status = root.querySelector('[data-newsletter-status]');
+          const isPopup = root.hasAttribute('data-newsletter-popup');
+          toggle?.addEventListener('click', function () { if (root.classList.contains('is-success')) return; root.classList.add('is-open'); if (status) status.textContent = ''; track('newsletter_start', { section: isPopup ? 'popup' : 'section' }); window.setTimeout(function () { email?.focus(); }, 60); });
+          root.querySelector('[data-newsletter-dismiss]')?.addEventListener('click', function () { closePopup(root, 'dismissed'); });
+          form?.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            if (root.classList.contains('is-success') || form.dataset.submitting === 'true') return;
+            const value = String(email?.value || '').trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { if (status) status.textContent = 'Please add a valid email.'; return; }
+            form.dataset.submitting = 'true'; root.querySelectorAll('button,input').forEach(function (control) { control.disabled = true; }); track('newsletter_submit', { section: isPopup ? 'popup' : 'section' });
+            try {
+              const response = await fetch('/api/task-submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ action: 'commonpl4ce_newsletter_signup', source: 'commonpl4ce_newsletter', intakeVersion: 'commonpl4ce_newsletter_v1', email: value, path, consent: 'cp_newsletter_v1' }) });
+              const result = await response.json().catch(function () { return {}; });
+              if (!response.ok || result.success !== true) throw new Error(result.error || 'Newsletter is not connected yet.');
+              root.classList.add('is-success'); if (status) status.textContent = 'Thank you. You’re on the list.'; track('newsletter_success', { section: isPopup ? 'popup' : 'section' });
+              if (isPopup) { try { localStorage.setItem(popupStorageKey, 'success'); } catch (error) {} successTimer = window.setTimeout(function () { closePopup(root, 'success'); }, 2800); }
+            } catch (error) { form.dataset.submitting = 'false'; root.querySelectorAll('button,input').forEach(function (control) { control.disabled = false; }); if (status) status.textContent = error.message || 'Newsletter is not connected yet.'; }
+          });
+        });
+        if (!popup || document.documentElement.dataset.newsletterEnabled === 'false') return;
+        try { if (localStorage.getItem(popupStorageKey)) return; } catch (error) {}
+        function showPopup() { if (document.documentElement.dataset.newsletterEnabled === 'false' || popupVisible || popupClosing) return; popupVisible = true; popup.classList.remove('is-exiting'); popup.hidden = false; clearTimeout(revealTimer); revealTimer = window.setTimeout(function () { popup.classList.add('is-visible'); }, reducedMotion ? 0 : 20); window.removeEventListener('scroll', checkPopupScroll); }
+        function checkPopupScroll() { const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); if (window.scrollY / scrollable >= .35) showPopup(); }
+        window.addEventListener('scroll', checkPopupScroll, { passive: true });
+        window.setTimeout(showPopup, 8000); checkPopupScroll();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true }); else ready();
+    })();
+  </script>
+
   <header class="site-header" id="siteHeader" aria-label="COMMONPL4CE">
     <div class="header-brand">
       <a href="/cp" aria-label="COMMONPL4CE home">
@@ -1366,6 +1569,15 @@
     </div>
     <a class="book-link" href="https://doneovernight.com/cp-book" data-cp-booking-link>Book</a>
   </header>
+
+  <aside class="cp-newsletter-popup" data-cp-newsletter data-newsletter-popup hidden aria-label="COMMONPL4CE newsletter popup">
+    <div class="cp-newsletter-popup-card">
+      <div class="cp-newsletter-popup-top"><p class="kicker">Newsletter</p><button class="cp-newsletter-popup-dismiss" type="button" data-newsletter-dismiss aria-label="Dismiss newsletter popup">×</button></div>
+      <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+      <form class="cp-newsletter-form" data-newsletter-form><label class="step"><span class="step-label">Email</span><input class="field" data-newsletter-email type="email" inputmode="email" autocomplete="email" required></label><button class="cal-button" type="submit">Join</button></form>
+      <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
+    </div>
+  </aside>
 
   <main id="top">
     <script type="application/json" id="archive-filename-order">
@@ -1394,6 +1606,7 @@
     <section class="archive-scroll" id="archive" aria-label="Campaign archive" data-cp-section="hero">
       <div class="archive-pin">
       <img class="archive-wordmark" id="archiveWordmark" src="/assets/common-place/final/wordmark-intro-commonpl4ce.png" alt="COMMONPL4CE">
+        <p class="archive-line">Available for campaigns, editorials and selected brand projects.</p>
         <div class="archive-rail" id="archiveRail">
           <figure class="archive-frame slide--opening"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-01-opening.jpg"><img src="/assets/common-place/mobile/slide-01-mobile.jpg" alt="Romy standing with her back toward the camera" loading="eager" decoding="async" fetchpriority="high"></picture></figure>
           <figure class="archive-frame slide--yellow"><picture><source media="(min-width: 768px)" srcset="/assets/common-place/fullscreen/slide-02-yellow.jpg"><img src="/assets/common-place/mobile/slide-02-mobile.jpg" alt="Yellow sweater portrait on film" loading="eager" decoding="async"></picture></figure>
@@ -1461,7 +1674,7 @@
           </div>
 
           <div class="novateur-slider-wrap">
-            <div class="novateur-slider" id="novateurSlider" aria-label="Selected client campaign images">
+            <div class="novateur-slider" id="novateurSlider" role="group" aria-label="Selected client campaign images">
               <figure class="novateur-slide is-wide"><img src="/assets/common-place/novateur/novateur-client-01.jpg" alt="Novateur campaign image 01" loading="lazy" decoding="async"></figure>
               <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-02.jpg" alt="Novateur campaign image 02" loading="lazy" decoding="async"></figure>
               <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-03.jpg" alt="Novateur campaign image 03" loading="lazy" decoding="async"></figure>
@@ -1480,13 +1693,13 @@
               <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-16.jpg" alt="Novateur campaign image 16" loading="lazy" decoding="async"></figure>
               <figure class="novateur-slide"><img src="/assets/common-place/novateur/novateur-client-17.jpg" alt="Novateur campaign image 17" loading="lazy" decoding="async"></figure>
             </div>
-            <div class="slider-controls" aria-hidden="true">
+            <div class="slider-controls">
               <button class="novateur-prev" type="button" aria-label="Previous Novateur image">‹</button>
               <button class="novateur-next" type="button" aria-label="Next Novateur image">›</button>
             </div>
           </div>
-          <div class="novateur-film" aria-label="Novateur campaign film">
-            <video autoplay muted loop playsinline preload="metadata">
+          <div class="novateur-film" role="group" aria-label="Novateur campaign film">
+            <video muted loop playsinline preload="metadata">
               <source src="/assets/common-place/novateur/novateur-campaign-film.mp4" type="video/mp4">
             </video>
           </div>
@@ -1585,7 +1798,7 @@
                 <span class="question-text">What kind of projects do you usually work on?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-1" role="region" aria-labelledby="question-trigger-1" aria-hidden="false">
+              <div class="question-panel" id="question-panel-1" role="group" aria-labelledby="question-trigger-1" aria-hidden="false">
                 <div class="question-panel-inner">
                   <p>We work with fashion labels, creative brands, founders, restaurants, campaigns, products, editorial projects and people who care deeply about visual identity.</p>
                 </div>
@@ -1598,7 +1811,7 @@
                 <span class="question-text">Do I need a complete concept before contacting you?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-2" role="region" aria-labelledby="question-trigger-2" aria-hidden="true">
+              <div class="question-panel" id="question-panel-2" role="group" aria-labelledby="question-trigger-2" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Not at all.</p>
                   <p>Some projects begin with a finished campaign.</p>
@@ -1614,7 +1827,7 @@
                 <span class="question-text">How does a project usually work?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-3" role="region" aria-labelledby="question-trigger-3" aria-hidden="true">
+              <div class="question-panel" id="question-panel-3" role="group" aria-labelledby="question-trigger-3" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Every project starts with understanding the goal.</p>
                   <p>From there we plan the creative direction, prepare production, shoot, edit and deliver.</p>
@@ -1629,7 +1842,7 @@
                 <span class="question-text">How long does delivery take?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-4" role="region" aria-labelledby="question-trigger-4" aria-hidden="true">
+              <div class="question-panel" id="question-panel-4" role="group" aria-labelledby="question-trigger-4" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Every production is different.</p>
                   <p>Smaller shoots can often be delivered much faster than larger campaigns.</p>
@@ -1644,7 +1857,7 @@
                 <span class="question-text">Why invest in professional photography?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-5" role="region" aria-labelledby="question-trigger-5" aria-hidden="true">
+              <div class="question-panel" id="question-panel-5" role="group" aria-labelledby="question-trigger-5" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Photography often creates the first impression people have of your business.</p>
                   <p>Strong imagery builds trust, consistency and a visual identity that lasts far beyond a single campaign.</p>
@@ -1658,7 +1871,7 @@
                 <span class="question-text">Can you travel?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-6" role="region" aria-labelledby="question-trigger-6" aria-hidden="true">
+              <div class="question-panel" id="question-panel-6" role="group" aria-labelledby="question-trigger-6" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Yes.</p>
                   <p>Projects are not limited by location.</p>
@@ -1673,7 +1886,7 @@
                 <span class="question-text">How is pricing determined?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-7" role="region" aria-labelledby="question-trigger-7" aria-hidden="true">
+              <div class="question-panel" id="question-panel-7" role="group" aria-labelledby="question-trigger-7" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>Every production is built around the project itself.</p>
                   <p>Instead of forcing predefined packages, each proposal reflects the creative direction, preparation, production and delivery required.</p>
@@ -1687,7 +1900,7 @@
                 <span class="question-text">What happens after I book?</span>
                 <span class="question-mark" aria-hidden="true"></span>
               </button>
-              <div class="question-panel" id="question-panel-8" role="region" aria-labelledby="question-trigger-8" aria-hidden="true">
+              <div class="question-panel" id="question-panel-8" role="group" aria-labelledby="question-trigger-8" aria-hidden="true">
                 <div class="question-panel-inner">
                   <p>You'll receive confirmation.</p>
                   <p>We discuss the creative direction.</p>
@@ -1757,9 +1970,9 @@
             <input class="field" id="preferredDate" name="preferred-date" type="text" placeholder="Select a date below" required>
           </fieldset>
           <p class="cal-note">Select a preferred shoot date.</p>
-          <div class="calendar" aria-label="Calendar date selector">
+          <div class="calendar" role="group" aria-label="Calendar date selector">
             <div class="calendar-head">
-              <h3 class="calendar-title" id="calendarTitle"></h3>
+              <h3 class="calendar-title" id="calendarTitle">Calendar</h3>
               <div class="calendar-nav">
                 <button type="button" id="calendarPrev" aria-label="Previous month">‹</button>
                 <button type="button" id="calendarNext" aria-label="Next month">›</button>
@@ -1795,6 +2008,18 @@
     </div>
   </main>
 
+  <section class="dark-section cp-newsletter" data-cp-newsletter aria-label="COMMONPL4CE newsletter">
+    <div class="cp-newsletter-card">
+      <p class="kicker">Newsletter</p>
+      <button class="cal-button cp-newsletter-toggle" type="button" data-newsletter-toggle>Join the CP newsletter</button>
+      <form class="cp-newsletter-form" data-newsletter-form>
+        <label class="step"><span class="step-label">Email</span><input class="field" data-newsletter-email type="email" inputmode="email" autocomplete="email" required></label>
+        <button class="cal-button" type="submit">Join</button>
+      </form>
+      <p class="cp-newsletter-status" data-newsletter-status aria-live="polite"></p>
+    </div>
+  </section>
+
   <footer class="footer" data-cp-section="footer">
     <img class="footer-wordmark" src="/assets/common-place/final/wordmark.png" alt="COMMONPL4CE">
     <div class="footer-brand">
@@ -1815,6 +2040,7 @@
         </a>
       </nav>
       <p class="footer-availability">Available worldwide</p>
+      <p class="footer-managed-text">COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT</p>
     </div>
     <a class="footer-credit" href="https://ask.doneovernight.com">
       <span>Powered by</span>
@@ -1829,6 +2055,67 @@
       const all = (selector, root) => Array.from((root || document).querySelectorAll(selector));
       const setText = (root, selector, value) => { const node = one(selector, root); if (node && typeof value === 'string') node.textContent = value; };
       const paragraphs = (value) => String(value || '').split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+      const safePublicUrl = (value, fallback = '') => {
+        const candidate = String(value || '').trim();
+        if (!candidate) return fallback;
+        if ((candidate.startsWith('/') && !candidate.startsWith('//')) || candidate.startsWith('#')) return candidate;
+        try {
+          const parsed = new URL(candidate, window.location.origin);
+          if (parsed.protocol === 'https:' || parsed.protocol === 'mailto:' || parsed.protocol === 'tel:') return candidate;
+        } catch (error) {}
+        return fallback;
+      };
+
+      function upsertMeta(selector, attributes) {
+        let node = document.head.querySelector(selector);
+        if (!node) { node = document.createElement('meta'); document.head.appendChild(node); }
+        Object.entries(attributes).forEach(function (entry) { node.setAttribute(entry[0], entry[1]); });
+      }
+
+      function applySiteSettings(config) {
+        const settings = config.siteSettings && typeof config.siteSettings === 'object' ? config.siteSettings : {};
+        const design = settings.design || {};
+        const branding = settings.branding || {};
+        const navigation = settings.navigation || {};
+        const seo = settings.seo || {};
+        const integrations = settings.integrations || {};
+        const contact = settings.contact || {};
+        const root = document.documentElement;
+        const safeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
+        const fontStack = (value, fallback) => ({ Inter: 'Inter, ui-sans-serif, system-ui, sans-serif', Arial: 'Arial, sans-serif', Georgia: 'Georgia, serif', 'Times New Roman': '"Times New Roman", serif' }[value] || fallback);
+        root.style.setProperty('--black', safeColor(design.background, '#060606'));
+        root.style.setProperty('--ink', safeColor(design.surface, '#0a0a09'));
+        root.style.setProperty('--paper', safeColor(design.paper, '#ede6d8'));
+        root.style.setProperty('--light', safeColor(design.light, '#f1eadc'));
+        root.style.setProperty('--light-ink', safeColor(design.lightInk, '#080807'));
+        root.style.setProperty('--sans', fontStack(design.displayFont, 'Inter, ui-sans-serif, system-ui, sans-serif'));
+        root.style.setProperty('--serif', fontStack(design.bodyFont, 'Georgia, serif'));
+        root.style.setProperty('--type-display-weight', String(Math.min(900, Math.max(400, Number(design.displayWeight) || 850))));
+        root.style.setProperty('--type-body-size', `${Math.min(26, Math.max(15, Number(design.bodySize) || 20))}px`);
+        root.style.setProperty('--type-body-line', String(Math.min(1.8, Math.max(1.1, Number(design.bodyLineHeight) || 1.34))));
+        root.style.setProperty('--section-spacing', `${Math.min(220, Math.max(56, Number(design.sectionSpacing) || 120))}px`);
+        root.style.setProperty('--content-width', `${Math.min(1440, Math.max(760, Number(design.contentWidth) || 1180))}px`);
+        root.style.setProperty('--button-radius', `${Math.min(24, Math.max(0, Number(design.radius) || 0))}px`);
+        document.body.dataset.buttonStyle = ['underline', 'outline', 'solid'].includes(design.buttonStyle) ? design.buttonStyle : 'underline';
+        const headerLogo = one('.header-logo'); if (headerLogo) headerLogo.src = safePublicUrl(branding.headerLogo, headerLogo.src);
+        const footerLogo = one('.footer-wordmark'); if (footerLogo) footerLogo.src = safePublicUrl(branding.footerLogo, footerLogo.src);
+        const favicon = document.head.querySelector('link[rel="icon"]'); if (favicon) favicon.href = safePublicUrl(branding.favicon, favicon.href);
+        const bookLink = one('.book-link'); if (bookLink) { bookLink.textContent = navigation.bookingLabel || 'Book'; bookLink.href = safePublicUrl(navigation.bookingUrl, 'https://doneovernight.com/cp-book'); }
+        if (seo.title) document.title = seo.title;
+        const description = document.head.querySelector('meta[name="description"]'); if (description && seo.description) description.content = seo.description;
+        const robots = document.head.querySelector('meta[name="robots"]'); if (robots) robots.content = seo.robots === 'index, follow' ? 'index, follow' : 'noindex, nofollow';
+        const canonical = document.head.querySelector('link[rel="canonical"]'); if (canonical) canonical.href = safePublicUrl(seo.canonical, 'https://doneovernight.com/cp');
+        upsertMeta('meta[property="og:title"]', { property: 'og:title', content: seo.title || document.title });
+        upsertMeta('meta[property="og:description"]', { property: 'og:description', content: seo.description || '' });
+        upsertMeta('meta[property="og:url"]', { property: 'og:url', content: safePublicUrl(seo.canonical, 'https://doneovernight.com/cp') });
+        upsertMeta('meta[property="og:image"]', { property: 'og:image', content: safePublicUrl(branding.socialImage, '/assets/common-place/fullscreen/slide-01-opening.jpg') });
+        const footerLinks = all('.footer-contact a');
+        if (footerLinks[0]) { footerLinks[0].href = safePublicUrl(contact.socialUrl, footerLinks[0].href); footerLinks[0].setAttribute('aria-label', `COMMONPL4CE ${contact.socialLabel || 'social'}`); }
+        if (footerLinks[1] && contact.email) footerLinks[1].href = safePublicUrl(`mailto:${contact.email}`, footerLinks[1].href);
+        all('[data-cp-newsletter]').forEach(function (node) { node.hidden = integrations.newsletterEnabled === false; });
+        document.documentElement.dataset.newsletterEnabled = integrations.newsletterEnabled === false ? 'false' : 'true';
+        window.__commonplaceAnalyticsEnabled = integrations.analyticsEnabled !== false;
+      }
 
       function sectionMap(config) {
         return new Map((Array.isArray(config.sections) ? config.sections : []).map((section) => [section.id, section]));
@@ -1843,10 +2130,11 @@
           const mobileSlot = mobile[index];
           const source = one('source', frame);
           const image = one('img', frame);
-          if (source && desktopSlot && desktopSlot.src && desktopSlot.status !== 'Hidden') source.srcset = desktopSlot.src;
-          if (image && mobileSlot && mobileSlot.src && mobileSlot.status !== 'Hidden') image.src = mobileSlot.src;
+          if (source && desktopSlot && desktopSlot.src && desktopSlot.status !== 'Hidden') source.srcset = safePublicUrl(desktopSlot.src, source.srcset);
+          if (image && mobileSlot && mobileSlot.src && mobileSlot.status !== 'Hidden') image.src = safePublicUrl(mobileSlot.src, image.src);
           if (image) image.alt = (mobileSlot && mobileSlot.alt) || (desktopSlot && desktopSlot.alt) || image.alt;
-          frame.hidden = desktopSlot && mobileSlot && desktopSlot.status === 'Hidden' && mobileSlot.status === 'Hidden';
+          frame.dataset.desktopHidden = desktopSlot && desktopSlot.status === 'Hidden' ? 'true' : 'false';
+          frame.dataset.mobileHidden = mobileSlot && mobileSlot.status === 'Hidden' ? 'true' : 'false';
         });
         window.dispatchEvent(new Event('resize'));
       }
@@ -1878,7 +2166,7 @@
           const question = document.createElement('span'); question.className = 'question-text'; question.textContent = item.question || '';
           const mark = document.createElement('span'); mark.className = 'question-mark'; mark.setAttribute('aria-hidden', 'true');
           trigger.append(number, question, mark);
-          const panel = document.createElement('div'); panel.className = 'question-panel'; panel.id = `question-panel-${index + 1}`; panel.setAttribute('role', 'region'); panel.setAttribute('aria-labelledby', trigger.id); panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+          const panel = document.createElement('div'); panel.className = 'question-panel'; panel.id = `question-panel-${index + 1}`; panel.setAttribute('role', 'group'); panel.setAttribute('aria-labelledby', trigger.id); panel.setAttribute('aria-hidden', open ? 'false' : 'true');
           const inner = document.createElement('div'); inner.className = 'question-panel-inner';
           paragraphs(item.answer).forEach(function (text) { const p = document.createElement('p'); p.textContent = text; inner.appendChild(p); });
           panel.appendChild(inner); article.append(trigger, panel); list.appendChild(article);
@@ -1886,13 +2174,77 @@
         const closing = document.createElement('div'); closing.className = 'questions-closing';
         const label = document.createElement('p'); label.className = 'questions-label'; label.textContent = section.closingKicker || '';
         const body = document.createElement('p'); body.textContent = section.closingBody || '';
-        const link = document.createElement('a'); link.className = 'questions-cta'; link.href = section.ctaLink || 'mailto:book@commonpl4ce.com'; link.textContent = section.ctaLabel || 'Ask COMMONPL4CE';
+        const link = document.createElement('a'); link.className = 'questions-cta'; link.href = safePublicUrl(section.ctaLink, 'mailto:book@commonpl4ce.com'); link.textContent = section.ctaLabel || 'Ask COMMONPL4CE';
         closing.append(label, body, link); list.appendChild(closing);
         if (typeof window.initCommonplaceFaq === 'function') window.initCommonplaceFaq();
       }
 
+      function renderManagedSection(section) {
+        const type = String(section.type || 'Text block').toLowerCase();
+        if (type.includes('divider') || type.includes('spacer')) {
+          const divider = document.createElement('section');
+          divider.className = 'cp-managed-divider';
+          divider.dataset.cpSection = section.id;
+          divider.dataset.cpDynamicSection = 'true';
+          divider.setAttribute('aria-label', section.name || 'Divider');
+          return divider;
+        }
+        const root = document.createElement('section');
+        const dark = type.includes('full-screen') || type.includes('testimonial') || type.includes('booking');
+        root.className = `${dark ? 'dark-section' : 'light-section'} cp-managed-section${type.includes('two-column') ? ' is-two-column' : ''}`;
+        root.dataset.cpSection = section.id;
+        root.dataset.cpDynamicSection = 'true';
+        const inner = document.createElement('div');
+        inner.className = 'section-inner';
+        const copy = document.createElement('div');
+        copy.className = 'managed-copy';
+        if (section.kicker) { const kicker = document.createElement('p'); kicker.className = 'kicker'; kicker.textContent = section.kicker; copy.appendChild(kicker); }
+        if (section.heading) { const heading = document.createElement('h2'); heading.className = 'section-title'; heading.textContent = section.heading; copy.appendChild(heading); }
+        [section.body, section.secondaryBody].filter(Boolean).forEach(function (value) { const body = document.createElement('p'); body.className = 'body-copy'; body.textContent = value; copy.appendChild(body); });
+        if (section.ctaLabel && section.ctaLink) { const cta = document.createElement('a'); cta.className = 'text-cta'; cta.href = safePublicUrl(section.ctaLink, '#'); cta.textContent = section.ctaLabel; copy.appendChild(cta); }
+        inner.appendChild(copy);
+        const primaryImage = safePublicUrl(section.desktopImage || section.mobileImage, '');
+        if (primaryImage) {
+          const picture = document.createElement('picture');
+          if (section.mobileImage) { const source = document.createElement('source'); source.media = '(max-width: 767px)'; source.srcset = safePublicUrl(section.mobileImage, primaryImage); picture.appendChild(source); }
+          const image = document.createElement('img'); image.className = 'managed-media'; image.src = primaryImage; image.alt = section.alt || ''; image.loading = 'lazy'; image.decoding = 'async'; picture.appendChild(image); inner.appendChild(picture);
+        }
+        const gallery = Array.isArray(section.gallery) ? section.gallery : [];
+        if (gallery.length) {
+          const grid = document.createElement('div'); grid.className = 'cp-managed-gallery';
+          gallery.forEach(function (item) { const image = document.createElement('img'); image.src = safePublicUrl(item.src || item.path, ''); image.alt = item.alt || ''; image.loading = 'lazy'; image.decoding = 'async'; grid.appendChild(image); });
+          inner.appendChild(grid);
+        }
+        root.appendChild(inner);
+        return root;
+      }
+
+      function syncSectionStructure(config) {
+        const sections = Array.isArray(config.sections) ? config.sections : [];
+        if (!sections.length) return;
+        const vertical = one('main .vertical');
+        if (!vertical) return;
+        all('[data-cp-dynamic-section="true"]').forEach((node) => node.remove());
+        const configured = new Set(sections.map((section) => section.id));
+        all('[data-cp-section]').forEach(function (node) {
+          if (['hero', 'footer'].includes(node.dataset.cpSection)) return;
+          if (!configured.has(node.dataset.cpSection)) node.hidden = true;
+        });
+        sections.forEach(function (section) {
+          if (!section || ['hero', 'footer'].includes(section.id)) return;
+          let node = one(`[data-cp-section="${CSS.escape(section.id)}"]`);
+          if (!node) node = renderManagedSection(section);
+          node.hidden = section.enabled === false || section.visibility === 'Disabled';
+          vertical.appendChild(node);
+        });
+      }
+
       function applySections(config) {
+        syncSectionStructure(config);
         const sections = sectionMap(config);
+        const content = config.content && typeof config.content === 'object' ? config.content : {};
+        setText(document, '.archive-line', content.heroLine);
+        setText(document, '.footer-managed-text', content.footerText);
         all('[data-cp-section]').forEach(function (node) {
           const section = sections.get(node.dataset.cpSection);
           if (section) node.hidden = section.enabled === false || section.visibility === 'Disabled';
@@ -1917,27 +2269,27 @@
         const project = sections.get('novateur'); const projectRoot = one('[data-cp-section="novateur"]');
         if (project && projectRoot) {
           setText(projectRoot, '.novateur-copy .kicker', project.kicker); setText(projectRoot, '.novateur-copy > p:last-child', project.body);
-          const logo = one('.novateur-logo', projectRoot); if (logo && project.desktopImage) logo.src = project.desktopImage;
+          const logo = one('.novateur-logo', projectRoot); if (logo && project.desktopImage) logo.src = safePublicUrl(project.desktopImage, logo.src);
           const meta = paragraphs(String(project.meta || '').replace(/\n/g, '\n\n')); const labels = all('.project-label', projectRoot); labels.forEach((node, index) => { if (meta[index] !== undefined) node.textContent = meta[index]; });
           const gallery = Array.isArray(project.gallery) ? project.gallery : []; const slider = one('#novateurSlider', projectRoot);
-          if (slider && gallery.length) { slider.replaceChildren(); gallery.forEach(function (item) { const figure = document.createElement('figure'); figure.className = `novateur-slide${item.variant === 'wide' ? ' is-wide' : ''}`; const image = document.createElement('img'); image.src = item.src || ''; image.alt = item.alt || ''; image.loading = 'lazy'; image.decoding = 'async'; figure.appendChild(image); slider.appendChild(figure); }); }
-          const video = one('.novateur-film source', projectRoot); if (video && project.video) { video.src = project.video; video.parentElement.load(); }
-          const projectLinks = all('.project-links a', projectRoot); (Array.isArray(project.links) ? project.links : []).forEach(function (item, index) { if (projectLinks[index]) { projectLinks[index].href = item.url || projectLinks[index].href; projectLinks[index].textContent = item.label || projectLinks[index].textContent; } });
+          if (slider && gallery.length) { slider.replaceChildren(); gallery.forEach(function (item) { const figure = document.createElement('figure'); figure.className = `novateur-slide${item.variant === 'wide' ? ' is-wide' : ''}`; const image = document.createElement('img'); image.src = safePublicUrl(item.src, ''); image.alt = item.alt || ''; image.loading = 'lazy'; image.decoding = 'async'; figure.appendChild(image); slider.appendChild(figure); }); }
+          const video = one('.novateur-film source', projectRoot); if (video && project.video) { video.src = safePublicUrl(project.video, video.src); video.parentElement.load(); if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) video.parentElement.play().catch(function () {}); }
+          const projectLinks = all('.project-links a', projectRoot); (Array.isArray(project.links) ? project.links : []).forEach(function (item, index) { if (projectLinks[index]) { projectLinks[index].href = safePublicUrl(item.url, projectLinks[index].href); projectLinks[index].textContent = item.label || projectLinks[index].textContent; } });
         }
         const behind = sections.get('behind-romy'); const behindRoot = one('[data-cp-section="behind-romy"]');
-        if (behind && behindRoot) { const image = one('img', behindRoot); if (image && behind.desktopImage) image.src = behind.desktopImage; if (image && behind.alt) image.alt = behind.alt; const copy = one('.founder-copy', behindRoot); const text = all('.lead,.body-copy', copy); const parts = [behind.body].concat(paragraphs(behind.secondaryBody)); text.forEach((node, index) => { if (parts[index] !== undefined) node.textContent = parts[index]; }); }
+        if (behind && behindRoot) { const image = one('img', behindRoot); if (image && behind.desktopImage) image.src = safePublicUrl(behind.desktopImage, image.src); if (image && behind.alt) image.alt = behind.alt; const copy = one('.founder-copy', behindRoot); const text = all('.lead,.body-copy', copy); const parts = [behind.body].concat(paragraphs(behind.secondaryBody)); text.forEach((node, index) => { if (parts[index] !== undefined) node.textContent = parts[index]; }); }
         const availability = sections.get('availability'); const availabilityRoot = one('[data-cp-section="availability"]');
         if (availability && availabilityRoot) { setText(availabilityRoot, 'h2', availability.heading); const texts = all(':scope > .section-inner > p', availabilityRoot); if (texts[0]) texts[0].innerHTML = String(availability.body || '').split('\n').map((line) => line.replace(/[&<>]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[char]))).join('<br>'); if (texts[1]) texts[1].textContent = availability.secondaryBody || ''; if (texts[2]) texts[2].textContent = availability.smallLine || ''; }
         const booking = sections.get('booking'); const bookingRoot = one('[data-cp-section="booking"]');
-        if (booking) { all('[data-cp-booking-link]').forEach((link) => { link.href = booking.ctaLink || 'https://doneovernight.com/cp-book'; if (link.classList.contains('text-cta') && booking.ctaLabel) link.textContent = booking.ctaLabel; }); if (bookingRoot) { setText(bookingRoot, '#booker-title', booking.heading); setText(bookingRoot, '.body-copy', booking.body); } }
+        if (booking) { all('[data-cp-booking-link]').forEach((link) => { link.href = safePublicUrl(booking.ctaLink, 'https://doneovernight.com/cp-book'); if (link.classList.contains('text-cta') && booking.ctaLabel) link.textContent = booking.ctaLabel; }); if (bookingRoot) { setText(bookingRoot, '#booker-title', booking.heading); setText(bookingRoot, '.body-copy', booking.body); } }
         const footer = sections.get('footer'); const footerRoot = one('[data-cp-section="footer"]');
-        if (footer && footerRoot) { setText(footerRoot, '.footer-availability', footer.secondaryBody); const wordmark = one('.footer-wordmark', footerRoot); if (wordmark && footer.desktopImage) wordmark.src = footer.desktopImage; const links = all('.footer-contact a', footerRoot); if (links[0] && footer.socialUrl) { links[0].href = footer.socialUrl; links[0].setAttribute('aria-label', `COMMONPL4CE ${footer.socialLabel || 'social'}`); } if (links[1] && footer.contactEmail) links[1].href = `mailto:${footer.contactEmail}`; }
+        if (footer && footerRoot) { setText(footerRoot, '.footer-availability', footer.secondaryBody || content.footerAvailability); const wordmark = one('.footer-wordmark', footerRoot); if (wordmark && footer.desktopImage) wordmark.src = safePublicUrl(footer.desktopImage, wordmark.src); const links = all('.footer-contact a', footerRoot); if (links[0] && footer.socialUrl) { links[0].href = safePublicUrl(footer.socialUrl, links[0].href); links[0].setAttribute('aria-label', `COMMONPL4CE ${footer.socialLabel || content.socials || 'social'}`); } if (links[1] && (footer.contactEmail || content.contactEmail)) links[1].href = safePublicUrl(`mailto:${footer.contactEmail || content.contactEmail}`, links[1].href); }
         const faq = sections.get('faq'); if (faq) renderFaq(faq);
       }
 
-      fetch(CONFIG_URL, { cache: 'no-store', credentials: 'same-origin' })
-        .then((response) => response.ok ? response.json() : null)
-        .then((data) => { if (!data || data.success !== true || !data.config) return; applyHero(data.config); applySections(data.config); document.documentElement.dataset.cpContentVersion = data.versionId || data.publishedAt || 'published'; })
+      (window.__commonplaceConfigPromise || fetch(CONFIG_URL, { cache: 'no-store', credentials: 'same-origin' })
+        .then((response) => response.ok ? response.json() : null))
+        .then((data) => { if (!data || data.success !== true || !data.config) return; window.__commonplaceBookingAvailability = data.config.bookingAvailability || null; window.dispatchEvent(new CustomEvent('commonpl4ce:booking-availability', { detail: window.__commonplaceBookingAvailability })); applySiteSettings(data.config); applyHero(data.config); applySections(data.config); document.documentElement.dataset.cpContentVersion = data.versionId || data.publishedAt || 'published'; })
         .catch(function () {});
     })();
   </script>
@@ -2030,6 +2382,8 @@
       let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       let selectedDate = null;
       let isSubmitting = false;
+      let bookingAvailability = window.__commonplaceBookingAvailability || { status: 'online', unavailableDates: [] };
+      let unavailableDates = new Set(Array.isArray(bookingAvailability.unavailableDates) ? bookingAvailability.unavailableDates : []);
 
       const formatDate = (date) => {
         const year = date.getFullYear();
@@ -2037,6 +2391,37 @@
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
+
+      function applyBookingAvailability(next = {}) {
+        bookingAvailability = next && typeof next === 'object' ? next : { status: 'online', unavailableDates: [] };
+        unavailableDates = new Set(Array.isArray(bookingAvailability.unavailableDates) ? bookingAvailability.unavailableDates : []);
+        const offline = String(bookingAvailability.status || 'online').toLowerCase() !== 'online';
+        let notice = document.getElementById('cpBookingUnavailable');
+        if (offline && !notice) {
+          notice = document.createElement('div');
+          notice.id = 'cpBookingUnavailable';
+          notice.className = 'booking-unavailable';
+          notice.setAttribute('role', 'status');
+          const title = document.createElement('h3');
+          const body = document.createElement('p');
+          const link = document.createElement('a');
+          link.className = 'text-cta';
+          title.textContent = bookingAvailability.offlineHeading || 'Booking temporarily unavailable.';
+          body.textContent = bookingAvailability.offlineMessage || 'Bookings are currently unavailable. Please check back later.';
+          link.textContent = bookingAvailability.offlineCtaLabel || 'Visit COMMONPL4CE';
+          const offlineLink = String(bookingAvailability.offlineCtaLink || '/cp').trim();
+          link.href = offlineLink.startsWith('/') || /^https:\/\//i.test(offlineLink) ? offlineLink : '/cp';
+          notice.append(title, body, link);
+          form.parentElement.insertBefore(notice, form);
+        }
+        if (notice) notice.hidden = !offline;
+        form.hidden = offline;
+        if (selectedDate && unavailableDates.has(formatDate(selectedDate))) {
+          selectedDate = null;
+          preferredDate.value = '';
+        }
+        renderCalendar();
+      }
 
       function renderCalendar() {
         calendarGrid.innerHTML = '';
@@ -2073,6 +2458,14 @@
             year: 'numeric'
           }));
 
+          const dateKey = formatDate(date);
+          const unavailable = dateKey < formatDate(today) || unavailableDates.has(dateKey);
+          if (unavailable) {
+            button.classList.add('is-unavailable');
+            button.disabled = true;
+            button.setAttribute('aria-label', `${button.getAttribute('aria-label')}, unavailable`);
+          }
+
           if (selectedDate && formatDate(selectedDate) === formatDate(date)) {
             button.classList.add('is-selected');
           }
@@ -2095,6 +2488,10 @@
       next.addEventListener('click', function () {
         visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
         renderCalendar();
+      });
+
+      window.addEventListener('commonpl4ce:booking-availability', function (event) {
+        applyBookingAvailability(event.detail || {});
       });
 
       const field = (name) => form.elements[name];
@@ -2270,7 +2667,7 @@
         }
       });
 
-      renderCalendar();
+      applyBookingAvailability(bookingAvailability);
     })();
   </script>
 
@@ -2279,6 +2676,8 @@
       const slider = document.getElementById('novateurSlider');
       const previous = document.querySelector('.novateur-prev');
       const next = document.querySelector('.novateur-next');
+      const film = document.querySelector('.novateur-film video');
+      if (film && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) film.play().catch(function () {});
       if (!slider || !previous || !next) return;
 
       function move(direction) {
@@ -2311,7 +2710,10 @@
       function measure() {
         const viewport = window.innerWidth;
         const archiveHeight = window.innerHeight;
-        const slideCount = rail.querySelectorAll('.archive-frame').length;
+        const slideCount = Array.from(rail.querySelectorAll('.archive-frame')).filter(function (frame) {
+          return window.innerWidth < 768 ? frame.dataset.mobileHidden !== 'true' : frame.dataset.desktopHidden !== 'true';
+        }).length;
+        rail.style.minWidth = `${Math.max(1, slideCount) * 100}vw`;
         maxTravel = Math.max(0, (slideCount - 1) * viewport);
         document.documentElement.style.setProperty('--archive-height', `${archiveHeight}px`);
         archive.style.height = `${archiveHeight + maxTravel}px`;

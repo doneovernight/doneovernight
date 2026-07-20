@@ -1164,6 +1164,8 @@
       color: rgba(255,214,204,.9);
     }
 
+    #analyticsRangeControls .button { min-width: 44px; }
+
     @keyframes publishPulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(207,190,158,.1); }
       50% { box-shadow: 0 0 0 4px rgba(207,190,158,.08); }
@@ -2363,7 +2365,50 @@
     .setting-row:first-child { border-top: 0; padding-top: 0; }
     .setting-row strong { font-size: 13px; }
     .setting-row span { color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .setting-row a { color: var(--text); text-decoration: underline; text-decoration-color: rgba(237,230,216,.28); text-underline-offset: 3px; }
+    .setting-row a {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      color: var(--text);
+      text-decoration: underline;
+      text-decoration-color: rgba(237,230,216,.28);
+      text-underline-offset: 3px;
+    }
+
+    .site-settings-groups {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .site-settings-group {
+      border: 1px solid rgba(237,230,216,.12);
+      background: rgba(255,255,255,.018);
+    }
+
+    .site-settings-group summary {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 760;
+      list-style: none;
+    }
+
+    .site-settings-group summary::-webkit-details-marker { display: none; }
+    .site-settings-group summary::after { content: "+"; color: var(--muted); font-size: 18px; font-weight: 400; }
+    .site-settings-group[open] summary::after { content: "−"; }
+    .site-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0 14px 16px; }
+    .site-settings-grid .field--wide { grid-column: 1 / -1; }
+
+    @media (max-width: 700px) {
+      .site-settings-grid { grid-template-columns: minmax(0, 1fr); }
+      .site-settings-grid .field--wide { grid-column: auto; }
+    }
 
     .record-actions {
       display: flex;
@@ -2582,6 +2627,11 @@
       backdrop-filter: none;
     }
 
+    .mobile-bottom-nav,
+    .mobile-action-bar,
+    .mobile-more-backdrop,
+    .mobile-builder-switch { display: none; }
+
     @media (max-width: 1080px) {
       .os-layout { grid-template-columns: 1fr; }
       .os-nav {
@@ -2598,29 +2648,157 @@
     }
 
     @media (max-width: 720px) {
-      .locale-switch { top: 12px; right: 12px; }
+      body.is-unlocked { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+      .button, .button.small, .quick-action, .panel-footer-action, .website-tab,
+      .operations-calendar-nav button, .operations-row, .customer-select, .hero-slot-card,
+      .media-card, .media-filter, .media-target-slot, .setting-row button { min-height: 44px; }
+      input, select { min-height: 48px; }
+      textarea { min-height: 118px; }
+      .locale-switch { top: 12px; right: 12px; grid-template-columns: repeat(2, 44px); }
+      .locale-switch button { height: 44px; }
       .os-header-inner {
         min-height: 0;
-        padding: 16px 0;
-        align-items: start;
-        flex-direction: column;
+        width: calc(100% - 24px);
+        padding: 11px 0;
+        align-items: center;
+        flex-direction: row;
       }
-      .os-brand { flex-direction: column; align-items: start; gap: 12px; }
-      .os-brand-meta { padding-left: 0; border-left: 0; }
-      .os-header-actions { width: 100%; justify-content: space-between; }
-      .os-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .os-brand { gap: 10px; }
+      .os-brand img { width: 148px; }
+      .os-brand-meta { display: none; }
+      .os-header-actions { width: auto; margin-left: auto; flex-wrap: nowrap; }
+      .os-header-actions > .button, .os-header-actions > .sync-state { display: none; }
+      .os-header .locale-switch { grid-template-columns: repeat(2, 44px); }
+      .os-header .locale-switch button { height: 44px; }
+      .os-layout { width: 100%; padding: 12px 12px 32px; }
+      .os-nav { display: none; }
+      .os-main, .view, .website-task { gap: 12px; }
       .operations-grid, .operations-stack, .operational-form, .metric-grid, .detail-grid, .field-grid, .image-slot-grid, .builder-editor-grid, .hero-field-grid, .content-draft-grid, .publish-summary-grid, .hero-builder-grid, .media-category-grid, .security-form, .booking-availability-form, .draft-frame-grid { grid-template-columns: 1fr; }
+      .media-target-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .operations-stack { grid-column: auto; }
       .operational-form .wide { grid-column: auto; }
-      .invoice-line-item { grid-template-columns: minmax(0, 1fr) 74px; }
+      .invoice-line-item { grid-template-columns: minmax(0, 1fr) 92px; padding: 12px; }
       .invoice-line-item .field:first-child { grid-column: 1 / -1; }
-      .operations-row { grid-template-columns: 38px minmax(0, 1fr); }
+      .operations-row { grid-template-columns: 44px minmax(0, 1fr); padding: 10px 6px; }
+      .operations-thumb { width: 44px; height: 44px; }
       .operations-row .status-pill { grid-column: 2; justify-self: start; }
       .booking-availability-form .field--wide { grid-column: auto; }
-      .hero-slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero-slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .view-head { align-items: start; flex-direction: column; }
+      .view-head { padding: 4px 2px 2px; }
+      .view-head > .button { width: 100%; }
+      .view-title { gap: 5px; }
+      .view-title h1 { font-size: 34px; line-height: .96; letter-spacing: 0; }
+      .view-title p { font-size: 13px; line-height: 1.5; }
       .builder-head { flex-direction: column; }
       .setting-row { grid-template-columns: 1fr; }
+      .os-panel { padding: 15px; }
+      .panel-head { align-items: stretch; flex-direction: column; }
+      .panel-head > .button { width: 100%; }
+      .metric { min-height: 108px; padding: 14px; }
+      .metric strong { font-size: 32px; letter-spacing: 0; }
+      .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .booking-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .booking-actions > * { width: 100%; }
+      .website-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      .website-tab { width: 100%; padding-inline: 7px; letter-spacing: .04em; }
+      .builder-status-bar, .builder-controls, .publish-actions, .image-actions { align-items: stretch; flex-direction: column; }
+      .builder-controls > *, .publish-actions > *, .image-actions > * { width: 100%; }
+      .operations-calendar-grid { gap: 3px; }
+      .operations-calendar-day { min-height: 44px; aspect-ratio: auto; }
+      .operations-calendar-nav button { width: 44px; height: 44px; }
+      .calendar-availability-action { align-items: stretch; flex-direction: column; }
+      .calendar-availability-action .button { width: 100%; }
+      .section-preview h3 { max-width: 100%; overflow-wrap: anywhere; font-size: 34px; letter-spacing: 0; }
+      .mobile-builder-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+      .mobile-builder-switch button { min-height: 44px; border: 1px solid rgba(237,230,216,.12); border-radius: 8px; background: rgba(237,230,216,.04); color: var(--muted); font-size: 11px; font-weight: 850; }
+      .mobile-builder-switch button[aria-selected="true"] { border-color: rgba(237,230,216,.3); background: rgba(237,230,216,.1); color: var(--text); }
+      .builder-grid[data-mobile-pane="sections"] > :not(:nth-child(1)),
+      .builder-grid[data-mobile-pane="editor"] > :not(:nth-child(2)),
+      .builder-grid[data-mobile-pane="preview"] > :not(:nth-child(3)) { display: none; }
+      .live-preview-grid, .preview-workspace-grid { min-width: 0; }
+      .live-frame-shell, .draft-preview-frame { max-width: 100%; overflow: hidden; }
+      .operational-modal { place-items: end stretch; padding: 0; }
+      .operational-modal-card {
+        width: 100%;
+        max-height: 92svh;
+        border-radius: 16px 16px 0 0;
+        padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
+      }
+      .confirm-backdrop { align-items: end; padding: 0; }
+      .confirm-card { width: 100%; border-radius: 16px 16px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
+      .confirm-actions { display: grid; grid-template-columns: 1fr; }
+      .os-footer { padding-bottom: 12px; }
+      .os-toast { bottom: calc(142px + env(safe-area-inset-bottom)); left: 12px; right: 12px; width: auto; }
+
+      .mobile-bottom-nav {
+        position: fixed;
+        z-index: 70;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        min-height: calc(70px + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(237,230,216,.14);
+        background: rgba(7,7,7,.94);
+        backdrop-filter: blur(22px) saturate(1.15);
+      }
+      .mobile-bottom-nav button {
+        min-width: 0;
+        min-height: 54px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: rgba(241,234,220,.5);
+        padding: 6px 3px;
+        font-size: 10px;
+        font-weight: 850;
+      }
+      .mobile-bottom-nav button[aria-selected="true"] { background: rgba(237,230,216,.09); color: var(--text); }
+      .mobile-bottom-nav button::before { content: attr(data-mobile-icon); display: block; margin-bottom: 4px; font: 900 11px var(--mono); }
+
+      .mobile-action-bar {
+        position: fixed;
+        z-index: 65;
+        left: 12px;
+        right: 12px;
+        bottom: calc(78px + env(safe-area-inset-bottom));
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid rgba(237,230,216,.14);
+        border-radius: 13px;
+        background: rgba(15,14,13,.92);
+        box-shadow: 0 14px 40px rgba(0,0,0,.36);
+        backdrop-filter: blur(18px);
+      }
+      .mobile-action-bar:empty { display: none; }
+      .mobile-action-bar .button { min-width: 0; flex: 1; padding-inline: 8px; }
+
+      .mobile-more-backdrop {
+        position: fixed;
+        z-index: 80;
+        inset: 0;
+        align-items: end;
+        background: rgba(0,0,0,.62);
+        backdrop-filter: blur(8px);
+      }
+      .mobile-more-backdrop.is-visible { display: flex; }
+      .mobile-more-sheet {
+        width: 100%;
+        display: grid;
+        gap: 7px;
+        padding: 16px 14px calc(18px + env(safe-area-inset-bottom));
+        border: 1px solid rgba(237,230,216,.16);
+        border-radius: 18px 18px 0 0;
+        background: #11100f;
+      }
+      .mobile-more-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+      .mobile-more-sheet-head strong { font-size: 14px; }
+      .mobile-more-sheet button, .mobile-more-sheet a { width: 100%; min-height: 48px; justify-content: flex-start; }
       .gate { padding-inline: 14px; }
       .gate-card { border-radius: 28px; padding: 28px; }
       .gate-footer { min-height: 150px; padding-bottom: 24px; }
@@ -2887,7 +3065,12 @@
                   <button class="button small" id="resetBuilderDraft" type="button">Reset draft</button>
                 </div>
               </div>
-              <div class="builder-grid" role="group" aria-label="Draft section builder">
+              <div class="mobile-builder-switch" role="tablist" aria-label="Builder view">
+                <button type="button" data-mobile-builder-pane="sections" aria-selected="true">Sections</button>
+                <button type="button" data-mobile-builder-pane="editor" aria-selected="false">Edit</button>
+                <button type="button" data-mobile-builder-pane="preview" aria-selected="false">Preview</button>
+              </div>
+              <div class="builder-grid" id="builderGrid" data-mobile-pane="sections" role="group" aria-label="Draft section builder">
                 <div class="builder-panel">
                   <div class="builder-head">
                     <div>
@@ -3024,8 +3207,8 @@
                     <span class="builder-state">Not live</span>
                   </div>
                   <div class="draft-frame-grid">
-                    <div><h3>Desktop draft</h3><iframe id="desktopDraftPreview" title="Desktop draft preview" sandbox="allow-scripts"></iframe></div>
-                    <div class="is-mobile"><h3>Mobile draft</h3><iframe id="mobileDraftPreview" title="Mobile draft preview" sandbox="allow-scripts"></iframe></div>
+                    <div><h3>Desktop draft</h3><div id="desktopDraftPreviewMount"></div></div>
+                    <div class="is-mobile"><h3>Mobile draft</h3><div id="mobileDraftPreviewMount"></div></div>
                   </div>
                 </section>
                 <div class="live-preview-stack">
@@ -3155,11 +3338,70 @@
             <div class="view-title">
               <div class="eyebrow">Settings</div>
               <h1>Workspace.</h1>
-              <p>Only working settings are editable. Everything else is locked until persistence is connected.</p>
+              <p>Only verified, server-backed settings are editable here.</p>
             </div>
           </div>
           <section class="os-panel">
             <div class="settings-list" id="settingsList"></div>
+            <section class="security-section" aria-label="Public website settings">
+              <div class="panel-head">
+                <div>
+                  <h2>Public website settings</h2>
+                  <p>Global design, brand, navigation, SEO and integration settings use the same draft and Publish workflow.</p>
+                </div>
+                <span class="status-pill" id="siteSettingsPublishState">Published</span>
+              </div>
+              <div class="site-settings-groups" id="siteSettingsForm">
+                <details class="site-settings-group" open>
+                  <summary>Design system</summary>
+                  <div class="site-settings-grid">
+                    <label class="field"><span>Dark background</span><input type="color" data-site-setting="design.background"></label>
+                    <label class="field"><span>Dark surface</span><input type="color" data-site-setting="design.surface"></label>
+                    <label class="field"><span>Paper</span><input type="color" data-site-setting="design.paper"></label>
+                    <label class="field"><span>Light background</span><input type="color" data-site-setting="design.light"></label>
+                    <label class="field"><span>Display font</span><select data-site-setting="design.displayFont"><option>Inter</option><option>Arial</option><option>Georgia</option><option>Times New Roman</option></select></label>
+                    <label class="field"><span>Body font</span><select data-site-setting="design.bodyFont"><option>Georgia</option><option>Inter</option><option>Arial</option><option>Times New Roman</option></select></label>
+                    <label class="field"><span>Display weight</span><input type="number" min="400" max="900" step="50" inputmode="numeric" data-site-setting="design.displayWeight"></label>
+                    <label class="field"><span>Body size</span><input type="number" min="15" max="26" inputmode="numeric" data-site-setting="design.bodySize"></label>
+                    <label class="field"><span>Line height</span><input type="number" min="1.1" max="1.8" step="0.01" inputmode="decimal" data-site-setting="design.bodyLineHeight"></label>
+                    <label class="field"><span>Section spacing</span><input type="number" min="56" max="220" inputmode="numeric" data-site-setting="design.sectionSpacing"></label>
+                    <label class="field"><span>Content width</span><input type="number" min="760" max="1440" inputmode="numeric" data-site-setting="design.contentWidth"></label>
+                    <label class="field"><span>Button style</span><select data-site-setting="design.buttonStyle"><option value="underline">Underline</option><option value="outline">Outline</option><option value="solid">Solid</option></select></label>
+                  </div>
+                </details>
+                <details class="site-settings-group">
+                  <summary>Brand and navigation</summary>
+                  <div class="site-settings-grid">
+                    <label class="field field--wide"><span>Header logo</span><input type="text" data-site-setting="branding.headerLogo"></label>
+                    <label class="field field--wide"><span>Footer logo</span><input type="text" data-site-setting="branding.footerLogo"></label>
+                    <label class="field"><span>BOOK label</span><input type="text" maxlength="30" data-site-setting="navigation.bookingLabel"></label>
+                    <label class="field"><span>Booking URL</span><input type="url" value="https://doneovernight.com/cp-book" readonly data-site-setting="navigation.bookingUrl"></label>
+                    <label class="field"><span>Social label</span><input type="text" data-site-setting="contact.socialLabel"></label>
+                    <label class="field"><span>Contact email</span><input type="email" inputmode="email" data-site-setting="contact.email"></label>
+                    <label class="field field--wide"><span>Social URL</span><input type="url" inputmode="url" data-site-setting="contact.socialUrl"></label>
+                  </div>
+                </details>
+                <details class="site-settings-group">
+                  <summary>SEO and sharing</summary>
+                  <div class="site-settings-grid">
+                    <label class="field field--wide"><span>Page title</span><input type="text" maxlength="70" data-site-setting="seo.title"></label>
+                    <label class="field field--wide"><span>Description</span><textarea rows="3" maxlength="180" data-site-setting="seo.description"></textarea></label>
+                    <label class="field field--wide"><span>Canonical URL</span><input type="url" readonly data-site-setting="seo.canonical"></label>
+                    <label class="field"><span>Search visibility</span><select data-site-setting="seo.robots"><option value="noindex, nofollow">Private / noindex</option><option value="index, follow">Public / index</option></select></label>
+                    <label class="field"><span>Favicon</span><input type="text" data-site-setting="branding.favicon"></label>
+                    <label class="field field--wide"><span>Social preview image</span><input type="text" data-site-setting="branding.socialImage"></label>
+                  </div>
+                </details>
+                <details class="site-settings-group">
+                  <summary>Integrations</summary>
+                  <div class="site-settings-grid">
+                    <label class="field"><span>COMMONPL4CE analytics</span><select data-site-setting="integrations.analyticsEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+                    <label class="field"><span>Newsletter capture</span><select data-site-setting="integrations.newsletterEnabled"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+                  </div>
+                </details>
+              </div>
+              <p class="form-note" id="siteSettingsNote">Settings save to the server draft and change /cp only after Publish.</p>
+            </section>
             <section class="security-section" aria-label="Booking availability settings">
               <div class="panel-head">
                 <div>
@@ -3228,17 +3470,39 @@
       </section>
     </div>
 
-    <div class="operational-modal" id="newBookingDialog" aria-hidden="true">
+    <div class="mobile-action-bar" id="mobileActionBar" role="toolbar" aria-label="Quick actions"></div>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile Website OS navigation">
+      <button type="button" data-view-target="overview" data-mobile-icon="OV" aria-selected="true">Overview</button>
+      <button type="button" data-view-target="bookings" data-mobile-icon="BK" aria-selected="false">Bookings</button>
+      <button type="button" data-view-target="calendar" data-mobile-icon="CA" aria-selected="false">Calendar</button>
+      <button type="button" data-view-target="website" data-mobile-icon="WB" aria-selected="false">Website</button>
+      <button type="button" id="mobileMoreButton" data-mobile-icon="•••" aria-expanded="false" aria-controls="mobileMoreSheet">More</button>
+    </nav>
+
+    <div class="mobile-more-backdrop" id="mobileMoreBackdrop" aria-hidden="true" inert>
+      <section class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
+        <div class="mobile-more-sheet-head"><strong id="mobileMoreTitle">More</strong><button class="button ghost small" id="mobileMoreClose" type="button">Close</button></div>
+        <button class="button ghost" type="button" data-view-target="clients">Clients</button>
+        <button class="button ghost" type="button" data-view-target="analytics">Analytics</button>
+        <button class="button ghost" type="button" data-view-target="settings">Settings</button>
+        <a class="button ghost" href="https://doneovernight.com/cp" target="_blank" rel="noreferrer">Open website</a>
+        <button class="button ghost" id="mobileRefreshButton" type="button">Refresh</button>
+        <button class="button ghost" id="mobileLogoutButton" type="button">Log out</button>
+      </section>
+    </div>
+
+    <div class="operational-modal" id="newBookingDialog" aria-hidden="true" inert>
       <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="newBookingTitle">
         <div class="panel-head">
           <div><h2 id="newBookingTitle">New Booking</h2><p>Create a real COMMONPL4CE booking through the existing intake flow.</p></div>
           <button class="button ghost small" type="button" data-close-new-booking>Cancel</button>
         </div>
         <form class="operational-form" id="newBookingForm">
-          <label class="field"><span>Name</span><input name="name" autocomplete="name" required></label>
-          <label class="field"><span>Brand / company</span><input name="brand" autocomplete="organization" required></label>
+          <label class="field"><span>Name</span><input name="name" type="text" autocomplete="name" required></label>
+          <label class="field"><span>Brand / company</span><input name="brand" type="text" autocomplete="organization" required></label>
           <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
-          <label class="field"><span>Instagram</span><input name="instagram" autocomplete="off"></label>
+          <label class="field"><span>Instagram</span><input name="instagram" type="text" autocomplete="off"></label>
           <label class="field"><span>Project type</span><select name="project" required><option value="">Select project type</option><option value="campaign">Campaign</option><option value="fashion">Fashion</option><option value="lifestyle">Lifestyle</option><option value="travel">Travel</option><option value="editorial">Editorial</option><option value="portraits">Portraits</option><option value="other">Other</option></select></label>
           <label class="field"><span>Location</span><select name="location" required><option value="">Select location</option><option value="netherlands">Netherlands</option><option value="europe">Europe</option><option value="worldwide">Worldwide</option></select></label>
           <label class="field"><span>Preferred date</span><input name="preferred-date" type="date" required></label>
@@ -3253,7 +3517,7 @@
       </section>
     </div>
 
-    <div class="operational-modal" id="invoiceDialog" aria-hidden="true">
+    <div class="operational-modal" id="invoiceDialog" aria-hidden="true" inert>
       <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="invoiceDialogTitle">
         <div class="panel-head">
           <div><h2 id="invoiceDialogTitle">Create Invoice</h2><p id="invoiceDialogBooking">Create a persisted draft invoice from this booking.</p></div>
@@ -3263,11 +3527,11 @@
           <input id="invoiceEditId" name="invoice_id" type="hidden">
           <input id="invoiceBookingId" name="booking_id" type="hidden">
           <input id="invoiceCustomerId" name="customer_id" type="hidden">
-          <label class="field"><span>Invoice number</span><input id="invoiceNumber" name="invoice_number" placeholder="Generated automatically"></label>
-          <label class="field"><span>Customer name</span><input id="invoiceCustomerName" name="customer_name" required></label>
+          <label class="field"><span>Invoice number</span><input id="invoiceNumber" name="invoice_number" type="text" placeholder="Generated automatically"></label>
+          <label class="field"><span>Customer name</span><input id="invoiceCustomerName" name="customer_name" type="text" required></label>
           <label class="field"><span>Customer email</span><input id="invoiceCustomerEmail" name="customer_email" type="email" required></label>
-          <label class="field"><span>Company</span><input id="invoiceCustomerCompany" name="customer_company"></label>
-          <label class="field"><span>VAT number</span><input id="invoiceCustomerVat" name="customer_vat_number"></label>
+          <label class="field"><span>Company</span><input id="invoiceCustomerCompany" name="customer_company" type="text"></label>
+          <label class="field"><span>VAT number</span><input id="invoiceCustomerVat" name="customer_vat_number" type="text"></label>
           <label class="field wide"><span>Billing address</span><textarea id="invoiceCustomerAddress" name="customer_address" rows="2"></textarea></label>
           <div class="wide invoice-line-items" id="invoiceLineItems"></div>
           <button class="button ghost small wide" id="addInvoiceLineItem" type="button">Add line item</button>
@@ -3285,7 +3549,7 @@
       </section>
     </div>
 
-    <div class="operational-modal" id="customerDialog" aria-hidden="true">
+    <div class="operational-modal" id="customerDialog" aria-hidden="true" inert>
       <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="customerDialogTitle">
         <div class="panel-head">
           <div><h2 id="customerDialogTitle">Add Client</h2><p id="customerDialogContext">Create a persisted COMMONPL4CE customer.</p></div>
@@ -3293,11 +3557,11 @@
         </div>
         <form class="operational-form" id="customerForm">
           <input id="customerBookingId" type="hidden">
-          <label class="field"><span>Name</span><input id="customerName" autocomplete="name" required></label>
-          <label class="field"><span>Company</span><input id="customerCompany" autocomplete="organization"></label>
+          <label class="field"><span>Name</span><input id="customerName" type="text" autocomplete="name" required></label>
+          <label class="field"><span>Company</span><input id="customerCompany" type="text" autocomplete="organization"></label>
           <label class="field"><span>Email</span><input id="customerEmail" type="email" autocomplete="email"></label>
-          <label class="field"><span>Phone</span><input id="customerPhone" autocomplete="tel"></label>
-          <label class="field"><span>VAT number</span><input id="customerVatNumber"></label>
+          <label class="field"><span>Phone</span><input id="customerPhone" type="tel" autocomplete="tel"></label>
+          <label class="field"><span>VAT number</span><input id="customerVatNumber" type="text"></label>
           <label class="field wide"><span>Billing address</span><textarea id="customerBillingAddress" rows="2"></textarea></label>
           <label class="field wide"><span>Notes</span><textarea id="customerNotes" rows="2"></textarea></label>
           <p class="form-note wide" id="customerDialogStatus" aria-live="polite">A matching email or company will require an explicit link or merge choice.</p>
@@ -3311,7 +3575,7 @@
 
     <div class="os-toast" id="osToast" role="status" aria-live="polite"></div>
 
-    <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true">
+    <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true" inert>
       <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
         <h2 id="confirmTitle">Move this booking to Trash?</h2>
         <p id="confirmBody">This removes it from the active workspace. It can be restored later.</p>
@@ -3357,6 +3621,13 @@
       "Collapse": "Inklappen",
       "Expand": "Uitklappen",
       "Overview": "Overzicht",
+      "More": "Meer",
+      "Close": "Sluiten",
+      "Quick actions": "Snelle acties",
+      "Mobile Website OS navigation": "Mobiele Website OS-navigatie",
+      "Builder view": "Builderweergave",
+      "Sections": "Secties",
+      "Edit": "Bewerken",
       "Bookings": "Boekingen",
       "Calendar": "Kalender",
       "Messages": "Berichten",
@@ -3617,7 +3888,48 @@
       "Analytics not connected yet.": "Analytics is nog niet gekoppeld.",
       "Waiting for first tracked signal.": "Wachten op het eerste gemeten signaal.",
       "Workspace.": "Werkruimte.",
-      "Only working settings are editable. Everything else is locked until persistence is connected.": "Alleen werkende instellingen zijn bewerkbaar. De rest blijft vergrendeld totdat opslag is gekoppeld.",
+      "Only verified, server-backed settings are editable here.": "Alleen gecontroleerde, server-side opgeslagen instellingen zijn hier bewerkbaar.",
+      "Public website settings": "Instellingen openbare website",
+      "Global design, brand, navigation, SEO and integration settings use the same draft and Publish workflow.": "Globale instellingen voor ontwerp, merk, navigatie, SEO en integraties gebruiken dezelfde concept- en publicatieworkflow.",
+      "Design system": "Ontwerpsysteem",
+      "Dark background": "Donkere achtergrond",
+      "Dark surface": "Donker vlak",
+      "Paper": "Papier",
+      "Light background": "Lichte achtergrond",
+      "Display font": "Displaylettertype",
+      "Body font": "Tekstlettertype",
+      "Display weight": "Displaygewicht",
+      "Body size": "Tekstgrootte",
+      "Line height": "Regelhoogte",
+      "Section spacing": "Sectieafstand",
+      "Content width": "Contentbreedte",
+      "Button style": "Knopstijl",
+      "Underline": "Onderstreept",
+      "Outline": "Omlijnd",
+      "Solid": "Vol",
+      "Brand and navigation": "Merk en navigatie",
+      "Header logo": "Headerlogo",
+      "Footer logo": "Footerlogo",
+      "BOOK label": "BOOK-label",
+      "Booking URL": "Boekings-URL",
+      "Social label": "Social-label",
+      "Contact email": "Contact-e-mail",
+      "Social URL": "Social-URL",
+      "SEO and sharing": "SEO en delen",
+      "Page title": "Paginatitel",
+      "Canonical URL": "Canonieke URL",
+      "Search visibility": "Zoekzichtbaarheid",
+      "Private / noindex": "Privé / noindex",
+      "Public / index": "Openbaar / index",
+      "Favicon": "Favicon",
+      "Social preview image": "Sociale voorbeeldafbeelding",
+      "Integrations": "Integraties",
+      "COMMONPL4CE analytics": "COMMONPL4CE-analytics",
+      "Newsletter capture": "Nieuwsbriefinschrijving",
+      "Enabled": "Ingeschakeld",
+      "Settings save to the server draft and change /cp only after Publish.": "Instellingen worden in het serverconcept opgeslagen en veranderen /cp pas na Publiceren.",
+      "Website settings are saved in the server draft and are not live yet. Review and Publish when ready.": "Website-instellingen zijn opgeslagen in het serverconcept en nog niet live. Controleer en publiceer wanneer alles gereed is.",
+      "These values match the published COMMONPL4CE website configuration.": "Deze waarden komen overeen met de gepubliceerde COMMONPL4CE-websiteconfiguratie.",
       "Booking availability": "Boekingsbeschikbaarheid",
       "Public booking page": "Openbare boekingspagina",
       "Controls whether /cp-book and the public /cp booker accept new requests after publishing.": "Bepaalt of /cp-book en de openbare /cp-booker na publicatie nieuwe aanvragen aannemen.",
@@ -3650,6 +3962,9 @@
       "Log out": "Uitloggen",
       "Loading bookings": "Boekingen laden",
       "Draft saved to workspace": "Concept opgeslagen in werkruimte",
+      "Drafts are saved securely to this workspace and remain private until publishing.": "Concepten worden veilig in deze werkruimte opgeslagen en blijven privé tot publicatie.",
+      "Save draft": "Concept opslaan",
+      "Restore draft": "Concept herstellen",
       "Saving draft": "Concept opslaan",
       "Draft save failed": "Concept opslaan mislukt",
       "Server draft unavailable - recovery copy only": "Serverconcept niet beschikbaar - alleen herstelkopie",
@@ -3894,6 +4209,18 @@
       "Not available.": "Niet beschikbaar.",
       "Logout other devices": "Andere apparaten uitloggen",
       "Revokes other server-side Website OS sessions.": "Trekt andere server-side Website OS-sessies in.",
+      "Signed-in devices": "Ingelogde apparaten",
+      "Server-side sessions for this account.": "Server-side sessies voor dit account.",
+      "This device": "Dit apparaat",
+      "Last active": "Laatst actief",
+      "Current": "Huidig",
+      "Sign out": "Uitloggen",
+      "Unknown device": "Onbekend apparaat",
+      "Browser": "Browser",
+      "Device": "Apparaat",
+      "Signing out device...": "Apparaat uitloggen…",
+      "Device signed out.": "Apparaat uitgelogd.",
+      "Could not sign out device.": "Apparaat kon niet worden uitgelogd.",
       "Two-factor authentication": "Tweefactorauthenticatie",
       "Coming in Phase 3.": "Komt in fase 3.",
       "Trash is empty.": "De prullenbak is leeg.",
@@ -3929,6 +4256,8 @@
       "Saving status...": "Status opslaan…",
       "Status saved.": "Status opgeslagen.",
       "Status updates connect in the next phase.": "Statuswijzigingen worden in de volgende fase gekoppeld.",
+      "Unsupported booking status.": "Niet-ondersteunde boekingsstatus.",
+      "Status update failed.": "Statuswijziging mislukt.",
       "Draft saved locally in this browser. Send will be connected in the next phase.": "Concept lokaal opgeslagen in deze browser. Verzenden wordt in de volgende fase gekoppeld.",
       "Draft copied. Send will be connected in the next phase.": "Concept gekopieerd. Verzenden wordt in de volgende fase gekoppeld.",
       "Copy unavailable in this browser. Send will be connected in the next phase.": "Kopiëren is niet beschikbaar in deze browser. Verzenden wordt in de volgende fase gekoppeld.",
@@ -4135,6 +4464,14 @@
         footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
         footerAvailability: "Available worldwide"
       },
+      siteSettings: {
+        design: { themePreset: "commonpl4ce", background: "#060606", surface: "#0a0a09", paper: "#ede6d8", light: "#f1eadc", lightInk: "#080807", displayFont: "Inter", bodyFont: "Georgia", displayWeight: 850, bodySize: 20, bodyLineHeight: 1.34, sectionSpacing: 120, contentWidth: 1180, buttonStyle: "underline", radius: 0 },
+        branding: { headerLogo: "/assets/common-place/final/cp-header-small.png", footerLogo: "/assets/common-place/final/wordmark.png", favicon: "/assets/common-place/final/cp-favicon-32.png", socialImage: "/assets/common-place/fullscreen/slide-01-opening.jpg" },
+        navigation: { bookingLabel: "Book", bookingUrl: "https://doneovernight.com/cp-book" },
+        seo: { title: "COMMONPL4CE | Campaign Archive", description: "CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.", canonical: "https://doneovernight.com/cp", robots: "noindex, nofollow" },
+        integrations: { analyticsEnabled: true, newsletterEnabled: true },
+        contact: { email: "book@commonpl4ce.com", socialLabel: "Instagram", socialUrl: "https://instagram.com/commonpl4ce" }
+      },
       bookingAvailability: {
         status: "online",
         offlineHeading: "Booking temporarily unavailable.",
@@ -4213,6 +4550,7 @@
       analyticsMessage: "Analytics not connected yet",
       authUser: null,
       authSession: null,
+      authSessions: [],
       recordActionsPending: new Set(),
       toastTimer: null,
       activeWebsiteTab: "builder",
@@ -4287,6 +4625,7 @@
         heroDesktopSlots: siteConfigToHeroSlots("desktop", normalized),
         heroMobileSlots: siteConfigToHeroSlots("mobile", normalized),
         mediaLibrary: persistedMedia.length ? persistedMedia : fallback.mediaLibrary,
+        siteSettings: normalized.siteSettings,
         bookingAvailability: normalized.bookingAvailability,
         mediaTarget: previous?.mediaTarget || null,
         selectedHeroSlot: previous?.selectedHeroSlot || fallback.selectedHeroSlot,
@@ -4338,6 +4677,37 @@
           status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : "Ready"
         }));
       };
+      const settingsSource = source.siteSettings && typeof source.siteSettings === "object" ? source.siteSettings : {};
+      const settingsFallback = fallback.siteSettings;
+      const bounded = (value, original, min, max) => Number.isFinite(Number(value)) ? Math.min(max, Math.max(min, Number(value))) : original;
+      const color = (value, original) => /^#[0-9a-f]{6}$/i.test(clean(value)) ? clean(value).toLowerCase() : original;
+      const font = (value, original) => ["Inter", "Arial", "Georgia", "Times New Roman"].includes(clean(value)) ? clean(value) : original;
+      const normalizedSiteSettings = {
+        design: {
+          ...settingsFallback.design,
+          ...(settingsSource.design || {}),
+          themePreset: "commonpl4ce",
+          background: color(settingsSource.design?.background, settingsFallback.design.background),
+          surface: color(settingsSource.design?.surface, settingsFallback.design.surface),
+          paper: color(settingsSource.design?.paper, settingsFallback.design.paper),
+          light: color(settingsSource.design?.light, settingsFallback.design.light),
+          lightInk: color(settingsSource.design?.lightInk, settingsFallback.design.lightInk),
+          displayFont: font(settingsSource.design?.displayFont, settingsFallback.design.displayFont),
+          bodyFont: font(settingsSource.design?.bodyFont, settingsFallback.design.bodyFont),
+          displayWeight: Math.round(bounded(settingsSource.design?.displayWeight, settingsFallback.design.displayWeight, 400, 900)),
+          bodySize: Math.round(bounded(settingsSource.design?.bodySize, settingsFallback.design.bodySize, 15, 26)),
+          bodyLineHeight: bounded(settingsSource.design?.bodyLineHeight, settingsFallback.design.bodyLineHeight, 1.1, 1.8),
+          sectionSpacing: Math.round(bounded(settingsSource.design?.sectionSpacing, settingsFallback.design.sectionSpacing, 56, 220)),
+          contentWidth: Math.round(bounded(settingsSource.design?.contentWidth, settingsFallback.design.contentWidth, 760, 1440)),
+          buttonStyle: ["underline", "outline", "solid"].includes(clean(settingsSource.design?.buttonStyle)) ? clean(settingsSource.design.buttonStyle) : settingsFallback.design.buttonStyle,
+          radius: Math.round(bounded(settingsSource.design?.radius, settingsFallback.design.radius, 0, 24))
+        },
+        branding: { ...settingsFallback.branding, ...(settingsSource.branding || {}) },
+        navigation: { ...settingsFallback.navigation, ...(settingsSource.navigation || {}), bookingUrl: workspace.bookingUrl },
+        seo: { ...settingsFallback.seo, ...(settingsSource.seo || {}), canonical: workspace.publicUrl, robots: lower(settingsSource.seo?.robots) === "index, follow" ? "index, follow" : "noindex, nofollow" },
+        integrations: { analyticsEnabled: settingsSource.integrations?.analyticsEnabled !== false, newsletterEnabled: settingsSource.integrations?.newsletterEnabled !== false },
+        contact: { ...settingsFallback.contact, ...(settingsSource.contact || {}) }
+      };
       return {
         ...fallback,
         ...source,
@@ -4349,6 +4719,7 @@
           ...fallback.content,
           ...(source.content || {})
         },
+        siteSettings: normalizedSiteSettings,
         bookingAvailability: normalizeBookingAvailability(source.bookingAvailability)
       };
     }
@@ -4529,6 +4900,7 @@
         heroDesktopSlots: defaultHeroSlots("desktop"),
         heroMobileSlots: defaultHeroSlots("mobile"),
         mediaLibrary: defaultMediaLibrary(),
+        siteSettings: normalizeSiteConfig(workspace.publishedConfig || DEFAULT_SITE_CONFIG).siteSettings,
         bookingAvailability: { ...normalizeSiteConfig(workspace.publishedConfig || DEFAULT_SITE_CONFIG).bookingAvailability },
         mediaTarget: null,
         selectedHeroSlot: { kind: "desktop", index: 0 },
@@ -4592,6 +4964,7 @@
         heroDesktopSlots: normalizeSlots(desktopSlots, fallback.heroDesktopSlots, "desktop"),
         heroMobileSlots: normalizeSlots(mobileSlots, fallback.heroMobileSlots, "mobile"),
         mediaLibrary: Array.isArray(builder.mediaLibrary) && builder.mediaLibrary.length ? normalizeMediaLibrary(builder.mediaLibrary) : fallback.mediaLibrary,
+        siteSettings: normalizeSiteConfig({ siteSettings: builder.siteSettings || fallback.siteSettings }).siteSettings,
         bookingAvailability: normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability || fallback.bookingAvailability }).bookingAvailability,
         mediaTarget: normalizeTarget(builder.mediaTarget),
         selectedHeroSlot: builder.selectedHeroSlot && ["desktop", "mobile"].includes(builder.selectedHeroSlot.kind)
@@ -4748,6 +5121,7 @@
           mobile: builder.heroMobileSlots.map((slot, index) => slotToConfig(slot, index, "mobile"))
         },
         content: { ...builder.websiteContent },
+        siteSettings: normalizeSiteConfig({ siteSettings: builder.siteSettings }).siteSettings,
         bookingAvailability: { ...normalizeSiteConfig({ bookingAvailability: builder.bookingAvailability }).bookingAvailability },
         sections: JSON.parse(JSON.stringify((builder.sections || []).map((section) => ({
           ...section,
@@ -4792,6 +5166,7 @@
       }, 0);
       const contentChanges = Object.keys(draft.content).filter((key) => !sameValue(draft.content[key], published.content[key]));
       const bookingAvailabilityChanges = Object.keys(draft.bookingAvailability || {}).filter((key) => !sameValue(draft.bookingAvailability[key], published.bookingAvailability?.[key]));
+      const siteSettingsChanges = JSON.stringify(draft.siteSettings || {}) === JSON.stringify(published.siteSettings || {}) ? 0 : 1;
       const blockedAssets = state.builder.heroDesktopSlots.concat(state.builder.heroMobileSlots).filter((slot) => {
         const asset = state.builder.mediaLibrary.find((item) => item.id === slot.mediaId);
         return slot.previewImage || /^data:/i.test(slot.image || "") || /^blob:/i.test(slot.image || "") || isLocalOnlyMedia(asset);
@@ -4805,8 +5180,8 @@
       const sectionIds = [...new Set(draftSections.concat(publishedSections).map((section) => section.id))];
       const sectionChangeNames = sectionIds.filter((id) => JSON.stringify(draftSections.find((section) => section.id === id) || null) !== JSON.stringify(publishedSections.find((section) => section.id === id) || null)).map((id) => draftSections.find((section) => section.id === id)?.name || publishedSections.find((section) => section.id === id)?.name || id);
       const sectionChanges = sectionChangeNames.length;
-      const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || bookingAvailabilityChanges.length > 0 || sectionChanges > 0;
-      return { draft, published, heroChanges, mediaPathChanges, contentChanges, bookingAvailabilityChanges, sectionChanges, sectionChangeNames, blockedAssets, hasChanges };
+      const hasChanges = heroChanges > 0 || mediaPathChanges > 0 || contentChanges.length > 0 || bookingAvailabilityChanges.length > 0 || siteSettingsChanges > 0 || sectionChanges > 0;
+      return { draft, published, heroChanges, mediaPathChanges, contentChanges, bookingAvailabilityChanges, siteSettingsChanges, sectionChanges, sectionChangeNames, blockedAssets, hasChanges };
     }
 
     function syncBuilderSectionsFromContent() {
@@ -4822,7 +5197,12 @@
       const booking = state.builder.sections.find((section) => section.id === "booking");
       if (booking) { booking.ctaLabel = content.bookingCtaText || content.bookingCta || booking.ctaLabel; booking.ctaLink = workspace.bookingUrl; }
       const footer = state.builder.sections.find((section) => section.id === "footer");
-      if (footer) footer.body = content.footerText || "";
+      if (footer) {
+        footer.body = content.footerText || "";
+        footer.secondaryBody = content.footerAvailability || footer.secondaryBody;
+        footer.contactEmail = content.contactEmail || footer.contactEmail;
+        footer.socialLabel = content.socials || footer.socialLabel;
+      }
     }
 
     async function fetchPublishedConfig() {
@@ -5016,6 +5396,14 @@
       state.authUser = data.user || null;
       state.authSession = data.session || { expiresAt: data.expiresAt || "" };
       renderSecuritySettings();
+      loadWebsiteSessions().catch(() => {});
+    }
+
+    async function loadWebsiteSessions() {
+      if (!state.authUser) return;
+      const data = await websiteAuthRequest("sessions");
+      state.authSessions = Array.isArray(data.sessions) ? data.sessions : [];
+      renderSecuritySettings();
     }
 
     function syncBookingCollections() {
@@ -5181,10 +5569,22 @@
 
     function renderFullDraftPreview() {
       if (!isWebsiteTabActive("preview")) return;
-      const desktop = $("desktopDraftPreview");
-      const mobile = $("mobileDraftPreview");
-      if (desktop) desktop.srcdoc = draftPreviewDocument("desktop");
-      if (mobile) mobile.srcdoc = draftPreviewDocument("mobile");
+      [
+        ["desktopDraftPreviewMount", "desktopDraftPreview", "Desktop draft preview", "desktop"],
+        ["mobileDraftPreviewMount", "mobileDraftPreview", "Mobile draft preview", "mobile"]
+      ].forEach(([mountId, frameId, title, kind]) => {
+        const mount = $(mountId);
+        if (!mount) return;
+        let frame = $(frameId);
+        if (!frame) {
+          frame = document.createElement("iframe");
+          frame.id = frameId;
+          frame.title = title;
+          frame.setAttribute("sandbox", "allow-scripts");
+          mount.replaceChildren(frame);
+        }
+        frame.srcdoc = draftPreviewDocument(kind);
+      });
     }
 
     function mountPreviewFrames() {
@@ -5218,7 +5618,10 @@
         unmountPreviewFrames();
         const preview = $("builderPreviewLarge");
         if (preview) preview.replaceChildren();
-        ["desktopDraftPreview", "mobileDraftPreview"].forEach((id) => { const frame = $(id); if (frame) frame.srcdoc = ""; });
+        ["desktopDraftPreviewMount", "mobileDraftPreviewMount"].forEach((id) => {
+          const mount = $(id);
+          if (mount) mount.replaceChildren();
+        });
       }
       if (tab === "builder") {
         const preview = $("builderPreview");
@@ -5566,11 +5969,17 @@
       });
     }
 
+    function setOverlayVisibility(element, visible) {
+      if (!element) return;
+      element.classList.toggle("is-visible", visible);
+      element.setAttribute("aria-hidden", visible ? "false" : "true");
+      element.inert = !visible;
+    }
+
     function openNewBookingDialog() {
       const dialog = $("newBookingDialog");
       if (!dialog) return;
-      dialog.classList.add("is-visible");
-      dialog.setAttribute("aria-hidden", "false");
+      setOverlayVisibility(dialog, true);
       $("newBookingStatus").textContent = t("This creates a real booking record.");
       window.setTimeout(() => dialog.querySelector("input[name='name']")?.focus(), 50);
     }
@@ -5578,8 +5987,7 @@
     function closeNewBookingDialog() {
       const dialog = $("newBookingDialog");
       if (!dialog) return;
-      dialog.classList.remove("is-visible");
-      dialog.setAttribute("aria-hidden", "true");
+      setOverlayVisibility(dialog, false);
     }
 
     function isoDateInput(date) {
@@ -5658,8 +6066,7 @@
         ? `${booking.name} · ${booking.taskId || booking.id}`
         : `${linkedCustomer.name} · customer invoice`;
       $("invoiceDialogStatus").textContent = t("Invoice starts as Draft. Invoiced and paid totals exclude VAT.");
-      dialog.classList.add("is-visible");
-      dialog.setAttribute("aria-hidden", "false");
+      setOverlayVisibility(dialog, true);
       window.setTimeout(() => $("invoiceCustomerName")?.focus(), 50);
     }
 
@@ -5690,15 +6097,13 @@
       $("invoiceDialogBooking").textContent = `${invoice.invoice_number} · Draft`;
       $("invoiceDialogStatus").textContent = "Only draft invoices can be edited.";
       $("createInvoiceButton").textContent = "Save draft invoice";
-      dialog.classList.add("is-visible");
-      dialog.setAttribute("aria-hidden", "false");
+      setOverlayVisibility(dialog, true);
     }
 
     function closeInvoiceDialog() {
       const dialog = $("invoiceDialog");
       if (!dialog) return;
-      dialog.classList.remove("is-visible");
-      dialog.setAttribute("aria-hidden", "true");
+      setOverlayVisibility(dialog, false);
       $("invoiceDialogTitle").textContent = "Create Invoice";
       $("createInvoiceButton").textContent = "Create draft invoice";
     }
@@ -5864,16 +6269,14 @@
         ? `${booking.name} · ${booking.taskId || booking.id}`
         : "Create a persisted COMMONPL4CE customer.";
       $("customerDialogStatus").textContent = "A matching email or company will require an explicit link or merge choice.";
-      dialog.classList.add("is-visible");
-      dialog.setAttribute("aria-hidden", "false");
+      setOverlayVisibility(dialog, true);
       window.setTimeout(() => $("customerName")?.focus(), 50);
     }
 
     function closeCustomerDialog() {
       const dialog = $("customerDialog");
       if (!dialog) return;
-      dialog.classList.remove("is-visible");
-      dialog.setAttribute("aria-hidden", "true");
+      setOverlayVisibility(dialog, false);
     }
 
     function customerPayloadFromDialog() {
@@ -6458,7 +6861,6 @@
         </div>
         <div class="image-actions">
           <button class="button small" type="button" data-hero-choose="${kind}:${index}">Choose from Media Library</button>
-          <button class="button small" type="button" disabled>Replace disabled</button>
           <button class="button small" type="button" data-hero-remove="${kind}:${index}">Remove</button>
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="-1"${index === 0 ? " disabled" : ""}>Move left</button>
           <button class="button small" type="button" data-hero-move="${kind}:${index}" data-direction="1"${index === slots.length - 1 ? " disabled" : ""}>Move right</button>
@@ -6669,6 +7071,7 @@
         ["Changed sections", diff.sectionChangeNames.length ? diff.sectionChangeNames.join(", ") : "None"],
         ["Changed text fields", diff.contentChanges.length ? diff.contentChanges.join(", ") : "None"],
         ["Booking availability", diff.bookingAvailabilityChanges.length ? diff.bookingAvailabilityChanges.join(", ") : "No change"],
+        ["Global website settings", diff.siteSettingsChanges ? "Changed" : "No change"],
         ["Changed media paths", diff.mediaPathChanges],
         ["Media assets connected", connectedMedia],
         ["Publish readiness", publishBlocker],
@@ -6850,6 +7253,7 @@
         writeBuilderRecoveryCache();
         renderWebsiteFields();
         renderBookingAvailabilitySettings();
+        renderSiteSettings();
         renderVersionHistory();
         if (isWebsiteTabActive("preview")) refreshPublicPreviewFrames();
       } catch (error) {
@@ -7555,6 +7959,46 @@
       renderPublishSummary();
     }
 
+    function readSiteSetting(settings, path) {
+      return clean(path).split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, settings);
+    }
+
+    function renderSiteSettings() {
+      const settings = normalizeSiteConfig({ siteSettings: state.builder.siteSettings }).siteSettings;
+      state.builder.siteSettings = settings;
+      document.querySelectorAll("[data-site-setting]").forEach((field) => {
+        const value = readSiteSetting(settings, field.dataset.siteSetting);
+        const next = typeof value === "boolean" ? String(value) : String(value ?? "");
+        if (field.value !== next) field.value = next;
+      });
+      const changed = siteConfigDiff().siteSettingsChanges > 0;
+      const stateLabel = $("siteSettingsPublishState");
+      if (stateLabel) {
+        stateLabel.textContent = changed ? "Unpublished" : "Published";
+        stateLabel.classList.toggle("is-warning", changed);
+      }
+      const note = $("siteSettingsNote");
+      if (note) note.textContent = changed
+        ? "Website settings are saved in the server draft and are not live yet. Review and Publish when ready."
+        : "These values match the published COMMONPL4CE website configuration.";
+    }
+
+    function updateSiteSetting(path, rawValue) {
+      const keys = clean(path).split(".").filter(Boolean);
+      if (keys.length !== 2) return;
+      const [group, key] = keys;
+      const current = normalizeSiteConfig({ siteSettings: state.builder.siteSettings }).siteSettings;
+      let value = rawValue;
+      if (group === "integrations") value = String(rawValue) === "true";
+      if (group === "design" && ["displayWeight", "bodySize", "bodyLineHeight", "sectionSpacing", "contentWidth", "radius"].includes(key)) value = Number(rawValue);
+      state.builder.siteSettings = normalizeSiteConfig({
+        siteSettings: { ...current, [group]: { ...current[group], [key]: value } }
+      }).siteSettings;
+      saveBuilderDraft();
+      renderSiteSettings();
+      renderPublishSummary();
+    }
+
     function renderSettings() {
       const settings = [
         ["COMMONPL4CE brand", "Logo and public visual identity assets are connected.", "Active"],
@@ -7572,6 +8016,7 @@
           <span class="status-pill">${escapeHTML(t(stateLabel))}</span>
         </div>
       `).join("");
+      renderSiteSettings();
       renderBookingAvailabilitySettings();
       renderSecuritySettings();
       renderTrash();
@@ -7600,8 +8045,7 @@
           return;
         }
         const cleanup = (value) => {
-          dialog.classList.remove("is-visible");
-          dialog.setAttribute("aria-hidden", "true");
+          setOverlayVisibility(dialog, false);
           cancel.removeEventListener("click", onCancel);
           accept.removeEventListener("click", onAccept);
           document.removeEventListener("keydown", onKeydown);
@@ -7615,8 +8059,7 @@
         titleNode.textContent = title;
         bodyNode.textContent = body;
         accept.textContent = confirmLabel;
-        dialog.classList.add("is-visible");
-        dialog.setAttribute("aria-hidden", "false");
+        setOverlayVisibility(dialog, true);
         cancel.addEventListener("click", onCancel);
         accept.addEventListener("click", onAccept);
         document.addEventListener("keydown", onKeydown);
@@ -7771,16 +8214,52 @@
         ["Last password change", user.passwordChangedAt ? formatTimestamp(user.passwordChangedAt) : "Not recorded yet.", "Server-side auth"],
         ["Active session", user.email ? `${user.email} · ${user.role || "Viewer"}` : "No active session", user.email ? "Active" : "Signed out"],
         ["Session expires", session.expiresAt ? formatTimestamp(session.expiresAt) : "Not available.", "HttpOnly cookie"],
-        ["Logout other devices", "Revokes other server-side Website OS sessions.", "Active"],
-        ["Two-factor authentication", "Coming in Phase 3.", "Phase 3"]
+        ["Logout other devices", "Revokes other server-side Website OS sessions.", "Active"]
       ];
+      const sessionRows = state.authSessions.length ? `
+        <div class="setting-row setting-row--heading">
+          <strong>${escapeHTML(t("Signed-in devices"))}</strong>
+          <span>${escapeHTML(t("Server-side sessions for this account."))}</span>
+          <span class="status-pill">${state.authSessions.length}</span>
+        </div>
+        ${state.authSessions.map((item) => `
+          <div class="setting-row">
+            <strong>${escapeHTML(item.current ? t("This device") : sessionDeviceLabel(item.userAgent))}</strong>
+            <span>${escapeHTML(`${t("Last active")} ${formatTimestamp(item.lastActivity || item.createdAt)}`)}</span>
+            ${item.current
+              ? `<span class="status-pill">${escapeHTML(t("Current"))}</span>`
+              : `<button class="button ghost small" type="button" data-revoke-session="${escapeHTML(item.id)}">${escapeHTML(t("Sign out"))}</button>`}
+          </div>
+        `).join("")}
+      ` : "";
       target.innerHTML = rows.map(([title, value, stateLabel]) => `
         <div class="setting-row">
-          <strong>${escapeHTML(title)}</strong>
-          <span>${escapeHTML(value)}</span>
-          <span class="status-pill">${escapeHTML(stateLabel)}</span>
+          <strong>${escapeHTML(t(title))}</strong>
+          <span>${escapeHTML(t(value))}</span>
+          <span class="status-pill">${escapeHTML(t(stateLabel))}</span>
         </div>
-      `).join("");
+      `).join("") + sessionRows;
+    }
+
+    function sessionDeviceLabel(userAgent = "") {
+      const value = clean(userAgent);
+      if (!value) return t("Unknown device");
+      const browser = /Edg\//.test(value) ? "Edge" : /Firefox\//.test(value) ? "Firefox" : /CriOS|Chrome\//.test(value) ? "Chrome" : /Safari\//.test(value) ? "Safari" : t("Browser");
+      const device = /iPhone/.test(value) ? "iPhone" : /iPad/.test(value) ? "iPad" : /Android/.test(value) ? "Android" : /Macintosh/.test(value) ? "Mac" : /Windows/.test(value) ? "Windows" : t("Device");
+      return `${browser} · ${device}`;
+    }
+
+    async function revokeWebsiteSession(sessionId) {
+      const status = $("securityStatus");
+      status.textContent = t("Signing out device...");
+      try {
+        await websiteAuthRequest("revoke_session", { session_id: sessionId });
+        state.authSessions = state.authSessions.filter((item) => item.id !== sessionId);
+        renderSecuritySettings();
+        status.textContent = t("Device signed out.");
+      } catch (error) {
+        status.textContent = error.message || t("Could not sign out device.");
+      }
     }
 
     async function updateBookingStatus(bookingId, nextStatus) {
@@ -7789,7 +8268,7 @@
       const note = document.querySelector(`[data-status-note="${CSS.escape(bookingId)}"]`);
       const mappedStatus = STATUS_TO_TASK_STATUS[nextStatus];
       if (!mappedStatus) {
-        if (note) note.textContent = "Status updates connect in the next phase.";
+        if (note) note.textContent = t("Unsupported booking status.");
         return;
       }
       if (note) note.textContent = "Saving status...";
@@ -7806,8 +8285,8 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.success !== true) {
-        if (note) note.textContent = "Status updates connect in the next phase.";
-        throw new Error(data?.error || "Status update failed");
+        if (note) note.textContent = data?.error || t("Status update failed.");
+        throw new Error(data?.error || t("Status update failed."));
       }
       booking.status = nextStatus;
       booking.taskStatus = mappedStatus;
@@ -7831,6 +8310,15 @@
       renderActiveWebsiteTab();
     }
 
+    function setMobileBuilderPane(pane) {
+      if (!["sections", "editor", "preview"].includes(pane)) return;
+      const grid = $("builderGrid");
+      if (grid) grid.dataset.mobilePane = pane;
+      document.querySelectorAll("[data-mobile-builder-pane]").forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.mobileBuilderPane === pane ? "true" : "false");
+      });
+    }
+
     function refreshPublicPreviewFrames() {
       if (!isWebsiteTabActive("preview")) return;
       mountPreviewFrames();
@@ -7848,6 +8336,32 @@
       });
     }
 
+    function closeMobileMore() {
+      const backdrop = $("mobileMoreBackdrop");
+      const trigger = $("mobileMoreButton");
+      if (backdrop) {
+        setOverlayVisibility(backdrop, false);
+      }
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    }
+
+    function renderMobileActionBar(view) {
+      const target = $("mobileActionBar");
+      if (!target) return;
+      const actions = {
+        overview: [["new-booking", "New Booking", "primary"]],
+        bookings: [["new-booking", "New Booking", "primary"]],
+        calendar: [["new-booking", "New Booking", "primary"]],
+        website: [["save-draft", "Save draft", ""], ["preview", "Preview", ""], ["publish-review", "Publish", "primary"]],
+        clients: [["add-client", "Add Client", "primary"]],
+        analytics: [["refresh", "Refresh", ""]],
+        settings: []
+      };
+      target.innerHTML = (actions[view] || []).map(([action, label, style]) =>
+        `<button class="button small ${style}" type="button" data-mobile-action="${action}">${escapeHTML(t(label))}</button>`
+      ).join("");
+    }
+
     function switchView(view) {
       if (["messages", "emails", "portfolio"].includes(view)) {
         showToast(t("This module is not available in production yet."));
@@ -7859,6 +8373,8 @@
       document.querySelectorAll(".view").forEach((section) => {
         section.classList.toggle("is-active", section.dataset.view === view);
       });
+      closeMobileMore();
+      renderMobileActionBar(view);
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (view === "analytics") {
         loadCommonplaceAnalytics(state.analyticsRange).catch((error) => {
@@ -7873,6 +8389,7 @@
 
     function unlockApp() {
       document.body.classList.add("is-unlocked");
+      renderMobileActionBar("overview");
       loadContentWorkspace().catch((error) => {
         state.publishError = error.message || "Workspace content unavailable";
         renderPublishSummary();
@@ -7943,6 +8460,7 @@
       try {
         await websiteAuthRequest("logout_other_devices");
         status.textContent = "Other active sessions were signed out.";
+        await loadWebsiteSessions();
       } catch (error) {
         status.textContent = error.message || "Could not log out other devices.";
       } finally {
@@ -7978,6 +8496,19 @@
       await websiteAuthRequest("logout").catch(() => {});
       window.location.reload();
     });
+    $("mobileLogoutButton").addEventListener("click", () => $("logoutButton").click());
+    $("mobileRefreshButton").addEventListener("click", () => { closeMobileMore(); loadBookings(); });
+    $("mobileMoreButton").addEventListener("click", () => {
+      const backdrop = $("mobileMoreBackdrop");
+      const visible = !backdrop.classList.contains("is-visible");
+      setOverlayVisibility(backdrop, visible);
+      $("mobileMoreButton").setAttribute("aria-expanded", visible ? "true" : "false");
+      if (visible) $("mobileMoreClose").focus();
+    });
+    $("mobileMoreClose").addEventListener("click", closeMobileMore);
+    $("mobileMoreBackdrop").addEventListener("click", (event) => {
+      if (event.target === $("mobileMoreBackdrop")) closeMobileMore();
+    });
 
     $("changePasswordButton").addEventListener("click", changeWebsitePassword);
     $("logoutOtherDevicesButton").addEventListener("click", logoutOtherDevices);
@@ -8006,6 +8537,23 @@
     });
 
     document.addEventListener("click", async (event) => {
+      const sessionRevoke = event.target.closest("[data-revoke-session]");
+      if (sessionRevoke) {
+        sessionRevoke.disabled = true;
+        await revokeWebsiteSession(sessionRevoke.dataset.revokeSession);
+        return;
+      }
+      const mobileAction = event.target.closest("[data-mobile-action]");
+      if (mobileAction) {
+        const action = mobileAction.dataset.mobileAction;
+        if (action === "new-booking") openNewBookingDialog();
+        if (action === "add-client") openCustomerDialog();
+        if (action === "save-draft") $("saveBuilderDraft").click();
+        if (action === "preview") switchWebsiteTab("preview");
+        if (action === "publish-review") switchWebsiteTab("publish");
+        if (action === "refresh") loadBookings();
+        return;
+      }
       const jump = event.target.closest("[data-view-jump]");
       if (jump) {
         if (jump.dataset.viewJump === "bookings") {
@@ -8227,7 +8775,11 @@
       if (sectionButton) {
         state.builder.selectedSectionId = sectionButton.dataset.builderSectionId;
         renderSectionBuilder();
+        if (window.matchMedia("(max-width: 720px)").matches) setMobileBuilderPane("editor");
       }
+
+      const mobileBuilderPane = event.target.closest("[data-mobile-builder-pane]");
+      if (mobileBuilderPane) setMobileBuilderPane(mobileBuilderPane.dataset.mobileBuilderPane);
 
       const websiteTab = event.target.closest("[data-website-tab-target]");
       if (websiteTab) {
@@ -8411,6 +8963,12 @@
 
     document.querySelectorAll("[data-booking-availability-field]").forEach((field) => {
       const update = () => updateBookingAvailabilityField(field.dataset.bookingAvailabilityField, field.value);
+      field.addEventListener("input", update);
+      field.addEventListener("change", update);
+    });
+
+    document.querySelectorAll("[data-site-setting]").forEach((field) => {
+      const update = () => updateSiteSetting(field.dataset.siteSetting, field.value);
       field.addEventListener("input", update);
       field.addEventListener("change", update);
     });
@@ -8670,6 +9228,7 @@
     });
 
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && $("mobileMoreBackdrop")?.classList.contains("is-visible")) closeMobileMore();
       if (event.key === "Escape" && $("newBookingDialog")?.classList.contains("is-visible")) closeNewBookingDialog();
       if (event.key === "Escape" && $("invoiceDialog")?.classList.contains("is-visible")) closeInvoiceDialog();
       if (event.key === "Escape" && $("customerDialog")?.classList.contains("is-visible")) closeCustomerDialog();

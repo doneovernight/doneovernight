@@ -43,8 +43,8 @@ test("invoice from a persisted customer retains customer and booking links", () 
   assert.equal(invoice.notes, "Usage included");
 });
 
-test("Website OS invoice PDF is a downloadable valid PDF payload", () => {
-  const pdf = buildWebsiteOsInvoicePdf({
+test("Website OS invoice PDF is a downloadable valid PDF payload", async () => {
+  const pdf = await buildWebsiteOsInvoicePdf({
     invoice_number: "CP-2026-00001",
     issue_date: "2026-07-19",
     due_date: "2026-08-02",

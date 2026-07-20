@@ -35,6 +35,7 @@ function loadHandler({ role = "Owner", task, auditEvents = [] } = {}) {
     filename: resolvedAuth,
     loaded: true,
     exports: {
+      assertWebsiteOsRequestOrigin: () => true,
       requireWebsiteOsSession: async (_req, options = {}) => {
         if (Array.isArray(options.roles) && !options.roles.includes(role)) {
           const error = new Error("Website OS permission denied");
@@ -76,6 +77,7 @@ async function runAction({ action, role = "Owner", task: taskOverride, expectedU
     id: "33333333-3333-4333-8333-333333333333",
     task_id: "DON-2026-00001",
     source: "commonpl4ce_booker",
+    website_os_workspace_id: "11111111-1111-4111-8111-111111111111",
     status: "new",
     updated_at: "2026-07-19T08:00:00.000Z",
     raw_payload: { source: "commonpl4ce_booker", workspace: "cp" }
@@ -100,7 +102,7 @@ async function runAction({ action, role = "Owner", task: taskOverride, expectedU
 
   const req = {
     method: "POST",
-    headers: { host: "admin.doneovernight.com" },
+    headers: { host: "admin.doneovernight.com", origin: "https://admin.doneovernight.com" },
     body: {
       action: "commonpl4ce_record_action",
       workspace_slug: "cp",
@@ -158,6 +160,7 @@ test("restore returns a trashed booking to its persisted previous status", async
       id: "33333333-3333-4333-8333-333333333333",
       task_id: "DON-2026-00001",
       source: "commonpl4ce_booker",
+      website_os_workspace_id: "11111111-1111-4111-8111-111111111111",
       status: "trashed",
       updated_at: "2026-07-19T08:00:00.000Z",
       raw_payload: {
@@ -190,6 +193,7 @@ test("Editor and cross-workspace record actions are rejected", async () => {
       id: "33333333-3333-4333-8333-333333333333",
       task_id: "DON-2026-00001",
       source: "commonpl4ce_booker",
+      website_os_workspace_id: "99999999-9999-4999-8999-999999999999",
       status: "new",
       updated_at: "2026-07-19T08:00:00.000Z",
       raw_payload: { source: "commonpl4ce_booker", workspace: "another-client" }

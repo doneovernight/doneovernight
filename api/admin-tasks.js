@@ -3,7 +3,7 @@ const SUPABASE_TIMEOUT_MS = 10_000;
 const { buildSecureReviewUrl } = require("../lib/review-token");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const xContentRoutes = require("../lib/x-content/routes");
-const { requireWebsiteOsSession } = require("../lib/website-os-auth");
+const { assertWebsiteOsRequestOrigin, requireWebsiteOsSession } = require("../lib/website-os-auth");
 const { listScopedRecords } = require("../lib/website-os-repository");
 const { summarizeInvoices } = require("../lib/website-os-invoices");
 const tenantContext = require("../lib/x-content/tenant-context");
@@ -84,15 +84,8 @@ async function verifyAdminOrWebsiteOsSession(req, adminKey) {
   return { mode: "website_os", workspaceSlug: current.workspace.slug, current };
 }
 
-function isCommonplaceTask(task = {}) {
-  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
-  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
-  const workspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
-  return source === "commonpl4ce_booker" ||
-    source === "commonpl4ce_booker_v1" ||
-    source === "commonpl4ce_newsletter" ||
-    workspace === "commonpl4ce" ||
-    workspace === "cp";
+function isCommonplaceTask(task = {}, workspaceId = "") {
+  return Boolean(workspaceId) && clean(task.website_os_workspace_id) === clean(workspaceId);
 }
 
 function taskReference(task = {}) {
@@ -163,6 +156,7 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     const adminKey = clean(input.admin_key || input.adminKey);
+    if (!adminKey) assertWebsiteOsRequestOrigin(req);
     const authorized = await verifyAdminOrWebsiteOsSession(req, adminKey);
     if (!authorized) {
       return send(res, 401, { success: false, error: "Admin access denied" });
@@ -170,7 +164,7 @@ module.exports = async function handler(req, res) {
 
     const tasks = await fetchTasks();
     const scopedTasks = authorized.mode === "website_os"
-      ? (Array.isArray(tasks) ? tasks.filter(isCommonplaceTask) : [])
+      ? (Array.isArray(tasks) ? tasks.filter((task) => isCommonplaceTask(task, authorized.current.workspace.id)) : [])
       : tasks;
     const enrichedTasks = Array.isArray(scopedTasks) ? await Promise.all(scopedTasks.map(enrichTask)) : [];
     const [invoices, customers, customerBookings] = authorized.mode === "website_os"
