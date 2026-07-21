@@ -1,5 +1,6 @@
 const SUPABASE_TIMEOUT_MS = 10_000;
 const { syncAccessKeyCredential } = require("../lib/ops");
+const { supabaseServiceHeaders } = require("../lib/supabase-service-auth");
 
 function send(res, statusCode, payload) {
   res.statusCode = statusCode;
@@ -61,12 +62,10 @@ async function supabaseFetch(path, options = {}) {
     const response = await fetch(`${url}/rest/v1/${path}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         ...(options.headers || {})
-      }
+      })
     });
 
     if (!response.ok) {

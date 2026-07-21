@@ -48,7 +48,8 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | SHELL-07 | EN/NL interface locale | Partial | Y | Y | N | P | - | - | Y | N | Immediate switching, `document.lang`, current-screen preservation and refresh persistence were verified in the authenticated production UI; preference remains device-local. |
 | SHELL-08 | Mobile shell and keyboard operation | Partial | Y | Y | - | - | - | - | Y | N | Authenticated production screens were exercised at phone width with bottom navigation, sheets, cards and 44px targets; physical Safari/Android coverage remains outstanding. |
 | SHELL-09 | Loading/error/success states | Partial | Y | Y | Y | - | - | - | N | N | Major operations have states/toasts, but consistency was not proven across every action. |
-| SHELL-10 | Unfinished-module navigation safety | Complete | Y | Y | - | - | - | - | Y | Y | Messages, Branded Emails and Portfolio are hidden; placeholder HTML remains dormant. |
+| SHELL-10 | V1 scope navigation safety | Complete | Y | Y | - | - | - | - | Y | Y | Messages, Branded Emails and Portfolio are explicitly out of scope for Website OS V1.0 and remain hidden from production navigation; dormant markup is not presented as functional UI. |
+| SHELL-11 | Shared modal and sheet accessibility | Complete | Y | Y | - | - | - | - | Y | Y | Every Website OS dialog uses one stack-aware controller for focus trapping/restoration, Escape, inert background state and scroll locking; nested confirmations and mobile sheets are browser-tested. |
 
 ## Overview And Analytics
 
@@ -166,21 +167,22 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | POL-02 | Public booking acceptance | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Both public bookers read only current customer-visible versions, fail closed on required/stale acceptance and retain the original intake source/version. |
 | POL-03 | Immutable acceptance evidence | Complete | Y | Y | Y | Y | Y | - | Y | Y | Exact version, booking, timestamp, customer snapshot and privacy-preserving fingerprints are append-only; later customer linking is role- and workspace-verified. |
 | POL-04 | External legal review and approved copy | Missing | N | N | N | N | - | - | N | N | The product deliberately does not invent legal terms; COMMONPL4CE must supply reviewed copy before activating policies. |
+| POL-05 | Placeholder publish protection | Complete | Y | Y | Y | - | Y | - | Y | Y | Preset placeholders may remain in private drafts, but the authenticated server publish boundary rejects English and Dutch placeholder copy with a clear validation error before any immutable version is created. |
 
 ## Communications And Portfolio
 
 | ID | Capability | Status | UI | FE | API | DB | Authz | Live | E2E | Ready | Evidence / limitation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| COMM-01 | Reply workspace | Placeholder | Y | P | N | Y | Y | - | N | N | Workspace-scoped thread/message storage now exists, but the dormant composer has no production API or delivery workflow and stays hidden. |
-| COMM-02 | Message threads/messages persistence | Partial | P | N | N | Y | Y | - | N | N | Migration 063 created workspace-scoped production tables and policies; the authenticated module repository/UI is not activated. |
-| COMM-03 | Message archive/trash/restore | Placeholder | Y | N | N | Y | Y | - | N | N | Schema support exists, but the module remains hidden and no production action contract is exposed. |
-| COMM-04 | Branded email templates | Placeholder | Y | P | N | Y | Y | - | N | N | Production template/send tables exist, but the dormant preview is not presented as a working delivery workflow. |
-| COMM-05 | Attachments and real delivery | Partial | P | P | P | Y | Y | - | N | N | Version-pinned document mappings and invoice PDF attachments exist; no email provider, delivery failure handling or resend protection exists yet. |
-| COMM-06 | Delivery/send history | Missing | N | N | N | N | N | - | N | N | Invoice manual send state is not an email-delivery record. |
-| PORT-01 | Portfolio project CRUD | Placeholder | Y | N | N | Y | Y | N | N | N | Migration 063 supplies workspace-scoped project persistence, but the production module remains hidden until its API/UI contract is complete. |
-| PORT-02 | Portfolio media/categories/order/featured | Placeholder | Y | N | N | Y | Y | N | N | N | Schema support exists; dormant controls are not exposed as working functionality. |
-| PORT-03 | Portfolio draft/publish/public rendering | Missing | N | N | N | N | N | N | N | N | Public archive does not consume Website OS portfolio records. |
-| PORT-04 | Portfolio deletion/mobile archive linking | Missing | N | N | N | N | N | N | N | N | No repository or lifecycle exists. |
+| COMM-01 | Reply workspace | Out of Scope for Website OS V1.0 | Y | P | N | Y | Y | - | - | - | Dormant markup and workspace-scoped schema are retained for later work; the module is hidden and is not a V1 defect or advertised capability. |
+| COMM-02 | Message threads/messages persistence | Out of Scope for Website OS V1.0 | P | N | N | Y | Y | - | - | - | Migration 063 created scoped tables and policies, but no V1 module is exposed. |
+| COMM-03 | Message archive/trash/restore | Out of Scope for Website OS V1.0 | Y | N | N | Y | Y | - | - | - | Schema support remains dormant and hidden; no production action contract is claimed for V1. |
+| COMM-04 | Branded email templates | Out of Scope for Website OS V1.0 | Y | P | N | Y | Y | - | - | - | Branded Emails remains hidden; production template/send tables do not constitute a V1 delivery workflow. |
+| COMM-05 | Attachments and real delivery | Out of Scope for Website OS V1.0 | P | P | P | Y | Y | - | - | - | Invoice document attachments remain working; email-provider delivery is explicitly outside V1. |
+| COMM-06 | Delivery/send history | Out of Scope for Website OS V1.0 | N | N | N | N | N | - | - | - | No email-delivery capability is represented in the V1 interface. |
+| PORT-01 | Portfolio project CRUD | Out of Scope for Website OS V1.0 | Y | N | N | Y | Y | N | - | - | Migration 063 supplies scoped persistence, but Portfolio remains hidden and is not a V1 capability. |
+| PORT-02 | Portfolio media/categories/order/featured | Out of Scope for Website OS V1.0 | Y | N | N | Y | Y | N | - | - | Dormant schema and controls are retained for later work and are not exposed. |
+| PORT-03 | Portfolio draft/publish/public rendering | Out of Scope for Website OS V1.0 | N | N | N | N | N | N | - | - | The public archive does not consume Website OS portfolio records; V1 makes no such claim. |
+| PORT-04 | Portfolio deletion/mobile archive linking | Out of Scope for Website OS V1.0 | N | N | N | N | N | N | - | - | No V1 Portfolio lifecycle is exposed. |
 
 ## Website Builder, FAQ And Publishing
 
@@ -247,7 +249,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | RESP-05 | 320px public horizontal containment | Complete | Y | Y | - | - | - | Y | Y | Y | `/cp` measures exactly 320px at a 320px viewport; 390, 430, 768, 1024, 1280 and 1440 also have no horizontal overflow. |
 | SEO-01 | Title, description, canonical and favicon | Complete | Y | Y | - | - | - | Y | Y | Y | All are present and production identity is correct. |
 | SEO-02 | Open Graph/Twitter metadata | Complete | Y | Y | Y | Y | Y | Y | Y | Y | Published title, description, canonical and social image update Open Graph/Twitter metadata. |
-| SEO-03 | Indexability, robots and sitemap | Partial | Y | Y | Y | Y | Y | Y | P | N | Search visibility is publishable and validated; sitemap automation remains outside Website OS. |
+| SEO-03 | Indexability, robots and sitemap | Decision pending | Y | Y | Y | Y | Y | Y | P | N | No approved A/B indexability decision is recorded. Per the release rule, current production behavior remains unchanged at `noindex, nofollow`; this is documented rather than guessed. Sitemap automation remains outside Website OS V1.0. |
 | SEO-04 | Structured data | Missing | N | N | N | N | N | Y | N | N | No photographer/organization/FAQ structured data. |
 | SEO-05 | Heading hierarchy and broken-link assurance | Complete | Y | Y | Y | Y | Y | Y | Y | Y | HTML validation passes, heading structure is preserved and published links use strict safe URL handling. |
 
@@ -280,7 +282,7 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 | OPS-04 | `task_requests` authorization policy | Complete | - | - | Y | Y | Y | Y | Y | Y | Broad public UPDATE policy was removed; direct anonymous update probes are rejected and APIs require workspace sessions. |
 | OPS-05 | Effective table grants | Complete | - | - | - | Y | Y | - | Y | Y | Anonymous/authenticated Website OS privileges are revoked; service-role repository access is retained. |
 | OPS-06 | Security headers / clickjacking | Complete | - | - | - | - | Y | Y | Y | Y | Admin routes ship CSP/frame-ancestors, X-Frame-Options, nosniff, HSTS, Referrer-Policy and Permissions-Policy. |
-| OPS-07 | Secret handling | Partial | - | - | Y | Y | P | - | P | N | The embedded service-role bearer was removed from the tracked n8n export and a fail-closed regression now passes. Because the credential remains exposed in Git history and production-sensitive values cannot be compared non-disclosively, revocation/rotation is still mandatory before acceptance. |
+| OPS-07 | Secret handling | Partial | - | - | Y | Y | P | - | P | N | Tracked workflow exports contain no embedded credential, all repository Supabase clients accept opaque secret keys without bearer misuse, and the Vercel production environment is prepared with the replacement sensitive key. Supabase still reports the historically exposed legacy service-role key as enabled; disabling it through the management control plane and then verifying rejection remains mandatory before V1 freeze. |
 | OPS-08 | Production route identity gate | Complete | - | - | - | - | - | Y | Y | Y | Eight critical routes passed status and identity/negative-marker checks. |
 | OPS-09 | Full test suite | Complete | - | - | - | - | - | - | Y | Y | `npm test` passes the current repository suite including hardening, auth, content, media, invoices, business documents, system-evidence isolation, policies, booking actions and inline-script parsing; the exact count is recorded by the release run. |
 | OPS-10 | Build/CI release gate | Complete | - | - | - | - | - | - | Y | Y | `vercel-build` runs the complete repository test suite and fails deployment on regression. |
@@ -294,6 +296,6 @@ Layer columns: **UI** = interface exists; **FE** = frontend wired; **API** = ser
 
 ## Canonical Verdict
 
-**NOT READY FOR ACCEPTANCE.** Business identity, versioned documents, policies, acceptance evidence and invoice document snapshots are production-backed, and the embedded bearer has been removed from the current n8n export. Acceptance remains blocked until that historically exposed service-role credential is revoked/rotated. Recovery/2FA, DNS/email provider automation, approved legal copy, real email delivery, public Portfolio, customer/invoice pagination, automated operational alerting and a reusable CI-owned authenticated browser suite remain explicitly incomplete; unavailable modules stay hidden from production navigation.
+**NOT READY FOR ACCEPTANCE.** Business identity, versioned documents, policies, acceptance evidence and invoice document snapshots are production-backed. Shared dialog accessibility and placeholder-copy publish protection are enforced, and current workflow exports are credential-free. Acceptance remains blocked until the historically exposed Supabase legacy service-role key is disabled and rejection is verified. Messages, Branded Emails and Portfolio are explicitly out of scope for Website OS V1.0 and remain hidden; they are not classified as production defects. The current `noindex, nofollow` behavior remains unchanged because no approved indexability decision is recorded. Recovery/2FA, DNS/email-provider automation, approved legal copy, customer/invoice pagination, automated operational alerting and a reusable CI-owned authenticated browser suite remain documented limitations.
 
 This matrix supersedes the earlier “Completed / Phase 3” summary. A capability may have a working UI/API and still be non-ready when its authorization, live consumer, durability, scale behavior, or direct end-to-end evidence is incomplete.

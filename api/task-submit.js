@@ -64,6 +64,7 @@ const {
 } = require("../lib/workspace-activation");
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
+const { supabaseServiceHeaders } = require("../lib/supabase-service-auth");
 const {
   assertBookingPolicyAcceptances,
   readPublicBookingPolicies,
@@ -3875,11 +3876,9 @@ async function storageFetch(path, options = {}) {
   const method = options.method || "GET";
   const response = await fetch(`${url}/storage/v1/${path}`, {
     ...options,
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+    headers: supabaseServiceHeaders(serviceRoleKey, {
       ...(options.headers || {})
-    }
+    })
   });
 
   if (!response.ok) {

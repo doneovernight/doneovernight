@@ -1,4 +1,5 @@
 const { attention, fetchWithTimeout, healthy, unavailable } = require("./utils");
+const { supabaseServiceHeaders } = require("../../lib/supabase-service-auth");
 
 const TIME_ZONE = "Europe/Amsterdam";
 const DELIVERED_STATES = ["delivered", "completed", "delivery_complete", "delivered_ready"];
@@ -36,11 +37,9 @@ function hasSupabase(config = {}) {
 async function supabaseGet(config, path) {
   return fetchWithTimeout(`${config.supabaseUrl}/rest/v1/${path}`, {
     method: "GET",
-    headers: {
-      apikey: config.supabaseServiceRoleKey,
-      Authorization: `Bearer ${config.supabaseServiceRoleKey}`,
+    headers: supabaseServiceHeaders(config.supabaseServiceRoleKey, {
       Accept: "application/json"
-    }
+    })
   });
 }
 

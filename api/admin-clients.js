@@ -4,6 +4,7 @@ const MINA_CREATOR_ID = "11111111-1111-4111-8111-111111111111";
 const crypto = require("node:crypto");
 const handleCreatorLiveStatus = require("../lib/creator-live-status");
 const { reportCreatorError, runCreatorHealth } = require("../lib/creator-watchtower");
+const { supabaseServiceHeaders } = require("../lib/supabase-service-auth");
 const CREATOR_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_JSON_BYTES = 16_000_000;
 const MAX_MEDIA_BYTES = 10_000_000;
@@ -767,13 +768,11 @@ async function supabaseFetch(pathname, options = {}) {
   try {
     const response = await fetch(url + "/rest/v1/" + pathname, {
       method: options.method || "GET",
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: "Bearer " + serviceRoleKey,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         Accept: "application/json",
         "Content-Type": "application/json",
         ...(options.prefer ? { Prefer: options.prefer } : {})
-      },
+      }),
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal
     });
@@ -1294,13 +1293,11 @@ async function uploadCreatorMedia(input = {}) {
   const path = "mosyaamosya/" + kind + "-" + Date.now() + "-" + crypto.randomBytes(5).toString("hex") + "." + ext;
   const response = await fetch(url + "/storage/v1/object/" + CREATOR_MEDIA_BUCKET + "/" + path, {
     method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: "Bearer " + serviceRoleKey,
+    headers: supabaseServiceHeaders(serviceRoleKey, {
       "Content-Type": uploadMimeType,
       "Cache-Control": "public, max-age=31536000, immutable",
       "x-upsert": "true"
-    },
+    }),
     body: parsed.buffer
   });
   const text = await response.text();

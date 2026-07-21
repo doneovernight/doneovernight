@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { buildTaskPayload } = require("../lib/tasks/model");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
 const { syncAccessKeyCredential } = require("../lib/ops");
+const { supabaseServiceHeaders } = require("../lib/supabase-service-auth");
 const { deliverClientJoinLifecycle, normalizeClientJoinSource } = require("../lib/client-join-lifecycle");
 const { claimOperatorClientRelationship, normalizeHandle } = require("../lib/operator-relationships");
 
@@ -107,12 +108,10 @@ async function supabaseFetch(path, options = {}) {
     const response = await fetch(`${url}/rest/v1/${path}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         ...(options.headers || {})
-      }
+      })
     });
 
     if (!response.ok) {

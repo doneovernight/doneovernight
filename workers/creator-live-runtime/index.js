@@ -41,6 +41,15 @@ function clean(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function supabaseServiceHeaders(value, extra = {}) {
+  const key = clean(value);
+  return {
+    apikey: key,
+    ...(/^sb_secret_[A-Za-z0-9_-]+$/.test(key) ? {} : { Authorization: "Bearer " + key }),
+    ...extra
+  };
+}
+
 function positiveInteger(value, fallback) {
   const next = Number(value);
   return Number.isFinite(next) && next > 0 ? Math.floor(next) : fallback;
@@ -380,13 +389,11 @@ function applyRankUpdate(data = {}) {
 async function supabaseRest(pathname, options = {}) {
   const response = await fetch(config.supabaseUrl + "/rest/v1/" + pathname, {
     method: options.method || "GET",
-    headers: {
-      apikey: config.serviceRoleKey,
-      Authorization: "Bearer " + config.serviceRoleKey,
+    headers: supabaseServiceHeaders(config.serviceRoleKey, {
       Accept: "application/json",
       "Content-Type": "application/json",
       ...(options.prefer ? { Prefer: options.prefer } : {})
-    },
+    }),
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   const text = await response.text();
@@ -509,12 +516,10 @@ async function writeSnapshot(reason = "event") {
 
   const response = await fetch(config.supabaseUrl + "/rest/v1/creator_live_runtime?on_conflict=creator_slug", {
     method: "POST",
-    headers: {
-      apikey: config.serviceRoleKey,
-      Authorization: "Bearer " + config.serviceRoleKey,
+    headers: supabaseServiceHeaders(config.serviceRoleKey, {
       "Content-Type": "application/json",
       Prefer: "resolution=merge-duplicates"
-    },
+    }),
     body: JSON.stringify(payload)
   });
   if (!response.ok) {

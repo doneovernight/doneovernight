@@ -25,6 +25,10 @@ const {
 const { duplicateCustomer, normalizeCustomerInput } = require("../lib/website-os-customers");
 const { buildWebsiteOsInvoicePdf } = require("../lib/website-os-invoice-pdf");
 const {
+  isSupabaseServiceCredential,
+  supabaseServiceHeaders
+} = require("../lib/supabase-service-auth");
+const {
   getBusinessBundle,
   getInvoiceDocumentBundle,
   handleWebsiteOsBusinessAction,
@@ -216,22 +220,9 @@ function getSupabaseConfig() {
   return { url, serviceRoleKey };
 }
 
-function decodeSupabaseJwtRole(token = "") {
-  try {
-    const payload = clean(token).split(".")[1] || "";
-    if (!payload) return "";
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    const decoded = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
-    return clean(decoded.role || "");
-  } catch (error) {
-    return "";
-  }
-}
-
 function getSupabaseDeleteConfig() {
   const config = getSupabaseConfig();
-  if (decodeSupabaseJwtRole(config.serviceRoleKey) !== "service_role") {
+  if (!isSupabaseServiceCredential(config.serviceRoleKey)) {
     const error = new Error("Supabase service role key is required for archived task deletion");
     error.code = "DELETE_SERVICE_ROLE_NOT_CONFIGURED";
     error.statusCode = 503;
@@ -475,11 +466,9 @@ async function loadTask(taskId) {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}&select=*&limit=1`, {
       method: "GET",
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         Accept: "application/json"
-      }
+      })
     });
 
     if (!response.ok) {
@@ -513,12 +502,10 @@ async function supabaseRest(path, options = {}) {
     const response = await fetch(`${url}/rest/v1/${path}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         ...(options.headers || {})
-      }
+      })
     });
     const text = await response.text().catch(() => "");
     if (!response.ok) {
@@ -1162,12 +1149,10 @@ async function patchTask(taskId, patch, { expectedUpdatedAt = "" } = {}) {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}`, {
       method: "PATCH",
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         Prefer: "return=representation"
-      },
+      }),
       body: JSON.stringify(patch)
     });
 
@@ -1252,12 +1237,10 @@ async function deleteArchivedTaskViaRpc(task = {}, diagnosticBase = {}) {
     const response = await fetch(`${url}/rest/v1/rpc/admin_delete_archived_task`, {
       method: "POST",
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         Accept: "application/json"
-      },
+      }),
       body: JSON.stringify({
         p_task_row_id: rowId,
         p_task_id: taskReference
@@ -1382,12 +1365,10 @@ async function deleteTaskRow(task = {}) {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${deleteColumn}=eq.${encodeURIComponent(deleteValue)}`, {
       method: "DELETE",
       signal: controller.signal,
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         "Content-Type": "application/json",
         Prefer: "return=minimal"
-      }
+      })
     });
 
     if (!response.ok) {

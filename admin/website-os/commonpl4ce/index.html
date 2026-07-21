@@ -50,6 +50,11 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
+    body.has-open-dialog {
+      overflow: hidden;
+      overscroll-behavior: contain;
+    }
+
     body::before {
       content: "";
       position: fixed;
@@ -4343,7 +4348,7 @@
     </nav>
 
     <div class="mobile-more-backdrop" id="mobileMoreBackdrop" aria-hidden="true" inert>
-      <section class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
+      <section class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle" tabindex="-1">
         <div class="mobile-more-sheet-head"><strong id="mobileMoreTitle">More</strong><button class="button ghost small" id="mobileMoreClose" type="button">Close</button></div>
         <button class="button ghost" id="mobileTodayButton" type="button" data-today-briefing-open hidden>Today</button>
         <button class="button ghost" type="button" data-view-target="documents">Business Documents</button>
@@ -4357,7 +4362,7 @@
     </div>
 
     <div class="operational-modal" id="newBookingDialog" aria-hidden="true" inert>
-      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="newBookingTitle">
+      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="newBookingTitle" tabindex="-1">
         <div class="panel-head">
           <div><h2 id="newBookingTitle">New Booking</h2><p>Create a real COMMONPL4CE booking through the existing intake flow.</p></div>
           <button class="button ghost small" type="button" data-close-new-booking>Cancel</button>
@@ -4382,7 +4387,7 @@
     </div>
 
     <div class="operational-modal" id="invoiceDialog" aria-hidden="true" inert>
-      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="invoiceDialogTitle">
+      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="invoiceDialogTitle" tabindex="-1">
         <div class="panel-head">
           <div><h2 id="invoiceDialogTitle">Create Invoice</h2><p id="invoiceDialogBooking">Create a persisted draft invoice from this booking.</p></div>
           <button class="button ghost small" type="button" data-close-invoice>Cancel</button>
@@ -4419,7 +4424,7 @@
     </div>
 
     <div class="operational-modal" id="customerDialog" aria-hidden="true" inert>
-      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="customerDialogTitle">
+      <section class="os-panel operational-modal-card" role="dialog" aria-modal="true" aria-labelledby="customerDialogTitle" tabindex="-1">
         <div class="panel-head">
           <div><h2 id="customerDialogTitle">Add Client</h2><p id="customerDialogContext">Create a persisted COMMONPL4CE customer.</p></div>
           <button class="button ghost small" type="button" data-close-customer>Cancel</button>
@@ -4443,7 +4448,7 @@
     </div>
 
     <div class="operational-modal today-briefing-modal" id="todayBriefingDialog" aria-hidden="true" inert>
-      <section class="os-panel operational-modal-card today-briefing-sheet" id="todayBriefingSheet" role="dialog" aria-modal="true" aria-labelledby="todayBriefingTitle" aria-describedby="todayBriefingStatus">
+      <section class="os-panel operational-modal-card today-briefing-sheet" id="todayBriefingSheet" role="dialog" aria-modal="true" aria-labelledby="todayBriefingTitle" aria-describedby="todayBriefingStatus" tabindex="-1">
         <div id="todayBriefingContent" data-i18n-skip></div>
         <p class="today-briefing-status" id="todayBriefingStatus" aria-live="polite"></p>
       </section>
@@ -4452,7 +4457,7 @@
     <div class="os-toast" id="osToast" role="status" aria-live="polite"></div>
 
     <div class="confirm-backdrop" id="confirmDialog" aria-hidden="true" inert>
-      <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
+      <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody" tabindex="-1">
         <h2 id="confirmTitle">Move this booking to Trash?</h2>
         <p id="confirmBody">This removes it from the active workspace. It can be restored later.</p>
         <div class="confirm-actions">
@@ -4463,7 +4468,7 @@
     </div>
 
     <div class="business-dialog-backdrop" id="businessDocumentPreviewDialog" hidden aria-hidden="true" inert>
-      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessDocumentPreviewTitle">
+      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessDocumentPreviewTitle" tabindex="-1">
         <div class="panel-head">
           <div><h2 id="businessDocumentPreviewTitle">Document preview</h2><p>Draft preview. Nothing is published from this screen.</p></div>
           <button class="icon-button" type="button" data-close-business-dialog="preview" aria-label="Close preview">&times;</button>
@@ -4473,7 +4478,7 @@
     </div>
 
     <div class="business-dialog-backdrop" id="businessAcceptanceDialog" hidden aria-hidden="true" inert>
-      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessAcceptanceTitle">
+      <section class="business-dialog-card" role="dialog" aria-modal="true" aria-labelledby="businessAcceptanceTitle" tabindex="-1">
         <div class="panel-head">
           <div><h2 id="businessAcceptanceTitle">Customer acceptances</h2><p>The accepted document version remains recorded.</p></div>
           <div class="record-actions"><span class="status-pill" id="policyAcceptanceCount">0</span><button class="icon-button" type="button" data-close-business-dialog="acceptances" aria-label="Close acceptances">&times;</button></div>
@@ -5357,6 +5362,7 @@
       "Document title": "Documenttitel",
       "Document content": "Documentinhoud",
       "Use approved business copy. Presets do not contain legal terms.": "Gebruik goedgekeurde bedrijfstekst. Presets bevatten geen juridische voorwaarden.",
+      "Replace all placeholder copy with approved business content before publishing.": "Vervang alle tijdelijke tekst door goedgekeurde bedrijfstekst voordat je publiceert.",
       "Booking": "Boeking",
       "Invoice": "Factuur",
       "Email": "E-mail",
@@ -5823,7 +5829,6 @@
       businessDocumentScreen: "list",
       businessPolicyScreen: "list",
       creatingBusinessPolicy: false,
-      businessDialogReturnFocus: null,
       trash: [],
       clients: [],
       selectedBookingId: "",
@@ -5871,11 +5876,13 @@
       todayBriefingLoaded: false,
       todayBriefingPending: false,
       todayBriefingSnoozeTimer: null,
-      todayBriefingReturnFocus: null,
       todayBriefingTouchStartX: null
     };
 
     const $ = (id) => document.getElementById(id);
+    const MANAGED_DIALOG_FOCUSABLE = "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+    const managedDialogStack = [];
+    const managedDialogBackground = new Map();
     const escapeHTML = (value) => clean(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -7305,47 +7312,19 @@
     function openBusinessDialog(kind, trigger = null) {
       const dialog = kind === "acceptances" ? $("businessAcceptanceDialog") : $("businessDocumentPreviewDialog");
       if (!dialog) return;
-      state.businessDialogReturnFocus = trigger || document.activeElement;
       if (kind === "acceptances") renderBusinessPolicyAcceptances();
       else renderBusinessDocumentPreview();
-      dialog.hidden = false;
-      dialog.inert = false;
-      dialog.setAttribute("aria-hidden", "false");
-      window.requestAnimationFrame(() => dialog.querySelector("button")?.focus());
+      setOverlayVisibility(dialog, true, {
+        initialFocus: "button",
+        onEscape: () => closeBusinessDialog(kind),
+        returnFocus: trigger
+      });
     }
 
     function closeBusinessDialog(kind) {
       const dialog = kind === "acceptances" ? $("businessAcceptanceDialog") : $("businessDocumentPreviewDialog");
       if (!dialog || dialog.hidden) return;
-      dialog.hidden = true;
-      dialog.inert = true;
-      dialog.setAttribute("aria-hidden", "true");
-      state.businessDialogReturnFocus?.focus?.();
-      state.businessDialogReturnFocus = null;
-    }
-
-    function handleBusinessDialogKeydown(event) {
-      const openDialog = [$('businessDocumentPreviewDialog'), $('businessAcceptanceDialog')].find((dialog) => dialog && !dialog.hidden);
-      if (!openDialog) return false;
-      const kind = openDialog.id === "businessAcceptanceDialog" ? "acceptances" : "preview";
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeBusinessDialog(kind);
-        return true;
-      }
-      if (event.key !== "Tab") return false;
-      const focusable = Array.from(openDialog.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"));
-      if (!focusable.length) return false;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-      return true;
+      setOverlayVisibility(dialog, false);
     }
 
     function setNamedFormValues(form, values = {}, { force = false } = {}) {
@@ -7507,7 +7486,7 @@
         renderBusinessWorkspace();
         showToast(t("Document draft created."));
       } catch (error) {
-        showToast(error.message);
+        showToast(t(error.message));
       } finally {
         state.businessPending = false;
       }
@@ -7581,7 +7560,7 @@
         state.documentStatusFilter = "active";
         showToast(t("Document published."));
       } catch (error) {
-        showToast(error.message);
+        showToast(t(error.message));
       } finally {
         state.businessPending = false;
       }
@@ -8162,19 +8141,128 @@
       });
     }
 
-    function setOverlayVisibility(element, visible) {
+    function managedDialogBackgroundElements() {
+      const app = $("app");
+      return [$("gate"), ...(app ? Array.from(app.children) : [])].filter(Boolean);
+    }
+
+    function captureManagedDialogBackground() {
+      if (managedDialogBackground.size) return;
+      managedDialogBackgroundElements().forEach((element) => {
+        managedDialogBackground.set(element, {
+          inert: element.inert,
+          ariaHidden: element.getAttribute("aria-hidden")
+        });
+      });
+    }
+
+    function syncManagedDialogEnvironment() {
+      const active = managedDialogStack.at(-1)?.element || null;
+      document.body.classList.toggle("has-open-dialog", Boolean(active));
+      if (!active) {
+        managedDialogBackground.forEach((previous, element) => {
+          element.inert = previous.inert;
+          if (previous.ariaHidden === null) element.removeAttribute("aria-hidden");
+          else element.setAttribute("aria-hidden", previous.ariaHidden);
+        });
+        managedDialogBackground.clear();
+        return;
+      }
+      managedDialogBackground.forEach((previous, element) => {
+        const isActive = element === active || element.contains(active);
+        element.inert = !isActive;
+        if (isActive) element.setAttribute("aria-hidden", "false");
+        else element.setAttribute("aria-hidden", "true");
+      });
+    }
+
+    function focusManagedDialog(record) {
+      const surface = record.element.querySelector("[role='dialog']") || record.element;
+      const target = record.initialFocus
+        ? record.element.querySelector(record.initialFocus)
+        : record.element.querySelector(MANAGED_DIALOG_FOCUSABLE);
+      (target || surface).focus?.({ preventScroll: true });
+    }
+
+    function activateManagedDialog(element, options = {}) {
+      const existingIndex = managedDialogStack.findIndex((record) => record.element === element);
+      if (existingIndex >= 0) managedDialogStack.splice(existingIndex, 1);
+      const record = {
+        element,
+        initialFocus: options.initialFocus || "",
+        onEscape: typeof options.onEscape === "function" ? options.onEscape : null,
+        returnFocus: options.returnFocus || (document.activeElement instanceof HTMLElement ? document.activeElement : null)
+      };
+      managedDialogStack.push(record);
+      syncManagedDialogEnvironment();
+      window.requestAnimationFrame(() => focusManagedDialog(record));
+    }
+
+    function deactivateManagedDialog(element, { restoreFocus = true } = {}) {
+      const index = managedDialogStack.findIndex((record) => record.element === element);
+      if (index < 0) return;
+      const [record] = managedDialogStack.splice(index, 1);
+      syncManagedDialogEnvironment();
+      if (restoreFocus && record.returnFocus?.isConnected) {
+        window.requestAnimationFrame(() => record.returnFocus.focus?.({ preventScroll: true }));
+      }
+    }
+
+    function setOverlayVisibility(element, visible, options = {}) {
       if (!element) return;
+      if (visible) captureManagedDialogBackground();
+      if (visible && element.hidden) element.hidden = false;
       element.classList.toggle("is-visible", visible);
       element.setAttribute("aria-hidden", visible ? "false" : "true");
       element.inert = !visible;
+      if (visible) activateManagedDialog(element, options);
+      else {
+        deactivateManagedDialog(element, options);
+        if (element.classList.contains("business-dialog-backdrop")) element.hidden = true;
+      }
+    }
+
+    function handleManagedDialogKeydown(event) {
+      const record = managedDialogStack.at(-1);
+      if (!record) return false;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (record.onEscape) record.onEscape();
+        else setOverlayVisibility(record.element, false);
+        return true;
+      }
+      if (event.key !== "Tab") return false;
+      const focusable = Array.from(record.element.querySelectorAll(MANAGED_DIALOG_FOCUSABLE))
+        .filter((element) => !element.closest("[inert]") && element.getClientRects().length > 0);
+      const surface = record.element.querySelector("[role='dialog']") || record.element;
+      if (!focusable.length) {
+        event.preventDefault();
+        surface.focus?.({ preventScroll: true });
+        return true;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!record.element.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+      return true;
     }
 
     function openNewBookingDialog() {
       const dialog = $("newBookingDialog");
       if (!dialog) return;
-      setOverlayVisibility(dialog, true);
+      setOverlayVisibility(dialog, true, {
+        initialFocus: "input[name='name']",
+        onEscape: closeNewBookingDialog
+      });
       $("newBookingStatus").textContent = t("This creates a real booking record.");
-      window.setTimeout(() => dialog.querySelector("input[name='name']")?.focus(), 50);
     }
 
     function closeNewBookingDialog() {
@@ -8515,23 +8603,22 @@
       state.todayBriefingIndex = selectedIndex >= 0 ? selectedIndex : 0;
       state.todayBriefingMode = "summary";
       state.todayBriefingPending = false;
-      state.todayBriefingReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       eligible.forEach((booking) => state.todayBriefingShownKeys.add(todayBriefingSessionKey(booking)));
       $("todayBriefingStatus").textContent = "";
       $("todayBriefingStatus").classList.remove("is-error");
-      setOverlayVisibility($("todayBriefingDialog"), true);
       renderTodayBriefing();
-      window.setTimeout(() => $("todayBriefingDialog")?.querySelector("[data-today-briefing-action='dismissed']")?.focus(), 50);
+      setOverlayVisibility($("todayBriefingDialog"), true, {
+        initialFocus: "[data-today-briefing-action='dismissed']",
+        onEscape: () => saveTodayBriefingAction("dismissed", { closeImmediately: true })
+      });
     }
 
     function closeTodayBriefing({ restoreFocus = true } = {}) {
       if (!$("todayBriefingDialog")?.classList.contains("is-visible")) return;
-      setOverlayVisibility($("todayBriefingDialog"), false);
+      setOverlayVisibility($("todayBriefingDialog"), false, { restoreFocus });
       state.todayBriefingMode = "summary";
       state.todayBriefingBookingIds = [];
       state.todayBriefingPending = false;
-      if (restoreFocus) state.todayBriefingReturnFocus?.focus?.();
-      state.todayBriefingReturnFocus = null;
     }
 
     function stepTodayBriefing(direction) {
@@ -8573,7 +8660,7 @@
       }, Math.min(nextSnooze - Date.now() + 250, 2147483000));
     }
 
-    async function saveTodayBriefingAction(action) {
+    async function saveTodayBriefingAction(action, { closeImmediately = false } = {}) {
       if (state.todayBriefingPending) return;
       const bookings = currentTodayBriefingBookings();
       const booking = bookings[state.todayBriefingIndex];
@@ -8582,6 +8669,7 @@
       $("todayBriefingStatus").classList.remove("is-error");
       $("todayBriefingStatus").textContent = action === "later" ? t("Remind me again in 60 minutes.") : t("Briefing saved for today.");
       renderTodayBriefing();
+      if (closeImmediately) closeTodayBriefing();
       try {
         const result = await todayBriefingRequest(action, { booking_task_id: bookingReference(booking) });
         const dismissal = normalizedBriefingDismissal(result.dismissal || {
@@ -8593,12 +8681,16 @@
         state.todayBriefingDismissals.push(dismissal);
         if (action === "later") state.todayBriefingShownKeys.delete(todayBriefingSessionKey(booking));
         scheduleTodayBriefingSnoozeRefresh();
-        closeTodayBriefing({ restoreFocus: action !== "viewed" });
+        if (!closeImmediately) closeTodayBriefing({ restoreFocus: action !== "viewed" });
         renderTodayBriefingEntryPoints();
         if (action === "viewed") openBooking(booking.id);
         else showToast(action === "later" ? t("Remind me again in 60 minutes.") : t("Briefing saved for today."));
       } catch (error) {
         state.todayBriefingPending = false;
+        if (closeImmediately) {
+          showToast(t("Could not save the briefing state."));
+          return;
+        }
         $("todayBriefingStatus").classList.add("is-error");
         $("todayBriefingStatus").textContent = error.message || t("Could not save the briefing state.");
         renderTodayBriefing();
@@ -8632,11 +8724,6 @@
     function handleTodayBriefingKeydown(event) {
       const dialog = $("todayBriefingDialog");
       if (!dialog?.classList.contains("is-visible")) return false;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        saveTodayBriefingAction("dismissed");
-        return true;
-      }
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         stepTodayBriefing(-1);
@@ -8647,19 +8734,7 @@
         stepTodayBriefing(1);
         return true;
       }
-      if (event.key !== "Tab") return false;
-      const focusable = Array.from(dialog.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"));
-      if (!focusable.length) return false;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-      return true;
+      return false;
     }
 
     function openInvoiceDialog(bookingId = "", customerId = "") {
@@ -8699,8 +8774,10 @@
         ? `${booking.name} · ${booking.taskId || booking.id}`
         : `${linkedCustomer.name} · customer invoice`;
       $("invoiceDialogStatus").textContent = t("Invoice starts as Draft. Invoiced and paid totals exclude VAT.");
-      setOverlayVisibility(dialog, true);
-      window.setTimeout(() => $("invoiceCustomerName")?.focus(), 50);
+      setOverlayVisibility(dialog, true, {
+        initialFocus: "#invoiceCustomerName",
+        onEscape: closeInvoiceDialog
+      });
     }
 
     function openInvoiceEditDialog(invoiceId) {
@@ -8731,7 +8808,10 @@
       $("invoiceDialogBooking").textContent = `${invoice.invoice_number} · Draft`;
       $("invoiceDialogStatus").textContent = "Only draft invoices can be edited.";
       $("createInvoiceButton").textContent = "Save draft invoice";
-      setOverlayVisibility(dialog, true);
+      setOverlayVisibility(dialog, true, {
+        initialFocus: "#invoiceCustomerName",
+        onEscape: closeInvoiceDialog
+      });
     }
 
     function closeInvoiceDialog() {
@@ -8905,8 +8985,10 @@
         ? `${booking.name} · ${booking.taskId || booking.id}`
         : "Create a persisted COMMONPL4CE customer.";
       $("customerDialogStatus").textContent = "A matching email or company will require an explicit link or merge choice.";
-      setOverlayVisibility(dialog, true);
-      window.setTimeout(() => $("customerName")?.focus(), 50);
+      setOverlayVisibility(dialog, true, {
+        initialFocus: "#customerName",
+        onEscape: closeCustomerDialog
+      });
     }
 
     function closeCustomerDialog() {
@@ -10690,22 +10772,19 @@
           setOverlayVisibility(dialog, false);
           cancel.removeEventListener("click", onCancel);
           accept.removeEventListener("click", onAccept);
-          document.removeEventListener("keydown", onKeydown);
           resolve(value);
         };
         const onCancel = () => cleanup(false);
         const onAccept = () => cleanup(true);
-        const onKeydown = (event) => {
-          if (event.key === "Escape") cleanup(false);
-        };
         titleNode.textContent = title;
         bodyNode.textContent = body;
         accept.textContent = confirmLabel;
-        setOverlayVisibility(dialog, true);
         cancel.addEventListener("click", onCancel);
         accept.addEventListener("click", onAccept);
-        document.addEventListener("keydown", onKeydown);
-        cancel.focus();
+        setOverlayVisibility(dialog, true, {
+          initialFocus: "#confirmCancel",
+          onEscape: onCancel
+        });
       });
     }
 
@@ -11151,9 +11230,12 @@
     $("mobileMoreButton").addEventListener("click", () => {
       const backdrop = $("mobileMoreBackdrop");
       const visible = !backdrop.classList.contains("is-visible");
-      setOverlayVisibility(backdrop, visible);
+      setOverlayVisibility(backdrop, visible, visible ? {
+        initialFocus: "#mobileMoreClose",
+        onEscape: closeMobileMore,
+        returnFocus: $("mobileMoreButton")
+      } : {});
       $("mobileMoreButton").setAttribute("aria-expanded", visible ? "true" : "false");
-      if (visible) $("mobileMoreClose").focus();
     });
     $("mobileMoreClose").addEventListener("click", closeMobileMore);
     $("mobileMoreBackdrop").addEventListener("click", (event) => {
@@ -12073,12 +12155,8 @@
     });
 
     document.addEventListener("keydown", (event) => {
+      if (handleManagedDialogKeydown(event)) return;
       if (handleTodayBriefingKeydown(event)) return;
-      if (handleBusinessDialogKeydown(event)) return;
-      if (event.key === "Escape" && $("mobileMoreBackdrop")?.classList.contains("is-visible")) closeMobileMore();
-      if (event.key === "Escape" && $("newBookingDialog")?.classList.contains("is-visible")) closeNewBookingDialog();
-      if (event.key === "Escape" && $("invoiceDialog")?.classList.contains("is-visible")) closeInvoiceDialog();
-      if (event.key === "Escape" && $("customerDialog")?.classList.contains("is-visible")) closeCustomerDialog();
     });
 
     document.querySelectorAll("[data-locale]").forEach((button) => {

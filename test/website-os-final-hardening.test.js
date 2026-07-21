@@ -110,8 +110,31 @@ test("tracked workflow exports contain no embedded bearer credentials", () => {
   workflowFiles.forEach((file) => {
     const source = fs.readFileSync(path.join(workflowDirectory, file), "utf8");
     const containsBearerCredential = /Bearer\s+eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(source);
+    const containsEmbeddedJwt = /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/.test(source);
     assert.equal(containsBearerCredential, false, `${file} contains an embedded bearer credential`);
+    assert.equal(containsEmbeddedJwt, false, `${file} contains an embedded JWT credential`);
   });
+  const portalWorkflow = read("docs/n8n/portal-task-submit-http-locale-fixed.workflow.json");
+  assert.doesNotMatch(portalWorkflow, /'Bearer '\s*\+\s*\$env\.SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(portalWorkflow, /\$env\.SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test("Supabase service clients support opaque keys without misusing Authorization", () => {
+  const { isSupabaseServiceCredential, supabaseServiceHeaders } = require("../lib/supabase-service-auth");
+  const opaque = "sb_secret_example_only";
+  const opaqueHeaders = supabaseServiceHeaders(opaque, { Accept: "application/json" });
+  assert.equal(isSupabaseServiceCredential(opaque), true);
+  assert.equal(opaqueHeaders.apikey, opaque);
+  assert.equal(opaqueHeaders.Authorization, undefined);
+  assert.equal(opaqueHeaders.Accept, "application/json");
+  assert.match(read("api/admin-update-task.js"), /isSupabaseServiceCredential/);
+  [
+    "api/admin-update-task.js", "api/admin-tasks.js", "api/admin-clients.js", "api/client-onboarding.js",
+    "api/workspace-link.js", "api/task-submit.js", "lib/ops.js", "lib/tasks/store.js",
+    "lib/attachments.js", "lib/creator-live-status.js", "lib/x-content/repository.js",
+    "heartbeat/providers/operations.js", "heartbeat/providers/analytics.js", "heartbeat/providers/health.js"
+  ].forEach((file) => assert.doesNotMatch(read(file), /Authorization:\s*[`\"]Bearer \$\{serviceRoleKey\}|Authorization:\s*"Bearer " \+ serviceRoleKey/));
+  assert.doesNotMatch(read("workers/creator-live-runtime/index.js"), /Authorization:\s*"Bearer " \+ config\.serviceRoleKey/);
 });
 
 test("all COMMONPL4CE executable inline scripts parse after hardening", () => {

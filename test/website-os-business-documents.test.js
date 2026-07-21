@@ -4,6 +4,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  assertPublishableBusinessDocument,
   classifyBusinessBundleRecords,
   isSystemAcceptanceEvidenceRecord,
   normalizeBusinessProfile,
@@ -80,6 +81,20 @@ test("business profile and document validation reject unsafe values", () => {
   assert.match(read("lib/website-os-business.js"), /new Set\(destinations\.map/);
 });
 
+test("placeholder business copy cannot cross the server-side publish boundary", () => {
+  assert.equal(assertPublishableBusinessDocument({ title: "Approved", body: "Final approved copy." }), true);
+  assert.throws(
+    () => assertPublishableBusinessDocument({ title: "Booking Policy", body: "[Add approved business copy.]" }),
+    (error) => error.code === "DOCUMENT_PLACEHOLDER_COPY_NOT_PUBLISHABLE" && error.statusCode === 422
+  );
+  assert.throws(
+    () => assertPublishableBusinessDocument({ title: "Boekingsbeleid", body: "[Voeg goedgekeurde bedrijfstekst toe.]" }),
+    (error) => error.code === "DOCUMENT_PLACEHOLDER_COPY_NOT_PUBLISHABLE"
+  );
+  const source = read("lib/website-os-business.js");
+  assert.match(source, /assertPublishableBusinessDocument\(document\)[\s\S]*website_os_publish_document/);
+});
+
 test("admin APIs require Website OS sessions and expose scoped document contracts", () => {
   const updateApi = read("api/admin-update-task.js");
   const readApi = read("api/admin-tasks.js");
@@ -151,8 +166,8 @@ test("Business Documents default flow uses presets, focused editing and progress
   assert.match(ui, /id="addBusinessDocument"/);
   assert.match(ui, /data-open-document-preview/);
   assert.match(ui, /id="businessDocumentPreviewDialog"[^>]*hidden[^>]*aria-hidden="true"[^>]*inert/);
-  assert.match(ui, /function handleBusinessDialogKeydown\(event\)/);
-  assert.match(ui, /if \(handleBusinessDialogKeydown\(event\)\) return/);
+  assert.match(ui, /function handleManagedDialogKeydown\(event\)/);
+  assert.match(ui, /if \(handleManagedDialogKeydown\(event\)\) return/);
 });
 
 test("Policy manager hides technical defaults and opens acceptance evidence on demand", () => {

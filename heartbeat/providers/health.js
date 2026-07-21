@@ -1,4 +1,5 @@
 const { attention, fetchWithTimeout, healthy, unavailable } = require("./utils");
+const { supabaseServiceHeaders } = require("../../lib/supabase-service-auth");
 
 async function checkHttp({ source, url, expectedStatuses = [200], method = "GET" }) {
   if (!url) return unavailable(source, "Missing URL");
@@ -34,11 +35,9 @@ async function checkSupabase(config) {
   try {
     const response = await fetchWithTimeout(`${config.supabaseUrl}/rest/v1/task_requests?select=task_id&limit=1`, {
       method: "GET",
-      headers: {
-        apikey: config.supabaseServiceRoleKey,
-        Authorization: `Bearer ${config.supabaseServiceRoleKey}`,
+      headers: supabaseServiceHeaders(config.supabaseServiceRoleKey, {
         Accept: "application/json"
-      }
+      })
     });
     const responseTimeMs = Date.now() - startedAt;
 
@@ -69,13 +68,11 @@ async function countSupabaseTable(config, { source, table, column = "id", filter
   try {
     const response = await fetchWithTimeout(`${config.supabaseUrl}/rest/v1/${query}`, {
       method: "GET",
-      headers: {
-        apikey: config.supabaseServiceRoleKey,
-        Authorization: `Bearer ${config.supabaseServiceRoleKey}`,
+      headers: supabaseServiceHeaders(config.supabaseServiceRoleKey, {
         Accept: "application/json",
         Prefer: "count=exact",
         Range: "0-0"
-      }
+      })
     });
     const responseTimeMs = Date.now() - startedAt;
 

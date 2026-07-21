@@ -6,6 +6,7 @@ const xContentRoutes = require("../lib/x-content/routes");
 const { assertWebsiteOsRequestOrigin, requireWebsiteOsSession } = require("../lib/website-os-auth");
 const { listScopedRecords } = require("../lib/website-os-repository");
 const { summarizeInvoices } = require("../lib/website-os-invoices");
+const { supabaseServiceHeaders } = require("../lib/supabase-service-auth");
 const tenantContext = require("../lib/x-content/tenant-context");
 
 function send(res, statusCode, payload) {
@@ -105,11 +106,9 @@ async function fetchTasks() {
   try {
     const response = await fetch(`${url}/rest/v1/task_requests?select=*&order=created_at.desc`, {
       method: "GET",
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+      headers: supabaseServiceHeaders(serviceRoleKey, {
         Accept: "application/json"
-      },
+      }),
       signal: controller.signal
     });
 
