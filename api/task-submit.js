@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const sharp = require("sharp");
 const { buildTaskPayload, validateTaskInput } = require("../lib/tasks/model");
 const {
   analyzeIntakeQuality,
@@ -15,6 +16,19 @@ const {
   supabaseFetch,
   workspaceSessionMatchesRequest
 } = require("../lib/ops");
+const {
+  assertWebsiteOsRequestOrigin,
+  changeWebsiteOsPassword,
+  getWebsiteOsSession,
+  listWebsiteOsSessions,
+  loginWebsiteOsUser,
+  logoutOtherWebsiteOsSessions,
+  logoutWebsiteOsUser,
+  publicUser,
+  publicWorkspace,
+  revokeWebsiteOsSession,
+  requireWebsiteOsSession
+} = require("../lib/website-os-auth");
 const { subscribeToDispatch } = require("../lib/dispatch-subscribe");
 const { handleNotificationPreference } = require("../lib/notification-preferences");
 const { createTaskId, saveTask, TaskPersistenceError } = require("../lib/tasks/store");
@@ -51,6 +65,11 @@ const {
 const { handleInvoiceDownloadRequest } = require("../lib/invoices");
 const { appendOperatorRelationshipTaskReference, getConnectedOperatorForWorkspace } = require("../lib/operator-relationships");
 const {
+  assertBookingPolicyAcceptances,
+  readPublicBookingPolicies,
+  recordBookingPolicyAcceptances
+} = require("../lib/website-os-business");
+const {
   applePackagePlan,
   appleSigningStatus,
   createSignedApplePassPackage,
@@ -75,6 +94,133 @@ const HQ_SESSION_COOKIE = "doneovernight_hq_session";
 const HQ_SESSION_TTL_SECONDS = Number(process.env.HQ_SESSION_TTL_SECONDS || 60 * 60 * 24);
 const HQ_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const HQ_LOGIN_MAX_ATTEMPTS = 6;
+const ADMIN_AUTH_ENDPOINT = "https://n8n.doneovernight.com/webhook/admin-auth";
+const COMMONPLACE_SITE_CONFIG_SOURCE = "commonpl4ce_site_config";
+const COMMONPLACE_CONTENT_WORKSPACE_SLUG = "cp";
+const COMMONPLACE_CONTENT_MEDIA_BUCKET = "website-os-media";
+const COMMONPLACE_CONTENT_MAX_MEDIA_BYTES = 4 * 1024 * 1024;
+const COMMONPLACE_CONTENT_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+let commonplaceTrackingSettingsCache = null;
+const COMMONPLACE_BOOKING_SOURCE = "commonpl4ce_booker";
+const COMMONPLACE_BOOKING_VERSION = "commonpl4ce_booker_v1";
+const COMMONPLACE_ANALYTICS_SOURCE = "commonpl4ce";
+const COMMONPLACE_NEWSLETTER_SOURCE = "commonpl4ce_newsletter";
+const COMMONPLACE_NEWSLETTER_VERSION = "commonpl4ce_newsletter_v1";
+const COMMONPLACE_TIME_ZONE = "Europe/Amsterdam";
+const COMMONPLACE_ALLOWED_ANALYTICS_PATHS = new Set(["/cp", "/cp-book"]);
+const COMMONPLACE_ANALYTICS_EVENTS = new Set([
+  "page_view",
+  "hero_view",
+  "scroll_depth",
+  "booker_station_view",
+  "book_cta_click",
+  "project_section_view",
+  "newsletter_start",
+  "newsletter_submit",
+  "newsletter_success",
+  "form_start",
+  "field_progress",
+  "form_submit_attempt",
+  "form_submit_success",
+  "form_submit_error"
+]);
+const COMMONPLACE_SITE_CONFIG_DEFAULT = {
+  version: 1,
+  workspace: "commonpl4ce",
+  updatedAt: "2026-07-09T00:00:00.000Z",
+  hero: {
+    desktop: [
+      ["/assets/common-place/fullscreen/slide-01-opening.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/fullscreen/slide-02-yellow.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-03-hoodie-front.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-04-chair.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-05-duo.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-06-couch.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/fullscreen/slide-07-profile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `desktop_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" })),
+    mobile: [
+      ["/assets/common-place/mobile/slide-01-mobile.jpg", "Romy standing with her back toward the camera", "Opening frame"],
+      ["/assets/common-place/mobile/slide-02-mobile.jpg", "Yellow sweater portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-03-mobile.jpg", "Hoodie portrait seated on a bench", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-04-mobile.jpg", "Editorial chair portrait on film", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-05-mobile.jpg", "Duo portrait in yellow campaign styling", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-06-mobile.jpg", "Campaign image with couch and hoodie", "Gallery frame"],
+      ["/assets/common-place/mobile/slide-07-mobile.jpg", "Side profile hoodie campaign image", "Gallery frame"]
+    ].map(([src, alt, label], index) => ({ id: `mobile_hero_${index + 1}`, src, alt, label, caption: label, status: "Ready" }))
+  },
+  content: {
+    heroLine: "Available for campaigns, editorials and selected brand projects.",
+    storyTitle: "Shot with feeling.",
+    storyLeadPrimary: "CP creates visual stories for brands, campaigns and people who want their imagery to feel real.",
+    storyLeadSecondary: "Film slows everything down. It forces attention, preserves texture and keeps the small imperfections that make a moment believable.",
+    storySmallLine: "For brands that need more than clean content: imagery with mood, memory and presence.",
+    aboutKicker: "Behind the Film",
+    aboutTitle: "Romy Peters",
+    aboutText: "COMMONPL4CE is shaped by Romy Peters, a photographer working between fashion, lifestyle, travel and documentary storytelling.",
+    behindTheFilm: "Selected projects can be captured on Kodak film to preserve grain, atmosphere and the small imperfections that make a visual feel alive.",
+    aboutBodySecondary: "Her work is built around feeling: quiet direction, real presence and images that carry texture beyond the moment.",
+    socials: "Instagram: @commonpl4ce",
+    contactEmail: "book@commonpl4ce.com",
+    availability: "Netherlands\nEurope\nWorldwide",
+    availabilityNote: "Available for campaigns,\neditorials and selected brand projects.",
+    availabilityQuiet: "Limited availability each month.",
+    bookingCtaText: "Start your project",
+    footerText: "COMMONPL4CE / Romy Peters / Powered by DONEOVERNIGHT",
+    footerAvailability: "Available worldwide"
+  },
+  siteSettings: {
+    design: {
+      themePreset: "commonpl4ce",
+      background: "#060606",
+      surface: "#0a0a09",
+      paper: "#ede6d8",
+      light: "#f1eadc",
+      lightInk: "#080807",
+      displayFont: "Inter",
+      bodyFont: "Georgia",
+      displayWeight: 850,
+      bodySize: 20,
+      bodyLineHeight: 1.34,
+      sectionSpacing: 120,
+      contentWidth: 1180,
+      buttonStyle: "underline",
+      radius: 0
+    },
+    branding: {
+      headerLogo: "/assets/common-place/final/cp-header-small.png",
+      footerLogo: "/assets/common-place/final/wordmark.png",
+      favicon: "/assets/common-place/final/cp-favicon-32.png",
+      socialImage: "/assets/common-place/fullscreen/slide-01-opening.jpg"
+    },
+    navigation: {
+      bookingLabel: "Book",
+      bookingUrl: "https://doneovernight.com/cp-book"
+    },
+    seo: {
+      title: "COMMONPL4CE | Campaign Archive",
+      description: "CP creates visual stories for brands, campaigns and people who want imagery with mood, memory and presence.",
+      canonical: "https://doneovernight.com/cp",
+      robots: "noindex, nofollow"
+    },
+    integrations: {
+      analyticsEnabled: true,
+      newsletterEnabled: true
+    },
+    contact: {
+      email: "book@commonpl4ce.com",
+      socialLabel: "Instagram",
+      socialUrl: "https://instagram.com/commonpl4ce"
+    }
+  },
+  bookingAvailability: {
+    status: "online",
+    offlineHeading: "Booking temporarily unavailable.",
+    offlineMessage: "Bookings are currently unavailable while the booking experience is being updated. Please visit COMMONPL4CE or check back later.",
+    offlineCtaLabel: "Visit COMMONPL4CE",
+    offlineCtaLink: "/cp",
+    blockedDates: []
+  }
+};
 const hqLoginAttempts = new Map();
 const ALLOWED_ANALYTICS_EVENTS = new Set([
   "page_view",
@@ -110,6 +256,920 @@ const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0
 function clean(value) {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCommonplaceBookingAvailability(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT.bookingAvailability;
+  const status = clean(source.status).toLowerCase() === "offline" ? "offline" : "online";
+  const offlineCtaLink = clean(source.offlineCtaLink || source.ctaLink) || fallback.offlineCtaLink;
+  const blockedDates = Array.isArray(source.blockedDates)
+    ? [...new Set(source.blockedDates.map(normalizeCommonplaceBookingDate).filter(Boolean))].sort()
+    : [];
+  return {
+    status,
+    offlineHeading: clean(source.offlineHeading || source.heading) || fallback.offlineHeading,
+    offlineMessage: clean(source.offlineMessage || source.message) || fallback.offlineMessage,
+    offlineCtaLabel: clean(source.offlineCtaLabel || source.ctaLabel) || fallback.offlineCtaLabel,
+    offlineCtaLink: offlineCtaLink.startsWith("/") || /^https?:\/\//i.test(offlineCtaLink) ? offlineCtaLink : fallback.offlineCtaLink,
+    blockedDates
+  };
+}
+
+function boundedNumber(value, fallback, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function normalizeCommonplaceSiteSettings(value = {}) {
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT.siteSettings;
+  const source = value && typeof value === "object" ? value : {};
+  const design = source.design && typeof source.design === "object" ? source.design : {};
+  const branding = source.branding && typeof source.branding === "object" ? source.branding : {};
+  const navigation = source.navigation && typeof source.navigation === "object" ? source.navigation : {};
+  const seo = source.seo && typeof source.seo === "object" ? source.seo : {};
+  const integrations = source.integrations && typeof source.integrations === "object" ? source.integrations : {};
+  const contact = source.contact && typeof source.contact === "object" ? source.contact : {};
+  const color = (candidate, original) => /^#[0-9a-f]{6}$/i.test(clean(candidate)) ? clean(candidate).toLowerCase() : original;
+  const displayFont = ["Inter", "Arial", "Georgia", "Times New Roman"].includes(clean(design.displayFont)) ? clean(design.displayFont) : fallback.design.displayFont;
+  const bodyFont = ["Inter", "Arial", "Georgia", "Times New Roman"].includes(clean(design.bodyFont)) ? clean(design.bodyFont) : fallback.design.bodyFont;
+  const canonical = /^https:\/\/doneovernight\.com\/cp\/?$/i.test(clean(seo.canonical)) ? clean(seo.canonical).replace(/\/$/, "") : fallback.seo.canonical;
+  const bookingUrl = clean(navigation.bookingUrl) === "https://doneovernight.com/cp-book" ? clean(navigation.bookingUrl) : fallback.navigation.bookingUrl;
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean(contact.email)) ? clean(contact.email).toLowerCase() : fallback.contact.email;
+  return {
+    design: {
+      themePreset: "commonpl4ce",
+      background: color(design.background, fallback.design.background),
+      surface: color(design.surface, fallback.design.surface),
+      paper: color(design.paper, fallback.design.paper),
+      light: color(design.light, fallback.design.light),
+      lightInk: color(design.lightInk, fallback.design.lightInk),
+      displayFont,
+      bodyFont,
+      displayWeight: Math.round(boundedNumber(design.displayWeight, fallback.design.displayWeight, 400, 900)),
+      bodySize: Math.round(boundedNumber(design.bodySize, fallback.design.bodySize, 15, 26)),
+      bodyLineHeight: boundedNumber(design.bodyLineHeight, fallback.design.bodyLineHeight, 1.1, 1.8),
+      sectionSpacing: Math.round(boundedNumber(design.sectionSpacing, fallback.design.sectionSpacing, 56, 220)),
+      contentWidth: Math.round(boundedNumber(design.contentWidth, fallback.design.contentWidth, 760, 1440)),
+      buttonStyle: ["underline", "outline", "solid"].includes(clean(design.buttonStyle)) ? clean(design.buttonStyle) : fallback.design.buttonStyle,
+      radius: Math.round(boundedNumber(design.radius, fallback.design.radius, 0, 24))
+    },
+    branding: {
+      headerLogo: clean(branding.headerLogo) || fallback.branding.headerLogo,
+      footerLogo: clean(branding.footerLogo) || fallback.branding.footerLogo,
+      favicon: clean(branding.favicon) || fallback.branding.favicon,
+      socialImage: clean(branding.socialImage) || fallback.branding.socialImage
+    },
+    navigation: {
+      bookingLabel: clean(navigation.bookingLabel).slice(0, 30) || fallback.navigation.bookingLabel,
+      bookingUrl
+    },
+    seo: {
+      title: clean(seo.title).slice(0, 70) || fallback.seo.title,
+      description: clean(seo.description).slice(0, 180) || fallback.seo.description,
+      canonical,
+      robots: clean(seo.robots).toLowerCase() === "index, follow" ? "index, follow" : "noindex, nofollow"
+    },
+    integrations: {
+      analyticsEnabled: integrations.analyticsEnabled !== false,
+      newsletterEnabled: integrations.newsletterEnabled !== false
+    },
+    contact: {
+      email,
+      socialLabel: clean(contact.socialLabel).slice(0, 40) || fallback.contact.socialLabel,
+      socialUrl: clean(contact.socialUrl) || fallback.contact.socialUrl
+    }
+  };
+}
+
+function normalizeCommonplaceBookingDate(value) {
+  const date = clean(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+  const parsed = new Date(`${date}T12:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date ? "" : date;
+}
+
+function currentCommonplaceDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: COMMONPLACE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function isCommonplaceBookingInput(input = {}) {
+  return clean(input.source).toLowerCase() === COMMONPLACE_BOOKING_SOURCE ||
+    clean(input.intakeVersion || input.intake_version).toLowerCase() === COMMONPLACE_BOOKING_VERSION;
+}
+
+function commonplaceBookingDateFromRecord(record = {}) {
+  return normalizeCommonplaceBookingDate(
+    record.raw_payload?.preferredDate ||
+    record.raw_payload?.preferred_date ||
+    record.raw_payload?.deadline ||
+    record.deadline
+  );
+}
+
+function commonplaceBookingStillReservesDate(record = {}) {
+  const status = clean(record.status || record.raw_payload?.status).toLowerCase();
+  const visibility = clean(record.raw_payload?.website_os_visibility).toLowerCase();
+  const isTest = record.raw_payload?.website_os_test_record === true || record.raw_payload?.test_record === true;
+  return !isTest && visibility !== "trashed" && !record.raw_payload?.deleted_at &&
+    !["archived", "cancelled", "rejected", "completed", "delivered", "trashed"].includes(status);
+}
+
+async function readCommonplaceBookingRecords() {
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return [];
+  const rows = await supabaseFetch([
+    `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_BOOKING_SOURCE)}`,
+    `website_os_workspace_id=eq.${encodeURIComponent(workspace.id)}`,
+    "select=task_id,status,deadline,raw_payload",
+    "order=created_at.desc"
+  ].join("&"));
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function readCommonplaceUnavailableDates(config = null) {
+  const normalized = normalizeCommonplaceSiteConfig(config || COMMONPLACE_SITE_CONFIG_DEFAULT);
+  const bookingDates = (await readCommonplaceBookingRecords())
+    .filter(commonplaceBookingStillReservesDate)
+    .map(commonplaceBookingDateFromRecord)
+    .filter(Boolean);
+  return [...new Set([
+    ...normalized.bookingAvailability.blockedDates,
+    ...bookingDates
+  ])].sort();
+}
+
+function commonplaceBookingTaskId(date) {
+  const year = date.slice(0, 4);
+  const monthDay = date.slice(5).replace("-", "");
+  return `DON-${year}-9${monthDay}`;
+}
+
+async function assertCommonplaceBookingAvailable(input = {}) {
+  const date = normalizeCommonplaceBookingDate(input.preferredDate || input.preferred_date || input.deadline);
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) {
+    const error = new Error("COMMONPL4CE workspace is unavailable.");
+    error.code = "BOOKING_WORKSPACE_UNAVAILABLE";
+    error.statusCode = 503;
+    throw error;
+  }
+  const config = await readPublishedCommonplaceConfig();
+  if (config.bookingAvailability.status !== "online") {
+    const error = new Error("Bookings are currently unavailable.");
+    error.code = "BOOKING_OFFLINE";
+    error.statusCode = 409;
+    throw error;
+  }
+  if (!date || date < currentCommonplaceDate()) {
+    const error = new Error("Select an available future date.");
+    error.code = "BOOKING_DATE_INVALID";
+    error.statusCode = 400;
+    throw error;
+  }
+  const unavailableDates = await readCommonplaceUnavailableDates(config);
+  if (unavailableDates.includes(date)) {
+    const error = new Error("This date is no longer available. Please choose another date.");
+    error.code = "BOOKING_DATE_UNAVAILABLE";
+    error.statusCode = 409;
+    throw error;
+  }
+  return { date, taskId: commonplaceBookingTaskId(date), workspaceId: workspace.id };
+}
+
+function normalizeCommonplaceSiteConfig(config = {}) {
+  const fallback = COMMONPLACE_SITE_CONFIG_DEFAULT;
+  const source = config && typeof config === "object" ? config : {};
+  const normalizeHero = (kind) => {
+    const slots = Array.isArray(source.hero?.[kind]) && source.hero[kind].length ? source.hero[kind] : fallback.hero[kind];
+    return slots.concat(fallback.hero[kind]).slice(0, 7).map((slot = {}, index) => ({
+      ...fallback.hero[kind][index],
+      ...slot,
+      id: clean(slot.id) || `${kind}_hero_${index + 1}`,
+      src: clean(slot.src || slot.image) || fallback.hero[kind][index].src,
+      alt: clean(slot.alt) || fallback.hero[kind][index].alt,
+      status: ["Draft", "Ready", "Hidden"].includes(slot.status) ? slot.status : "Ready"
+    }));
+  };
+  return {
+    ...fallback,
+    ...source,
+    version: Number(source.version || fallback.version) || fallback.version,
+    workspace: "commonpl4ce",
+    updatedAt: clean(source.updatedAt) || fallback.updatedAt,
+    hero: {
+      desktop: normalizeHero("desktop"),
+      mobile: normalizeHero("mobile")
+    },
+    content: {
+      ...fallback.content,
+      ...(source.content && typeof source.content === "object" ? source.content : {})
+    },
+    siteSettings: normalizeCommonplaceSiteSettings(source.siteSettings),
+    bookingAvailability: normalizeCommonplaceBookingAvailability(source.bookingAvailability)
+  };
+}
+
+function isCommonplaceContentRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_content") === "1") return true;
+  } catch (error) {}
+  return clean(input.action).startsWith("commonpl4ce_content_");
+}
+
+function isCommonplaceContentUploadRequest(req) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    return url.searchParams.get("commonpl4ce_content_upload") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function normalizeContentLifecycle(value, fallback = "draft") {
+  const normalized = clean(value).toLowerCase();
+  return ["draft", "ready", "published", "disabled"].includes(normalized) ? normalized : fallback;
+}
+
+function containsBrowserOnlyMedia(value) {
+  if (typeof value === "string") return /^(blob:|data:|file:)/i.test(value.trim());
+  if (Array.isArray(value)) return value.some(containsBrowserOnlyMedia);
+  return Boolean(value && typeof value === "object" && Object.values(value).some(containsBrowserOnlyMedia));
+}
+
+function assertSafeContentUrl(value, field = "url") {
+  const candidate = clean(value);
+  if (!candidate) return;
+  if (candidate.length > 2048 || /[\u0000-\u001f\u007f]/.test(candidate)) {
+    const error = new Error(`Website content ${field} is invalid`);
+    error.statusCode = 400;
+    error.code = "CONTENT_URL_INVALID";
+    throw error;
+  }
+  if ((candidate.startsWith("/") && !candidate.startsWith("//")) || candidate.startsWith("#")) return;
+  let parsed;
+  try {
+    parsed = new URL(candidate);
+  } catch (parseError) {
+    const error = new Error(`Website content ${field} must use a safe absolute or root-relative URL`);
+    error.statusCode = 400;
+    error.code = "CONTENT_URL_INVALID";
+    throw error;
+  }
+  const protocol = parsed.protocol.toLowerCase();
+  const safeMail = protocol === "mailto:" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parsed.pathname);
+  const safeTelephone = protocol === "tel:" && /^\+?[0-9 ()-]{6,24}$/.test(parsed.pathname);
+  if (protocol !== "https:" && !safeMail && !safeTelephone) {
+    const error = new Error(`Website content ${field} uses an unsafe URL protocol`);
+    error.statusCode = 400;
+    error.code = "CONTENT_URL_PROTOCOL_REJECTED";
+    throw error;
+  }
+  if (parsed.username || parsed.password) {
+    const error = new Error(`Website content ${field} cannot contain URL credentials`);
+    error.statusCode = 400;
+    error.code = "CONTENT_URL_CREDENTIALS_REJECTED";
+    throw error;
+  }
+}
+
+function validateContentUrls(value, path = []) {
+  if (typeof value === "string") {
+    const field = path.join(".");
+    const leaf = path.at(-1) || "";
+    const parent = path.at(-2) || "";
+    if (/^\d+$/.test(leaf) && /(urls?|hrefs?|links?|srcs?|images?|videos?|gallery|paths?)$/i.test(parent)) {
+      assertSafeContentUrl(value, field);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => validateContentUrls(item, [...path, String(index)]));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  Object.entries(value).forEach(([key, item]) => {
+    const nextPath = [...path, key];
+    if (typeof item === "string" && /(url|href|link|src|image|video|favicon|logo|path)$/i.test(key)) {
+      assertSafeContentUrl(item, nextPath.join("."));
+    } else {
+      validateContentUrls(item, nextPath);
+    }
+  });
+}
+
+function validateCommonplaceContent(config, { publishing = false } = {}) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    const error = new Error("Website content must be an object");
+    error.statusCode = 400;
+    error.code = "CONTENT_INVALID";
+    throw error;
+  }
+  if (Buffer.byteLength(JSON.stringify(config), "utf8") > 750_000) {
+    const error = new Error("Website content is too large");
+    error.statusCode = 413;
+    error.code = "CONTENT_TOO_LARGE";
+    throw error;
+  }
+  validateContentUrls(config);
+  const sections = Array.isArray(config.sections) ? config.sections : [];
+  if (!sections.length || sections.length > 60) {
+    const error = new Error("Website content must contain between 1 and 60 sections");
+    error.statusCode = 400;
+    error.code = "CONTENT_SECTIONS_INVALID";
+    throw error;
+  }
+  const ids = new Set();
+  for (const section of sections) {
+    const id = clean(section?.id);
+    if (!id || ids.has(id)) {
+      const error = new Error("Every website section needs a unique id");
+      error.statusCode = 400;
+      error.code = "CONTENT_SECTION_ID_INVALID";
+      throw error;
+    }
+    ids.add(id);
+    if (id === "faq") {
+      const questions = Array.isArray(section.questions) ? section.questions : [];
+      if (questions.length > 50) {
+        const error = new Error("FAQ supports at most 50 questions");
+        error.statusCode = 400;
+        error.code = "FAQ_LIMIT_EXCEEDED";
+        throw error;
+      }
+      const questionIds = new Set();
+      for (const item of questions) {
+        const questionId = clean(item?.id);
+        if (!questionId || questionIds.has(questionId) || clean(item?.question).length > 300 || clean(item?.answer).length > 5000) {
+          const error = new Error("FAQ question data is invalid");
+          error.statusCode = 400;
+          error.code = "FAQ_ITEM_INVALID";
+          throw error;
+        }
+        questionIds.add(questionId);
+      }
+      if (clean(section.defaultOpenId) && !questionIds.has(clean(section.defaultOpenId))) {
+        const error = new Error("FAQ default-open item does not exist");
+        error.statusCode = 400;
+        error.code = "FAQ_DEFAULT_INVALID";
+        throw error;
+      }
+    }
+  }
+  const booking = sections.find((section) => section.id === "booking");
+  if (booking && clean(booking.ctaLink) !== "https://doneovernight.com/cp-book") {
+    const error = new Error("COMMONPL4CE booking URL must be https://doneovernight.com/cp-book");
+    error.statusCode = 400;
+    error.code = "BOOKING_URL_INVALID";
+    throw error;
+  }
+  if (publishing && containsBrowserOnlyMedia(config)) {
+    const error = new Error("Local preview media cannot be published");
+    error.statusCode = 409;
+    error.code = "CONTENT_LOCAL_MEDIA_BLOCKED";
+    throw error;
+  }
+  return normalizeCommonplaceSiteConfig(config);
+}
+
+async function getCommonplaceContentWorkspace() {
+  const rows = await supabaseFetch([
+    `website_os_workspaces?slug=eq.${encodeURIComponent(COMMONPLACE_CONTENT_WORKSPACE_SLUG)}`,
+    "status=eq.active",
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function readPublishedCommonplaceContentState() {
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return null;
+  const rows = await supabaseFetch([
+    `website_os_content_state?workspace_id=eq.${encodeURIComponent(workspace.id)}`,
+    "select=*",
+    "limit=1"
+  ].join("&"));
+  const state = Array.isArray(rows) ? rows[0] || null : null;
+  return state ? { workspace, state } : null;
+}
+
+async function readPublishedCommonplaceConfig() {
+  const persisted = await readPublishedCommonplaceContentState().catch(() => null);
+  if (persisted?.state?.published_config) return normalizeCommonplaceSiteConfig(persisted.state.published_config);
+  const legacy = await readCommonplaceSiteConfigRecord().catch(() => null);
+  return legacy ? configFromCommonplaceRecord(legacy) : normalizeCommonplaceSiteConfig();
+}
+
+async function readCommonplaceTrackingSettings() {
+  if (commonplaceTrackingSettingsCache?.expiresAt > Date.now()) return commonplaceTrackingSettingsCache.value;
+  const config = await readPublishedCommonplaceConfig();
+  const value = config.siteSettings?.integrations || { analyticsEnabled: true, newsletterEnabled: true };
+  commonplaceTrackingSettingsCache = { value, expiresAt: Date.now() + 5_000 };
+  return value;
+}
+
+function publicContentUser(user = {}) {
+  return user?.id ? { id: user.id, email: user.email || "", role: user.role || "Viewer" } : null;
+}
+
+function publicContentDraft(row = {}, editor = null) {
+  return row?.id ? {
+    id: row.id,
+    content: row.content || {},
+    lifecycle: row.lifecycle_status || "draft",
+    revision: Number(row.revision) || 0,
+    basePublishedVersion: Number(row.base_published_version) || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+    updatedBy: publicContentUser(editor)
+  } : null;
+}
+
+function publicContentVersion(row = {}, editor = null) {
+  return row?.id ? {
+    id: row.id,
+    version: Number(row.version_number) || 0,
+    lifecycle: row.lifecycle_status || "published",
+    publishedAt: row.published_at || null,
+    publishedBy: publicContentUser(editor),
+    sourceVersionId: row.source_version_id || null
+  } : null;
+}
+
+function publicMediaAsset(row = {}) {
+  return row?.id ? {
+    id: row.id,
+    filename: row.filename || "",
+    path: row.public_url || "",
+    bucket: row.storage_bucket || "",
+    storagePath: row.storage_path || "",
+    mimeType: row.mime_type || "",
+    byteSize: Number(row.byte_size) || 0,
+    width: row.width || null,
+    height: row.height || null,
+    alt: row.alt_text || "",
+    category: row.category || "other",
+    variant: row.variant_kind || "original",
+    variants: row.variants || {},
+    usage: Array.isArray(row.usage) ? row.usage : [],
+    status: row.status || "draft",
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null
+  } : null;
+}
+
+async function contentUsersById(ids = []) {
+  const safeIds = [...new Set(ids.filter(Boolean))];
+  if (!safeIds.length) return new Map();
+  const rows = await supabaseFetch(`website_os_users?id=in.(${safeIds.map(encodeURIComponent).join(",")})&select=id,email,role`);
+  return new Map((Array.isArray(rows) ? rows : []).map((row) => [row.id, row]));
+}
+
+async function writeContentAudit(context, action, entityId, previousState = {}, nextState = {}, metadata = {}) {
+  await supabaseFetch("website_os_audit_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      workspace_id: context.workspace.id,
+      actor_user_id: context.user.id,
+      entity_type: "website_content",
+      entity_id: entityId || context.workspace.id,
+      action,
+      previous_state: previousState,
+      next_state: nextState,
+      metadata
+    })
+  });
+}
+
+function collectCommonplaceMediaUsage(config = {}, prefix = "Draft") {
+  const usage = new Map();
+  const add = (path, label) => {
+    const safePath = clean(path);
+    if (!safePath || /^(blob:|data:|file:)/i.test(safePath)) return;
+    if (!usage.has(safePath)) usage.set(safePath, new Set());
+    usage.get(safePath).add(`${prefix}: ${label}`);
+  };
+  ["desktop", "mobile"].forEach((kind) => {
+    (Array.isArray(config.hero?.[kind]) ? config.hero[kind] : []).forEach((slot, index) => {
+      add(slot?.src || slot?.image, `${kind === "mobile" ? "Mobile" : "Desktop"} Hero ${String(index + 1).padStart(2, "0")}`);
+    });
+  });
+  (Array.isArray(config.sections) ? config.sections : []).forEach((section, sectionIndex) => {
+    const label = clean(section?.name || section?.heading || section?.id) || `Section ${sectionIndex + 1}`;
+    ["desktopImage", "mobileImage", "image", "logo"].forEach((key) => add(section?.[key], `${label} ${key}`));
+    (Array.isArray(section?.gallery) ? section.gallery : []).forEach((item, index) => add(item?.src || item?.path, `${label} Gallery ${String(index + 1).padStart(2, "0")}`));
+  });
+  const branding = config.siteSettings?.branding || {};
+  add(branding.headerLogo, "Header logo");
+  add(branding.footerLogo, "Footer logo");
+  add(branding.favicon, "Favicon");
+  add(branding.socialImage, "Social image");
+  return usage;
+}
+
+async function syncCommonplaceMediaUsage(context, draftConfig, publishedConfig = null) {
+  const merged = new Map();
+  [
+    collectCommonplaceMediaUsage(draftConfig, "Draft"),
+    collectCommonplaceMediaUsage(publishedConfig || {}, "Published")
+  ].forEach((source) => source.forEach((labels, path) => {
+    if (!merged.has(path)) merged.set(path, new Set());
+    labels.forEach((label) => merged.get(path).add(label));
+  }));
+  const rows = await supabaseFetch(`website_os_media_assets?workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=id,public_url,usage`);
+  const assets = Array.isArray(rows) ? rows : [];
+  await Promise.all(assets.map(async (asset) => {
+    const next = [...(merged.get(clean(asset.public_url)) || [])].sort();
+    const current = (Array.isArray(asset.usage) ? asset.usage.map(clean).filter(Boolean) : []).sort();
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(asset.id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ usage: next, updated_by: context.user.id })
+    });
+  }));
+}
+
+async function readCommonplaceContentBundle(context) {
+  const workspaceId = context.workspace.id;
+  const [draftRows, stateRows, versionRows, mediaRows] = await Promise.all([
+    supabaseFetch(`website_os_content_drafts?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&limit=1`),
+    supabaseFetch(`website_os_content_state?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&limit=1`),
+    supabaseFetch(`website_os_content_versions?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&order=version_number.desc&limit=30`),
+    supabaseFetch(`website_os_media_assets?workspace_id=eq.${encodeURIComponent(workspaceId)}&deleted_at=is.null&select=*&order=updated_at.desc&limit=200`)
+  ]);
+  const draft = Array.isArray(draftRows) ? draftRows[0] || null : null;
+  const published = Array.isArray(stateRows) ? stateRows[0] || null : null;
+  const versions = Array.isArray(versionRows) ? versionRows : [];
+  const media = Array.isArray(mediaRows) ? mediaRows : [];
+  const users = await contentUsersById([
+    draft?.updated_by,
+    published?.published_by,
+    ...versions.map((row) => row.published_by)
+  ]);
+  return {
+    draft: publicContentDraft(draft, users.get(draft?.updated_by)),
+    published: published ? {
+      content: published.published_config || {},
+      versionId: published.published_version_id,
+      publishedAt: published.published_at,
+      publishedBy: publicContentUser(users.get(published.published_by))
+    } : null,
+    versions: versions.map((row) => publicContentVersion(row, users.get(row.published_by))),
+    media: media.map(publicMediaAsset),
+    currentUser: publicContentUser(context.user)
+  };
+}
+
+function contentRpcError(error) {
+  const detail = `${error?.message || ""} ${error?.detail || ""}`;
+  if (/CONTENT_DRAFT_CONFLICT|40001|P0001/i.test(detail)) {
+    error.statusCode = 409;
+    error.code = "CONTENT_DRAFT_CONFLICT";
+    error.message = "This draft changed on another device. Reload before saving again.";
+  }
+  return error;
+}
+
+async function handleCommonplaceContentGet(req, res) {
+  try {
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles: ["Owner", "Admin", "Editor", "Viewer"] });
+    return send(res, 200, { success: true, ...(await readCommonplaceContentBundle(context)) });
+  } catch (error) {
+    return send(res, error.statusCode || 500, { success: false, error: error.message || "Content unavailable", code: error.code || "CONTENT_READ_FAILED" });
+  }
+}
+
+async function handleCommonplaceContentPost(req, res, input = {}) {
+  const action = clean(input.action).replace(/^commonpl4ce_content_/, "");
+  try {
+    assertWebsiteOsRequestOrigin(req);
+    const roles = action === "rollback" ? ["Owner", "Admin"] : ["Owner", "Admin", "Editor"];
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles });
+    const expectedRevision = Number(input.expected_revision ?? input.expectedRevision);
+    if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+      return send(res, 400, { success: false, error: "Expected draft revision is required", code: "CONTENT_REVISION_REQUIRED" });
+    }
+
+    if (action === "save") {
+      const content = validateCommonplaceContent(input.content);
+      const result = await supabaseFetch("rpc/website_os_save_content_draft", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_content: content,
+          p_lifecycle_status: normalizeContentLifecycle(input.lifecycle, "draft")
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      const publishedRows = await supabaseFetch(`website_os_content_state?workspace_id=eq.${encodeURIComponent(context.workspace.id)}&select=published_config&limit=1`);
+      await syncCommonplaceMediaUsage(context, content, Array.isArray(publishedRows) ? publishedRows[0]?.published_config : null);
+      await writeContentAudit(context, "draft_saved", result?.id, { revision: expectedRevision }, { revision: result?.revision, lifecycle: result?.lifecycle_status });
+      return send(res, 200, { success: true, draft: publicContentDraft(result, context.user) });
+    }
+
+    if (action === "publish") {
+      if (clean(input.confirmation) !== "PUBLISH_COMMONPL4CE") {
+        return send(res, 400, { success: false, error: "Explicit publish confirmation is required", code: "CONTENT_PUBLISH_CONFIRMATION_REQUIRED" });
+      }
+      const content = validateCommonplaceContent(input.content, { publishing: true });
+      const result = await supabaseFetch("rpc/website_os_publish_content", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_content: content,
+          p_lifecycle_status: normalizeContentLifecycle(input.lifecycle, "published") === "disabled" ? "disabled" : "published"
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      commonplaceTrackingSettingsCache = null;
+      await syncCommonplaceMediaUsage(context, content, content);
+      await writeContentAudit(context, "published", result?.version?.id, { revision: expectedRevision }, { version: result?.version?.version_number });
+      const bundle = await readCommonplaceContentBundle(context);
+      return send(res, 200, { success: true, ...bundle });
+    }
+
+    if (action === "rollback") {
+      if (clean(input.confirmation) !== "ROLLBACK_COMMONPL4CE" || !/^[0-9a-f-]{36}$/i.test(clean(input.version_id || input.versionId))) {
+        return send(res, 400, { success: false, error: "Explicit rollback confirmation and version are required", code: "CONTENT_ROLLBACK_CONFIRMATION_REQUIRED" });
+      }
+      const result = await supabaseFetch("rpc/website_os_rollback_content", {
+        method: "POST",
+        body: JSON.stringify({
+          p_workspace_id: context.workspace.id,
+          p_user_id: context.user.id,
+          p_expected_revision: expectedRevision,
+          p_version_id: clean(input.version_id || input.versionId)
+        })
+      }).catch((error) => { throw contentRpcError(error); });
+      await writeContentAudit(context, "rolled_back", result?.version?.id, {}, { sourceVersionId: clean(input.version_id || input.versionId), version: result?.version?.version_number });
+      const bundle = await readCommonplaceContentBundle(context);
+      await syncCommonplaceMediaUsage(context, bundle.draft?.content || {}, bundle.published?.content || {});
+      return send(res, 200, { success: true, ...bundle });
+    }
+
+    if (action === "media_update") {
+      const id = clean(input.media_id || input.mediaId);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return send(res, 400, { success: false, error: "Valid media id required", code: "MEDIA_ID_INVALID" });
+      const existingRows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+      const patch = {
+        filename: clean(input.filename) || existing.filename,
+        alt_text: clean(input.alt_text ?? input.alt) || "",
+        category: clean(input.category) || existing.category,
+        variant_kind: ["original", "desktop", "mobile"].includes(clean(input.variant)) ? clean(input.variant) : existing.variant_kind,
+        status: ["draft", "ready", "hidden", "archived"].includes(clean(input.status).toLowerCase()) ? clean(input.status).toLowerCase() : existing.status,
+        usage: Array.isArray(input.usage) ? input.usage.map(clean).filter(Boolean).slice(0, 50) : existing.usage,
+        updated_by: context.user.id
+      };
+      const rows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&select=*`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(patch)
+      });
+      const asset = Array.isArray(rows) ? rows[0] : null;
+      await writeContentAudit(context, "media_updated", id, { status: existing.status }, { status: asset?.status });
+      return send(res, 200, { success: true, media: publicMediaAsset(asset) });
+    }
+
+    if (action === "media_remove") {
+      const id = clean(input.media_id || input.mediaId);
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return send(res, 400, { success: false, error: "Valid media id required", code: "MEDIA_ID_INVALID" });
+      const existingRows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+      if (Array.isArray(existing.usage) && existing.usage.length) return send(res, 409, { success: false, error: `This asset is used in ${existing.usage.join(", ")}.`, code: "MEDIA_IN_USE" });
+      const now = new Date().toISOString();
+      await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ status: "trashed", deleted_at: now, deleted_by: context.user.id, updated_by: context.user.id })
+      });
+      if (existing.storage_bucket && existing.storage_path) {
+        try {
+          await storageFetch(`object/${encodeURIComponent(existing.storage_bucket)}/${encodeStoragePath(existing.storage_path)}`, { method: "DELETE" });
+        } catch (storageError) {
+          await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}`, {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ status: existing.status, deleted_at: null, deleted_by: null, updated_by: context.user.id })
+          }).catch(() => {});
+          throw storageError;
+        }
+      }
+      await writeContentAudit(context, "media_removed", id, { status: existing.status }, { status: "trashed", deletedAt: now });
+      return send(res, 200, { success: true, mediaId: id });
+    }
+
+    return send(res, 400, { success: false, error: "Unsupported content action", code: "CONTENT_ACTION_UNSUPPORTED" });
+  } catch (error) {
+    return send(res, error.statusCode || 500, { success: false, error: error.statusCode && error.statusCode < 500 ? error.message : "Website content update failed", code: error.code || "CONTENT_UPDATE_FAILED" });
+  }
+}
+
+function isCommonplaceSiteConfigRequest(req, input = {}) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") return true;
+  } catch (error) {}
+  return input.action === COMMONPLACE_SITE_CONFIG_SOURCE || input.intent === COMMONPLACE_SITE_CONFIG_SOURCE;
+}
+
+function isCommonplacePoliciesRequest(req) {
+  try {
+    const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    return url.searchParams.get("commonpl4ce_policies") === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+async function handleCommonplacePoliciesGet(req, res) {
+  const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+  const publicPath = clean(url.searchParams.get("path") || "/cp-book");
+  const publicRequest = validateCommonplacePublicRequest(req, { path: publicPath, source: COMMONPLACE_BOOKING_SOURCE });
+  if (!publicRequest.ok) return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error, code: "COMMONPL4CE_PUBLIC_ROUTE_REJECTED" });
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return send(res, 503, { success: false, error: "COMMONPL4CE workspace unavailable", code: "CONTENT_WORKSPACE_UNAVAILABLE" });
+  const policies = await readPublicBookingPolicies(workspace.id);
+  return send(res, 200, { success: true, source: "commonpl4ce", policies });
+}
+
+async function verifyAdminKey(adminKey) {
+  if (!clean(adminKey)) return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(ADMIN_AUTH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ admin_key: adminKey }),
+      signal: controller.signal
+    });
+    if (!response.ok) return false;
+    const data = await response.json().catch(() => ({}));
+    return data?.success === true;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function verifyAdminOrWebsiteOsSession(req, adminKey, roles = ["Owner", "Admin", "Editor"]) {
+  if (clean(adminKey)) return verifyAdminKey(adminKey);
+  await requireWebsiteOsSession(req, { slug: "cp", roles });
+  return true;
+}
+
+async function readCommonplaceSiteConfigRecord() {
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return null;
+  const rows = await supabaseFetch([
+    `task_requests?source=eq.${encodeURIComponent(COMMONPLACE_SITE_CONFIG_SOURCE)}`,
+    `website_os_workspace_id=eq.${encodeURIComponent(workspace.id)}`,
+    "select=*",
+    "order=updated_at.desc",
+    "limit=1"
+  ].join("&"));
+  return Array.isArray(rows) ? rows[0] : null;
+}
+
+function configFromCommonplaceRecord(record = {}) {
+  return normalizeCommonplaceSiteConfig(record.raw_payload?.config || record.raw_payload || COMMONPLACE_SITE_CONFIG_DEFAULT);
+}
+
+async function handleCommonplaceSiteConfigGet(req, res) {
+  try {
+    const persisted = await readPublishedCommonplaceContentState().catch(() => null);
+    if (persisted?.state?.published_config) {
+      const config = normalizeCommonplaceSiteConfig(persisted.state.published_config);
+      const unavailableDates = await readCommonplaceUnavailableDates(config);
+      return send(res, 200, {
+        success: true,
+        config: {
+          ...config,
+          bookingAvailability: { ...config.bookingAvailability, unavailableDates }
+        },
+        source: "website_os_content_state",
+        versionId: persisted.state.published_version_id,
+        publishedAt: persisted.state.published_at || config.updatedAt || null
+      });
+    }
+    const record = await readCommonplaceSiteConfigRecord();
+    const config = record ? configFromCommonplaceRecord(record) : normalizeCommonplaceSiteConfig();
+    const unavailableDates = await readCommonplaceUnavailableDates(config);
+    return send(res, 200, {
+      success: true,
+      config: {
+        ...config,
+        bookingAvailability: {
+          ...config.bookingAvailability,
+          unavailableDates
+        }
+      },
+      source: record ? "task_requests" : "default",
+      publishedAt: record?.updated_at || config.updatedAt || null
+    });
+  } catch (error) {
+    const config = normalizeCommonplaceSiteConfig();
+    return send(res, 200, {
+      success: true,
+      config: {
+        ...config,
+        bookingAvailability: {
+          ...config.bookingAvailability,
+          unavailableDates: [...config.bookingAvailability.blockedDates]
+        }
+      },
+      source: "default",
+      warning: error.code || error.message || "config_store_unavailable"
+    });
+  }
+}
+
+async function handleCommonplaceSiteConfigPost(req, res, input = {}) {
+  const adminKey = input.admin_key || input.adminKey || req.headers["x-admin-key"];
+  if (!clean(adminKey)) assertWebsiteOsRequestOrigin(req);
+  const authorized = await verifyAdminOrWebsiteOsSession(req, adminKey, ["Owner", "Admin", "Editor"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+  const config = normalizeCommonplaceSiteConfig({
+    ...(input.config || {}),
+    updatedAt: new Date().toISOString()
+  });
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return send(res, 503, { success: false, error: "COMMONPL4CE workspace unavailable", code: "CONTENT_WORKSPACE_UNAVAILABLE" });
+  const rawPayload = {
+    source: COMMONPLACE_SITE_CONFIG_SOURCE,
+    config,
+    published_at: config.updatedAt,
+    workspace: "commonpl4ce"
+  };
+  const existing = await readCommonplaceSiteConfigRecord().catch(() => null);
+  let row = null;
+
+  if (existing?.id || existing?.task_id) {
+    const filter = existing.id
+      ? `id=eq.${encodeURIComponent(existing.id)}`
+      : `task_id=eq.${encodeURIComponent(existing.task_id)}`;
+    const rows = await supabaseFetch(`task_requests?${filter}&select=*`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        website_os_workspace_id: workspace.id,
+        updated_at: config.updatedAt,
+        status: "published",
+        queue_state: "website_config",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  } else {
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: config.updatedAt,
+        updated_at: config.updatedAt,
+        status: "published",
+        payment_status: "not_required",
+        queue_state: "website_config",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE Website OS",
+        email: "book@commonpl4ce.com",
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE published website config",
+        task_summary: "COMMONPL4CE published website config",
+        source: COMMONPLACE_SITE_CONFIG_SOURCE,
+        website_os_workspace_id: workspace.id,
+        raw_payload: rawPayload
+      })
+    });
+    row = Array.isArray(rows) ? rows[0] : null;
+  }
+
+  return send(res, 200, {
+    success: true,
+    config: row ? configFromCommonplaceRecord(row) : config,
+    source: "task_requests",
+    publishedAt: row?.updated_at || config.updatedAt
+  });
 }
 
 const EMAIL_TYPO_DOMAIN_SUGGESTIONS = {
@@ -448,6 +1508,88 @@ function safeAnalyticsMetadata(input = {}) {
   return output;
 }
 
+function requestHost(req, input = {}) {
+  const raw = clean(input.host || req.headers["x-forwarded-host"] || req.headers.host).toLowerCase();
+  return raw.split(",")[0].trim();
+}
+
+function publicIngestFingerprint(req, input = {}, scope = "public") {
+  const ip = clean(req.headers["x-forwarded-for"]).split(",")[0].trim() || clean(req.headers["x-real-ip"]) || "unknown";
+  const session = clean(input.session_id || input.sessionId || input.email).toLowerCase().slice(0, 160);
+  const secret = process.env.WEBSITE_OS_AUTH_PEPPER || process.env.SUPABASE_SERVICE_ROLE_KEY || "commonpl4ce-public";
+  return crypto.createHmac("sha256", secret).update(`${scope}|${ip}|${session}|${clean(req.headers["user-agent"]).slice(0, 240)}`).digest("hex");
+}
+
+async function assertPublicIngestRate(req, input, { scope, windowSeconds, maxRequests }) {
+  const rows = await supabaseFetch("rpc/website_os_register_public_ingest", {
+    method: "POST",
+    body: JSON.stringify({
+      p_scope: scope,
+      p_fingerprint: publicIngestFingerprint(req, input, scope),
+      p_window_seconds: windowSeconds,
+      p_max_requests: maxRequests
+    })
+  });
+  const result = Array.isArray(rows) ? rows[0] : rows;
+  if (result?.allowed === false) {
+    const error = new Error("Too many requests. Please try again later.");
+    error.statusCode = 429;
+    error.code = "RATE_LIMITED";
+    error.retryAfter = Math.max(1, Number(result.retry_after_seconds) || windowSeconds);
+    throw error;
+  }
+  return result || { allowed: true };
+}
+
+function normalizeCommonplacePublicPath(value = "", fallback = "") {
+  const raw = clean(value || fallback);
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw, "https://doneovernight.com");
+    const pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  } catch (error) {
+    const pathname = raw.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
+    return pathname === "/cp/" ? "/cp" : pathname;
+  }
+}
+
+function resolveCommonplaceAnalyticsPath(req, input = {}) {
+  return normalizeCommonplacePublicPath(
+    input.path || input.route || input.pathname || input.page_path || input.url,
+    req.headers.referer || ""
+  );
+}
+
+function isCommonplaceAnalyticsInput(input = {}) {
+  return clean(input.source || input.scope || input.workspace).toLowerCase() === COMMONPLACE_ANALYTICS_SOURCE ||
+    input.action === "commonpl4ce_analytics_event" ||
+    input.intent === "commonpl4ce_analytics_event";
+}
+
+function normalizeCommonplaceAnalyticsEvent(value = "") {
+  const normalized = clean(value).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return COMMONPLACE_ANALYTICS_EVENTS.has(normalized) ? normalized : "";
+}
+
+function safeCommonplaceAnalyticsMetadata(input = {}) {
+  const metadata = safeAnalyticsMetadata(input);
+  const output = {};
+  const allowed = new Set(["depth", "section", "field", "label", "button", "status", "source_path", "form", "booking_id"]);
+  Object.entries(metadata).forEach(([key, value]) => {
+    if (!allowed.has(key)) return;
+    if (key === "depth" && !["25", "50", "75", "100"].includes(String(value))) return;
+    output[key] = value;
+  });
+  return output;
+}
+
+function analyticsRangeStart(range = "7d") {
+  const now = Date.now();
+  const days = range === "24h" ? 1 : range === "30d" ? 30 : 7;
+  return new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function hashAnalyticsUserAgent(value = "") {
   const safe = clean(value).slice(0, 500);
   if (!safe) return "";
@@ -462,7 +1604,87 @@ function isTrackEventRequest(req, input = {}) {
   return input.action === "track_event" || input.intent === "track_event";
 }
 
+async function handleCommonplaceTrackEventRequest(req, res, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics disabled on admin hosts" });
+  }
+
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return send(res, 403, { success: false, error: "COMMONPL4CE analytics path rejected" });
+  }
+
+  const trackingSettings = await readCommonplaceTrackingSettings().catch(() => ({ analyticsEnabled: true }));
+  if (trackingSettings.analyticsEnabled === false) {
+    return send(res, 202, { success: true, accepted: false, stored: false, reason: "analytics_disabled", scope: COMMONPLACE_ANALYTICS_SOURCE });
+  }
+
+  const eventType = normalizeCommonplaceAnalyticsEvent(input.event_type || input.eventType || input.name || input.event);
+  if (!eventType) {
+    return send(res, 400, { success: false, error: "Unsupported COMMONPL4CE event type" });
+  }
+
+  const metadata = safeCommonplaceAnalyticsMetadata(input.metadata || input.props || {});
+  if (eventType === "scroll_depth" && !["25", "50", "75", "100"].includes(String(metadata.depth || ""))) {
+    return send(res, 400, { success: false, error: "Invalid scroll depth" });
+  }
+
+  try {
+    await assertPublicIngestRate(req, input, { scope: "commonpl4ce_analytics", windowSeconds: 60, maxRequests: 120 });
+  } catch (error) {
+    if (error.statusCode === 429) res.setHeader("Retry-After", String(error.retryAfter || 60));
+    return send(res, error.statusCode || 503, { success: false, accepted: false, stored: false, error: error.statusCode === 429 ? error.message : "Analytics storage is unavailable", code: error.code || "ANALYTICS_RATE_UNAVAILABLE" });
+  }
+
+  const row = {
+    event_type: eventType,
+    task_id: "",
+    source: COMMONPLACE_ANALYTICS_SOURCE,
+    route: path,
+    referrer: stripAnalyticsUrl(input.referrer || input.referrer_url || ""),
+    session_id: clean(input.session_id || input.sessionId).slice(0, 120),
+    user_agent_hash: hashAnalyticsUserAgent(req.headers["user-agent"] || ""),
+    metadata
+  };
+
+  try {
+    await supabaseFetch(ANALYTICS_EVENT_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(row)
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: true,
+      reason: "stored",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_ANALYTICS_STORE_FAILED]", {
+      event_type: eventType,
+      path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 202, {
+      success: true,
+      accepted: true,
+      stored: false,
+      reason: error.statusCode ? `supabase_http_${error.statusCode}` : "analytics_not_configured",
+      event_type: eventType,
+      scope: COMMONPLACE_ANALYTICS_SOURCE
+    });
+  }
+}
+
 async function handleTrackEventRequest(req, res, input = {}) {
+  if (isCommonplaceAnalyticsInput(input)) {
+    return handleCommonplaceTrackEventRequest(req, res, input);
+  }
+
   const eventType = normalizeAnalyticsEventType(input.event_type || input.eventType || input.name || input.event);
   if (!eventType) {
     return send(res, 400, { success: false, error: "Unsupported event type" });
@@ -504,6 +1726,396 @@ async function handleTrackEventRequest(req, res, input = {}) {
       stored: false,
       reason: error.statusCode ? `supabase_http_${error.statusCode}` : "tracking_failed",
       event_type: eventType
+    });
+  }
+}
+
+function isCommonplaceNewsletterRequest(input = {}) {
+  return input.action === "commonpl4ce_newsletter_signup" ||
+    input.intent === "commonpl4ce_newsletter_signup" ||
+    clean(input.source).toLowerCase() === COMMONPLACE_NEWSLETTER_SOURCE;
+}
+
+function isCommonplaceAnalyticsSummaryRequest(input = {}) {
+  return input.action === "commonpl4ce_analytics_summary" ||
+    input.intent === "commonpl4ce_analytics_summary";
+}
+
+function isWebsiteOsAuthRequest(input = {}) {
+  return input.action === "website_os_auth" || input.intent === "website_os_auth";
+}
+
+function isWebsiteOsTodayBriefingRequest(input = {}) {
+  return input.action === "website_os_today_briefing" || input.intent === "website_os_today_briefing";
+}
+
+function assertWebsiteOsAdminHost(req) {
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "").toLowerCase();
+  if (host && host !== "admin.doneovernight.com" && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+    const error = new Error("Website OS auth is only available on the admin host.");
+    error.statusCode = 403;
+    error.code = "ADMIN_HOST_REQUIRED";
+    throw error;
+  }
+}
+
+async function handleWebsiteOsAuthRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  assertWebsiteOsRequestOrigin(req);
+  const action = clean(input.auth_action || input.authAction).toLowerCase();
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || "cp");
+
+  if (action === "login") {
+    const result = await loginWebsiteOsUser(req, res, {
+      slug: workspaceSlug,
+      email: input.email,
+      password: input.password
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "session") {
+    const current = await getWebsiteOsSession(req, { slug: workspaceSlug });
+    if (!current) {
+      return send(res, 401, {
+        success: false,
+        authenticated: false,
+        error: "Website OS session required",
+        code: "WEBSITE_OS_SESSION_REQUIRED"
+      });
+    }
+    return send(res, 200, {
+      success: true,
+      authenticated: true,
+      workspace: publicWorkspace(current.workspace),
+      user: publicUser(current.user),
+      session: {
+        expiresAt: current.session.expires_at,
+        lastActivity: current.session.last_activity,
+        createdAt: current.session.created_at
+      }
+    });
+  }
+
+  if (action === "logout") {
+    await logoutWebsiteOsUser(req, res);
+    return send(res, 200, { success: true });
+  }
+
+  if (action === "change_password") {
+    if (clean(input.new_password || input.newPassword) !== clean(input.confirm_password || input.confirmPassword)) {
+      return send(res, 400, {
+        success: false,
+        error: "New passwords do not match.",
+        code: "PASSWORD_CONFIRMATION_MISMATCH"
+      });
+    }
+    const result = await changeWebsiteOsPassword(req, {
+      slug: workspaceSlug,
+      currentPassword: input.current_password || input.currentPassword,
+      newPassword: input.new_password || input.newPassword
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "logout_other_devices") {
+    const result = await logoutOtherWebsiteOsSessions(req, { slug: workspaceSlug });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "sessions") {
+    const result = await listWebsiteOsSessions(req, { slug: workspaceSlug });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  if (action === "revoke_session") {
+    const result = await revokeWebsiteOsSession(req, {
+      slug: workspaceSlug,
+      sessionId: input.session_id || input.sessionId
+    });
+    return send(res, 200, { success: true, ...result });
+  }
+
+  return send(res, 400, { success: false, error: "Unsupported Website OS auth action" });
+}
+
+function publicTodayBriefingDismissal(row = {}) {
+  const action = clean(row.dismissal_action);
+  const snoozedUntil = row.snoozed_until || null;
+  return {
+    bookingTaskId: clean(row.booking_task_id),
+    briefingDate: clean(row.briefing_date),
+    action,
+    snoozedUntil,
+    updatedAt: row.updated_at || null,
+    active: action !== "later" || Boolean(snoozedUntil && Date.parse(snoozedUntil) > Date.now())
+  };
+}
+
+async function handleWebsiteOsTodayBriefingRequest(req, res, input = {}) {
+  assertWebsiteOsAdminHost(req);
+  assertWebsiteOsRequestOrigin(req);
+  const workspaceSlug = slugify(input.workspace_slug || input.workspaceSlug || COMMONPLACE_CONTENT_WORKSPACE_SLUG);
+  const current = await requireWebsiteOsSession(req, {
+    slug: workspaceSlug,
+    roles: ["Owner", "Admin", "Editor", "Viewer"]
+  });
+  const operation = clean(input.briefing_action || input.briefingAction || "list").toLowerCase();
+  const briefingDate = currentCommonplaceDate();
+
+  if (operation === "list") {
+    const rows = await supabaseFetch([
+      `website_os_today_briefing_dismissals?workspace_id=eq.${encodeURIComponent(current.workspace.id)}`,
+      `user_id=eq.${encodeURIComponent(current.user.id)}`,
+      `briefing_date=eq.${encodeURIComponent(briefingDate)}`,
+      "select=booking_task_id,briefing_date,dismissal_action,snoozed_until,updated_at",
+      "order=updated_at.desc"
+    ].join("&"));
+    return send(res, 200, {
+      success: true,
+      briefingDate,
+      timeZone: COMMONPLACE_TIME_ZONE,
+      dismissals: (Array.isArray(rows) ? rows : []).map(publicTodayBriefingDismissal)
+    });
+  }
+
+  if (!["dismissed", "later", "viewed"].includes(operation)) {
+    return send(res, 400, {
+      success: false,
+      error: "Unsupported Today Briefing action",
+      code: "TODAY_BRIEFING_ACTION_INVALID"
+    });
+  }
+
+  const bookingTaskId = clean(input.booking_task_id || input.bookingTaskId).slice(0, 120);
+  if (!bookingTaskId) {
+    return send(res, 400, {
+      success: false,
+      error: "Booking reference required",
+      code: "TODAY_BRIEFING_BOOKING_REQUIRED"
+    });
+  }
+
+  try {
+    const result = await supabaseFetch("rpc/website_os_save_today_briefing_state", {
+      method: "POST",
+      body: JSON.stringify({
+        p_workspace_id: current.workspace.id,
+        p_user_id: current.user.id,
+        p_booking_task_id: bookingTaskId,
+        p_briefing_date: briefingDate,
+        p_action: operation
+      })
+    });
+    const saved = Array.isArray(result) ? result[0] : result;
+    return send(res, 200, {
+      success: true,
+      briefingDate,
+      timeZone: COMMONPLACE_TIME_ZONE,
+      dismissal: saved || { bookingTaskId, briefingDate, action: operation }
+    });
+  } catch (error) {
+    const scoped = /TODAY_BRIEFING_(BOOKING|USER)_SCOPE_INVALID/.test(`${error.message || ""} ${error.detail || ""}`);
+    return send(res, scoped ? 403 : (error.statusCode || 500), {
+      success: false,
+      error: scoped ? "Today Briefing booking is not available in this workspace" : "Today Briefing state could not be saved",
+      code: scoped ? "TODAY_BRIEFING_SCOPE_REJECTED" : "TODAY_BRIEFING_SAVE_FAILED"
+    });
+  }
+}
+
+function validateCommonplacePublicRequest(req, input = {}) {
+  const host = requestHost(req, input);
+  if (host === "admin.doneovernight.com" || host.startsWith("admin.")) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE public action disabled on admin hosts" };
+  }
+  const path = resolveCommonplaceAnalyticsPath(req, input);
+  if (!COMMONPLACE_ALLOWED_ANALYTICS_PATHS.has(path)) {
+    return { ok: false, statusCode: 403, error: "COMMONPL4CE path rejected" };
+  }
+  return { ok: true, path };
+}
+
+async function handleCommonplaceNewsletterRequest(req, res, input = {}) {
+  const publicRequest = validateCommonplacePublicRequest(req, input);
+  if (!publicRequest.ok) {
+    return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error });
+  }
+
+  try {
+    await assertPublicIngestRate(req, input, { scope: "commonpl4ce_newsletter", windowSeconds: 3600, maxRequests: 6 });
+  } catch (error) {
+    if (error.statusCode === 429) res.setHeader("Retry-After", String(error.retryAfter || 3600));
+    return send(res, error.statusCode || 503, { success: false, stored: false, error: error.statusCode === 429 ? error.message : "Newsletter storage is unavailable", code: error.code || "NEWSLETTER_RATE_UNAVAILABLE" });
+  }
+
+  const email = normalizeEmailValue(input.email);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return send(res, 400, { success: false, error: "Valid email required" });
+  }
+
+  const now = new Date().toISOString();
+  const workspace = await getCommonplaceContentWorkspace();
+  if (!workspace) return send(res, 503, { success: false, stored: false, error: "Newsletter storage is unavailable", code: "CONTENT_WORKSPACE_UNAVAILABLE" });
+  const publishedConfig = await readPublishedCommonplaceConfig();
+  if (publishedConfig.siteSettings?.integrations?.newsletterEnabled === false) {
+    return send(res, 409, { success: false, stored: false, error: "Newsletter signups are currently unavailable", code: "NEWSLETTER_DISABLED" });
+  }
+  const rawPayload = {
+    source: COMMONPLACE_NEWSLETTER_SOURCE,
+    intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+    path: publicRequest.path,
+    submittedAt: now,
+    consent: clean(input.consent) || "newsletter_signup",
+    consentVersion: "commonpl4ce_newsletter_consent_v1",
+    consentedAt: now
+  };
+
+  try {
+    const existingRows = await supabaseFetch([
+      `task_requests?website_os_workspace_id=eq.${encodeURIComponent(workspace.id)}`,
+      `source=eq.${encodeURIComponent(COMMONPLACE_NEWSLETTER_SOURCE)}`,
+      `email=eq.${encodeURIComponent(email)}`,
+      "select=id,task_id",
+      "order=created_at.desc",
+      "limit=1"
+    ].join("&"));
+    const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+    if (existing) {
+      return send(res, 200, {
+        success: true,
+        stored: true,
+        duplicate: true,
+        source: COMMONPLACE_NEWSLETTER_SOURCE,
+        intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+        id: existing.task_id || existing.id || ""
+      });
+    }
+    const rows = await supabaseFetch("task_requests?select=*", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        task_id: createTaskId(new Date()),
+        created_at: now,
+        updated_at: now,
+        status: "new",
+        payment_status: "not_required",
+        queue_state: "newsletter",
+        priority: "standard",
+        review_window_estimate: "not_applicable",
+        name: "COMMONPL4CE newsletter signup",
+        email,
+        company: "COMMONPL4CE",
+        task_description: "COMMONPL4CE newsletter signup",
+        task_summary: `Newsletter signup from ${publicRequest.path}`,
+        source: COMMONPLACE_NEWSLETTER_SOURCE,
+        website_os_workspace_id: workspace.id,
+        raw_payload: rawPayload
+      })
+    });
+    const row = Array.isArray(rows) ? rows[0] : null;
+    return send(res, 200, {
+      success: true,
+      stored: true,
+      source: COMMONPLACE_NEWSLETTER_SOURCE,
+      intakeVersion: COMMONPLACE_NEWSLETTER_VERSION,
+      id: row?.task_id || row?.id || ""
+    });
+  } catch (error) {
+    console.warn("[COMMONPL4CE_NEWSLETTER_STORE_FAILED]", {
+      path: publicRequest.path,
+      statusCode: error.statusCode || null,
+      detail: clean(error.detail).slice(0, 300) || null
+    });
+    return send(res, 503, {
+      success: false,
+      stored: false,
+      error: "Newsletter storage is not connected yet",
+      code: error.statusCode ? `supabase_http_${error.statusCode}` : "newsletter_not_configured"
+    });
+  }
+}
+
+function summarizeCommonplaceAnalytics(events = [], newsletters = [], testBookings = []) {
+  const testBookingIds = new Set(testBookings.filter((booking) => (
+    booking.raw_payload?.website_os_test_record === true || booking.raw_payload?.test_record === true
+  )).map((booking) => clean(booking.task_id)).filter(Boolean));
+  const count = (type, route = "") => events.filter((event) => (
+    event.event_type === type && (!route || normalizeCommonplacePublicPath(event.route) === route)
+  )).length;
+  const scrollCounts = { 25: 0, 50: 0, 75: 0, 100: 0 };
+  events.forEach((event) => {
+    if (event.event_type !== "scroll_depth") return;
+    const depth = clean(event.metadata?.depth);
+    if (Object.prototype.hasOwnProperty.call(scrollCounts, depth)) scrollCounts[depth] += 1;
+  });
+  // Conversion is only meaningful when both values come from the same tracked funnel.
+  const testBookingCount = testBookingIds.size;
+  const formSuccess = events.filter((event) => event.event_type === "form_submit_success" && normalizeCommonplacePublicPath(event.route) === "/cp-book" && !testBookingIds.has(clean(event.metadata?.booking_id))).length;
+  const formStarts = count("form_start", "/cp-book");
+  const conversionCoverageComplete = formStarts > 0 && formSuccess <= formStarts;
+  const conversionRate = conversionCoverageComplete ? Math.round((formSuccess / formStarts) * 100) : null;
+  const conversionMessage = formStarts === 0
+    ? "No tracked form starts yet."
+    : formSuccess > formStarts
+      ? "Historical form-start coverage is incomplete."
+      : "";
+  return {
+    connected: true,
+    generatedAt: new Date().toISOString(),
+    metrics: {
+      cpVisits: count("page_view", "/cp"),
+      cpBookVisits: count("page_view", "/cp-book"),
+      bookCtaClicks: count("book_cta_click"),
+      bookerStationViews: count("booker_station_view"),
+      bookingFormStarts: formStarts,
+      bookingFormSubmissions: formSuccess,
+      conversionRate,
+      conversionDenominator: "Tracked /cp-book form starts",
+      conversionMessage,
+      newsletterStarts: count("newsletter_start"),
+      newsletterSignups: newsletters.length || count("newsletter_success"),
+      testBookingsExcluded: testBookingCount
+    },
+    scrollDropoff: scrollCounts,
+    recentSignups: newsletters.slice(0, 8).map((row) => ({
+      email: clean(row.email),
+      createdAt: row.created_at || row.updated_at || "",
+      path: normalizeCommonplacePublicPath(row.raw_payload?.path || row.route || "")
+    }))
+  };
+}
+
+async function handleCommonplaceAnalyticsSummaryRequest(req, res, input = {}) {
+  const authorized = await verifyAdminOrWebsiteOsSession(req, input.admin_key || input.adminKey || req.headers["x-admin-key"], ["Owner", "Admin", "Editor", "Viewer"]);
+  if (!authorized) {
+    return send(res, 401, { success: false, error: "Admin access denied", code: "ADMIN_ACCESS_DENIED" });
+  }
+
+  const range = ["24h", "7d", "30d"].includes(clean(input.range)) ? clean(input.range) : "7d";
+  const since = analyticsRangeStart(range);
+
+  try {
+    const summaryResult = await supabaseFetch("rpc/website_os_commonpl4ce_analytics_summary", {
+      method: "POST",
+      body: JSON.stringify({ p_since: since })
+    });
+    const analytics = Array.isArray(summaryResult) ? summaryResult[0] : summaryResult;
+
+    return send(res, 200, {
+      success: true,
+      connected: true,
+      range,
+      analytics
+    });
+  } catch (error) {
+    return send(res, 200, {
+      success: true,
+      connected: false,
+      range,
+      analytics: null,
+      message: "Analytics not connected yet",
+      reason: error.code || error.message || "analytics_store_unavailable"
     });
   }
 }
@@ -2178,6 +3790,79 @@ function sanitizeAttachmentFilename(value = "") {
   return `${basename}${extension}`;
 }
 
+async function inspectCommonplaceImage(file) {
+  let metadata;
+  try {
+    metadata = await sharp(file.data, { limitInputPixels: 40_000_000, animated: false }).metadata();
+  } catch (sourceError) {
+    const error = new Error("The selected file is not a valid image");
+    error.statusCode = 415;
+    error.code = "MEDIA_BYTES_INVALID";
+    throw error;
+  }
+  const formatToMime = { jpeg: "image/jpeg", png: "image/png", webp: "image/webp", avif: "image/avif" };
+  const detectedMime = formatToMime[metadata.format];
+  if (!detectedMime || detectedMime !== clean(file.type).toLowerCase()) {
+    const error = new Error("The image contents do not match the file type");
+    error.statusCode = 415;
+    error.code = "MEDIA_SIGNATURE_MISMATCH";
+    throw error;
+  }
+  if (!metadata.width || !metadata.height || metadata.width > 16_000 || metadata.height > 16_000 || Number(metadata.pages || 1) !== 1) {
+    const error = new Error("Image dimensions are unsupported");
+    error.statusCode = 415;
+    error.code = "MEDIA_DIMENSIONS_INVALID";
+    throw error;
+  }
+  return metadata;
+}
+
+async function buildCommonplaceImageVariants(data) {
+  async function render(width, quality) {
+    return sharp(data, { limitInputPixels: 40_000_000, animated: false })
+      .rotate()
+      .resize({ width, height: width, fit: "inside", withoutEnlargement: true })
+      .webp({ quality, effort: 4 })
+      .toBuffer({ resolveWithObject: true });
+  }
+  const [original, desktop, mobile] = await Promise.all([
+    render(4000, 88),
+    render(2400, 84),
+    render(1200, 82)
+  ]);
+  return { original, desktop, mobile };
+}
+
+async function ensureCommonplaceMediaBucket() {
+  try {
+    const bucket = await storageFetch(`bucket/${encodeURIComponent(COMMONPLACE_CONTENT_MEDIA_BUCKET)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" }
+    });
+    if (bucket?.public !== true) {
+      await storageFetch(`bucket/${encodeURIComponent(COMMONPLACE_CONTENT_MEDIA_BUCKET)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public: true, file_size_limit: COMMONPLACE_CONTENT_MAX_MEDIA_BYTES, allowed_mime_types: [...COMMONPLACE_CONTENT_MEDIA_TYPES] })
+      });
+    }
+    return;
+  } catch (error) {
+    if (!isStorageBucketMissingError(error)) throw error;
+  }
+  await storageFetch("bucket", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: COMMONPLACE_CONTENT_MEDIA_BUCKET,
+      name: COMMONPLACE_CONTENT_MEDIA_BUCKET,
+      public: true,
+      file_size_limit: COMMONPLACE_CONTENT_MAX_MEDIA_BYTES,
+      allowed_mime_types: [...COMMONPLACE_CONTENT_MEDIA_TYPES]
+    })
+  });
+}
+
 function safeStorageErrorText(value) {
   return String(value || "")
     .replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]")
@@ -2478,6 +4163,94 @@ async function handleWorkspaceAttachmentUpload(req, res) {
   }
 }
 
+async function handleCommonplaceContentUpload(req, res) {
+  const uploadedStoragePaths = [];
+  try {
+    assertWebsiteOsRequestOrigin(req);
+    const context = await requireWebsiteOsSession(req, { slug: COMMONPLACE_CONTENT_WORKSPACE_SLUG, roles: ["Owner", "Admin", "Editor"] });
+    const buffer = await readMultipartBuffer(req);
+    const { fields, files } = parseMultipartUpload(buffer, req.headers["content-type"] || "");
+    const file = files[0];
+    if (!file || files.length !== 1) return send(res, 400, { success: false, error: "Choose one image", code: "MEDIA_FILE_REQUIRED" });
+    if (!COMMONPLACE_CONTENT_MEDIA_TYPES.has(clean(file.type).toLowerCase())) {
+      return send(res, 415, { success: false, error: "Use JPEG, PNG, WebP or AVIF", code: "MEDIA_TYPE_INVALID" });
+    }
+    if (!file.size || file.size > COMMONPLACE_CONTENT_MAX_MEDIA_BYTES) {
+      return send(res, 413, { success: false, error: "Image must be 4 MB or smaller", code: "MEDIA_FILE_TOO_LARGE" });
+    }
+    await inspectCommonplaceImage(file);
+    const variant = ["desktop", "mobile", "original"].includes(clean(fields.variant)) ? clean(fields.variant) : "original";
+    const filename = sanitizeAttachmentFilename(file.name);
+    const assetId = clean(fields.asset_id || fields.assetId);
+    let existing = null;
+    if (assetId) {
+      if (!/^[0-9a-f-]{36}$/i.test(assetId)) return send(res, 400, { success: false, error: "Invalid media id", code: "MEDIA_ID_INVALID" });
+      const rows = await supabaseFetch(`website_os_media_assets?id=eq.${encodeURIComponent(assetId)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&deleted_at=is.null&select=*&limit=1`);
+      existing = Array.isArray(rows) ? rows[0] || null : null;
+      if (!existing) return send(res, 404, { success: false, error: "Media asset not found", code: "MEDIA_NOT_FOUND" });
+    }
+    const checksum = crypto.createHash("sha256").update(file.data).digest("hex");
+    const generated = await buildCommonplaceImageVariants(file.data);
+    await ensureCommonplaceMediaBucket();
+    const objectRoot = `${context.workspace.slug}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}`;
+    const paths = {
+      original: `${objectRoot}-original.webp`,
+      desktop: `${objectRoot}-desktop.webp`,
+      mobile: `${objectRoot}-mobile.webp`
+    };
+    for (const kind of ["original", "desktop", "mobile"]) {
+      await storageFetch(`object/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(paths[kind])}`, {
+        method: "POST",
+        headers: { "Content-Type": "image/webp", "x-upsert": "false" },
+        body: generated[kind].data
+      });
+      uploadedStoragePaths.push(paths[kind]);
+    }
+    const { url } = getSupabaseStorageConfig();
+    const publicUrls = Object.fromEntries(Object.entries(paths).map(([kind, path]) => [kind, `${url}/storage/v1/object/public/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(path)}`]));
+    const now = new Date().toISOString();
+    const values = {
+      filename: filename.replace(/\.[^.]+$/, "") + ".webp",
+      storage_bucket: COMMONPLACE_CONTENT_MEDIA_BUCKET,
+      storage_path: paths.original,
+      public_url: publicUrls.original,
+      mime_type: "image/webp",
+      byte_size: generated.original.data.length,
+      width: generated.original.info.width,
+      height: generated.original.info.height,
+      alt_text: clean(fields.alt_text || fields.alt) || existing?.alt_text || "",
+      category: clean(fields.category) || existing?.category || "other",
+      variant_kind: variant,
+      variants: {
+        desktop: { url: publicUrls.desktop, path: paths.desktop, width: generated.desktop.info.width, height: generated.desktop.info.height, byteSize: generated.desktop.data.length },
+        mobile: { url: publicUrls.mobile, path: paths.mobile, width: generated.mobile.info.width, height: generated.mobile.info.height, byteSize: generated.mobile.data.length }
+      },
+      status: "draft",
+      updated_by: context.user.id,
+      checksum,
+      ...(existing ? { replaced_at: now } : { workspace_id: context.workspace.id, created_by: context.user.id })
+    };
+    const rows = await supabaseFetch(existing
+      ? `website_os_media_assets?id=eq.${encodeURIComponent(existing.id)}&workspace_id=eq.${encodeURIComponent(context.workspace.id)}&select=*`
+      : "website_os_media_assets?select=*", {
+      method: existing ? "PATCH" : "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(values)
+    });
+    const asset = Array.isArray(rows) ? rows[0] || null : null;
+    if (!asset) throw new Error("Media record was not persisted");
+    if (existing?.storage_bucket && existing?.storage_path) {
+      const oldPaths = [existing.storage_path, existing.variants?.desktop?.path, existing.variants?.mobile?.path].filter(Boolean);
+      Promise.all(oldPaths.map((path) => storageFetch(`object/${encodeURIComponent(existing.storage_bucket)}/${encodeStoragePath(path)}`, { method: "DELETE" }).catch(() => {})));
+    }
+    await writeContentAudit(context, existing ? "media_replaced" : "media_uploaded", asset.id, existing || {}, asset, { variant });
+    return send(res, 200, { success: true, media: publicMediaAsset(asset) });
+  } catch (error) {
+    if (uploadedStoragePaths.length) Promise.all(uploadedStoragePaths.map((path) => storageFetch(`object/${COMMONPLACE_CONTENT_MEDIA_BUCKET}/${encodeStoragePath(path)}`, { method: "DELETE" }).catch(() => {})));
+    return send(res, error.statusCode || 500, { success: false, error: error.statusCode && error.statusCode < 500 ? error.message : "Media upload failed", code: error.code || "MEDIA_UPLOAD_FAILED" });
+  }
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return Promise.resolve(req.body);
 
@@ -2537,6 +4310,15 @@ async function getConnectedOperatorMetadata(input = {}) {
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
     const url = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
+    if (url.searchParams.get("commonpl4ce_content") === "1") {
+      return handleCommonplaceContentGet(req, res);
+    }
+    if (url.searchParams.get("commonpl4ce_site_config") === "1") {
+      return handleCommonplaceSiteConfigGet(req, res);
+    }
+    if (isCommonplacePoliciesRequest(req)) {
+      return handleCommonplacePoliciesGet(req, res);
+    }
     if (url.searchParams.get("ask_security_config") === "1") {
       const config = askVerificationConfig();
       return send(res, 200, {
@@ -2588,8 +4370,52 @@ module.exports = async function handler(req, res) {
     return handleWorkspaceAttachmentUpload(req, res);
   }
 
+  if (isCommonplaceContentUploadRequest(req)) {
+    return handleCommonplaceContentUpload(req, res);
+  }
+
   try {
     const input = await parseBody(req);
+    if (isWebsiteOsAuthRequest(input)) {
+      try {
+        return await handleWebsiteOsAuthRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.message || "Website OS auth failed",
+          code: error.code || "WEBSITE_OS_AUTH_FAILED"
+        });
+      }
+    }
+
+    if (isWebsiteOsTodayBriefingRequest(input)) {
+      try {
+        return await handleWebsiteOsTodayBriefingRequest(req, res, input);
+      } catch (error) {
+        return send(res, error.statusCode || 500, {
+          success: false,
+          error: error.statusCode && error.statusCode < 500 ? error.message : "Today Briefing unavailable",
+          code: error.code || "TODAY_BRIEFING_FAILED"
+        });
+      }
+    }
+
+    if (isCommonplaceSiteConfigRequest(req, input)) {
+      return handleCommonplaceSiteConfigPost(req, res, input);
+    }
+
+    if (isCommonplaceContentRequest(req, input)) {
+      return handleCommonplaceContentPost(req, res, input);
+    }
+
+    if (isCommonplaceAnalyticsSummaryRequest(input)) {
+      return handleCommonplaceAnalyticsSummaryRequest(req, res, input);
+    }
+
+    if (isCommonplaceNewsletterRequest(input)) {
+      return handleCommonplaceNewsletterRequest(req, res, input);
+    }
+
     if (isJourneyConfirmationRequest(req, input)) {
       return handleJourneyConfirmationRequest(req, res, input);
     }
@@ -2655,8 +4481,36 @@ module.exports = async function handler(req, res) {
     }
 
     const now = new Date();
-    const taskId = getRequestedTaskId(input) || createTaskId(now);
+    let commonplaceReservation = null;
+    let commonplacePolicyAcceptance = null;
+    if (isCommonplaceBookingInput(input)) {
+      const publicRequest = validateCommonplacePublicRequest(req, { ...input, path: input.path || "/cp-book" });
+      if (!publicRequest.ok) return send(res, publicRequest.statusCode, { success: false, error: publicRequest.error, code: "COMMONPL4CE_PUBLIC_ROUTE_REJECTED" });
+      await assertPublicIngestRate(req, input, { scope: "commonpl4ce_booking", windowSeconds: 3600, maxRequests: 12 });
+      commonplaceReservation = await assertCommonplaceBookingAvailable(input);
+      const acceptanceInput = Array.isArray(input.policy_acceptances || input.policyAcceptances)
+        ? (input.policy_acceptances || input.policyAcceptances)
+        : [];
+      const acceptedPolicyIds = acceptanceInput.map((item) => clean(typeof item === "string" ? item : item?.policy_id || item?.policyId || item?.id)).filter(Boolean);
+      commonplacePolicyAcceptance = await assertBookingPolicyAcceptances(commonplaceReservation.workspaceId, acceptedPolicyIds);
+    }
+    const taskId = getRequestedTaskId(input) || commonplaceReservation?.taskId || createTaskId(now);
     let { task } = attachReviewSecurity(buildTaskPayload(input, taskId, now));
+    if (commonplaceReservation?.workspaceId) {
+      task.websiteOsWorkspaceId = commonplaceReservation.workspaceId;
+      task.rawPayload = {
+        ...(task.rawPayload || {}),
+        website_os_workspace_id: commonplaceReservation.workspaceId,
+        website_os_policy_acceptances: (commonplacePolicyAcceptance?.policies || [])
+          .filter((policy) => commonplacePolicyAcceptance.acceptedIds.includes(policy.id))
+          .map((policy) => ({
+            policy_id: policy.id,
+            document_id: policy.documentId,
+            version_id: policy.versionId,
+            version_number: policy.versionNumber
+          }))
+      };
+    }
     const connectedOperator = await getConnectedOperatorMetadata(input);
     if (connectedOperator) {
       task.rawPayload = {
@@ -2672,7 +4526,42 @@ module.exports = async function handler(req, res) {
 
     // Future operational handoffs: quote generation, payment session generation,
     // portal linking, operator assignment, and realtime client status updates.
-    const persistedTask = await saveTask(task);
+    let persistedTask;
+    try {
+      persistedTask = await saveTask(task);
+    } catch (error) {
+      const duplicateReservation = commonplaceReservation &&
+        error instanceof TaskPersistenceError &&
+        error.diagnostic?.upstreamStatus === 409;
+      if (!duplicateReservation) throw error;
+      const bookingError = new Error("This date is no longer available. Please choose another date.");
+      bookingError.code = "BOOKING_DATE_UNAVAILABLE";
+      bookingError.statusCode = 409;
+      throw bookingError;
+    }
+    if (commonplaceReservation && commonplacePolicyAcceptance?.acceptedIds?.length) {
+      try {
+        await recordBookingPolicyAcceptances({
+          workspaceId: commonplaceReservation.workspaceId,
+          bookingTaskId: taskId,
+          name: input.name,
+          emailAddress: input.email,
+          acceptedPolicyIds: commonplacePolicyAcceptance.acceptedIds,
+          requestFingerprint: publicIngestFingerprint(req, input, "commonpl4ce_policy_acceptance"),
+          userAgent: req.headers["user-agent"] || ""
+        });
+      } catch (acceptanceError) {
+        await supabaseFetch([
+          "task_requests?",
+          `website_os_workspace_id=eq.${encodeURIComponent(commonplaceReservation.workspaceId)}`,
+          `&task_id=eq.${encodeURIComponent(taskId)}`
+        ].join(""), { method: "DELETE", headers: { Prefer: "return=minimal" } }).catch(() => {});
+        const error = new Error("Booking could not be recorded safely. Please try again.");
+        error.code = "POLICY_ACCEPTANCE_PERSIST_FAILED";
+        error.statusCode = 503;
+        throw error;
+      }
+    }
     if (connectedOperator?.portal_request_id) {
       appendOperatorRelationshipTaskReference({
         portalRequest: {
@@ -2849,6 +4738,14 @@ module.exports = async function handler(req, res) {
         code: "EMAIL_TYPO_CONFIRMATION_REQUIRED",
         suggested_email: error.suggestedEmail || "",
         message: "Please confirm your email address before sending."
+      });
+    }
+
+    if (["BOOKING_OFFLINE", "BOOKING_DATE_INVALID", "BOOKING_DATE_UNAVAILABLE"].includes(error.code)) {
+      return send(res, error.statusCode || 409, {
+        success: false,
+        error: error.message,
+        code: error.code
       });
     }
 

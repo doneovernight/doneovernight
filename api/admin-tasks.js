@@ -3,6 +3,9 @@ const SUPABASE_TIMEOUT_MS = 10_000;
 const { buildSecureReviewUrl } = require("../lib/review-token");
 const { withFreshTaskAttachmentUrls } = require("../lib/attachments");
 const xContentRoutes = require("../lib/x-content/routes");
+const { assertWebsiteOsRequestOrigin, requireWebsiteOsSession } = require("../lib/website-os-auth");
+const { listScopedRecords } = require("../lib/website-os-repository");
+const { summarizeInvoices } = require("../lib/website-os-invoices");
 const tenantContext = require("../lib/x-content/tenant-context");
 
 function send(res, statusCode, payload) {
@@ -72,6 +75,28 @@ async function verifyAdminKey(adminKey) {
   }
 }
 
+async function verifyAdminOrWebsiteOsSession(req, adminKey) {
+  if (adminKey && await verifyAdminKey(adminKey)) return { mode: "admin" };
+  const current = await requireWebsiteOsSession(req, {
+    slug: "cp",
+    roles: ["Owner", "Admin", "Editor", "Viewer"]
+  });
+  return { mode: "website_os", workspaceSlug: current.workspace.slug, current };
+}
+
+function isCommonplaceTask(task = {}, workspaceId = "") {
+  return Boolean(workspaceId) && clean(task.website_os_workspace_id) === clean(workspaceId);
+}
+
+function taskReference(task = {}) {
+  return clean(task.task_id || task.taskId || task.id || task.raw_payload?.task_id);
+}
+
+function isWebsiteOsTestTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  return raw.website_os_test_record === true || raw.test_record === true;
+}
+
 async function fetchTasks() {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
@@ -132,14 +157,44 @@ module.exports = async function handler(req, res) {
   try {
     const input = await parseBody(req);
     const adminKey = clean(input.admin_key || input.adminKey);
-    const authorized = await verifyAdminKey(adminKey);
+    if (!adminKey) assertWebsiteOsRequestOrigin(req);
+    const authorized = await verifyAdminOrWebsiteOsSession(req, adminKey);
     if (!authorized) {
       return send(res, 401, { success: false, error: "Admin access denied" });
     }
 
     const tasks = await fetchTasks();
-    const enrichedTasks = Array.isArray(tasks) ? await Promise.all(tasks.map(enrichTask)) : [];
-    return send(res, 200, { success: true, tasks: enrichedTasks });
+    const scopedTasks = authorized.mode === "website_os"
+      ? (Array.isArray(tasks) ? tasks.filter((task) => isCommonplaceTask(task, authorized.current.workspace.id)) : [])
+      : tasks;
+    const enrichedTasks = Array.isArray(scopedTasks) ? await Promise.all(scopedTasks.map(enrichTask)) : [];
+    const [invoices, customers, customerBookings, invoiceDocuments] = authorized.mode === "website_os"
+      ? await Promise.all([
+        listScopedRecords(authorized.current, "invoice", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authorized.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authorized.current, "clientBooking", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authorized.current, "invoiceDocument", { order: "created_at.desc", limit: 200 })
+      ])
+      : [[], [], [], []];
+    const testBookingRefs = new Set(
+      (Array.isArray(scopedTasks) ? scopedTasks : [])
+        .filter(isWebsiteOsTestTask)
+        .map(taskReference)
+        .filter(Boolean)
+    );
+    const testCustomerIds = new Set(customers.filter((customer) => customer.is_test === true).map((customer) => customer.id));
+    const productionInvoices = invoices.filter((invoice) => (
+      !testBookingRefs.has(clean(invoice.booking_task_id)) && !testCustomerIds.has(invoice.client_id)
+    ));
+    return send(res, 200, {
+      success: true,
+      tasks: enrichedTasks,
+      customers,
+      customerBookings,
+      invoices: productionInvoices,
+      invoiceDocuments: invoiceDocuments.filter((link) => productionInvoices.some((invoice) => invoice.id === link.invoice_id)),
+      invoiceSummary: summarizeInvoices(productionInvoices)
+    });
   } catch (error) {
     if (error.message === "Invalid JSON") {
       return send(res, 400, { success: false, error: "Invalid JSON", code: "INVALID_JSON" });

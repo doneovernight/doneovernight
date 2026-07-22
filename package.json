@@ -2,16 +2,28 @@
   "name": "doneovernight-content-agent",
   "private": true,
   "version": "1.0.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "npm run test:how-it-works-industries && npm run test:x-content",
     "test:how-it-works-industries": "node scripts/verify-how-it-works-industries.mjs",
     "verify:production": "node scripts/verify-how-it-works-industries.mjs --url https://doneovernight.com --production",
-    "vercel-build": "npm run test:how-it-works-industries",
-    "test:x-content": "node --test test/**/*.test.js",
-    "x:health": "node scripts/x-content-cli.js health"
+    "vercel-build": "npm test",
+    "test:x-content": "node scripts/run-x-content-tests.mjs",
+    "test:website-os-builder-containment": "playwright test test/website-os-builder-containment.spec.mjs --reporter=line",
+    "test:website-os-business-documents-ux": "playwright test test/website-os-business-documents-ux.spec.mjs --reporter=line",
+    "x:health": "node scripts/x-content-cli.js health",
+    "website-os:migrate:production": "node scripts/website-os-production-migrate.mjs"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "bcryptjs": "^3.0.3",
+    "pdfkit": "^0.19.1",
+    "sharp": "^0.35.3",
     "twitter-text": "^3.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   }
 }

@@ -1,4 +1,41 @@
 {
+  "headers": [
+    {
+      "source": "/cp",
+      "has": [{ "type": "host", "value": "admin\\.doneovernight\\.com" }],
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src https://doneovernight.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" }
+      ]
+    },
+    {
+      "source": "/cp",
+      "has": [{ "type": "host", "value": "doneovernight\\.com" }],
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://admin.doneovernight.com; upgrade-insecure-requests" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" }
+      ]
+    },
+    {
+      "source": "/cp-book",
+      "has": [{ "type": "host", "value": "doneovernight\\.com" }],
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" }
+      ]
+    }
+  ],
   "routes": [
     {
       "src": "/x-content/?",
@@ -59,6 +96,24 @@
         }
       ],
       "dest": "/admin/mosyaamosya/index.html"
+    },
+    {
+      "src": "/cp/?",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/admin/website-os/commonpl4ce/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src https://doneovernight.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      }
     },
     {
       "src": "/mina/?",
@@ -419,7 +474,32 @@
           "value": "doneovernight\\.com"
         }
       ],
-      "dest": "/cp/index.html"
+      "dest": "/cp/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://admin.doneovernight.com; upgrade-insecure-requests",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      }
+    },
+    {
+      "src": "/cp-book/?",
+      "has": [
+        {
+          "type": "host",
+          "value": "doneovernight\\.com"
+        }
+      ],
+      "dest": "/cp-book/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.supabase.co; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      }
     },
     {
       "src": "/commonpl4ce/?",
@@ -453,6 +533,126 @@
       ],
       "status": 308,
       "dest": "https://ask.doneovernight.com"
+    },
+    {
+      "src": "/api/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/favicon\\.ico",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/favicon\\.svg",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/favicon.svg"
+    },
+    {
+      "src": "/favicon-48\\.png",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/favicon-48.png"
+    },
+    {
+      "src": "/favicon-96\\.png",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/favicon-96.png"
+    },
+    {
+      "src": "/favicon\\.png",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/favicon.png"
+    },
+    {
+      "src": "/shared\\.css",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/shared.css"
+    },
+    {
+      "src": "/icon-(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/icon-$1"
+    },
+    {
+      "src": "/manifest\\.webmanifest",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/manifest.webmanifest"
+    },
+    {
+      "src": "/service-worker\\.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/service-worker.js"
+    },
+    {
+      "src": "/.*",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin\\.doneovernight\\.com"
+        }
+      ],
+      "dest": "/admin/not-found.html"
     },
     {
       "handle": "filesystem"

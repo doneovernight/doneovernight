@@ -9,6 +9,29 @@ const {
   activateWorkspaceAfterVerifiedPayment,
   buildWorkspaceActivationResponse
 } = require("../lib/workspace-activation");
+const { assertWebsiteOsRequestOrigin, requireWebsiteOsSession } = require("../lib/website-os-auth");
+const {
+  createScopedRecord,
+  getScopedRecord,
+  listScopedRecords,
+  updateScopedRecord,
+  writeAuditEvent
+} = require("../lib/website-os-repository");
+const {
+  buildInvoiceStatusPatch,
+  normalizeInvoiceInput,
+  summarizeInvoices
+} = require("../lib/website-os-invoices");
+const { duplicateCustomer, normalizeCustomerInput } = require("../lib/website-os-customers");
+const { buildWebsiteOsInvoicePdf } = require("../lib/website-os-invoice-pdf");
+const {
+  getBusinessBundle,
+  getInvoiceDocumentBundle,
+  handleWebsiteOsBusinessAction,
+  linkPolicyAcceptancesToCustomer,
+  resolveInvoiceDocuments,
+  syncInvoiceDocuments
+} = require("../lib/website-os-business");
 
 const VALID_STATUSES = new Set([
   "review_pending",
@@ -366,6 +389,72 @@ async function verifyAdminKey(adminKey) {
     error.statusCode = 403;
     throw error;
   }
+}
+
+async function verifyAdminOrWebsiteOsSession(req, adminKey) {
+  const key = clean(adminKey);
+  if (key) {
+    await verifyAdminKey(key);
+    return { mode: "admin" };
+  }
+  const current = await requireWebsiteOsSession(req, {
+    slug: "cp",
+    roles: ["Owner", "Admin", "Editor"]
+  });
+  return { mode: "website_os", workspaceSlug: current.workspace.slug, current };
+}
+
+function isCommonplaceTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
+  const workspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    workspace === "commonpl4ce" ||
+    workspace === "cp";
+}
+
+function isCommonplaceBookingTask(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const source = clean(task.source || raw.source || raw.booking_source || raw.bookingSource).toLowerCase();
+  const intakeVersion = clean(task.intake_version || task.intakeVersion || raw.intakeVersion || raw.intake_version).toLowerCase();
+  const summary = clean(task.task_summary || task.task_description || raw.task_summary || raw.task_description);
+  return source === "commonpl4ce_booker" ||
+    source === "commonpl4ce_booker_v1" ||
+    intakeVersion === "commonpl4ce_booker_v1" ||
+    summary.includes("COMMONPL4CE booking request");
+}
+
+function isCommonpl4ceWorkspaceBooking(task = {}) {
+  const raw = task.raw_payload && typeof task.raw_payload === "object" ? task.raw_payload : {};
+  const declaredWorkspace = clean(task.workspace || task.workspace_slug || raw.workspace || raw.workspace_slug).toLowerCase();
+  if (declaredWorkspace && !["cp", "commonpl4ce"].includes(declaredWorkspace)) return false;
+  return isCommonplaceBookingTask(task);
+}
+
+function belongsToWebsiteOsWorkspace(task = {}, current = {}) {
+  return Boolean(current?.workspace?.id) && clean(task.website_os_workspace_id) === clean(current.workspace.id);
+}
+
+function isWebsiteOsStatusOnlyUpdate(input = {}) {
+  const allowedKeys = new Set(["workspace_slug", "workspaceSlug", "id", "task_id", "taskId", "operational_id", "reference_id", "status", "updated_at", "updatedAt"]);
+  return clean(input.status) && Object.keys(input).every((key) => allowedKeys.has(key));
+}
+
+function isCommonplaceRecordActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_record_action";
+}
+
+function isCommonplaceInvoiceActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_invoice_action";
+}
+
+function isCommonplaceCustomerActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_customer_action";
+}
+
+function isCommonplaceBusinessActionRequest(input = {}) {
+  return clean(input.action || input.intent) === "commonpl4ce_business_action";
 }
 
 function buildTaskFilter(taskId) {
@@ -1060,11 +1149,14 @@ async function sendClientAdminAction(taskId, input = {}) {
   };
 }
 
-async function patchTask(taskId, patch) {
+async function patchTask(taskId, patch, { expectedUpdatedAt = "" } = {}) {
   const { url, serviceRoleKey } = getSupabaseConfig();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
-  const taskFilter = buildTaskFilter(taskId);
+  const taskFilter = [
+    buildTaskFilter(taskId),
+    expectedUpdatedAt ? `updated_at=eq.${encodeURIComponent(expectedUpdatedAt)}` : ""
+  ].filter(Boolean).join("&");
 
   try {
     const response = await fetch(`${url}/rest/v1/${TASK_TABLE}?${taskFilter}`, {
@@ -1091,9 +1183,11 @@ async function patchTask(taskId, patch) {
     const rows = await response.json();
     const updatedTask = Array.isArray(rows) ? rows[0] : null;
     if (!updatedTask) {
-      const error = new Error("Task not found");
-      error.code = "TASK_NOT_FOUND";
-      error.statusCode = 404;
+      const error = new Error(expectedUpdatedAt
+        ? "Record changed in another session. Reload and try again."
+        : "Task not found");
+      error.code = expectedUpdatedAt ? "RECORD_ACTION_CONFLICT" : "TASK_NOT_FOUND";
+      error.statusCode = expectedUpdatedAt ? 409 : 404;
       throw error;
     }
     return updatedTask;
@@ -1515,6 +1609,588 @@ async function updateWorkspaceSlug(taskId, input = {}) {
   };
 }
 
+function commonpl4ceRecordRaw(task = {}) {
+  return task.raw_payload && typeof task.raw_payload === "object" && task.raw_payload ? task.raw_payload : {};
+}
+
+function commonpl4ceRecordRef(task = {}) {
+  return clean(task.task_id || task.taskId || task.id || task.raw_payload?.task_id || "");
+}
+
+function commonpl4ceAuditEntry({ current, task, recordType, action, previousStatus }) {
+  return {
+    workspace: "cp",
+    record_id: commonpl4ceRecordRef(task),
+    record_type: recordType,
+    action,
+    actor_user_id: clean(current?.user?.id || ""),
+    actor_role: clean(current?.user?.role || ""),
+    timestamp: new Date().toISOString(),
+    previous_status: clean(previousStatus || task.status || task.raw_payload?.status || "")
+  };
+}
+
+async function writeCommonpl4ceRecordAudit(current, entry = {}, previousRecord = {}, nextRecord = {}) {
+  await writeAuditEvent(current, {
+    entityType: clean(entry.record_type) || "booking",
+    entityId: clean(entry.record_id),
+    action: clean(entry.action),
+    previousState: {
+      status: clean(previousRecord.status),
+      is_test: previousRecord.raw_payload?.website_os_test_record === true,
+      deleted_at: clean(previousRecord.raw_payload?.deleted_at),
+      updated_at: clean(previousRecord.updated_at)
+    },
+    nextState: {
+      status: clean(nextRecord.status),
+      is_test: nextRecord.raw_payload?.website_os_test_record === true,
+      deleted_at: clean(nextRecord.raw_payload?.deleted_at),
+      updated_at: clean(nextRecord.updated_at)
+    },
+    metadata: {
+      workspace: "cp",
+      actor_role: clean(entry.actor_role),
+      previous_status: clean(entry.previous_status)
+    }
+  });
+}
+
+async function handleCommonpl4ceRecordAction(req, taskId, input = {}) {
+  const action = clean(input.record_action || input.recordAction || input.operation).toLowerCase();
+  const recordType = clean(input.record_type || input.recordType).toLowerCase() === "message" ? "message" : "booking";
+  const allowedActions = new Set(["archive", "trash", "restore", "mark_test", "unmark_test", "permanent_delete"]);
+  if (!allowedActions.has(action)) {
+    const error = new Error("Unsupported record action");
+    error.code = "UNSUPPORTED_RECORD_ACTION";
+    error.statusCode = 400;
+    throw error;
+  }
+  const roles = action === "permanent_delete" ? ["Owner"] : ["Owner", "Admin"];
+  const current = await requireWebsiteOsSession(req, { slug: "cp", roles });
+  const task = await loadTask(taskId);
+  if (!task || !belongsToWebsiteOsWorkspace(task, current) || !isCommonpl4ceWorkspaceBooking(task)) {
+    const error = new Error("Record not found");
+    error.code = "RECORD_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const expectedUpdatedAt = clean(input.expected_updated_at || input.expectedUpdatedAt);
+  if (expectedUpdatedAt && clean(task.updated_at) !== expectedUpdatedAt) {
+    const error = new Error("Record changed in another session. Reload and try again.");
+    error.code = "RECORD_ACTION_CONFLICT";
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const now = new Date().toISOString();
+  const previousStatus = clean(task.status || task.raw_payload?.status || "new");
+  const rawPayload = commonpl4ceRecordRaw(task);
+  const isTrashed = previousStatus.toLowerCase() === "trashed" || clean(rawPayload.website_os_visibility).toLowerCase() === "trashed" || Boolean(rawPayload.deleted_at);
+  const auditEntry = commonpl4ceAuditEntry({ current, task, recordType, action, previousStatus });
+  const previousAudit = Array.isArray(rawPayload.website_os_audit) ? rawPayload.website_os_audit : [];
+  const baseRawPayload = {
+    ...rawPayload,
+    website_os_audit: [auditEntry, ...previousAudit].slice(0, 50),
+    website_os_last_action_at: now,
+    website_os_last_action_by: clean(current.user.id || ""),
+    website_os_last_action: action
+  };
+
+  if (action === "archive") {
+    if (isTrashed) {
+      const error = new Error("Trashed records must be restored before archiving");
+      error.code = "RECORD_ACTION_CONFLICT";
+      error.statusCode = 409;
+      throw error;
+    }
+    const updated = await patchTask(taskId, {
+      status: "archived",
+      raw_payload: {
+        ...baseRawPayload,
+        website_status: "Archived",
+        website_os_visibility: "active",
+        archived_at: now,
+        archived_by: clean(current.user.id || "")
+      },
+      updated_at: now
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
+    return { action, record: updated, message: "Record archived." };
+  }
+
+  if (action === "trash") {
+    if (isTrashed) {
+      const error = new Error("Record is already in Trash");
+      error.code = "RECORD_ALREADY_TRASHED";
+      error.statusCode = 409;
+      throw error;
+    }
+    const updated = await patchTask(taskId, {
+      status: "trashed",
+      raw_payload: {
+        ...baseRawPayload,
+        deleted_at: now,
+        deleted_by: clean(current.user.id || ""),
+        delete_reason: clean(input.delete_reason || input.deleteReason) || `Moved ${recordType} to Trash`,
+        deleted_record_type: recordType,
+        previous_status: previousStatus,
+        website_os_visibility: "trashed"
+      },
+      updated_at: now
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
+    return { action, record: updated, message: "Record moved to Trash." };
+  }
+
+  if (action === "restore") {
+    if (!isTrashed) {
+      const error = new Error("Only trashed records can be restored");
+      error.code = "RECORD_NOT_TRASHED";
+      error.statusCode = 409;
+      throw error;
+    }
+    const restoredStatus = clean(rawPayload.previous_status) || "new";
+    const updated = await patchTask(taskId, {
+      status: restoredStatus === "trashed" ? "new" : restoredStatus,
+      raw_payload: {
+        ...baseRawPayload,
+        restored_at: now,
+        restored_by: clean(current.user.id || ""),
+        previous_status: previousStatus,
+        deleted_at: "",
+        deleted_by: "",
+        delete_reason: "",
+        website_os_visibility: "active"
+      },
+      updated_at: now
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
+    return { action, record: updated, message: "Record restored." };
+  }
+
+  if (action === "mark_test" || action === "unmark_test") {
+    if (isTrashed) {
+      const error = new Error("Restore the record before changing its test status");
+      error.code = "RECORD_ACTION_CONFLICT";
+      error.statusCode = 409;
+      throw error;
+    }
+    const isTest = action === "mark_test";
+    if ((rawPayload.website_os_test_record === true) === isTest) {
+      return { action, record: task, unchanged: true, message: isTest ? "Record is already marked as test." : "Test label is already removed." };
+    }
+    const updated = await patchTask(taskId, {
+      raw_payload: {
+        ...baseRawPayload,
+        website_os_test_record: isTest,
+        test_record: isTest
+      },
+      updated_at: now
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, updated);
+    return { action, record: updated, message: isTest ? "Record marked as test." : "Test label removed." };
+  }
+
+  if (action === "permanent_delete") {
+    if (clean(input.confirm) !== "PERMANENT_DELETE") {
+      const error = new Error("Permanent delete confirmation required");
+      error.code = "PERMANENT_DELETE_CONFIRMATION_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    if (!isTrashed) {
+      const error = new Error("Only trashed records can be permanently deleted");
+      error.code = "RECORD_NOT_TRASHED";
+      error.statusCode = 409;
+      throw error;
+    }
+    const archivedForDelete = await patchTask(taskId, {
+      status: "archived",
+      raw_payload: {
+        ...baseRawPayload,
+        website_os_visibility: "trashed",
+        permanent_delete_requested_at: now,
+        permanent_delete_requested_by: clean(current.user.id || "")
+      },
+      updated_at: now
+    }, { expectedUpdatedAt: clean(task.updated_at) });
+    await writeCommonpl4ceRecordAudit(current, auditEntry, task, archivedForDelete);
+    await deleteTaskRow(archivedForDelete);
+    return { action, deleted: true, message: "Record permanently deleted." };
+  }
+}
+
+function websiteOsBookingFromTask(task = {}) {
+  const raw = commonpl4ceRecordRaw(task);
+  return {
+    id: clean(task.id),
+    taskId: commonpl4ceRecordRef(task),
+    name: clean(raw.name || raw.contact_name || task.name || task.client_name),
+    email: clean(raw.email || raw.contact_email || task.email || task.client_email),
+    brandCompany: clean(raw.brand || raw.brand_company || raw.company || task.company),
+    phone: clean(raw.phone || raw.phone_number || task.phone),
+    billingAddress: clean(raw.billing_address || raw.address || task.billing_address),
+    vatNumber: clean(raw.vat_number || raw.vat || task.vat_number),
+    instagram: clean(raw.instagram || task.instagram),
+    projectType: clean(raw.projectType || raw.project_type),
+    location: clean(raw.location),
+    preferredDate: clean(raw.preferredDate || raw.preferred_date || task.deadline),
+    budget: clean(raw.budgetRange || raw.budget || task.client_budget),
+    isTest: raw.website_os_test_record === true || raw.test_record === true,
+    status: clean(task.status || raw.status || "new").toLowerCase()
+  };
+}
+
+function assertCustomerRole(current, roles = ["Owner", "Admin"]) {
+  if (!roles.includes(clean(current?.user?.role))) {
+    const error = new Error("Customer permission denied");
+    error.code = "CUSTOMER_PERMISSION_DENIED";
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+async function loadCommonpl4ceBooking(current, taskId) {
+  const task = await loadTask(taskId);
+  if (!task || !belongsToWebsiteOsWorkspace(task, current) || !isCommonpl4ceWorkspaceBooking(task)) {
+    const error = new Error("Booking not found in this workspace");
+    error.code = "CUSTOMER_BOOKING_NOT_FOUND";
+    error.statusCode = 404;
+    throw error;
+  }
+  return websiteOsBookingFromTask(task);
+}
+
+async function linkBookingToCustomer(current, customer, booking) {
+  if (!booking?.taskId) return null;
+  const existing = await listScopedRecords(current, "clientBooking", {
+    filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+    limit: 5
+  });
+  if (existing[0]) {
+    if (existing[0].client_id !== customer.id) {
+      const error = new Error("This booking is already linked to another customer");
+      error.code = "CUSTOMER_BOOKING_ALREADY_LINKED";
+      error.statusCode = 409;
+      throw error;
+    }
+    await linkPolicyAcceptancesToCustomer(current, booking.taskId, customer.id);
+    return existing[0];
+  }
+  const link = await createScopedRecord(current, "clientBooking", {
+    client_id: customer.id,
+    booking_task_id: booking.taskId,
+    booking_snapshot: booking
+  }, { action: "customer_booking_linked" });
+  await linkPolicyAcceptancesToCustomer(current, booking.taskId, customer.id);
+  return link;
+}
+
+async function handleCommonpl4ceCustomerAction(current, input = {}) {
+  assertCustomerRole(current);
+  const operation = clean(input.customer_action || input.customerAction || input.operation).toLowerCase();
+  const customerId = clean(input.customer_id || input.customerId);
+  const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
+
+  if (operation === "create" || operation === "create_from_booking") {
+    const booking = taskId ? await loadCommonpl4ceBooking(current, taskId) : {};
+    const candidate = normalizeCustomerInput(input, booking);
+    const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+    const duplicate = duplicateCustomer(customers, candidate);
+    const resolution = clean(input.duplicate_resolution || input.duplicateResolution).toLowerCase();
+    if (duplicate && !["link", "merge"].includes(resolution)) {
+      const error = new Error("A matching customer already exists. Link or merge this booking instead.");
+      error.code = "CUSTOMER_DUPLICATE";
+      error.statusCode = 409;
+      error.existingCustomer = duplicate;
+      throw error;
+    }
+    let customer = duplicate;
+    if (duplicate && resolution === "merge") {
+      customer = await updateScopedRecord(current, "client", duplicate.id, {
+        ...normalizeCustomerInput(input, booking, duplicate),
+        updated_by: current.user.id
+      }, { action: "customer_merged" });
+    }
+    if (!customer) {
+      customer = await createScopedRecord(current, "client", {
+        ...candidate,
+        updated_by: current.user.id
+      }, { action: "customer_created" });
+    }
+    const bookingLink = await linkBookingToCustomer(current, customer, booking);
+    return { operation, customer, bookingLink, duplicateResolved: Boolean(duplicate) };
+  }
+
+  if (operation === "update") {
+    const existing = await getScopedRecord(current, "client", customerId);
+    if (!existing) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const values = normalizeCustomerInput(input, {}, existing);
+    const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+    const duplicate = duplicateCustomer(customers.filter((item) => item.id !== existing.id), values);
+    if (duplicate) {
+      const error = new Error("Another customer already uses this email or company identity");
+      error.code = "CUSTOMER_DUPLICATE";
+      error.statusCode = 409;
+      error.existingCustomer = duplicate;
+      throw error;
+    }
+    const customer = await updateScopedRecord(current, "client", existing.id, {
+      ...values,
+      updated_by: current.user.id
+    }, { action: "customer_updated" });
+    return { operation, customer };
+  }
+
+  if (operation === "link_booking") {
+    const customer = await getScopedRecord(current, "client", customerId);
+    if (!customer) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const booking = await loadCommonpl4ceBooking(current, taskId);
+    const bookingLink = await linkBookingToCustomer(current, customer, booking);
+    return { operation, customer, bookingLink };
+  }
+
+  const error = new Error("Unsupported customer action");
+  error.code = "CUSTOMER_ACTION_UNSUPPORTED";
+  error.statusCode = 400;
+  throw error;
+}
+
+function assertInvoiceRole(current, roles) {
+  if (!roles.includes(clean(current?.user?.role))) {
+    const error = new Error("Invoice permission denied");
+    error.code = "INVOICE_PERMISSION_DENIED";
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+function requestedInvoiceDocumentIds(input = {}) {
+  if (Object.prototype.hasOwnProperty.call(input, "document_ids")) return Array.isArray(input.document_ids) ? input.document_ids : [];
+  if (Object.prototype.hasOwnProperty.call(input, "documentIds")) return Array.isArray(input.documentIds) ? input.documentIds : [];
+  return undefined;
+}
+
+async function handleCommonpl4ceInvoiceAction(current, input = {}) {
+  assertInvoiceRole(current, ["Owner", "Admin"]);
+  const operation = clean(input.invoice_action || input.invoiceAction || input.operation).toLowerCase();
+
+  if (operation === "create") {
+    const taskId = clean(input.task_id || input.taskId || input.booking_task_id || input.bookingTaskId);
+    const requestedCustomerId = clean(input.customer_id || input.customerId);
+    if (!taskId && !requestedCustomerId) {
+      const error = new Error("A booking or customer is required");
+      error.code = "INVOICE_ORIGIN_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    const booking = taskId ? await loadCommonpl4ceBooking(current, taskId) : {};
+    if (["archived", "trashed", "cancelled", "rejected"].includes(booking.status)) {
+      const error = new Error("Archived, trashed or cancelled bookings cannot be invoiced");
+      error.code = "INVOICE_BOOKING_INELIGIBLE";
+      error.statusCode = 409;
+      throw error;
+    }
+    let customer = requestedCustomerId ? await getScopedRecord(current, "client", requestedCustomerId) : null;
+    if (requestedCustomerId && !customer) {
+      const error = new Error("Customer not found in this workspace");
+      error.code = "INVOICE_CUSTOMER_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!customer && booking.taskId) {
+      const links = await listScopedRecords(current, "clientBooking", {
+        filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+        limit: 1
+      });
+      customer = links[0] ? await getScopedRecord(current, "client", links[0].client_id) : null;
+      if (!customer) {
+        const candidate = normalizeCustomerInput(input, booking);
+        const customers = await listScopedRecords(current, "client", { order: "updated_at.desc", limit: 200 });
+        customer = duplicateCustomer(customers, candidate) || await createScopedRecord(current, "client", {
+          ...candidate,
+          updated_by: current.user.id
+        }, { action: "customer_created_from_invoice" });
+        await linkBookingToCustomer(current, customer, booking);
+      }
+    }
+    if (customer?.is_test || booking.isTest) {
+      const error = new Error("Test customers or bookings cannot be invoiced");
+      error.code = "INVOICE_TEST_RECORD_BLOCKED";
+      error.statusCode = 409;
+      throw error;
+    }
+    const previous = booking.taskId ? await listScopedRecords(current, "invoice", {
+      filters: [`booking_task_id=eq.${encodeURIComponent(booking.taskId)}`],
+      order: "created_at.desc",
+      limit: 25
+    }) : [];
+    const activeInvoice = previous.find((invoice) => invoice.status !== "cancelled");
+    const allowDuplicate = input.allow_duplicate === true || input.allowDuplicate === true;
+    if (activeInvoice && !allowDuplicate) {
+      const error = new Error(`Booking already has invoice ${activeInvoice.invoice_number}`);
+      error.code = "INVOICE_DUPLICATE";
+      error.statusCode = 409;
+      throw error;
+    }
+    if (allowDuplicate) {
+      assertInvoiceRole(current, ["Owner"]);
+      if (clean(input.duplicate_confirmation || input.duplicateConfirmation) !== "ALLOW_DUPLICATE_INVOICE") {
+        const error = new Error("Explicit duplicate invoice confirmation is required");
+        error.code = "INVOICE_DUPLICATE_CONFIRMATION_REQUIRED";
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+    const selectedDocumentIds = requestedInvoiceDocumentIds(input);
+    await resolveInvoiceDocuments(current, selectedDocumentIds);
+    const values = normalizeInvoiceInput(input, booking, customer || {});
+    const now = new Date().toISOString();
+    const invoice = await createScopedRecord(current, "invoice", {
+      ...values,
+      allow_duplicate: allowDuplicate,
+      duplicate_approved_by: allowDuplicate ? current.user.id : null,
+      duplicate_approved_at: allowDuplicate ? now : null,
+      updated_by: current.user.id
+    }, { action: "invoice_created" });
+    const invoiceDocuments = await syncInvoiceDocuments(current, invoice, selectedDocumentIds);
+    return { operation, invoice, invoiceDocuments };
+  }
+
+  if (operation === "update") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    if (invoice.status !== "draft") {
+      const error = new Error("Only draft invoices can be edited");
+      error.code = "INVOICE_NOT_EDITABLE";
+      error.statusCode = 409;
+      throw error;
+    }
+    const customer = invoice.client_id ? await getScopedRecord(current, "client", invoice.client_id) : {};
+    const selectedDocumentIds = requestedInvoiceDocumentIds(input);
+    if (selectedDocumentIds !== undefined) await resolveInvoiceDocuments(current, selectedDocumentIds);
+    const normalized = normalizeInvoiceInput({
+      ...input,
+      invoice_number: input.invoice_number || invoice.invoice_number,
+      customer_name: input.customer_name || invoice.customer_name,
+      customer_email: input.customer_email || invoice.customer_email,
+      customer_company: input.customer_company ?? invoice.customer_company,
+      customer_address: input.customer_address ?? invoice.customer_details?.address,
+      customer_vat_number: input.customer_vat_number ?? invoice.customer_details?.vat_number,
+      line_items: input.line_items || invoice.line_items,
+      vat_rate: input.vat_rate ?? invoice.vat_rate,
+      issue_date: input.issue_date || invoice.issue_date,
+      due_date: input.due_date || invoice.due_date,
+      notes: input.notes ?? invoice.notes
+    }, { taskId: invoice.booking_task_id }, customer || {});
+    const updated = await updateScopedRecord(current, "invoice", invoice.id, {
+      ...normalized,
+      updated_by: current.user.id
+    }, { action: "invoice_updated" });
+    const invoiceDocuments = selectedDocumentIds === undefined
+      ? await getInvoiceDocumentBundle(current, updated.id)
+      : await syncInvoiceDocuments(current, updated, selectedDocumentIds);
+    return { operation, invoice: updated, invoiceDocuments };
+  }
+
+  if (operation === "update_status") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const nextStatus = clean(input.status).toLowerCase();
+    if (nextStatus === "sent" && clean(input.confirm) !== "MARK_INVOICE_SENT") {
+      const error = new Error("Explicit review confirmation is required before marking an invoice sent");
+      error.code = "INVOICE_SEND_CONFIRMATION_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    const now = new Date().toISOString();
+    const patch = buildInvoiceStatusPatch(invoice, nextStatus, now);
+    delete patch.updated_by;
+    if (nextStatus === "sent") {
+      patch.send_history = [...(Array.isArray(invoice.send_history) ? invoice.send_history : []), {
+        action: "marked_sent",
+        delivery: "not_automatically_sent",
+        actor_user_id: current.user.id,
+        at: now
+      }];
+    }
+    if (["paid", "credited"].includes(nextStatus)) {
+      patch.payment_history = [...(Array.isArray(invoice.payment_history) ? invoice.payment_history : []), {
+        action: nextStatus,
+        actor_user_id: current.user.id,
+        at: now
+      }];
+    }
+    const updated = await updateScopedRecord(current, "invoice", invoice.id, {
+      ...patch,
+      updated_by: current.user.id
+    }, { action: `invoice_status_${nextStatus}` });
+    return { operation, invoice: updated };
+  }
+
+  if (operation === "download_pdf") {
+    const invoiceId = clean(input.invoice_id || input.invoiceId);
+    const invoice = await getScopedRecord(current, "invoice", invoiceId);
+    if (!invoice) {
+      const error = new Error("Invoice not found in this workspace");
+      error.code = "INVOICE_NOT_FOUND";
+      error.statusCode = 404;
+      throw error;
+    }
+    const [invoiceDocuments, business] = await Promise.all([
+      getInvoiceDocumentBundle(current, invoice.id),
+      getBusinessBundle(current)
+    ]);
+    const pdf = await buildWebsiteOsInvoicePdf(invoice, {
+      businessProfile: business.businessProfile || {},
+      documents: invoiceDocuments
+    });
+    await writeAuditEvent(current, {
+      entityType: "invoice",
+      entityId: invoice.id,
+      action: "invoice_pdf_downloaded",
+      nextState: invoice
+    });
+    return {
+      operation,
+      invoice,
+      pdf: {
+        filename: `${invoice.invoice_number}.pdf`,
+        content_type: "application/pdf",
+        content_base64: pdf.toString("base64")
+      }
+    };
+  }
+
+  const error = new Error("Unsupported invoice action");
+  error.code = "INVOICE_ACTION_UNSUPPORTED";
+  error.statusCode = 400;
+  throw error;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST" && req.method !== "PATCH") {
     res.setHeader("Allow", "POST, PATCH");
@@ -1523,14 +2199,100 @@ module.exports = async function handler(req, res) {
 
   try {
     const input = await parseBody(req);
-    await verifyAdminKey(input.admin_key || req.headers["x-admin-key"]);
-    const taskId = clean(input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
+    if (!clean(input.admin_key || req.headers["x-admin-key"])) assertWebsiteOsRequestOrigin(req);
+    const authContext = await verifyAdminOrWebsiteOsSession(req, input.admin_key || req.headers["x-admin-key"]);
+    if (isCommonplaceBusinessActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "BUSINESS_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleWebsiteOsBusinessAction(authContext.current, input);
+      return send(res, 200, { success: true, ...result });
+    }
+    if (isCommonplaceInvoiceActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "INVOICE_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleCommonpl4ceInvoiceAction(authContext.current, input);
+      const [invoices, customers, customerBookings, invoiceDocuments] = await Promise.all([
+        listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "invoiceDocument", { order: "created_at.desc", limit: 200 })
+      ]);
+      return send(res, 200, {
+        success: true,
+        ...result,
+        customers,
+        customerBookings,
+        invoices,
+        invoiceDocuments,
+        invoiceSummary: summarizeInvoices(invoices)
+      });
+    }
+    if (isCommonplaceCustomerActionRequest(input)) {
+      if (authContext.mode !== "website_os" || !authContext.current) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS session required",
+          code: "CUSTOMER_WEBSITE_OS_SESSION_REQUIRED"
+        });
+      }
+      const result = await handleCommonpl4ceCustomerAction(authContext.current, input);
+      const [customers, customerBookings, invoices] = await Promise.all([
+        listScopedRecords(authContext.current, "client", { order: "updated_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "clientBooking", { order: "created_at.desc", limit: 200 }),
+        listScopedRecords(authContext.current, "invoice", { order: "created_at.desc", limit: 200 })
+      ]);
+      return send(res, 200, {
+        success: true,
+        ...result,
+        customers,
+        customerBookings,
+        invoices,
+        invoiceSummary: summarizeInvoices(invoices)
+      });
+    }
+    const taskId = clean(input.record_id || input.recordId || input.task_id || input.taskId || input.operational_id || input.reference_id || input.id);
     if (!taskId) {
       return send(res, 400, {
         success: false,
         error: "Missing task id",
         code: "TASK_ID_REQUIRED"
       });
+    }
+
+    if (isCommonplaceRecordActionRequest(input)) {
+      const result = await handleCommonpl4ceRecordAction(req, taskId, input);
+      return send(res, 200, {
+        success: true,
+        ...result
+      });
+    }
+
+    if (authContext.mode === "website_os") {
+      if (!isWebsiteOsStatusOnlyUpdate(input)) {
+        return send(res, 403, {
+          success: false,
+          error: "Website OS permission denied",
+          code: "WEBSITE_OS_PERMISSION_DENIED"
+        });
+      }
+      const scopedTask = await loadTask(taskId);
+      if (!scopedTask || !belongsToWebsiteOsWorkspace(scopedTask, authContext.current) || !isCommonplaceTask(scopedTask)) {
+        return send(res, 404, {
+          success: false,
+          error: "Task not found",
+          code: "TASK_NOT_FOUND"
+        });
+      }
     }
 
     if (isReopenArchivedTaskRequest(input)) {
@@ -1706,10 +2468,21 @@ module.exports = async function handler(req, res) {
     }
 
     console.warn(`Admin task update error: ${error.code || error.message}`);
+    const safeActionError = [
+      "RECORD_",
+      "CUSTOMER_",
+      "BUSINESS_",
+      "DOCUMENT_",
+      "POLICY_",
+      "WEBSITE_OS_",
+      "PERMANENT_DELETE_",
+      "UNSUPPORTED_RECORD_ACTION"
+    ].some((prefix) => clean(error.code).startsWith(prefix));
     return send(res, error.statusCode || 500, {
       success: false,
-      error: "Could not update task",
+      error: clean(error.code).startsWith("INVOICE_") || safeActionError ? error.message : "Could not update task",
       code: error.code || "ADMIN_TASK_UPDATE_FAILED",
+      ...(error.existingCustomer ? { existingCustomer: error.existingCustomer } : {}),
       ...(error.reminderDebug ? { reminderDebug: error.reminderDebug } : {}),
       ...(error.emailResult ? { emailResult: error.emailResult } : {}),
       ...(error.deleteDebug ? { deleteDebug: error.deleteDebug } : {}),
