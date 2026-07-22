@@ -1105,6 +1105,11 @@ test("Command Center keeps all eight operational views, deliberate empty states,
   assert.match(page, /persisted X analytics only/); assert.match(page, /No persisted analytics/); assert.match(page, /SHADOW PROPOSAL/); assert.doesNotMatch(page, /fake analytics/i); assert.doesNotMatch(page, /mock metrics/i);
 });
 
+test("Mission Control is the default operator homepage with live health, plan, drill-downs, and refresh", () => {
+  const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(page, /active='Mission Control'/); assert.match(page, /Mission Control/); assert.match(page, /mission-health/); assert.match(page, /Discovery hierarchy/); assert.match(page, /Today's plan/); assert.match(page, /Why did we post\?/); assert.match(page, /data-mission-route/); assert.match(page, /setInterval\(\(\)=>\{if\(authState==='authenticated'\)load\(\)/);
+});
+
 test("Command Center navigation permits only verified X posts, persisted sources, and exact reply conversations", () => {
   assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
   assert.equal(navigationLinks.canonicalXPostUrl({ xPostId: "1845123456789012345", xPostUrl: "https://x.com/doneovernight/status/1845123456789012345" }), "https://x.com/doneovernight/status/1845123456789012345");
