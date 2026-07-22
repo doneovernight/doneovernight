@@ -115,13 +115,14 @@ module.exports = async function handler(req, res) {
   const requestUrl = new URL(req.url || "/", `https://${req.headers.host || "doneovernight.com"}`);
   const xContentRoute = requestUrl.searchParams.get("x_content_route");
   if (xContentRoute && xContentRoutes[xContentRoute]) {
-    // The legacy internal admin/cron boundary is the only Phase 1 compatibility
-    // adapter. It supplies the seeded workspace after the cutover flag is on;
-    // shared repositories still require an explicit context and never default.
-    const routedRequest = tenantContext.workspaceScopingEnabled() && !req.tenantContext
-      ? { ...req, tenantContext: tenantContext.seededCompatibilityContext() }
-      : req;
-    return xContentRoutes[xContentRoute](routedRequest, res);
+    // Internal admin/cron calls are the compatibility boundary for the existing
+    // DONEOVERNIGHT workspace. Establish the context before any repository call;
+    // repositories never invent a workspace on their own.
+    const boundaryContext = req.tenantContext
+      ? tenantContext.resolveBoundaryContext(req.tenantContext)
+      : tenantContext.seededCompatibilityContext();
+    const routedRequest = { ...req, tenantContext: boundaryContext };
+    return tenantContext.run(boundaryContext, () => xContentRoutes[xContentRoute](routedRequest, res));
   }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");

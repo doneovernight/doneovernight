@@ -658,6 +658,48 @@ test("Phase 1 internal admin boundary supplies only the seeded workspace after c
   }
 });
 
+test("legacy publishing boundary establishes compatibility context while scoping is disabled", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  delete process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const adminTasks = require("../api/admin-tasks");
+  const original = routes.heartbeat;
+  let activeContext;
+  routes.heartbeat = async (_req, res) => {
+    activeContext = tenantContext.current();
+    res.statusCode = 200;
+    res.end(JSON.stringify({ success: true }));
+  };
+  try {
+    await adminTasks({ method: "GET", url: "/api/admin-tasks?x_content_route=heartbeat", headers: {} }, responseCapture());
+    assert.equal(activeContext.workspaceId, tenantContext.SEEDED_WORKSPACE_ID);
+    assert.equal(activeContext.compatibility, true);
+  } finally {
+    routes.heartbeat = original;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
+test("compatibility context supplies workspace_id to writes without enabling tenant cutover", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const originalFetch = global.fetch;
+  delete process.env.X_WORKSPACE_SCOPING_ENABLED;
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  let captured;
+  global.fetch = async (url, options = {}) => {
+    captured = { url: String(url), body: JSON.parse(options.body) };
+    return new Response("[]", { status: 201, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await tenantContext.run(tenantContext.seededCompatibilityContext(), () => repository.createRun("autonomy_publish"));
+    assert.equal(captured.body.workspace_id, tenantContext.SEEDED_WORKSPACE_ID);
+    assert.equal(new URL(captured.url).searchParams.get("on_conflict"), null);
+  } finally {
+    global.fetch = originalFetch;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
 test("Phase 1 synthetic workspaces remain isolated across drafts, analytics, activity, sources, and settings", async () => {
   const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
   const originalFetch = global.fetch;
