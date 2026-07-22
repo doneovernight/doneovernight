@@ -404,6 +404,26 @@ test("OAuth 2.0 PKCE authorization requests only the required scopes and never i
   assert.equal(url.origin + url.pathname, "https://x.com/i/oauth2/authorize"); assert.equal(url.searchParams.get("scope"), "tweet.read tweet.write users.read offline.access"); assert.equal(url.searchParams.get("code_challenge_method"), "S256"); assert.equal(url.searchParams.has("code_verifier"), false);
 });
 
+test("OAuth 2.0 reconnect binds a single-use callback, encrypts tokens, and verifies the seeded account", async () => {
+  const originalEnv = { X_CLIENT_ID: process.env.X_CLIENT_ID, X_CLIENT_SECRET: process.env.X_CLIENT_SECRET, X_REDIRECT_URI: process.env.X_REDIRECT_URI, SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  const original = { getSetting: repository.getSetting, setSetting: repository.setSetting, recordAutonomyAudit: repository.recordAutonomyAudit };
+  const values = new Map(); let calls = 0;
+  process.env.X_CLIENT_ID = "client-id"; process.env.X_CLIENT_SECRET = "client-secret"; process.env.X_REDIRECT_URI = "https://doneovernight.com/api/x-content-oauth/callback"; process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
+  repository.getSetting = async (key) => values.has(key) ? { key, value: values.get(key) } : null;
+  repository.setSetting = async (key, value) => { values.set(key, value); return { key, value }; };
+  repository.recordAutonomyAudit = async () => ({ id: "audit" });
+  const fetchOriginal = global.fetch;
+  global.fetch = async (url) => { calls += 1; if (String(url).endsWith("/oauth2/token")) return new Response(JSON.stringify(calls === 1 ? { access_token: "access-one", refresh_token: "refresh-one", expires_in: 7200, scope: "tweet.read tweet.write users.read offline.access" } : { access_token: "access-two", refresh_token: "refresh-two", expires_in: 7200, scope: "tweet.read tweet.write users.read offline.access" }), { status: 200 }); if (String(url).includes("/2/users/me")) return new Response(JSON.stringify({ data: { id: "2037306333813235713", username: "doneovernight" } }), { status: 200 }); throw new Error(`Unexpected URL ${url}`); };
+  try {
+    const started = await xClient.startOAuth2Authorization({ workspaceId: "workspace-doneovernight", adminBinding: "admin-session-hash" });
+    const pending = JSON.parse(values.get("x_oauth2_pkce_pending")); assert.equal(pending.workspace_id, "workspace-doneovernight"); assert.ok(pending.callback_nonce); assert.ok(pending.verifier); assert.ok(!started.authorizationUrl.includes(pending.verifier));
+    await assert.rejects(() => xClient.completeOAuth2Authorization({ code: "wrong-session", state: pending.state, callbackNonce: pending.callback_nonce }, { workspaceId: "workspace-doneovernight", adminBinding: "different-session" }), { code: "X_OAUTH2_STATE_INVALID" });
+    const result = await xClient.completeOAuth2Authorization({ code: "one-time-code", state: pending.state, callbackNonce: pending.callback_nonce }, { workspaceId: "workspace-doneovernight", adminBinding: "admin-session-hash" });
+    assert.equal(result.username, "doneovernight"); assert.equal(result.userId, "2037306333813235713"); assert.equal(result.refreshTokenAvailable, true); assert.match(values.get("x_oauth2_connection"), /^enc:v1:/); assert.doesNotMatch(values.get("x_oauth2_connection"), /access-two|refresh-two|access_token|refresh_token/); assert.equal(JSON.parse(values.get("x_oauth2_pkce_pending")).consumed_at !== undefined, true);
+    await assert.rejects(() => xClient.completeOAuth2Authorization({ code: "replay", state: pending.state, callbackNonce: pending.callback_nonce }, { workspaceId: "workspace-doneovernight", adminBinding: "admin-session-hash" }), { code: "X_OAUTH2_STATE_INVALID" });
+  } finally { global.fetch = fetchOriginal; Object.assign(repository, original); for (const [key, value] of Object.entries(originalEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } }
+});
+
 test("transient X API errors retry while invalid content errors do not", async () => {
   const fetchOriginal = global.fetch; const tokenOriginal = process.env.X_ACCESS_TOKEN; const refreshOriginal = process.env.X_REFRESH_TOKEN;
   process.env.X_ACCESS_TOKEN = "test-token"; delete process.env.X_REFRESH_TOKEN;
@@ -1040,6 +1060,9 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /#app\{display:none/);
   assert.match(page, /if\(sessionStorage\.getItem\(KEY\)\)open\(\)/);
   assert.match(page, /\$\('#gate'\)\.style\.display='none';\$\('#app'\)\.style\.display='block'/);
+  assert.match(page, /Reconnect X account/);
+  assert.match(page, /Verify connection/);
+  assert.match(page, /Disconnect X account/);
   assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
 });
 
