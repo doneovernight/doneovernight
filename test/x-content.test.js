@@ -9,6 +9,7 @@ const accountActivity = require("../lib/x-content/account-activity");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
 const discoveryHierarchy = require("../lib/x-content/discovery-hierarchy");
+const dailyPlan = require("../lib/x-content/daily-plan");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
@@ -106,7 +107,29 @@ test("internal knowledge fallback carries auditable provenance and does not fabr
   const candidate = discoveryHierarchy.internalKnowledgeCandidate({ id: "k1", insight: "Explicit workspace lesson", evidence: "Recorded operating note", topic: "automation" }, Date.parse("2026-07-22T10:00:00.000Z"));
   assert.equal(candidate.topic_cluster, "automation");
   assert.equal(candidate.internal_provenance.kind, "workspace_knowledge");
-  assert.equal(candidate.source_url, "https://doneovernight.com");
+  assert.match(candidate.source_url, /^https:\/\/doneovernight\.com\/internal-knowledge\//);
+});
+
+test("daily plan targets two minimum, three preferred, five maximum with Amsterdam spacing and mix", () => {
+  const plan = dailyPlan.planSlots({ now: Date.parse("2026-07-22T05:00:00.000Z"), timezone: "Europe/Amsterdam", count: 3 });
+  assert.deepEqual(plan.target, { minimum: 2, preferred: [3, 4], maximum: 5 });
+  assert.equal(plan.slots.length, 3);
+  assert.equal(dailyPlan.respectsSpacing(plan.slots), true);
+  assert.deepEqual(plan.slots.map((slot) => slot.objective), ["timely_insight", "operator_lesson", "founder_framework"]);
+  for (const slot of plan.slots) { const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", hourCycle: "h23" }).format(new Date(slot.planned_for))); assert.ok(hour >= 8 && hour < 22); }
+});
+
+test("daily target status becomes at-risk only when the minimum has no usable schedule", () => {
+  assert.equal(dailyPlan.dailyStatus({ published: 0, scheduled: 1, next: null }).at_risk, true);
+  assert.equal(dailyPlan.dailyStatus({ published: 1, scheduled: 1, next: "2026-07-22T10:00:00.000Z" }).at_risk, false);
+  assert.equal(dailyPlan.remainingMinimum({ published: 1, scheduled: 0 }), 1);
+});
+
+test("daily autonomy plan route is protected and mapped through the existing admin task boundary", () => {
+  const config = JSON.parse(fs.readFileSync(require.resolve("../vercel.json"), "utf8"));
+  const route = config.rewrites.find((entry) => entry.source === "/api/x-content-daily-plan");
+  assert.equal(route.destination, "/api/admin-tasks?x_content_route=dailyPlan");
+  assert.equal(typeof routes.dailyPlan, "function");
 });
 
 test("OpenAI strict JSON schema requires its nullable optional_cta field", () => {

@@ -14,7 +14,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
+        options: [discovery, daily_plan, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -27,6 +27,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  daily_plan:
+    if: github.event.schedule == '0 6,7 * * *' || inputs.task == 'daily_plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Generate and persist the Amsterdam daily autonomous plan
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-daily-plan
+
   discovery:
     if: github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery'
     runs-on: ubuntu-latest
