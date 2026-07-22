@@ -1076,7 +1076,7 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /Incorrect password\. Try again\./);
   assert.match(page, /Unable to sign in right now\. Try again\./);
   assert.match(page, /Too many attempts\. Wait a moment and try again\./);
-  assert.match(page, /Your session check expired\. Please try again\./);
+  assert.match(page, /Your session expired\. Sign in again\./);
   assert.match(page, /aria-busy/);
   assert.match(page, /prefers-reduced-motion:reduce/);
   assert.match(page, /restoreSession\(\)/);
