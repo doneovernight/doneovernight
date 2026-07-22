@@ -8,6 +8,7 @@ const xClient = require("../lib/x-content/x-client");
 const accountActivity = require("../lib/x-content/account-activity");
 const { getConfig } = require("../lib/x-content/config");
 const { REGISTRY } = require("../lib/x-content/sources");
+const discoveryHierarchy = require("../lib/x-content/discovery-hierarchy");
 const { schema, DRAFT_TARGET } = require("../lib/x-content/generate");
 const routes = require("../lib/x-content/routes");
 const editorial = require("../lib/x-content/editorial");
@@ -74,6 +75,38 @@ test("source registry contains only verified official feeds for the repaired sou
   assert.equal(REGISTRY.some((source) => source.publisher === "Anthropic"), false);
   assert.equal(REGISTRY.find((source) => source.publisher === "Supabase")?.url, "https://supabase.com/rss.xml");
   assert.equal(REGISTRY.find((source) => source.publisher === "n8n")?.url, "https://blog.n8n.io/rss/");
+});
+
+test("hierarchical discovery defines ordered source tiers with explicit confidence policy", () => {
+  assert.deepEqual(discoveryHierarchy.HIERARCHY.map((tier) => tier.level), Array.from({ length: 12 }, (_, index) => index + 1));
+  assert.deepEqual(discoveryHierarchy.HIERARCHY.map((tier) => tier.key), ["breaking_news", "industry_releases", "x_discussions", "quote_opportunities", "github_releases", "hacker_news", "product_hunt", "evergreen_education", "founder_insights", "internal_knowledge", "historical_lessons", "scheduled_campaigns"]);
+  for (const tier of discoveryHierarchy.HIERARCHY) {
+    for (const field of ["freshnessHours", "trustScore", "duplicateWindowHours", "cooldownHours", "qualityFloor", "relevanceFloor", "authorityScore"]) assert.ok(Number.isFinite(tier[field]), `${tier.key} missing ${field}`);
+  }
+});
+
+test("discovery confidence rejects duplicates and topic cooldowns and selects the highest-priority eligible tier", () => {
+  const now = Date.parse("2026-07-22T10:00:00.000Z");
+  const candidates = [
+    { id: "low", title: "A current discussion", topic_cluster: "automation", publishedAt: new Date(now - 2 * 3600000).toISOString(), discovery_tier: "x_discussions", quality_score: .82, relevance_score: .84, authority_score: .8, trust_score: .8 },
+    { id: "high", title: "Official release", topic_cluster: "release", publishedAt: new Date(now - 2 * 3600000).toISOString(), discovery_tier: "industry_releases", quality_score: .86, relevance_score: .88, authority_score: 1, trust_score: .98 }
+  ];
+  const selected = discoveryHierarchy.selectHierarchicalCandidate(candidates, { now });
+  assert.equal(selected.candidate.id, "high");
+  assert.equal(selected.selected_level, 2);
+  const duplicate = discoveryHierarchy.scoreDiscoveryCandidate(candidates[1], { now, existingCandidates: [{ title: "Official release" }] });
+  assert.equal(duplicate.eligible, false);
+  const cooled = discoveryHierarchy.scoreDiscoveryCandidate({ ...candidates[1], topic_cluster: "release" }, { now, recentPublications: [{ topic_cluster: "release", published_at: new Date(now - 2 * 3600000).toISOString() }] });
+  assert.equal(cooled.cooldown, true);
+  assert.equal(cooled.eligible, false);
+});
+
+test("internal knowledge fallback carries auditable provenance and does not fabricate an empty topic", () => {
+  assert.equal(discoveryHierarchy.internalKnowledgeCandidate(null), null);
+  const candidate = discoveryHierarchy.internalKnowledgeCandidate({ id: "k1", insight: "Explicit workspace lesson", evidence: "Recorded operating note", topic: "automation" }, Date.parse("2026-07-22T10:00:00.000Z"));
+  assert.equal(candidate.topic_cluster, "automation");
+  assert.equal(candidate.internal_provenance.kind, "workspace_knowledge");
+  assert.equal(candidate.source_url, "https://doneovernight.com");
 });
 
 test("OpenAI strict JSON schema requires its nullable optional_cta field", () => {
