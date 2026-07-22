@@ -14,7 +14,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_metrics]
+        options: [discovery, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -194,6 +194,19 @@ jobs:
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-publish
 
+  autonomy_publish_diagnostic:
+    if: inputs.task == 'autonomy_publish_diagnostic'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run read-only guarded publishing diagnostic
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-publish?diagnostic=1
+
   autonomy_metrics:
     if: inputs.task == 'autonomy_metrics'
     runs-on: ubuntu-latest
@@ -216,7 +229,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error
+          curl --fail-with-body --silent --show-error
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-verify-identity
 
