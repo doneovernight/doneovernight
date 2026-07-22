@@ -146,7 +146,10 @@ module.exports = async function handler(req, res) {
     const boundaryContext = req.tenantContext
       ? tenantContext.resolveBoundaryContext(req.tenantContext)
       : tenantContext.seededCompatibilityContext();
-    const routedRequest = { ...req, tenantContext: boundaryContext };
+    // Preserve IncomingMessage request properties that are not enumerable when
+    // crossing the internal compatibility boundary. Cron/auth routes require
+    // headers to remain intact for their authorization check.
+    const routedRequest = { ...req, headers: req.headers, method: req.method, url: req.url, tenantContext: boundaryContext };
     return tenantContext.run(boundaryContext, () => xContentRoutes[xContentRoute](routedRequest, res));
   }
   if (req.method !== "POST") {

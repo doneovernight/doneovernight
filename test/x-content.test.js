@@ -679,6 +679,28 @@ test("legacy publishing boundary establishes compatibility context while scoping
   }
 });
 
+test("legacy publishing boundary preserves non-enumerable authorization headers", async () => {
+  const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
+  delete process.env.X_WORKSPACE_SCOPING_ENABLED;
+  const adminTasks = require("../api/admin-tasks");
+  const original = routes.heartbeat;
+  let receivedHeaders;
+  routes.heartbeat = async (req, res) => {
+    receivedHeaders = req.headers;
+    res.statusCode = 200;
+    res.end(JSON.stringify({ success: true }));
+  };
+  const req = { method: "GET", url: "/api/admin-tasks?x_content_route=heartbeat" };
+  Object.defineProperty(req, "headers", { value: { authorization: "Bearer redacted" }, enumerable: false });
+  try {
+    await adminTasks(req, responseCapture());
+    assert.deepEqual(receivedHeaders, { authorization: "Bearer redacted" });
+  } finally {
+    routes.heartbeat = original;
+    if (previous === undefined) delete process.env.X_WORKSPACE_SCOPING_ENABLED; else process.env.X_WORKSPACE_SCOPING_ENABLED = previous;
+  }
+});
+
 test("compatibility context supplies workspace_id to writes without enabling tenant cutover", async () => {
   const previous = process.env.X_WORKSPACE_SCOPING_ENABLED;
   const originalFetch = global.fetch;
