@@ -1066,10 +1066,20 @@ test("admin X Content routes resolve both slash forms to the protected login wit
 
   const page = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
   assert.match(page, /<section id="gate" class="gate"/);
+  assert.match(page, /id="session-loader"[^>]*>.*Checking session/s);
   assert.match(page, /<div id="app">/);
   assert.match(page, /#app\{display:none/);
-  assert.match(page, /if\(sessionStorage\.getItem\(KEY\)\)open\(\)/);
-  assert.match(page, /\$\('#gate'\)\.style\.display='none';\$\('#app'\)\.style\.display='block'/);
+  assert.match(page, /let authState='checking',authRequestInFlight=false/);
+  assert.match(page, /setLoginState\('checking'\)/);
+  assert.match(page, /setLoginState\('submitting'\)/);
+  assert.match(page, /Unlocking/);
+  assert.match(page, /Incorrect password\. Try again\./);
+  assert.match(page, /Unable to sign in right now\. Try again\./);
+  assert.match(page, /Too many attempts\. Wait a moment and try again\./);
+  assert.match(page, /Your session check expired\. Please try again\./);
+  assert.match(page, /aria-busy/);
+  assert.match(page, /prefers-reduced-motion:reduce/);
+  assert.match(page, /restoreSession\(\)/);
   assert.match(page, /Reconnect X account/);
   assert.match(page, /Verify connection/);
   assert.match(page, /Disconnect X account/);
