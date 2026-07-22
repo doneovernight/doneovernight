@@ -424,6 +424,16 @@ test("OAuth 2.0 reconnect binds a single-use callback, encrypts tokens, and veri
   } finally { global.fetch = fetchOriginal; Object.assign(repository, original); for (const [key, value] of Object.entries(originalEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } }
 });
 
+test("Verify connection forces a refresh, checks identity, and returns dashboard-safe metadata", async () => {
+  const xOriginal = { storedOAuth2Metadata: xClient.storedOAuth2Metadata, refreshOAuth2Connection: xClient.refreshOAuth2Connection, verifyIdentity: xClient.verifyIdentity }; const repoOriginal = { getSetting: repository.getSetting, setSetting: repository.setSetting };
+  let refreshed = 0; const settings = new Map([['x_autonomy_safe_stop', { value: 'true' }], ['content_publish_mode', { value: 'approve' }]]);
+  xClient.storedOAuth2Metadata = async () => ({ present: true, refreshTokenAvailable: true, scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'], expiresAt: new Date(Date.now() + 48 * 3600000).toISOString(), username: 'doneovernight', userId: '2037306333813235713', lastIdentityCheck: null, lastRefresh: null, error: null });
+  xClient.refreshOAuth2Connection = async (options) => { assert.equal(options.forceRefresh, true); refreshed += 1; return {}; };
+  xClient.verifyIdentity = async () => ({ username: 'doneovernight', userId: '2037306333813235713', authenticationMethod: 'oauth_2_0_pkce_user_context' });
+  repository.getSetting = async (key) => settings.get(key) || null; repository.setSetting = async (key, value) => { settings.set(key, { value }); return { key, value }; };
+  try { const result = await service.verifyXAccount(); assert.equal(refreshed, 1); assert.equal(result.identity.username, 'doneovernight'); assert.equal(result.identity.user_id, '2037306333813235713'); assert.equal(result.status, 'Connected'); } finally { Object.assign(xClient, xOriginal); Object.assign(repository, repoOriginal); }
+});
+
 test("transient X API errors retry while invalid content errors do not", async () => {
   const fetchOriginal = global.fetch; const tokenOriginal = process.env.X_ACCESS_TOKEN; const refreshOriginal = process.env.X_REFRESH_TOKEN;
   process.env.X_ACCESS_TOKEN = "test-token"; delete process.env.X_REFRESH_TOKEN;
