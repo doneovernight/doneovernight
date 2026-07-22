@@ -1108,8 +1108,7 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /Verify connection/);
   assert.match(page, /Disconnect X account/);
   assert.match(page, /data-x-account-feedback/);
-  assert.match(page, /Waiting for X authorization/);
-  assert.match(page, /Popup blocked\. Continuing in this tab/);
+  assert.match(page, /window\.location\.assign\(result\.authorization_url\)/);
   assert.match(page, /Connection healthy/);
   assert.match(page, /x-account-oauth/);
   assert.match(page, /addEventListener\('message'/);
@@ -1117,6 +1116,8 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /Reconnecting…/);
   assert.match(page, /Verifying…/);
   assert.match(page, /Disconnecting…/);
+  assert.match(page, /window\.location\.assign\(result\.authorization_url\)/);
+  assert.doesNotMatch(page, /authorizationTab=window\.open/);
   assert.match(page, /const baseRender=render;\s*render=function\(\)\{baseRender\(\);/);
   assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
 });
