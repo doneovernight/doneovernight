@@ -404,6 +404,30 @@ test("OAuth 2.0 PKCE authorization requests only the required scopes and never i
   assert.equal(url.origin + url.pathname, "https://x.com/i/oauth2/authorize"); assert.equal(url.searchParams.get("scope"), "tweet.read tweet.write users.read offline.access"); assert.equal(url.searchParams.get("code_challenge_method"), "S256"); assert.equal(url.searchParams.has("code_verifier"), false);
 });
 
+test("OAuth start binds the callback cookies across the production subdomains", async () => {
+  const originalFetch = global.fetch; const originalStart = xClient.startOAuth2Authorization; const redirect = process.env.X_REDIRECT_URI;
+  process.env.X_REDIRECT_URI = "https://doneovernight.com/api/x-content-oauth/callback";
+  global.fetch = async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+  xClient.startOAuth2Authorization = async () => ({ authorizationUrl: "https://x.com/i/oauth2/authorize?state=s", callbackNonce: "nonce", scopes: ['tweet.read', 'tweet.write', 'users.read', 'offline.access'] });
+  try {
+    const result = await callAdmin({ action: "x_oauth_start", admin_key: "valid" });
+    assert.equal(result.statusCode, 200); assert.equal(result.payload.result.callback_url, process.env.X_REDIRECT_URI);
+    assert.equal(result.headers["Set-Cookie"].every((cookie) => cookie.includes("Domain=.doneovernight.com") && cookie.includes("SameSite=Lax")), true);
+  } finally { global.fetch = originalFetch; xClient.startOAuth2Authorization = originalStart; if (redirect === undefined) delete process.env.X_REDIRECT_URI; else process.env.X_REDIRECT_URI = redirect; }
+});
+
+test("OAuth callback returns a popup-safe sanitized completion page and clears binding cookies", async () => {
+  const originals = { complete: xClient.completeOAuth2Authorization, recover: service.recoverAfterOAuthReconnect, setSetting: repository.setSetting };
+  const originalRedirect = process.env.X_REDIRECT_URI; process.env.X_REDIRECT_URI = "https://doneovernight.com/api/x-content-oauth/callback";
+  xClient.completeOAuth2Authorization = async (input, options) => { assert.equal(input.callbackNonce, "nonce"); assert.equal(options.adminBinding, "binding"); return { username: "doneovernight" }; };
+  service.recoverAfterOAuthReconnect = async () => ({ recovered: true }); repository.setSetting = async () => ({});
+  const response = { statusCode: 0, headers: {}, body: "", setHeader(name, value) { this.headers[name] = value; }, end(value) { this.body = String(value || ""); } };
+  try {
+    await routes.oauthCallback({ method: "GET", url: "/api/x-content-oauth/callback?code=one-time&state=state", headers: { host: "doneovernight.com", cookie: "x_oauth2_callback_nonce=nonce; x_oauth2_admin_binding=binding" } }, response);
+    assert.equal(response.statusCode, 200); assert.match(response.headers["Content-Type"], /text\/html/); assert.match(response.body, /x-account-oauth/); assert.match(response.body, /window\.opener/); assert.match(response.body, /admin\.doneovernight\.com\/x-content/); assert.equal(response.body.includes("one-time"), false); assert.equal(response.headers["Set-Cookie"].every((cookie) => cookie.includes("Max-Age=0") && cookie.includes("Domain=.doneovernight.com")), true);
+  } finally { Object.assign(xClient, { completeOAuth2Authorization: originals.complete }); Object.assign(service, { recoverAfterOAuthReconnect: originals.recover }); repository.setSetting = originals.setSetting; if (originalRedirect === undefined) delete process.env.X_REDIRECT_URI; else process.env.X_REDIRECT_URI = originalRedirect; }
+});
+
 test("OAuth 2.0 reconnect binds a single-use callback, encrypts tokens, and verifies the seeded account", async () => {
   const originalEnv = { X_CLIENT_ID: process.env.X_CLIENT_ID, X_CLIENT_SECRET: process.env.X_CLIENT_SECRET, X_REDIRECT_URI: process.env.X_REDIRECT_URI, SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY };
   const original = { getSetting: repository.getSetting, setSetting: repository.setSetting, recordAutonomyAudit: repository.recordAutonomyAudit };
@@ -1083,6 +1107,16 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /Reconnect X account/);
   assert.match(page, /Verify connection/);
   assert.match(page, /Disconnect X account/);
+  assert.match(page, /data-x-account-feedback/);
+  assert.match(page, /Waiting for X authorization/);
+  assert.match(page, /Popup blocked\. Continuing in this tab/);
+  assert.match(page, /Connection healthy/);
+  assert.match(page, /x-account-oauth/);
+  assert.match(page, /addEventListener\('message'/);
+  assert.match(page, /aria-busy/);
+  assert.match(page, /Reconnecting…/);
+  assert.match(page, /Verifying…/);
+  assert.match(page, /Disconnecting…/);
   assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
 });
 
