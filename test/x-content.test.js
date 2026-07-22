@@ -1117,6 +1117,7 @@ test("admin X Content routes resolve both slash forms to the protected login wit
   assert.match(page, /Reconnecting…/);
   assert.match(page, /Verifying…/);
   assert.match(page, /Disconnecting…/);
+  assert.match(page, /const baseRender=render;\s*render=function\(\)\{baseRender\(\);/);
   assert.doesNotMatch(page, /x_content_route=(?:publish|autonomyPublish)/);
 });
 
