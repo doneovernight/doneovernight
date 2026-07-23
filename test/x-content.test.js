@@ -23,6 +23,7 @@ const intelligence = require("../lib/x-content/growth-intelligence");
 const navigationLinks = require("../lib/x-content/navigation-links");
 const { collectAnalytics } = require("../lib/x-content/engagement");
 const tenantContext = require("../lib/x-content/tenant-context");
+const selfHealing = require("../lib/x-content/self-healing");
 
 process.env.X_CONTENT_ALLOW_TEST_CONTEXT = "true";
 
@@ -1080,6 +1081,26 @@ test("V3 X failures activate a safe stop and retain a sanitized error record", a
   const draft = autonomyDraft("approved", { status: "approved" }); const candidate = autonomyCandidate(); let stopped = false; const audits = []; const repo = { getSetting: async () => null, listAutonomySchedules: async () => [{ id: "schedule", draft_id: draft.id, status: "scheduled", scheduled_for: new Date(Date.now() - 1000).toISOString() }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => ({ id: "publication" }), updateAutonomySchedule: async () => ({}), recordAutonomyAudit: async (row) => { audits.push(row); return row; }, setSetting: async (key, value) => { if (key === autonomy.SAFE_STOP_KEY && value === "true") stopped = true; } }; const client = { verifyIdentity: async () => { throw Object.assign(new Error("The text is too long"), { category: "content", statusCode: 400, code: 186, xFailure: { http_status: 400, x_error_code: 186, x_error_category: "content", x_title: "Invalid Request", x_detail: "The text is too long", x_type: "https://api.x.com/2/problems/invalid-request", sanitized_message: "The text is too long", failure_phase: "tweet_create", rate_limit: {} } }); } }; const result = await autonomy.processScheduled({ repository: repo, xClient: client, config: autonomyConfig("auto", true), notify: async () => {} }); assert.match(result.skipped, /safe stop/); assert.equal(stopped, true); const failure = audits.find((row) => row.event_type === "publish_failed"); assert.equal(failure.payload.http_status, 400); assert.equal(failure.payload.x_error_code, 186); assert.equal(failure.payload.failure_phase, "tweet_create"); assert.doesNotMatch(JSON.stringify(failure), /authorization|token|secret/i);
   const insufficient = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => [] } }); assert.equal(insufficient.adjusted, false); assert.match(insufficient.reason, /10/);
   const checkpoints = Array.from({ length: 10 }, (_, index) => ({ publication_id: `p${index}`, normalized_performance: .2 })); let created; const learning = await autonomy.runLearningCycle({ repository: { listMetricCheckpoints: async () => checkpoints, listLearningVersions: async () => [{ version: 1, status: "active", weights: { prediction: 1 } }], createLearningVersion: async (row) => { created = row; return row; } } }); assert.equal(learning.adjusted, true); assert.ok(Math.abs(created.weights.prediction - 1) <= .05);
+});
+
+test("self-healing classifies failures and records only sanitized incident fields", async () => {
+  const writes = []; const repo = { upsertSelfHealingIncident: async (row) => { writes.push(row); return { id: "incident", ...row }; } };
+  const error = Object.assign(new Error("refresh token secret leaked should never persist"), { statusCode: 401, category: "authentication", code: "invalid_grant", xFailure: { sanitized_message: "Refresh token is invalid", x_error_category: "authentication" } });
+  const incident = await selfHealing.recordIncident(repo, { component: "oauth", error, phase: "oauth_refresh", workspace_id: tenantContext.SEEDED_WORKSPACE_ID, reference: "connection" });
+  assert.equal(incident.failure_category, "oauth_refresh_invalid"); assert.equal(incident.status, "approval_required"); assert.equal(incident.approval_required, true); assert.equal(incident.workspace_id, tenantContext.SEEDED_WORKSPACE_ID); assert.doesNotMatch(JSON.stringify(writes[0]), /refresh_token=[A-Za-z0-9._-]{12,}|Bearer\s+[A-Za-z0-9._-]{12,}/i);
+  assert.equal(selfHealing.recoveryFor("unknown").automatic, false); assert.equal(selfHealing.recoveryFor("unknown").escalation, "critical");
+});
+
+test("self-healing retries transient work with deterministic idempotency and rate-limit backoff", async () => {
+  let calls = 0; const sleeps = []; const result = await selfHealing.withBoundedRetry(async ({ idempotency_key }) => { calls += 1; assert.equal(idempotency_key, "incident:retry"); if (calls < 3) throw Object.assign(new Error("temporary"), { statusCode: 503, category: "transient" }); return "ok"; }, { idempotency_key: "incident:retry", sleep: async (ms) => sleeps.push(ms), jitter: () => 0 });
+  assert.equal(result.value, "ok"); assert.equal(result.attempts, 3); assert.equal(calls, 3); assert.equal(sleeps.length, 2); assert.ok(sleeps[1] >= sleeps[0]);
+});
+
+test("self-healing alerting deduplicates unresolved incidents and status exposes recovery state", async () => {
+  let updates = 0; const repo = { updateSelfHealingIncident: async () => { updates += 1; } }; const incident = { incident_key: "same", last_alerted_at: new Date().toISOString(), alert_count: 1 };
+  const suppressed = await selfHealing.alertOnce(repo, async () => ({ sent: true }), incident, "duplicate"); assert.equal(suppressed.skipped, "deduplicated"); assert.equal(updates, 0);
+  const status = await selfHealing.status({ listSelfHealingIncidents: async () => [{ status: "recovered", first_seen_at: "2026-07-23T10:00:00Z", recovery_started_at: "2026-07-23T10:01:00Z", recovery_completed_at: "2026-07-23T10:06:00Z" }, { status: "approval_required", component: "oauth" }] });
+  assert.equal(status.active_count, 1); assert.equal(status.resolved_count, 1); assert.equal(status.average_recovery_minutes, 5); assert.equal(status.code_repair_enabled, false);
 });
 
 test("V4 learning builds DONEOVERNIGHT preferences, predicts approval, and reports reject patterns", () => {
