@@ -607,6 +607,26 @@ test("V3 thresholds permit only strong, official, fresh queued drafts", () => {
   assert.equal(weak.would_auto_approve, false); assert.ok(weak.blocking_thresholds.includes("insight_score"));
 });
 
+test("Learning Mode makes predicted performance advisory until 50 original posts", async () => {
+  const draft = autonomyDraft("learning-gate", { model_output: { v2: { scores: { insight: .9, save: .2, repost: .2, educational: .85, brand: .95, novelty: .2 } } } });
+  const candidate = autonomyCandidate();
+  const repo = { listAccountActivity: async () => Array.from({ length: 3 }, (_, index) => ({ x_post_id: `post-${index}`, classification: index === 0 ? "agent_original" : "manual_original" })) };
+  const learning = await autonomy.learningStatus(repo);
+  const advisory = autonomy.evaluateDraft({ draft, candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig("auto", true), learning });
+  assert.equal(learning.lifetime_original_posts, 3);
+  assert.equal(learning.predicted_performance, "advisory");
+  assert.equal(learning.remaining_until_blocking, 47);
+  assert.equal(advisory.predicted_performance_mode, "advisory");
+  assert.equal(advisory.predicted_performance_blocking, false);
+  assert.equal(advisory.blocking_thresholds.includes("predicted_performance"), false);
+  const complete = await autonomy.learningStatus({ listAccountActivity: async () => Array.from({ length: 50 }, (_, index) => ({ x_post_id: `post-${index}`, classification: "manual_original" })) });
+  const blocking = autonomy.evaluateDraft({ draft, candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig("auto", true), learning: complete });
+  assert.equal(complete.learning_mode, false);
+  assert.equal(complete.predicted_performance, "blocking");
+  assert.equal(complete.remaining_until_blocking, 0);
+  assert.ok(blocking.blocking_thresholds.includes("predicted_performance"));
+});
+
 test("controlled autonomous defaults enforce the authorized 2-to-5 daily policy without changing content gates", () => {
   const config = getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true });
   assert.equal(config.autonomy.minimumDailyTarget, 2);
