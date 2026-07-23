@@ -24,6 +24,7 @@ const navigationLinks = require("../lib/x-content/navigation-links");
 const { collectAnalytics } = require("../lib/x-content/engagement");
 const tenantContext = require("../lib/x-content/tenant-context");
 const selfHealing = require("../lib/x-content/self-healing");
+const gateAudit = require("../lib/x-content/gate-audit");
 
 process.env.X_CONTENT_ALLOW_TEST_CONTEXT = "true";
 
@@ -606,6 +607,44 @@ test("V3 thresholds permit only strong, official, fresh queued drafts", () => {
   assert.equal(pass.would_auto_approve, true); assert.equal(pass.objective, "operator_attraction");
   const weak = autonomy.evaluateDraft({ draft: autonomyDraft("weak", { model_output: { v2: { scores: { insight: .8, novelty: .9, repost: .9, save: .9, educational: .9, brand: .95 } } } }), candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config: autonomyConfig() });
   assert.equal(weak.would_auto_approve, false); assert.ok(weak.blocking_thresholds.includes("insight_score"));
+});
+
+test("gate audit records every gate, primary blocker, and advisory learning state", async () => {
+  const draft = autonomyDraft("audit-draft", { duplicate_score: 0 });
+  const candidate = autonomyCandidate("audit-candidate");
+  const config = autonomyConfig("auto", true);
+  const learningState = { available: true, lifetime_original_posts: 3, threshold: 50, learning_mode: true, predicted_performance: "advisory", predicted_performance_blocking: false, remaining_until_blocking: 47 };
+  const decision = autonomy.evaluateDraft({ draft, candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, config, learning: learningState });
+  const audit = gateAudit.buildGateAudit({ draft, candidate, source: { id: "source", publisher: "GitHub", confidence: 1 }, decision: { ...decision, run_id: "run-audit" }, cadence: ["topic_cooldown", "minimum_spacing"], slot: null, runtimeState: {}, config, learning: learningState, publications: [] });
+  assert.deepEqual(Object.keys(audit.gate_results), gateAudit.GATES);
+  assert.equal(audit.gate_results.predicted_performance.status, "PASS");
+  assert.equal(audit.primary_blocking_gate, "topic_cooldown");
+  assert.deepEqual(audit.secondary_blocking_gates, ["cadence"]);
+  assert.equal(audit.gate_results.final_eligibility.status, "FAIL");
+  assert.equal(audit.candidate_id, "audit-candidate");
+  assert.equal(audit.discovery_tier, "unknown");
+});
+
+test("autonomy cycle persists one gate audit per evaluated candidate and recommends only observed blockers", async () => {
+  const high = autonomyDraft("audit-high"); const blocked = autonomyDraft("audit-blocked", { duplicate_score: 0 });
+  const stored = []; const scheduled = [];
+  const candidateFor = (draft) => ({ ...autonomyCandidate(draft.id), id: `candidate-${draft.id}`, discovery_tier: "github_releases", topic_cluster: draft.topic_cluster });
+  const repo = { listDrafts: async () => [high, blocked], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async (id) => candidateFor({ id: id.replace("candidate-", "") }), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => ({ id: `decision-${row.draft_id}` }), upsertGateAudit: async (row) => { stored.push(row); return row; }, createAutonomySchedule: async (row) => { scheduled.push(row); return { id: `schedule-${row.draft_id}`, ...row }; }, updateDraft: async () => ({}), recordAutonomyAudit: async (row) => row };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), runId: "run-gate-audit", now: Date.parse("2026-07-23T09:00:00.000Z") });
+  assert.equal(result.evaluated, 2); assert.equal(stored.length, 2); assert.equal(new Set(stored.map((row) => row.audit_key)).size, 2);
+  assert.equal(result.gate_audit.evaluated, 2); assert.equal(result.gate_audit.eligible_candidates.length, 1); assert.equal(result.gate_audit.recommendations.some((row) => row.gate === "final_eligibility"), false); assert.equal(scheduled.length, 1);
+  assert.match(result.gate_audit.why_nothing_was_published, /final publishable candidate/);
+});
+
+test("gate audit migration is additive, workspace-scoped, and service-role writable", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260724_x_gate_audit.sql"), "utf8");
+  for (const column of ["audit_key", "workspace_id", "candidate_id", "discovery_tier", "gate_results", "primary_blocking_gate", "secondary_blocking_gates", "final_eligibility"]) assert.match(sql, new RegExp(`add column if not exists ${column}`));
+  assert.match(sql, /unique \(workspace_id, audit_key\)/); assert.match(sql, /enable row level security/); assert.match(sql, /grant select, insert, update, delete on table public\.x_gate_audits to service_role/);
+});
+
+test("Mission Control exposes gate-audit rejection distribution instead of a generic empty-candidate message", () => {
+  const html = fs.readFileSync(require.resolve("../admin/x-content/index.html"), "utf8");
+  assert.match(html, /Gate Audit/); assert.match(html, /primary_rejection_counts/); assert.match(html, /final publishable candidates/); assert.doesNotMatch(html, /No candidate\./);
 });
 
 test("Learning Mode makes predicted performance advisory until 50 original posts", async () => {
