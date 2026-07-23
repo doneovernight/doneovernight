@@ -1094,6 +1094,7 @@ test("self-healing classifies failures and records only sanitized incident field
 test("self-healing retries transient work with deterministic idempotency and rate-limit backoff", async () => {
   let calls = 0; const sleeps = []; const result = await selfHealing.withBoundedRetry(async ({ idempotency_key }) => { calls += 1; assert.equal(idempotency_key, "incident:retry"); if (calls < 3) throw Object.assign(new Error("temporary"), { statusCode: 503, category: "transient" }); return "ok"; }, { idempotency_key: "incident:retry", sleep: async (ms) => sleeps.push(ms), jitter: () => 0 });
   assert.equal(result.value, "ok"); assert.equal(result.attempts, 3); assert.equal(calls, 3); assert.equal(sleeps.length, 2); assert.ok(sleeps[1] >= sleeps[0]);
+  assert.equal(selfHealing.classifyFailure({ statusCode: 429, message: "retry after" }), "rate_limit"); assert.equal(selfHealing.classifyFailure({ statusCode: 404, detail: "column is missing from PostgREST schema" }), "missing_schema"); assert.equal(selfHealing.classifyFailure({ statusCode: 404, detail: "PostgREST schema cache stale" }), "postgrest_schema_cache_stale");
 });
 
 test("self-healing alerting deduplicates unresolved incidents and status exposes recovery state", async () => {
