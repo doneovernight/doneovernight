@@ -957,6 +957,36 @@ test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", (
   const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
 });
 
+test("due schedules transition out of scheduled when a hard gate blocks them", async () => {
+  const draft = autonomyDraft("missed", { status: "approved", model_output: { v2: { scores: { insight: .93, novelty: .9, repost: .91, save: .93, educational: .9, brand: .95 } } } });
+  const candidate = autonomyCandidate(); const updates = []; const audits = [];
+  const now = Date.parse("2026-07-23T12:30:00.000Z");
+  const repo = { getSetting: async () => null, setSetting: async () => ({}), listAutonomySchedules: async () => [{ id: "due", draft_id: draft.id, status: "scheduled", scheduled_for: "2026-07-23T12:00:00.000Z" }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => [], listDrafts: async () => [draft], getPublication: async () => null, createPublication: async () => { throw new Error("must not publish a blocked schedule"); }, updateAutonomySchedule: async (id, patch) => { updates.push({ id, patch }); return { id, ...patch }; }, recordAutonomyAudit: async (row) => { audits.push(row); return row; } };
+  const config = autonomyConfig("auto", true); config.autonomy.thresholds.performance = .99;
+  const result = await autonomy.processScheduled({ repository: repo, xClient: { verifyIdentity: async () => { throw new Error("must not verify identity"); } }, config, now });
+  assert.match(result.skipped, /predicted_performance/);
+  assert.ok(updates.some((row) => row.patch.status === "due"));
+  assert.ok(updates.some((row) => ["missed", "superseded"].includes(row.patch.status)));
+  assert.ok(audits.some((row) => row.event_type === "schedule_missed"));
+});
+
+test("transient cadence blocks recover to a future safe slot instead of leaving an overdue schedule", async () => {
+  const draft = autonomyDraft("delayed", { status: "approved" }); const candidate = autonomyCandidate(); const updates = [];
+  const now = Date.parse("2026-07-23T12:30:00.000Z");
+  const recent = [{ id: "publication", draft_id: "old", status: "published", published_at: "2026-07-23T11:00:00.000Z" }];
+  const repo = { getSetting: async () => null, setSetting: async () => ({}), listAutonomySchedules: async () => [{ id: "due", draft_id: draft.id, status: "scheduled", scheduled_for: "2026-07-23T12:00:00.000Z" }], getDraft: async () => draft, getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), listPublishedPublications: async () => recent, listDrafts: async () => [draft], getPublication: async () => null, updateAutonomySchedule: async (id, patch) => { updates.push({ id, patch }); return { id, ...patch }; }, recordAutonomyAudit: async (row) => row };
+  const result = await autonomy.processScheduled({ repository: repo, xClient: { verifyIdentity: async () => { throw new Error("must not publish while spacing is blocked"); } }, config: autonomyConfig("auto", true), now });
+  assert.match(result.skipped, /Delayed until/);
+  assert.ok(updates.some((row) => row.patch.status === "scheduled" && row.patch.scheduled_for));
+});
+
+test("schedule recovery migration explicitly permits every terminal and recovery state", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260723_x_scheduled_publication_recovery.sql"), "utf8");
+  for (const state of ["scheduled", "due", "publishing", "published", "missed", "failed", "cancelled", "superseded"]) assert.match(sql, new RegExp(`'${state}'`));
+  assert.match(sql, /last_eligibility_checked_at/);
+  assert.match(sql, /create index if not exists/);
+});
+
 test("shadow decisions write schedules without publishing or changing draft approval", async () => {
   const draft = autonomyDraft(); const candidate = autonomyCandidate(); const calls = { published: 0, schedules: [], decisions: [], audits: [] }; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], getSetting: async () => null, setSetting: async () => ({}), getCandidate: async () => candidate, findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => { calls.decisions.push(row); return { id: "decision" }; }, createAutonomySchedule: async (row) => { calls.schedules.push(row); return { id: "schedule", ...row }; }, recordAutonomyAudit: async (row) => { calls.audits.push(row); return row; } };
   const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), now: new Date("2026-07-20T08:00:00Z").getTime(), notify: async () => {} });
