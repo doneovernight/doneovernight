@@ -636,6 +636,23 @@ test("autonomy cycle persists one gate audit per evaluated candidate and recomme
   assert.match(result.gate_audit.why_nothing_was_published, /final publishable candidate/);
 });
 
+test("canonical execution plan links evaluation and never creates a detached schedule", async () => {
+  const draft = autonomyDraft("canonical-draft"); const item = { id: "plan-item", plan_id: "plan", draft_id: draft.id, slot_number: 0, lifecycle_status: "drafted" }; const updates = []; const schedules = [];
+  const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listExecutionPlanItems: async () => [item], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async () => autonomyCandidate(), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => ({ id: `decision-${row.draft_id}` }), upsertGateAudit: async (row) => ({ id: "audit", ...row }), updateExecutionPlanItem: async (id, patch) => { updates.push({ id, patch }); return { ...item, ...patch }; }, createAutonomySchedule: async (row) => { schedules.push(row); return { id: "schedule", ...row }; }, updateDraft: async () => ({}), recordAutonomyAudit: async (row) => row };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("auto", true), runId: "canonical-run", now: Date.parse("2026-07-23T09:00:00.000Z") });
+  assert.equal(result.evaluated, 1); assert.equal(schedules.length, 1); assert.equal(schedules[0].execution_plan_item_id, item.id); assert.ok(updates.some((row) => row.patch.schedule_id === "schedule" && row.patch.lifecycle_status === "scheduled"));
+});
+
+test("canonical gate-audit persistence failure is surfaced and blocks the plan item", async () => {
+  const draft = autonomyDraft("audit-failure"); const updates = []; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listExecutionPlanItems: async () => [{ id: "plan-item", plan_id: "plan", draft_id: draft.id, slot_number: 0, lifecycle_status: "drafted" }], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async () => autonomyCandidate(), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async () => ({ id: "decision" }), upsertGateAudit: async () => { throw new Error("gate audit unavailable"); }, updateExecutionPlanItem: async (id, patch) => { updates.push({ id, patch }); return patch; }, recordAutonomyAudit: async (row) => row };
+  await assert.rejects(() => autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), runId: "audit-failure-run", now: Date.parse("2026-07-23T09:00:00.000Z") }), /gate audit unavailable/); assert.equal(updates[0].patch.blocker_code, "gate_audit_persistence_failed");
+});
+
+test("canonical execution-plan migration defines one plan ledger and schedule linkage", () => {
+  const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260725_x_daily_execution_plan.sql"), "utf8");
+  assert.match(sql, /create table if not exists public\.x_daily_execution_plans/); assert.match(sql, /create table if not exists public\.x_daily_execution_plan_items/); assert.match(sql, /execution_plan_item_id/); assert.match(sql, /unique index if not exists x_daily_execution_plan_items_workspace_draft_uidx/); assert.match(sql, /enable row level security/); assert.match(sql, /grant select, insert, update, delete on table public\.x_daily_execution_plans, public\.x_daily_execution_plan_items to service_role/); assert.match(sql, /on conflict do nothing/);
+});
+
 test("gate audit migration is additive, workspace-scoped, and service-role writable", () => {
   const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260724_x_gate_audit.sql"), "utf8");
   for (const column of ["audit_key", "workspace_id", "candidate_id", "discovery_tier", "gate_results", "primary_blocking_gate", "secondary_blocking_gates", "final_eligibility"]) assert.match(sql, new RegExp(`add column if not exists ${column}`));
