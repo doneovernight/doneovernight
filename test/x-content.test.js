@@ -627,6 +627,18 @@ test("Learning Mode makes predicted performance advisory until 50 original posts
   assert.ok(blocking.blocking_thresholds.includes("predicted_performance"));
 });
 
+test("Learning Mode schedules only the highest-ranked candidate after non-prediction gates", async () => {
+  const high = autonomyDraft("high", { model_output: { v2: { scores: { insight: .95, save: .95, repost: .95, educational: .95, brand: .95, novelty: .95 } } } });
+  const low = autonomyDraft("low", { model_output: { v2: { scores: { insight: .9, save: .2, repost: .2, educational: .85, brand: .95, novelty: .2 } } } });
+  const scheduled = [];
+  const candidateFor = (draft) => ({ ...autonomyCandidate(draft.id), id: `candidate-${draft.id}`, topic_cluster: draft.id, created_at: new Date().toISOString() });
+  const repo = { listDrafts: async () => [low, high], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listAccountActivity: async () => [{ classification: "manual_original" }, { classification: "agent_original" }, { classification: "manual_original" }], getSetting: async () => null, getCandidate: async (id) => candidateFor(id === "candidate-high" ? high : low), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => ({ id: `decision-${row.draft_id}` }), createAutonomySchedule: async (row) => { scheduled.push(row); return { id: `schedule-${row.draft_id}`, ...row }; }, updateDraft: async () => ({}), recordAutonomyAudit: async (row) => row };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("auto", true), now: Date.parse("2026-07-23T09:00:00.000Z") });
+  assert.equal(result.learning.learning_mode, true);
+  assert.equal(scheduled.length, 1);
+  assert.equal(scheduled[0].draft_id, "high");
+});
+
 test("controlled autonomous defaults enforce the authorized 2-to-5 daily policy without changing content gates", () => {
   const config = getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true });
   assert.equal(config.autonomy.minimumDailyTarget, 2);
