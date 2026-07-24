@@ -1,0 +1,27 @@
+name: X guarded publisher schedule
+
+on:
+  schedule:
+    # Keep the 15-minute cadence off crowded quarter-hour boundaries. This
+    # dedicated workflow prevents discovery and enrichment cron delivery from
+    # sharing the publisher's scheduler event.
+    - cron: "7,22,37,52 * * * *"
+
+permissions: {}
+
+concurrency:
+  group: x-content-guarded-publisher
+  cancel-in-progress: false
+
+jobs:
+  publishing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run guarded autonomous publishing check
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy-publish

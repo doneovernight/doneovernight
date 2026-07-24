@@ -5,6 +5,8 @@ const path = require("node:path");
 
 const workflowPath = path.join(__dirname, "../.github/workflows/x-content-schedule.yml");
 const workflow = fs.readFileSync(workflowPath, "utf8");
+const publisherWorkflowPath = path.join(__dirname, "../.github/workflows/x-content-publish-schedule.yml");
+const publisherWorkflow = fs.readFileSync(publisherWorkflowPath, "utf8");
 const testRunner = fs.readFileSync(path.join(__dirname, "../scripts/run-x-content-tests.mjs"), "utf8");
 
 function job(name) {
@@ -64,10 +66,16 @@ test("each discovery enrichment runs in an isolated job", () => {
 
 test("publishing remains an independent fifteen-minute job", () => {
   const publishing = job("publishing");
-  assert.match(workflow, /cron: "7,22,37,52 \* \* \* \*"/);
-  assert.match(publishing, /github\.event\.schedule == '7,22,37,52 \* \* \* \*'/);
+  assert.doesNotMatch(workflow, /cron: "7,22,37,52 \* \* \* \*"/);
+  assert.match(publishing, /inputs\.task == 'publishing'/);
   assert.match(publishing, /api\/x-content-autonomy-publish\b/);
   assert.doesNotMatch(publishing, /\bneeds:/);
+
+  assert.match(publisherWorkflow, /cron: "7,22,37,52 \* \* \* \*"/);
+  assert.match(publisherWorkflow, /group: x-content-guarded-publisher/);
+  assert.match(publisherWorkflow, /cancel-in-progress: false/);
+  assert.match(publisherWorkflow, /api\/x-content-autonomy-publish\b/);
+  assert.doesNotMatch(publisherWorkflow, /api\/x-content-(?:discover|daily-plan|autonomy-metrics|growth|radar|engagement)\b/);
 });
 
 test("manual enrichment tasks remain independently dispatchable", () => {
@@ -79,13 +87,15 @@ test("manual enrichment tasks remain independently dispatchable", () => {
 });
 
 test("HTTP failures retain sanitized response bodies for workflow diagnostics", () => {
-  const curlCommands = workflow.match(/^\s+curl .+$/gm) || [];
+  const curlCommands = `${workflow}\n${publisherWorkflow}`.match(/^\s+curl .+$/gm) || [];
   assert.ok(curlCommands.length > 0);
   for (const command of curlCommands) {
     assert.match(command, /--fail-with-body/);
   }
-  assert.doesNotMatch(workflow, /-o \/dev\/null/);
-  assert.doesNotMatch(workflow, /curl --fail(?:\s|$)/);
+  for (const document of [workflow, publisherWorkflow]) {
+    assert.doesNotMatch(document, /-o \/dev\/null/);
+    assert.doesNotMatch(document, /curl --fail(?:\s|$)/);
+  }
 });
 
 test("production builds isolate tests from live integration credentials", () => {
