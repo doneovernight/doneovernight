@@ -179,6 +179,9 @@ jobs:
     if: inputs.task == 'publishing'
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    concurrency:
+      group: x-content-guarded-publisher
+      cancel-in-progress: false
     steps:
       - name: Run guarded autonomous publishing check
         env:
@@ -247,6 +250,9 @@ jobs:
     if: inputs.task == 'autonomy_publish'
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    concurrency:
+      group: x-content-guarded-publisher
+      cancel-in-progress: false
     steps:
       - name: Run guarded autonomous publishing check
         env:

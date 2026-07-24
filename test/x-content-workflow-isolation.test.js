@@ -68,14 +68,27 @@ test("publishing remains an independent fifteen-minute job", () => {
   const publishing = job("publishing");
   assert.doesNotMatch(workflow, /cron: "7,22,37,52 \* \* \* \*"/);
   assert.match(publishing, /inputs\.task == 'publishing'/);
+  assert.doesNotMatch(publishing, /github\.event\.schedule/);
   assert.match(publishing, /api\/x-content-autonomy-publish\b/);
   assert.doesNotMatch(publishing, /\bneeds:/);
+  assert.match(workflow, /options: \[[^\]]*publishing[^\]]*\]/);
+
+  for (const name of ["publishing", "autonomy_publish"]) {
+    assert.match(job(name), /concurrency:\n\s+group: x-content-guarded-publisher\n\s+cancel-in-progress: false/);
+  }
 
   assert.match(publisherWorkflow, /cron: "7,22,37,52 \* \* \* \*"/);
+  assert.equal((publisherWorkflow.match(/cron:/g) || []).length, 1);
+  assert.doesNotMatch(publisherWorkflow, /workflow_dispatch/);
+  assert.match(publisherWorkflow, /permissions: \{\}/);
   assert.match(publisherWorkflow, /group: x-content-guarded-publisher/);
   assert.match(publisherWorkflow, /cancel-in-progress: false/);
+  assert.match(publisherWorkflow, /timeout-minutes: 3/);
+  assert.match(publisherWorkflow, /CRON_SECRET/);
   assert.match(publisherWorkflow, /api\/x-content-autonomy-publish\b/);
   assert.doesNotMatch(publisherWorkflow, /api\/x-content-(?:discover|daily-plan|autonomy-metrics|growth|radar|engagement)\b/);
+  const dedicatedJobs = publisherWorkflow.slice(publisherWorkflow.indexOf("\njobs:\n") + "\njobs:\n".length);
+  assert.equal((dedicatedJobs.match(/^  [a-z0-9_]+:\n/gm) || []).length, 1);
 });
 
 test("manual enrichment tasks remain independently dispatchable", () => {
