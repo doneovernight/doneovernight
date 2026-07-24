@@ -648,9 +648,33 @@ test("canonical gate-audit persistence failure is surfaced and blocks the plan i
   await assert.rejects(() => autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), runId: "audit-failure-run", now: Date.parse("2026-07-23T09:00:00.000Z") }), /gate audit unavailable/); assert.equal(updates[0].patch.blocker_code, "gate_audit_persistence_failed");
 });
 
+test("autonomy shadow route safely no-ops with HTTP-200 semantics while gate-audit schema is pending", async () => {
+  const original = autonomy.runAutonomyCycle; const finished = []; const audits = [];
+  autonomy.runAutonomyCycle = async () => { const error = Object.assign(new Error("Supabase request failed: 404"), { statusCode: 404, detail: JSON.stringify({ code: "PGRST205", message: "Could not find the table 'public.x_gate_audits' in the schema cache" }) }); throw error; };
+  const repo = { createRun: async () => ({ id: "pending-run" }), recordAutonomyAudit: async (row) => { audits.push(row); return row; }, finishRun: async (_id, status, summary) => { finished.push({ status, summary }); return summary; } };
+  try {
+    const result = await service.autonomyDecisionCycle({ repository: repo, config: autonomyConfig("shadow", false) });
+    assert.equal(result.schema_pending, true); assert.equal(result.published, false); assert.equal(result.evaluated, 0); assert.equal(result.migration, "20260724_x_gate_audit.sql");
+    assert.equal(finished[0].status, "completed"); assert.equal(audits[0].reason, "gate_audit_schema_pending");
+  } finally { autonomy.runAutonomyCycle = original; }
+});
+
 test("canonical execution-plan migration defines one plan ledger and schedule linkage", () => {
   const sql = fs.readFileSync(require.resolve("../supabase/migrations/20260725_x_daily_execution_plan.sql"), "utf8");
   assert.match(sql, /create table if not exists public\.x_daily_execution_plans/); assert.match(sql, /create table if not exists public\.x_daily_execution_plan_items/); assert.match(sql, /execution_plan_item_id/); assert.match(sql, /unique index if not exists x_daily_execution_plan_items_workspace_draft_uidx/); assert.match(sql, /enable row level security/); assert.match(sql, /grant select, insert, update, delete on table public\.x_daily_execution_plans, public\.x_daily_execution_plan_items to service_role/); assert.match(sql, /on conflict do nothing/);
+});
+
+test("scheduled workflow endpoints remain mapped to protected deployed handlers", () => {
+  const workflow = fs.readFileSync(require.resolve("../.github/workflows/x-content-schedule.yml"), "utf8");
+  const paths = [...workflow.matchAll(/https:\/\/doneovernight\.com(\/api\/x-content-[a-z0-9-]+(?:\/(?:start|callback))?)/g)].map((match) => match[1]);
+  const config = JSON.parse(fs.readFileSync(require.resolve("../vercel.json"), "utf8"));
+  const mappings = new Map([...config.routes, ...(config.rewrites || [])].filter((route) => route.source?.startsWith("/api/x-content-")).map((route) => [route.source, route.destination]));
+  assert.ok(paths.length > 0);
+  for (const path of new Set(paths)) {
+    const destination = mappings.get(path); assert.ok(destination, `missing Vercel mapping for ${path}`);
+    const key = destination.match(/x_content_route=([^&]+)/)?.[1]; assert.ok(key, `missing dispatcher key for ${path}`); assert.equal(typeof routes[key], "function", `missing deployed handler ${key} for ${path}`);
+  }
+  assert.match(workflow, /Run autonomy shadow decisions/); assert.match(workflow, /api\/x-content-autonomy/);
 });
 
 test("gate audit migration is additive, workspace-scoped, and service-role writable", () => {
