@@ -386,6 +386,12 @@ test("heartbeat keeps core publishing healthy while enrichment failures remain d
   }
 });
 
+test("engagement enrichment persists an explicit run for Mission Control health", async () => {
+  const finished = []; const repo = { createRun: async () => ({ id: "engagement-run" }), getSetting: async () => null, finishRun: async (id, status, summary, error) => { finished.push({ id, status, summary, error }); } };
+  const result = await service.engagementCheck({ repository: repo, config: {}, syncAccountActivity: async () => ({ synced: true }), collectEngagement: async () => ({ mentions: 0 }), collectAnalytics: async () => ({ snapshots: 2 }) });
+  assert.equal(result.schema_pending, false); assert.equal(finished.length, 1); assert.equal(finished[0].id, "engagement-run"); assert.equal(finished[0].status, "completed"); assert.equal(finished[0].summary.analytics.snapshots, 2);
+});
+
 test("OpenAI strict JSON schema requires its nullable optional_cta field", () => {
   assert.equal(schema.required.includes("optional_cta"), true);
 });
