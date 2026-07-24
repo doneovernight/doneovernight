@@ -710,6 +710,8 @@ test("successful X identity checks require the seeded user ID and persist fresh 
     assert.equal(writes.length, 1);
     assert.equal(writes[0].key, "x_oauth2_last_identity_check");
     assert.deepEqual(Object.keys(JSON.parse(writes[0].value)).sort(), ["at", "user_id", "username"]);
+    repository.setSetting = async () => { throw Object.assign(new Error("Supabase unavailable"), { code: "SUPABASE_HTTP_503" }); };
+    await assert.rejects(() => xClient.verifyIdentity(), { code: "SUPABASE_HTTP_503" });
   } finally { global.fetch = fetchOriginal; repository.setSetting = setSettingOriginal; if (tokenOriginal === undefined) delete process.env.X_ACCESS_TOKEN; else process.env.X_ACCESS_TOKEN = tokenOriginal; }
 });
 
