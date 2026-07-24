@@ -178,7 +178,10 @@ jobs:
           https://doneovernight.com/api/x-content-executive-report
 
   publishing:
-    if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
+    # Every real schedule event is also a safe publisher heartbeat. The guarded,
+    # idempotent endpoint makes this a fallback when GitHub delays or drops the
+    # dedicated 15-minute event; workflow_dispatch discovery never publishes.
+    if: github.event_name == 'schedule' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     concurrency:
