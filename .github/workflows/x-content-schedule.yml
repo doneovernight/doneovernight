@@ -3,6 +3,8 @@ name: X content schedule
 on:
   schedule:
     - cron: "0 */2 * * *"
+    # Guarded publishing runs independently every fifteen minutes.
+    - cron: "*/15 * * * *"
     # One of these is 08:00 Europe/Amsterdam across CET/CEST; the route checks local time.
     - cron: "0 6,7 * * *"
     - cron: "0 6,7 * * 1"
@@ -176,7 +178,7 @@ jobs:
           https://doneovernight.com/api/x-content-executive-report
 
   publishing:
-    if: inputs.task == 'publishing'
+    if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     concurrency:

@@ -5,8 +5,6 @@ const path = require("node:path");
 
 const workflowPath = path.join(__dirname, "../.github/workflows/x-content-schedule.yml");
 const workflow = fs.readFileSync(workflowPath, "utf8");
-const publisherWorkflowPath = path.join(__dirname, "../.github/workflows/x-content-publish-schedule.yml");
-const publisherWorkflow = fs.readFileSync(publisherWorkflowPath, "utf8");
 const testRunner = fs.readFileSync(path.join(__dirname, "../scripts/run-x-content-tests.mjs"), "utf8");
 
 function job(name) {
@@ -66,9 +64,8 @@ test("each discovery enrichment runs in an isolated job", () => {
 
 test("publishing remains an independent fifteen-minute job", () => {
   const publishing = job("publishing");
-  assert.doesNotMatch(workflow, /cron: "7,22,37,52 \* \* \* \*"/);
-  assert.match(publishing, /inputs\.task == 'publishing'/);
-  assert.doesNotMatch(publishing, /github\.event\.schedule/);
+  assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
+  assert.match(publishing, /github\.event\.schedule == '\*\/15 \* \* \* \*'/);
   assert.match(publishing, /api\/x-content-autonomy-publish\b/);
   assert.doesNotMatch(publishing, /\bneeds:/);
   assert.match(workflow, /options: \[[^\]]*publishing[^\]]*\]/);
@@ -77,18 +74,6 @@ test("publishing remains an independent fifteen-minute job", () => {
     assert.match(job(name), /concurrency:\n\s+group: x-content-guarded-publisher\n\s+cancel-in-progress: false/);
   }
 
-  assert.match(publisherWorkflow, /cron: "\*\/15 \* \* \* \*"/);
-  assert.equal((publisherWorkflow.match(/cron:/g) || []).length, 1);
-  assert.doesNotMatch(publisherWorkflow, /workflow_dispatch/);
-  assert.match(publisherWorkflow, /permissions: \{\}/);
-  assert.match(publisherWorkflow, /group: x-content-guarded-publisher/);
-  assert.match(publisherWorkflow, /cancel-in-progress: false/);
-  assert.match(publisherWorkflow, /timeout-minutes: 3/);
-  assert.match(publisherWorkflow, /CRON_SECRET/);
-  assert.match(publisherWorkflow, /api\/x-content-autonomy-publish\b/);
-  assert.doesNotMatch(publisherWorkflow, /api\/x-content-(?:discover|daily-plan|autonomy-metrics|growth|radar|engagement)\b/);
-  const dedicatedJobs = publisherWorkflow.slice(publisherWorkflow.indexOf("\njobs:\n") + "\njobs:\n".length);
-  assert.equal((dedicatedJobs.match(/^  [a-z0-9_]+:\n/gm) || []).length, 1);
 });
 
 test("manual enrichment tasks remain independently dispatchable", () => {
@@ -100,15 +85,13 @@ test("manual enrichment tasks remain independently dispatchable", () => {
 });
 
 test("HTTP failures retain sanitized response bodies for workflow diagnostics", () => {
-  const curlCommands = `${workflow}\n${publisherWorkflow}`.match(/^\s+curl .+$/gm) || [];
+  const curlCommands = workflow.match(/^\s+curl .+$/gm) || [];
   assert.ok(curlCommands.length > 0);
   for (const command of curlCommands) {
     assert.match(command, /--fail-with-body/);
   }
-  for (const document of [workflow, publisherWorkflow]) {
-    assert.doesNotMatch(document, /-o \/dev\/null/);
-    assert.doesNotMatch(document, /curl --fail(?:\s|$)/);
-  }
+  assert.doesNotMatch(workflow, /-o \/dev\/null/);
+  assert.doesNotMatch(workflow, /curl --fail(?:\s|$)/);
 });
 
 test("production builds isolate tests from live integration credentials", () => {
