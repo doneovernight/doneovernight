@@ -3,7 +3,7 @@ name: X content schedule
 on:
   schedule:
     - cron: "0 */2 * * *"
-    # Guarded publishing runs independently every fifteen minutes.
+    # GitHub is a watchdog only; Supabase pg_cron is the five-minute primary.
     - cron: "*/15 * * * *"
     # One of these is 08:00 Europe/Amsterdam across CET/CEST; the route checks local time.
     - cron: "0 6,7 * * *"
@@ -15,7 +15,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, daily_plan, radar, engagement, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
+        options: [discovery, daily_plan, radar, engagement, growth, intelligence, daily_brief, executive_report, publishing, scheduler_install, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -178,10 +178,9 @@ jobs:
           https://doneovernight.com/api/x-content-executive-report
 
   publishing:
-    # Every real schedule event is also a safe publisher heartbeat. The guarded,
-    # idempotent endpoint makes this a fallback when GitHub delays or drops the
-    # dedicated 15-minute event; workflow_dispatch discovery never publishes.
-    if: github.event_name == 'schedule' || inputs.task == 'publishing'
+    # The protected endpoint checks primary freshness. Scheduled watchdog ticks
+    # publish only when Supabase pg_cron is late; manual dispatch remains safe.
+    if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     concurrency:
@@ -191,10 +190,28 @@ jobs:
       - name: Run guarded autonomous publishing check
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
-          -H "Authorization: Bearer ${CRON_SECRET}"
+          SCHEDULER_SOURCE: ${{ github.event_name == 'schedule' && 'github_watchdog' || 'github_manual' }}
+        run: |
+          intended_at="$(date -u +'%Y-%m-%dT%H:%M:00Z')"
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors \
+          -H "Authorization: Bearer ${CRON_SECRET}" \
+          -H "X-Scheduler-Source: ${SCHEDULER_SOURCE}" \
+          -H "X-Scheduler-Intended-At: ${intended_at}" \
           https://doneovernight.com/api/x-content-autonomy-publish
+
+  scheduler_install:
+    if: inputs.task == 'scheduler_install'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Install the Vault-backed Supabase primary publisher clock
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error
+          -X POST
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-scheduler-install
 
   autonomy:
     if: inputs.task == 'autonomy'
@@ -265,6 +282,7 @@ jobs:
         run: >-
           curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
+          -H "X-Scheduler-Source: github_manual"
           https://doneovernight.com/api/x-content-autonomy-publish
 
   autonomy_publish_diagnostic:
