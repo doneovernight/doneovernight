@@ -696,6 +696,23 @@ test("X username guard rejects an account other than @doneovernight", async () =
   global.fetch = fetchOriginal; if (envOriginal === undefined) delete process.env.X_ACCESS_TOKEN; else process.env.X_ACCESS_TOKEN = envOriginal;
 });
 
+test("successful X identity checks require the seeded user ID and persist fresh health evidence", async () => {
+  const fetchOriginal = global.fetch; const tokenOriginal = process.env.X_ACCESS_TOKEN; const setSettingOriginal = repository.setSetting; const writes = [];
+  process.env.X_ACCESS_TOKEN = "test-token";
+  repository.setSetting = async (key, value) => { writes.push({ key, value }); return { key, value }; };
+  try {
+    global.fetch = async () => new Response(JSON.stringify({ data: { id: "wrong-user-id", username: "doneovernight" } }), { status: 200, headers: { "Content-Type": "application/json" } });
+    await assert.rejects(() => xClient.verifyIdentity(), { code: "X_USERNAME_GUARD_FAILED" });
+    assert.equal(writes.length, 0);
+    global.fetch = async () => new Response(JSON.stringify({ data: { id: "2037306333813235713", username: "doneovernight" } }), { status: 200, headers: { "Content-Type": "application/json" } });
+    const identity = await xClient.verifyIdentity();
+    assert.equal(identity.userId, "2037306333813235713");
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].key, "x_oauth2_last_identity_check");
+    assert.deepEqual(Object.keys(JSON.parse(writes[0].value)).sort(), ["at", "user_id", "username"]);
+  } finally { global.fetch = fetchOriginal; repository.setSetting = setSettingOriginal; if (tokenOriginal === undefined) delete process.env.X_ACCESS_TOKEN; else process.env.X_ACCESS_TOKEN = tokenOriginal; }
+});
+
 test("X configuration recognizes OAuth 1.0a and app-only bearer credentials safely", () => {
   assert.equal(xClient.authenticationMethod({ xApiKey: "key", xApiSecret: "secret", xAccessToken: "access", xAccessTokenSecret: "access-secret" }), "oauth_1_0a_user_context");
   assert.equal(getConfig({ xBearerToken: "app-only" }).x.bearerToken, "app-only");
