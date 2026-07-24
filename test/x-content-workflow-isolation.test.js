@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const workflowPath = path.join(__dirname, "../.github/workflows/x-content-schedule.yml");
 const workflow = fs.readFileSync(workflowPath, "utf8");
+const testRunner = fs.readFileSync(path.join(__dirname, "../scripts/run-x-content-tests.mjs"), "utf8");
 
 function job(name) {
   const marker = `  ${name}:\n`;
@@ -85,4 +86,20 @@ test("HTTP failures retain sanitized response bodies for workflow diagnostics", 
   }
   assert.doesNotMatch(workflow, /-o \/dev\/null/);
   assert.doesNotMatch(workflow, /curl --fail(?:\s|$)/);
+});
+
+test("production builds isolate tests from live integration credentials", () => {
+  for (const name of [
+    "OPENAI_API_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "CRON_SECRET",
+    "TELEGRAM_BOT_TOKEN",
+    "X_CLIENT_SECRET"
+  ]) assert.match(testRunner, new RegExp(`\\"${name}\\"`));
+
+  assert.match(testRunner, /testEnv\.CONTENT_PUBLISH_MODE = "approve"/);
+  assert.match(testRunner, /testEnv\.CONTENT_AUTONOMY_MODE = "shadow"/);
+  assert.match(testRunner, /testEnv\.X_AUTONOMOUS_PUBLISH_ENABLED = "false"/);
+  assert.match(testRunner, /testEnv\.X_ALLOW_TEST_POST = "false"/);
 });
