@@ -14,7 +14,7 @@ on:
         description: "Scheduled task to invoke"
         required: true
         type: choice
-        options: [discovery, daily_plan, radar, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
+        options: [discovery, daily_plan, radar, engagement, growth, intelligence, daily_brief, executive_report, publishing, identity, oauth_start, regenerate_legacy, autonomy, autonomy_publish, autonomy_publish_diagnostic, autonomy_metrics]
       draft_limit:
         description: "Optional legacy replacement limit (1-5)"
         required: false
@@ -31,6 +31,9 @@ jobs:
     if: github.event.schedule == '0 6,7 * * *' || inputs.task == 'daily_plan'
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    concurrency:
+      group: x-content-canonical-plan
+      cancel-in-progress: false
     steps:
       - name: Generate and persist the Amsterdam daily autonomous plan
         env:
@@ -49,53 +52,88 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-discover
 
+  canonical_plan_after_discovery:
+    needs: discovery
+    if: always() && needs.discovery.result == 'success' && (github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: x-content-canonical-plan
+      cancel-in-progress: false
+    steps:
+      - name: Persist the canonical daily execution plan
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-daily-plan?skip_discovery=1
+
+      - name: Evaluate and schedule the canonical plan
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-autonomy
+
+  radar_after_discovery:
+    needs: discovery
+    if: always() && needs.discovery.result == 'success' && (github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
       - name: Rank the Social Radar
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-radar
 
+  engagement_after_discovery:
+    needs: discovery
+    if: always() && needs.discovery.result == 'success' && (github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
       - name: Collect approval-only engagement drafts and analytics
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-engagement
 
-      - name: Run autonomy shadow decisions
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
-          -H "Authorization: Bearer ${CRON_SECRET}"
-          https://doneovernight.com/api/x-content-autonomy
-
+  autonomy_metrics_after_discovery:
+    needs: discovery
+    if: always() && needs.discovery.result == 'success' && (github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
       - name: Collect autonomy metric checkpoints
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-metrics
 
+  growth_after_discovery:
+    needs: discovery
+    if: always() && needs.discovery.result == 'success' && (github.event.schedule == '0 */2 * * *' || inputs.task == 'discovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
       - name: Run Growth Director in shadow mode
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-growth
 
@@ -108,8 +146,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-daily-brief
 
@@ -122,8 +159,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-intelligence
 
@@ -136,8 +172,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-executive-report
 
@@ -150,8 +185,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
-          -o /dev/null
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-publish
 
@@ -159,12 +193,15 @@ jobs:
     if: inputs.task == 'autonomy'
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    concurrency:
+      group: x-content-canonical-plan
+      cancel-in-progress: false
     steps:
       - name: Run a shadow decision cycle
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy
 
@@ -177,9 +214,22 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-radar
+
+  engagement:
+    if: inputs.task == 'engagement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Collect approval-only engagement drafts and analytics
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: >-
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
+          -H "Authorization: Bearer ${CRON_SECRET}"
+          https://doneovernight.com/api/x-content-engagement
 
   growth:
     if: inputs.task == 'growth'
@@ -190,7 +240,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-growth
 
@@ -203,7 +253,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-publish
 
@@ -229,7 +279,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-autonomy-metrics
 
@@ -268,6 +318,6 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: >-
-          curl --fail --silent --show-error --retry 2 --retry-all-errors
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors
           -H "Authorization: Bearer ${CRON_SECRET}"
           https://doneovernight.com/api/x-content-regenerate-legacy?limit=${{ inputs.draft_limit || '5' }}

@@ -104,6 +104,12 @@ test("discovery confidence rejects duplicates and topic cooldowns and selects th
   assert.equal(cooled.eligible, false);
 });
 
+test("a persisted candidate is not rejected as a duplicate of itself", () => {
+  const candidate = { id: "candidate-1", title: "A durable workflow release", publishedAt: new Date().toISOString(), discovery_tier: "github_releases", quality_score: .9, relevance_score: .9, authority_score: .98, trust_score: .98, novelty_score: .9 };
+  const result = discoveryHierarchy.scoreDiscoveryCandidate(candidate, { existingCandidates: [candidate] });
+  assert.equal(result.duplicate_score, 0); assert.equal(result.eligible, true);
+});
+
 test("internal knowledge fallback carries auditable provenance and does not fabricate an empty topic", () => {
   assert.equal(discoveryHierarchy.internalKnowledgeCandidate(null), null);
   const candidate = discoveryHierarchy.internalKnowledgeCandidate({ id: "k1", insight: "Explicit workspace lesson", evidence: "Recorded operating note", topic: "automation" }, Date.parse("2026-07-22T10:00:00.000Z"));
@@ -121,10 +127,68 @@ test("daily plan targets two minimum, three preferred, five maximum with Amsterd
   for (const slot of plan.slots) { const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", hourCycle: "h23" }).format(new Date(slot.planned_for))); assert.ok(hour >= 8 && hour < 22); }
 });
 
+test("daily plan keeps stable slot identities when earlier Amsterdam slots have passed", () => {
+  const day = "2026-07-22";
+  const morning = dailyPlan.planSlotsForDay({ day, now: Date.parse("2026-07-22T05:00:00.000Z"), timezone: "Europe/Amsterdam", count: 5 });
+  const afternoon = dailyPlan.planSlotsForDay({ day, now: Date.parse("2026-07-22T12:30:00.000Z"), timezone: "Europe/Amsterdam", count: 5 });
+  assert.ok(afternoon.slots.length > 0);
+  for (const slot of afternoon.slots) {
+    const original = morning.slots.find((row) => row.index === slot.index);
+    assert.ok(original, `missing stable slot ${slot.index}`);
+    assert.equal(slot.planned_for, original.planned_for);
+    assert.equal(slot.objective, original.objective);
+  }
+  assert.ok(afternoon.slots[0].index > 0);
+});
+
 test("daily target status becomes at-risk only when the minimum has no usable schedule", () => {
   assert.equal(dailyPlan.dailyStatus({ published: 0, scheduled: 1, next: null }).at_risk, true);
   assert.equal(dailyPlan.dailyStatus({ published: 1, scheduled: 1, next: "2026-07-22T10:00:00.000Z" }).at_risk, false);
   assert.equal(dailyPlan.remainingMinimum({ published: 1, scheduled: 0 }), 1);
+});
+
+test("daily planner reconciles queued drafts into today and tomorrow canonical items", async () => {
+  const now = Date.parse("2026-07-23T05:00:00.000Z");
+  const drafts = Array.from({ length: 6 }, (_, index) => ({ id: `draft-${index}`, candidate_id: `candidate-${index}`, status: "queued", text: `Durable operating insight ${index}`, topic_cluster: `topic-${index}`, source_references: [`https://example.com/${index}`], quality_score: 1 - index / 100, weighted_character_count: 190, created_at: new Date(now).toISOString(), model_output: { v2: { scores: { insight: .95, novelty: .95, repost: .95, save: .95, educational: .95, brand: .95 } } } }));
+  const plans = new Map(); const items = new Map();
+  const repo = {
+    createRun: async () => ({ id: "planner-run" }), finishRun: async (_id, _status, summary) => summary,
+    createExecutionPlan: async (row) => { const existing = plans.get(row.plan_date); const plan = existing || { id: `plan-${row.plan_date}`, ...row }; plans.set(row.plan_date, plan); return plan; },
+    getExecutionPlan: async (date) => plans.get(date) || null,
+    listExecutionPlanItems: async (planId) => [...items.values()].filter((row) => !planId || row.plan_id === planId),
+    createExecutionPlanItem: async (row) => { const key = `${row.plan_id}:${row.slot_number}`; const item = { id: items.get(key)?.id || `item-${key}`, ...items.get(key), ...row }; items.set(key, item); return item; },
+    listAutonomySchedules: async () => [], listPublishedPublications: async () => [], recentCandidates: async () => [], listDrafts: async () => drafts,
+    getSetting: async () => null, setSetting: async () => ({}), listGrowthMemory: async () => []
+  };
+  const result = await service.dailyAutonomyPlan({ repository: repo, config: getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true }), now, skipDiscovery: true });
+  assert.equal(result.plan.days.length, 2); assert.equal(result.slots.length, 6); assert.equal(result.drafts_selected, 6);
+  assert.equal(items.size, 6); assert.deepEqual(new Set([...items.values()].map((item) => item.draft_id)), new Set(drafts.map((draft) => draft.id)));
+  assert.ok([...items.values()].every((item) => item.lifecycle_status === "drafted" && item.plan_id && item.intended_at));
+});
+
+test("canonical planner rejects unselected generation attempts and leaves one active linked draft", async () => {
+  const now = Date.parse("2026-07-23T05:00:00.000Z"); const plans = new Map(); const items = new Map(); const created = []; const updates = [];
+  const candidate = freshCandidate("planner", { discovery_tier: "internal_knowledge", publisher: "DONEOVERNIGHT", relevance_score: .95, quality_score: .95, novelty_score: .95 });
+  const repo = {
+    createRun: async () => ({ id: "planner-run" }), finishRun: async (_id, _status, summary) => summary,
+    createExecutionPlan: async (row) => { const plan = plans.get(row.plan_date) || { id: `plan-${row.plan_date}`, ...row }; plans.set(row.plan_date, plan); return plan; }, getExecutionPlan: async (date) => plans.get(date) || null,
+    listExecutionPlanItems: async (planId) => [...items.values()].filter((row) => !planId || row.plan_id === planId), createExecutionPlanItem: async (row) => { const key = `${row.plan_id}:${row.slot_number}`; const item = { id: `item-${key}`, ...items.get(key), ...row }; items.set(key, item); return item; }, updateExecutionPlanItem: async (id, patch) => { const entry = [...items.entries()].find(([, row]) => row.id === id); if (!entry) return null; const row = { ...entry[1], ...patch }; items.set(entry[0], row); return row; },
+    listAutonomySchedules: async () => [], listPublishedPublications: async () => [], recentCandidates: async () => [candidate], listDrafts: async () => [], recentDrafts: async () => [], findSourceByUrl: async () => ({ id: "source", publisher: "DONEOVERNIGHT", confidence: 1 }), getCandidate: async () => candidate,
+    createDraft: async (row) => { const draft = { id: `generated-${created.length + 1}`, created_at: new Date(now).toISOString(), ...row }; created.push(draft); return draft; }, updateDraft: async (id, patch) => { updates.push({ id, patch }); const draft = created.find((row) => row.id === id); if (draft) Object.assign(draft, patch); return draft; },
+    listEditorFeedback: async () => [], getEditorProfile: async () => null, listPerformanceMemory: async () => [], saveDraftLearningMetadata: async () => null, listGrowthMemory: async () => [], getSetting: async () => null, setSetting: async () => null, listSelfHealingIncidents: async () => []
+  };
+  const generated = async (input) => ({ post_text: `Visible state makes automation repairable. Give every handoff an owner, a status, and a recovery path. Teams move faster when the system explains where work stopped and what safe action comes next. ${created.length + 1}`, post_type: "builder_insight", confidence: .92, topic_cluster: input.topic_cluster, factual_claims: [], source_references: [input.sourceUrl], why_it_fits: "Original operating lesson", scores: { insight: .94, novelty: .9, repost: .9, save: .94, educational: .94, brand: .96 } });
+  const result = await service.dailyAutonomyPlan({ repository: repo, config: getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true }), now, skipDiscovery: true, generateDraft: generated });
+  const active = created.filter((row) => row.status === "queued"); const linked = [...items.values()].filter((row) => row.draft_id);
+  assert.equal(created.length % 3, 0); assert.equal(active.length, created.length / 3); assert.equal(linked.length, active.length); assert.deepEqual(new Set(linked.map((row) => row.draft_id)), new Set(active.map((row) => row.id)));
+  assert.equal(updates.filter((row) => row.patch.status === "rejected" && /highest-quality draft/.test(row.patch.rejection_reason)).length, active.length * 2); assert.equal(result.drafts_selected, active.length);
+});
+
+test("canonical planner preserves a healthy future schedule", async () => {
+  const now = Date.parse("2026-07-23T05:00:00.000Z"); const today = dailyPlan.dayKey(new Date(now), "Europe/Amsterdam"); const plan = { id: "plan-today", plan_date: today, maximum_posts: 5 }; const future = new Date(now + 4 * 3600000).toISOString(); const item = { id: "item", plan_id: plan.id, slot_number: 0, draft_id: "draft", schedule_id: "schedule", intended_at: future, lifecycle_status: "scheduled" }; const scheduleUpdates = [];
+  const repo = { createRun: async () => ({ id: "run" }), finishRun: async (_id, _status, summary) => summary, createExecutionPlan: async (row) => row.plan_date === today ? plan : ({ id: `plan-${row.plan_date}`, ...row }), getExecutionPlan: async (date) => date === today ? plan : null, listExecutionPlanItems: async (planId) => !planId || planId === plan.id ? [item] : [], createExecutionPlanItem: async (row) => ({ id: `item-${row.slot_number}`, ...row }), updateExecutionPlanItem: async (_id, patch) => ({ ...item, ...patch }), listAutonomySchedules: async () => [{ id: "schedule", draft_id: "draft", status: "scheduled", scheduled_for: future }], updateAutonomySchedule: async (id, patch) => { scheduleUpdates.push({ id, patch }); return patch; }, listPublishedPublications: async () => [], recentCandidates: async () => [], listDrafts: async () => [{ id: "draft", status: "approved", created_at: new Date(now).toISOString() }], listGrowthMemory: async () => [], findSourceByUrl: async () => null, recordSource: async (row) => ({ id: "source", ...row }), getCandidate: async () => null, createCandidate: async (row) => ({ id: `candidate-${row.topic_cluster}`, created_at: new Date(now).toISOString(), ...row }), getSetting: async () => null, setSetting: async () => null, listSelfHealingIncidents: async () => [] };
+  await service.dailyAutonomyPlan({ repository: repo, config: getConfig({ autonomyMode: "auto", autonomousPublishEnabled: true }), now, skipDiscovery: true });
+  assert.equal(scheduleUpdates.length, 0);
 });
 
 test("daily autonomy plan route is protected and mapped through the existing admin task boundary", () => {
@@ -632,7 +696,7 @@ test("autonomy cycle persists one gate audit per evaluated candidate and recomme
   const repo = { listDrafts: async () => [high, blocked], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async (id) => candidateFor({ id: id.replace("candidate-", "") }), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async (row) => ({ id: `decision-${row.draft_id}` }), upsertGateAudit: async (row) => { stored.push(row); return row; }, createAutonomySchedule: async (row) => { scheduled.push(row); return { id: `schedule-${row.draft_id}`, ...row }; }, updateDraft: async () => ({}), recordAutonomyAudit: async (row) => row };
   const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), runId: "run-gate-audit", now: Date.parse("2026-07-23T09:00:00.000Z") });
   assert.equal(result.evaluated, 2); assert.equal(stored.length, 2); assert.equal(new Set(stored.map((row) => row.audit_key)).size, 2);
-  assert.equal(result.gate_audit.evaluated, 2); assert.equal(result.gate_audit.eligible_candidates.length, 1); assert.equal(result.gate_audit.recommendations.some((row) => row.gate === "final_eligibility"), false); assert.equal(scheduled.length, 1);
+  assert.equal(result.gate_audit.evaluated, 2); assert.equal(result.gate_audit.eligible_candidates.length, 2); assert.equal(result.gate_audit.recommendations.some((row) => row.gate === "final_eligibility"), false); assert.equal(scheduled.length, 1);
   assert.match(result.gate_audit.why_nothing_was_published, /final publishable candidate/);
 });
 
@@ -643,19 +707,47 @@ test("canonical execution plan links evaluation and never creates a detached sch
   assert.equal(result.evaluated, 1); assert.equal(schedules.length, 1); assert.equal(schedules[0].execution_plan_item_id, item.id); assert.ok(updates.some((row) => row.patch.schedule_id === "schedule" && row.patch.lifecycle_status === "scheduled"));
 });
 
+test("canonical evaluation persists blocked and learning-deferred plan lifecycles", async () => {
+  const high = autonomyDraft("canonical-high", { candidate_id: "candidate-high", topic_cluster: "high-topic" });
+  const deferred = autonomyDraft("canonical-deferred", { candidate_id: "candidate-deferred", topic_cluster: "deferred-topic" });
+  const weak = autonomyDraft("canonical-weak", { candidate_id: "candidate-weak", topic_cluster: "weak-topic", model_output: { v2: { scores: { insight: .4, novelty: .9, repost: .9, save: .9, educational: .9, brand: .95 } } } });
+  const items = [high, deferred, weak].map((draft, index) => ({ id: `item-${draft.id}`, plan_id: "plan", draft_id: draft.id, slot_number: index, lifecycle_status: "drafted" }));
+  const updates = []; const schedules = [];
+  const repo = {
+    listDrafts: async () => [deferred, weak, high], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listExecutionPlanItems: async () => items,
+    listAccountActivity: async () => [{ classification: "agent_original" }], getSetting: async () => null,
+    getCandidate: async (id) => ({ ...autonomyCandidate(id), id, topic_cluster: id.replace("candidate-", "") }), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }),
+    createAutonomyDecision: async (row) => ({ id: `decision-${row.draft_id}` }), upsertGateAudit: async (row) => ({ id: `audit-${row.draft_id}`, ...row }),
+    updateExecutionPlanItem: async (id, patch) => { updates.push({ id, patch }); return patch; },
+    createAutonomySchedule: async (row) => { schedules.push(row); return { id: `schedule-${row.draft_id}`, ...row }; }, updateDraft: async () => ({}), recordAutonomyAudit: async (row) => row
+  };
+  await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("auto", true), runId: "canonical-lifecycles", now: Date.parse("2026-07-23T09:00:00.000Z") });
+  assert.equal(schedules.length, 1);
+  const weakUpdate = updates.find((row) => row.id === "item-canonical-weak" && row.patch.lifecycle_status === "blocked");
+  const deferredUpdate = updates.find((row) => ["item-canonical-high", "item-canonical-deferred"].includes(row.id) && row.patch.lifecycle_status === "evaluated");
+  assert.ok(weakUpdate); assert.equal(weakUpdate.patch.decision_id, "decision-canonical-weak"); assert.equal(weakUpdate.patch.gate_audit_id, "audit-canonical-weak");
+  assert.ok(deferredUpdate); assert.equal(deferredUpdate.patch.recovery_action, "evaluate_next_autonomy_cycle"); assert.equal(deferredUpdate.patch.gate_audit_id, deferredUpdate.id.replace("item-", "audit-"));
+});
+
+test("canonical scheduling requires the persisted gate audit to remain eligible", async () => {
+  const draft = autonomyDraft("persisted-gate-draft"); const item = { id: "persisted-gate-item", plan_id: "plan", draft_id: draft.id, slot_number: 0, lifecycle_status: "drafted" }; const updates = []; let schedules = 0;
+  const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listExecutionPlanItems: async () => [item], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async () => autonomyCandidate(), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async () => ({ id: "decision" }), upsertGateAudit: async (row) => ({ id: "audit", ...row, final_eligibility: false }), updateExecutionPlanItem: async (id, patch) => { updates.push({ id, patch }); return patch; }, createAutonomySchedule: async () => { schedules += 1; }, recordAutonomyAudit: async (row) => row };
+  const result = await autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("auto", true), runId: "persisted-gate-run", now: Date.parse("2026-07-23T09:00:00.000Z") });
+  assert.equal(schedules, 0); assert.equal(result.scheduled.length, 0); assert.ok(updates.some((row) => row.patch.lifecycle_status === "blocked" && row.patch.gate_audit_id === "audit"));
+});
+
 test("canonical gate-audit persistence failure is surfaced and blocks the plan item", async () => {
   const draft = autonomyDraft("audit-failure"); const updates = []; const repo = { listDrafts: async () => [draft], listPublishedPublications: async () => [], listAutonomySchedules: async () => [], listExecutionPlanItems: async () => [{ id: "plan-item", plan_id: "plan", draft_id: draft.id, slot_number: 0, lifecycle_status: "drafted" }], listAccountActivity: async () => [], getSetting: async () => null, getCandidate: async () => autonomyCandidate(), findSourceByUrl: async () => ({ id: "source", publisher: "GitHub", confidence: 1 }), createAutonomyDecision: async () => ({ id: "decision" }), upsertGateAudit: async () => { throw new Error("gate audit unavailable"); }, updateExecutionPlanItem: async (id, patch) => { updates.push({ id, patch }); return patch; }, recordAutonomyAudit: async (row) => row };
   await assert.rejects(() => autonomy.runAutonomyCycle({ repository: repo, config: autonomyConfig("shadow", false), runId: "audit-failure-run", now: Date.parse("2026-07-23T09:00:00.000Z") }), /gate audit unavailable/); assert.equal(updates[0].patch.blocker_code, "gate_audit_persistence_failed");
 });
 
-test("autonomy shadow route safely no-ops with HTTP-200 semantics while gate-audit schema is pending", async () => {
-  const original = autonomy.runAutonomyCycle; const finished = []; const audits = [];
+test("canonical autonomy fails visibly while gate-audit schema is pending", async () => {
+  const original = autonomy.runAutonomyCycle; const finished = []; const incidents = [];
   autonomy.runAutonomyCycle = async () => { const error = Object.assign(new Error("Supabase request failed: 404"), { statusCode: 404, detail: JSON.stringify({ code: "PGRST205", message: "Could not find the table 'public.x_gate_audits' in the schema cache" }) }); throw error; };
-  const repo = { createRun: async () => ({ id: "pending-run" }), recordAutonomyAudit: async (row) => { audits.push(row); return row; }, finishRun: async (_id, status, summary) => { finished.push({ status, summary }); return summary; } };
+  const plan = { id: "plan", plan_date: "2026-07-23" }; const repo = { createRun: async () => ({ id: "pending-run" }), createExecutionPlan: async () => plan, getExecutionPlan: async () => plan, listExecutionPlanItems: async () => [], listAutonomySchedules: async () => [], listPublishedPublications: async () => [], recentCandidates: async () => [], listDrafts: async () => [], getSetting: async () => null, createExecutionPlanItem: async (row) => ({ id: `item-${row.slot_number}`, ...row }), recordAutonomyAudit: async (row) => row, upsertSelfHealingIncident: async (row) => { incidents.push(row); return row; }, finishRun: async (_id, status, summary, error) => { finished.push({ status, summary, error }); return summary; } };
   try {
-    const result = await service.autonomyDecisionCycle({ repository: repo, config: autonomyConfig("shadow", false) });
-    assert.equal(result.schema_pending, true); assert.equal(result.published, false); assert.equal(result.evaluated, 0); assert.equal(result.migration, "20260724_x_gate_audit.sql");
-    assert.equal(finished[0].status, "completed"); assert.equal(audits[0].reason, "gate_audit_schema_pending");
+    await assert.rejects(() => service.autonomyDecisionCycle({ repository: repo, config: autonomyConfig("shadow", false), now: Date.parse("2026-07-23T09:00:00.000Z"), skipPlanning: true }), /Supabase request failed: 404/);
+    assert.equal(finished.at(-1).status, "failed"); assert.ok(incidents.some((row) => row.component === "canonical_planner" && row.failure_category === "missing_schema"));
   } finally { autonomy.runAutonomyCycle = original; }
 });
 
@@ -674,7 +766,7 @@ test("scheduled workflow endpoints remain mapped to protected deployed handlers"
     const destination = mappings.get(path); assert.ok(destination, `missing Vercel mapping for ${path}`);
     const key = destination.match(/x_content_route=([^&]+)/)?.[1]; assert.ok(key, `missing dispatcher key for ${path}`); assert.equal(typeof routes[key], "function", `missing deployed handler ${key} for ${path}`);
   }
-  assert.match(workflow, /Run autonomy shadow decisions/); assert.match(workflow, /api\/x-content-autonomy/);
+  assert.match(workflow, /Evaluate and schedule the canonical plan/); assert.match(workflow, /api\/x-content-autonomy/);
 });
 
 test("gate audit migration is additive, workspace-scoped, and service-role writable", () => {
@@ -1068,6 +1160,31 @@ test("metric collection persists checkpoints and performance memory without an X
 test("V3 cadence enforces daily, weekly, topic, source, and four-hour limits", () => {
   const now = new Date("2026-07-20T12:00:00Z").getTime(); const draft = autonomyDraft(); const candidate = autonomyCandidate(); const historic = Array.from({ length: 2 }, (_, index) => ({ id: `p${index}`, draft_id: `old${index}`, status: "published", published_at: new Date(now - (index + 1) * 60 * 60000).toISOString() })); const drafts = new Map(historic.map((publication, index) => [publication.draft_id, { topic_cluster: "operations", source_references: [candidate.source_url] }]));
   const blocks = autonomy.cadenceBlocks(draft, candidate, historic, drafts, autonomyConfig(), now); assert.ok(blocks.includes("daily_cap")); assert.ok(blocks.includes("minimum_spacing")); assert.ok(blocks.includes("topic_cooldown")); assert.ok(blocks.includes("source_limit_48h"));
+});
+
+test("cadence lookbacks do not treat future schedules as historical topic or source use", () => {
+  const now = Date.parse("2026-07-20T10:00:00.000Z"); const draft = autonomyDraft("future-candidate"); const candidate = autonomyCandidate();
+  const future = [{ id: "future", draft_id: "future-draft", status: "published", published_at: new Date(now + 2 * 3600000).toISOString() }];
+  const drafts = new Map([["future-draft", { topic_cluster: draft.topic_cluster, source_references: [candidate.source_url] }]]);
+  const blocks = autonomy.cadenceBlocks(draft, candidate, future, drafts, autonomyConfig(), now);
+  assert.equal(blocks.includes("topic_cooldown"), false); assert.equal(blocks.includes("source_limit_48h"), false);
+});
+
+test("strict canonical publishing rejects cancelled, future, and stale schedule state before X", async () => {
+  const now = Date.parse("2026-07-23T12:30:00.000Z"); const config = autonomyConfig("auto", true); let xCalls = 0;
+  const run = async (schedule) => {
+    const item = { id: `item-${schedule.id}`, draft_id: schedule.draft_id, schedule_id: schedule.id, intended_at: new Date(now - 60000).toISOString(), lifecycle_status: "scheduled" }; const planUpdates = []; const scheduleUpdates = [];
+    const repo = { getSetting: async () => null, listDueExecutionPlanItems: async () => [item], getAutonomySchedule: async () => ({ ...schedule, execution_plan_item_id: item.id }), updateExecutionPlanItem: async (_id, patch) => { planUpdates.push(patch); return patch; }, updateAutonomySchedule: async (_id, patch) => { scheduleUpdates.push(patch); return patch; }, recordAutonomyAudit: async (row) => row };
+    const result = await autonomy.processScheduled({ repository: repo, xClient: { verifyIdentity: async () => { xCalls += 1; }, publish: async () => { xCalls += 1; } }, config, now, requireCanonicalPlan: true });
+    return { result, planUpdates, scheduleUpdates };
+  };
+  const cancelled = await run({ id: "cancelled", draft_id: "draft-cancelled", status: "cancelled", scheduled_for: new Date(now - 5 * 60000).toISOString() });
+  assert.match(cancelled.result.skipped, /canonical_schedule_status_cancelled/); assert.ok(cancelled.planUpdates.some((patch) => patch.lifecycle_status === "blocked"));
+  const future = await run({ id: "future", draft_id: "draft-future", status: "scheduled", scheduled_for: new Date(now + 10 * 60000).toISOString() });
+  assert.match(future.result.skipped, /not due yet/); assert.ok(future.planUpdates.some((patch) => patch.intended_at === new Date(now + 10 * 60000).toISOString() && patch.lifecycle_status === "scheduled"));
+  const stale = await run({ id: "stale", draft_id: "draft-stale", status: "scheduled", scheduled_for: new Date(now - 2 * 3600000).toISOString() });
+  assert.match(stale.result.skipped, /Stale schedule/); assert.ok(stale.scheduleUpdates.some((patch) => ["superseded", "cancelled"].includes(patch.status))); assert.ok(stale.planUpdates.some((patch) => patch.blocker_code === "stale_schedule_beyond_grace"));
+  assert.equal(xCalls, 0);
 });
 
 test("due schedules transition out of scheduled when a hard gate blocks them", async () => {
