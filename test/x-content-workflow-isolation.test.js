@@ -77,7 +77,7 @@ test("publishing remains an independent fifteen-minute job", () => {
     assert.match(job(name), /concurrency:\n\s+group: x-content-guarded-publisher\n\s+cancel-in-progress: false/);
   }
 
-  assert.match(publisherWorkflow, /cron: "7,22,37,52 \* \* \* \*"/);
+  assert.match(publisherWorkflow, /cron: "\*\/15 \* \* \* \*"/);
   assert.equal((publisherWorkflow.match(/cron:/g) || []).length, 1);
   assert.doesNotMatch(publisherWorkflow, /workflow_dispatch/);
   assert.match(publisherWorkflow, /permissions: \{\}/);
