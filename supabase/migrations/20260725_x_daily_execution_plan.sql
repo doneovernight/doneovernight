@@ -623,15 +623,10 @@ begin
       raise exception '% autonomy schedules could not be linked to a tenant-safe execution-plan item', detached_schedule_count;
     end if;
 
-    if not exists (
-      select 1 from pg_constraint
-       where conrelid = 'public.x_autonomy_schedules'::regclass
-         and conname = 'x_autonomy_schedules_plan_item_required'
-    ) then
-      alter table public.x_autonomy_schedules
-        add constraint x_autonomy_schedules_plan_item_required
-        check (execution_plan_item_id is not null) not valid;
-    end if;
+    -- Production code requires this link whenever canonical execution planning
+    -- is enabled. Do not add a global NOT NULL check here: compatibility-mode
+    -- rollback intentionally permits the legacy scheduler to remain available
+    -- without removing the additive plan columns or their tenant-safe FK.
   end if;
 end
 $$ language plpgsql;

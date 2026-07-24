@@ -51,6 +51,8 @@ test("canonical lifecycle joins and foreign keys are tenant-safe", () => {
     "workspace_publication_fkey",
     "workspace_plan_item_fkey"
   ]) assert.match(sql, new RegExp(reference));
+  assert.doesNotMatch(sql, /check \(execution_plan_item_id is not null\)/i);
+  assert.match(sql, /compatibility-mode[\s\S]*legacy scheduler/i);
 });
 
 test("canonical schedule backfill preserves every production lifecycle state", () => {
