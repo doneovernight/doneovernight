@@ -3,7 +3,9 @@ name: X content schedule
 on:
   schedule:
     - cron: "0 */2 * * *"
-    - cron: "*/15 * * * *"
+    # Keep the 15-minute cadence off the crowded quarter-hour boundaries; GitHub
+    # documents that high-load schedule events may otherwise be delayed or dropped.
+    - cron: "7,22,37,52 * * * *"
     # One of these is 08:00 Europe/Amsterdam across CET/CEST; the route checks local time.
     - cron: "0 6,7 * * *"
     - cron: "0 6,7 * * 1"
@@ -177,7 +179,7 @@ jobs:
           https://doneovernight.com/api/x-content-executive-report
 
   publishing:
-    if: github.event.schedule == '*/15 * * * *' || inputs.task == 'publishing'
+    if: github.event.schedule == '7,22,37,52 * * * *' || inputs.task == 'publishing'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

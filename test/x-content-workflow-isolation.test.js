@@ -64,8 +64,8 @@ test("each discovery enrichment runs in an isolated job", () => {
 
 test("publishing remains an independent fifteen-minute job", () => {
   const publishing = job("publishing");
-  assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
-  assert.match(publishing, /github\.event\.schedule == '\*\/15 \* \* \* \*'/);
+  assert.match(workflow, /cron: "7,22,37,52 \* \* \* \*"/);
+  assert.match(publishing, /github\.event\.schedule == '7,22,37,52 \* \* \* \*'/);
   assert.match(publishing, /api\/x-content-autonomy-publish\b/);
   assert.doesNotMatch(publishing, /\bneeds:/);
 });
